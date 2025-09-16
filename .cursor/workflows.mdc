@@ -97,7 +97,21 @@ Define high-level tasks. Follow the `## Request Processing Steps` below to execu
    - **Steps:**
      1. Fetch relevant rules (`implement-*.mdc`) using `fetch_rules`.
      2. Use `edit_file` to implement the required code changes across necessary files (components, API routes, types, etc.). Ensure imports and dependencies are handled.
+     3. **MANDATORY BUILD VALIDATION:** Use `run_terminal_cmd` to build the project and ensure it compiles successfully. If build fails, use the `<fix>` workflow to resolve compilation errors before proceeding.
+     4. **NO EXCEPTIONS:** Code must always build successfully. Never leave the project in a broken state.
   </develop>
+
+  <build_validate>
+   - **Goal:** Ensure the project always builds successfully.
+   - **Steps:**
+     1. **Build Check:** Use `run_terminal_cmd` to run the appropriate build command for the project type:
+        - iOS/macOS: `xcodebuild -project [project].xcodeproj -scheme [scheme] -destination 'platform=iOS Simulator,name=iPhone 16' build`
+        - React/Node: `npm run build` or `yarn build`
+        - Other: Use the appropriate build command for the project
+     2. **Fix Build Errors:** If build fails, use the `<fix>` workflow to resolve compilation errors.
+     3. **Verify Success:** Repeat until build succeeds with exit code 0.
+     4. **Document Issues:** If persistent build issues occur, document them in `docs/learnings.md`.
+  </build_validate>
 
   <invent>
     - **Goal:** Create a new command-line tool.

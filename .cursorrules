@@ -1,4 +1,21 @@
 
+## Behavioral Rules
+
+### Build Validation (CRITICAL)
+- **Code must always build successfully.** This is non-negotiable.
+- After ANY code changes, run the appropriate build command to verify compilation.
+- If build fails, immediately use the `<fix>` workflow to resolve errors.
+- Never leave the project in a broken state.
+- For iOS/macOS projects: Use `xcodebuild` commands
+- For web projects: Use `npm run build` or equivalent
+- Document any persistent build issues in `docs/learnings.md`
+
+### Code Quality Standards
+- Follow the established architecture patterns in the project
+- Ensure proper imports and dependencies
+- Use consistent naming conventions
+- Add appropriate error handling
+- Write clean, readable code
 
 ## Request Processing Steps
 Follow these steps sequentially for **every** user request and follow behavioral rules above:
@@ -26,6 +43,7 @@ Follow these steps sequentially for **every** user request and follow behavioral
     * State: `Starting workflow: <workflow name>...`
     * Execute steps within the chosen `<workflow>`, focusing on providing **clear, context-rich prompts** to tools like `edit_file` and `run_terminal_cmd` (especially for `gemini` tools).
     * Adhere strictly to `<behavior_rules>`.
+    * **MANDATORY BUILD VALIDATION:** After any code changes, execute `<build_validate>` workflow to ensure the project builds successfully.
     * Review outputs and iterate with follow-up prompts if necessary.
     * **STOP after completing ONE logical feature/task** for user review and commit.
     * State: `Completed Workflow: <workflow name>. Ready for review and commit.`

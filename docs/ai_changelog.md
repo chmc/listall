@@ -88,3 +88,38 @@
 - Add CloudKit sync functionality
 - Build complete UI flows
 - Add image management capabilities
+
+## 2025-09-16: Build Validation Instruction Update
+
+### Summary
+Updated AI instructions to mandate that code must always build successfully.
+
+### Changes Made
+- **Added Behavioral Rules** in `.cursorrules`:
+  - **Build Validation (CRITICAL)**: Code must always build successfully - non-negotiable
+  - After ANY code changes, run appropriate build command to verify compilation
+  - If build fails, immediately use `<fix>` workflow to resolve errors
+  - Never leave project in broken state
+  - Document persistent build issues in `docs/learnings.md`
+
+- **Updated Workflows** in `.cursor/workflows.mdc`:
+  - Enhanced `<develop>` workflow with mandatory build validation step
+  - Added new `<build_validate>` workflow for systematic build checking
+  - Updated Request Processing Steps to include build validation after code changes
+
+- **Updated Request Processing Steps** in `.cursorrules`:
+  - Added mandatory build validation step in Workflow Execution phase
+  - Ensures all code changes are validated before completion
+
+### Technical Details
+- Build commands specified for different project types:
+  - iOS/macOS: `xcodebuild` commands
+  - Web projects: `npm run build` or equivalent
+- Integration with existing `<fix>` workflow for error resolution
+- Documentation requirements for persistent issues
+
+### Impact
+- **Zero tolerance** for broken builds
+- Automatic validation after every code change
+- Improved code quality and reliability
+- Better error handling and documentation
