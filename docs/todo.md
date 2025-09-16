@@ -129,12 +129,15 @@
 
 ## Testing Strategy (Integrated Throughout All Phases)
 - ✅ Test infrastructure is set up and working
-- ❌ Write unit tests for all services as they are implemented
-- ❌ Create integration tests for Core Data + CloudKit when implemented
-- ❌ Add UI tests for critical user flows as features are built
-- ❌ Implement accessibility testing for UI components
-- ❌ Create performance tests for large datasets when needed
-- ❌ Add export/import functionality tests when features are implemented
+- ❌ Write unit tests for all services as they are implemented (ONLY for existing code)
+- ❌ Create integration tests for Core Data + CloudKit when implemented (ONLY for existing code)
+- ❌ Add UI tests for critical user flows as features are built (ONLY for existing code)
+- ❌ Implement accessibility testing for UI components (ONLY for existing code)
+- ❌ Create performance tests for large datasets when needed (ONLY for existing code)
+- ❌ Add export/import functionality tests when features are implemented (ONLY for existing code)
+- **IMPORTANT**: Never write tests for imaginary, planned, or future code - only test what actually exists
+- **CRITICAL**: Do NOT change implementation to fix tests unless implementation is truly impossible to test
+- **PRINCIPLE**: Tests should adapt to implementation, not the other way around
 
 ## Phase 16: Polish and Release
 - ❌ Implement app icon and launch screen

@@ -68,6 +68,25 @@
 - **Application**: Implemented timestamp-based last-write-wins with user notification
 - **Benefit**: Data consistency across devices with minimal user intervention
 
+## Testing Best Practices
+
+### Test Only Existing Code
+- **Learning**: Tests should only be written for code that actually exists and is implemented
+- **Application**: Never write tests for imaginary, planned, or future code that hasn't been built yet
+- **Benefit**: Prevents test maintenance overhead and ensures tests validate real functionality
+- **Rule**: Only add tests when implementing or modifying actual working code
+
+### Test-Driven Development Approach
+- **Learning**: Write tests as you implement features, not as a separate phase
+- **Application**: Test new functionality immediately after implementation to catch issues early
+- **Benefit**: Higher code quality and faster feedback on implementation correctness
+
+### Implementation vs Testing Priority
+- **Learning**: Implementation should not be changed to fix tests unless the implementation is truly impossible to test
+- **Application**: Tests should adapt to the implementation, not the other way around
+- **Benefit**: Maintains design integrity and prevents test-driven architecture compromises
+- **Rule**: Only modify implementation for testing if the code is genuinely untestable (e.g., tightly coupled, no dependency injection)
+
 ## Future Considerations
 
 ### Platform Expansion

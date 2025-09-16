@@ -123,3 +123,61 @@ Updated AI instructions to mandate that code must always build successfully.
 - Automatic validation after every code change
 - Improved code quality and reliability
 - Better error handling and documentation
+
+## 2025-09-16: Testing Instruction Clarification
+
+### Summary
+Updated testing instructions to clarify that tests should only be written for existing implementations, not imaginary or planned code.
+
+### Changes Made
+- **Updated learnings.md**:
+  - Added new "Testing Best Practices" section
+  - **Test Only Existing Code**: Tests should only be written for code that actually exists and is implemented
+  - **Rule**: Never write tests for imaginary, planned, or future code that hasn't been built yet
+  - **Benefit**: Prevents test maintenance overhead and ensures tests validate real functionality
+
+- **Updated todo.md**:
+  - Modified testing strategy section to emphasize "ONLY for existing code"
+  - Added explicit warning: "Never write tests for imaginary, planned, or future code - only test what actually exists"
+  - Updated all testing task descriptions to include "(ONLY for existing code)" clarification
+
+### Technical Details
+- Tests should only be added when implementing or modifying actual working code
+- Prevents creation of tests for features that don't exist yet
+- Ensures test suite remains maintainable and relevant
+- Aligns with test-driven development best practices
+
+### Impact
+- **Prevents test maintenance overhead** from testing non-existent code
+- **Ensures test relevance** by only testing real implementations
+- **Improves development efficiency** by focusing on actual functionality
+- **Maintains clean test suite** without placeholder or imaginary tests
+
+## 2025-09-16: Implementation vs Testing Priority Clarification
+
+### Summary
+Added clarification that implementation should not be changed to fix tests unless the implementation is truly impossible to test.
+
+### Changes Made
+- **Updated learnings.md**:
+  - Added new "Implementation vs Testing Priority" section
+  - **Rule**: Implementation should not be changed to fix tests unless the implementation is truly impossible to test
+  - **Principle**: Tests should adapt to the implementation, not the other way around
+  - **Benefit**: Maintains design integrity and prevents test-driven architecture compromises
+
+- **Updated todo.md**:
+  - Added **CRITICAL** warning: "Do NOT change implementation to fix tests unless implementation is truly impossible to test"
+  - Added **PRINCIPLE**: "Tests should adapt to implementation, not the other way around"
+  - Reinforced that tests should work with existing code structure
+
+### Technical Details
+- Only modify implementation for testing if code is genuinely untestable (e.g., tightly coupled, no dependency injection)
+- Tests should work with the existing architecture and design patterns
+- Prevents compromising good design for test convenience
+- Maintains separation of concerns and architectural integrity
+
+### Impact
+- **Preserves design integrity** by not compromising architecture for testing
+- **Prevents test-driven architecture compromises** that can harm code quality
+- **Maintains implementation focus** on business requirements rather than test convenience
+- **Ensures tests validate real behavior** rather than artificial test-friendly interfaces
