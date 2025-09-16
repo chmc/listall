@@ -1,10 +1,3 @@
-//
-//  ServicesTests.swift
-//  ListAllTests
-//
-//  Created by Sutela Aleksi on 15.9.2025.
-//
-
 import Testing
 import Foundation
 @testable import ListAll

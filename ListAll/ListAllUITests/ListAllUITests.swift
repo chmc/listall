@@ -1,10 +1,3 @@
-//
-//  ListAllUITests.swift
-//  ListAllUITests
-//
-//  Created by Sutela Aleksi on 15.9.2025.
-//
-
 import XCTest
 
 final class ListAllUITests: XCTestCase {

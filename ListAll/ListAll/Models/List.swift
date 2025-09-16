@@ -1,10 +1,3 @@
-//
-//  List.swift
-//  ListAll
-//
-//  Created by Sutela Aleksi on 15.9.2025.
-//
-
 import Foundation
 
 // MARK: - List Model
