@@ -2,10 +2,20 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
+    @StateObject private var cloudKitService = CloudKitService()
+    @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
+                // Sync Status Bar
+                if cloudKitService.syncStatus != .available || cloudKitService.isSyncing {
+                    SyncStatusView(cloudKitService: cloudKitService)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                }
+                
+                // Main Content
                 if viewModel.isLoading {
                     ProgressView("Loading lists...")
                 } else if viewModel.lists.isEmpty {
@@ -34,6 +44,17 @@ struct MainView: View {
             }
             .navigationTitle("Lists")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        Task {
+                            await cloudKitService.sync()
+                        }
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(cloudKitService.isSyncing)
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         // TODO: Add create list functionality
@@ -45,6 +66,26 @@ struct MainView: View {
         }
         .onAppear {
             viewModel.loadLists()
+            Task {
+                await conflictManager.checkForConflicts()
+            }
+        }
+        .sheet(isPresented: $conflictManager.showingConflictResolution) {
+            if let conflict = conflictManager.currentConflict {
+                SyncConflictResolutionView(
+                    conflictObject: conflict,
+                    onResolve: { strategy in
+                        Task {
+                            await conflictManager.resolveConflict(with: strategy)
+                        }
+                    }
+                )
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSPersistentStoreRemoteChange)) { _ in
+            Task {
+                await conflictManager.checkForConflicts()
+            }
         }
     }
 }

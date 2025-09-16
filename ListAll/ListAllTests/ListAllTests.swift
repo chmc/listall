@@ -7,6 +7,9 @@ struct ListAllTests {
     // MARK: - Item Model Tests
     
     @Test func testItemInitialization() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let item = Item(title: "Test Item")
         
         #expect(item.title == "Test Item")
@@ -20,6 +23,9 @@ struct ListAllTests {
     }
     
     @Test func testItemWithListId() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let listId = UUID()
         let item = Item(title: "Test Item", listId: listId)
         
@@ -27,6 +33,9 @@ struct ListAllTests {
     }
     
     @Test func testItemSortedImages() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var item = Item(title: "Test Item")
         
         var image1 = ItemImage()
@@ -45,6 +54,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageCount() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var item = Item(title: "Test Item")
         
         #expect(item.imageCount == 0)
@@ -57,6 +69,9 @@ struct ListAllTests {
     }
     
     @Test func testItemDisplayTitle() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let item1 = Item(title: "Valid Title")
         let item2 = Item(title: "   ")
         let item3 = Item(title: "")
@@ -67,6 +82,9 @@ struct ListAllTests {
     }
     
     @Test func testItemDisplayDescription() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var item1 = Item(title: "Test")
         item1.itemDescription = "Valid description"
         
@@ -85,6 +103,9 @@ struct ListAllTests {
     }
     
     @Test func testItemUpdateModifiedDate() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var item = Item(title: "Test Item")
         let originalDate = item.modifiedAt
         
@@ -97,6 +118,9 @@ struct ListAllTests {
     }
     
     @Test func testItemToggleCrossedOut() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var item = Item(title: "Test Item")
         let originalDate = item.modifiedAt
         
@@ -116,6 +140,9 @@ struct ListAllTests {
     }
     
     @Test func testItemValidation() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let validItem = Item(title: "Valid Title")
         let invalidTitleItem = Item(title: "   ")
         var invalidQuantityItem = Item(title: "Valid Title")
@@ -127,6 +154,9 @@ struct ListAllTests {
     }
     
     @Test func testItemFormattedQuantity() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var item1 = Item(title: "Test")
         item1.quantity = 1
         
@@ -140,6 +170,9 @@ struct ListAllTests {
     // MARK: - List Model Tests
     
     @Test func testListInitialization() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let list = List(name: "Test List")
         
         #expect(list.name == "Test List")
@@ -149,6 +182,9 @@ struct ListAllTests {
     }
     
     @Test func testListSortedItems() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var list = List(name: "Test List")
         
         var item1 = Item(title: "Item 1")
@@ -167,6 +203,9 @@ struct ListAllTests {
     }
     
     @Test func testListItemCounts() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var list = List(name: "Test List")
         
         #expect(list.itemCount == 0)
@@ -188,6 +227,9 @@ struct ListAllTests {
     }
     
     @Test func testListUpdateModifiedDate() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var list = List(name: "Test List")
         let originalDate = list.modifiedAt
         
@@ -200,6 +242,9 @@ struct ListAllTests {
     }
     
     @Test func testListValidation() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let validList = List(name: "Valid List")
         let invalidList = List(name: "   ")
         
@@ -208,6 +253,9 @@ struct ListAllTests {
     }
     
     @Test func testListAddItem() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var list = List(name: "Test List")
         let item = Item(title: "Test Item")
         
@@ -220,6 +268,9 @@ struct ListAllTests {
     }
     
     @Test func testListRemoveItem() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var list = List(name: "Test List")
         let item = Item(title: "Test Item")
         list.addItem(item)
@@ -231,6 +282,9 @@ struct ListAllTests {
     }
     
     @Test func testListUpdateItem() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         var list = List(name: "Test List")
         var item = Item(title: "Original Title")
         list.addItem(item)
@@ -244,6 +298,9 @@ struct ListAllTests {
     // MARK: - ItemImage Model Tests
     
     @Test func testItemImageInitialization() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let image = ItemImage()
         
         #expect(image.id != UUID())
@@ -253,6 +310,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageWithData() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let data = Data("test".utf8)
         let image = ItemImage(imageData: data, itemId: UUID())
         
@@ -261,6 +321,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageHasImageData() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let imageWithData = ItemImage(imageData: Data("test".utf8))
         let imageWithoutData = ItemImage()
         
@@ -269,6 +332,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageSize() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let data = Data("test".utf8)
         let image = ItemImage(imageData: data)
         
@@ -276,6 +342,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageFormattedSize() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let smallData = Data(count: 500)
         let mediumData = Data(count: 1500)
         let largeData = Data(count: 1_500_000)
@@ -290,6 +359,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageValidation() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let validImage = ItemImage(imageData: Data("test".utf8))
         let invalidImage = ItemImage()
         
@@ -298,6 +370,9 @@ struct ListAllTests {
     }
     
     @Test func testItemImageCompressImage() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         // Create a simple test image data
         let testData = Data(count: 2_000_000) // 2MB
         var image = ItemImage(imageData: testData)

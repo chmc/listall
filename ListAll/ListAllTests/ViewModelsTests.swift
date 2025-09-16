@@ -8,6 +8,9 @@ struct ViewModelsTests {
     // MARK: - ItemViewModel Tests
     
     @Test func testItemViewModelInitialization() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let item = Item(title: "Test Item")
         let viewModel = ItemViewModel(item: item)
         
@@ -17,6 +20,9 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelToggleCrossedOut() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let item = Item(title: "Test Item")
         let viewModel = ItemViewModel(item: item)
         
@@ -28,6 +34,9 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelUpdateItem() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let item = Item(title: "Original Title")
         let viewModel = ItemViewModel(item: item)
         
@@ -39,6 +48,9 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelUpdateItemWithEmptyDescription() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let item = Item(title: "Original Title")
         let viewModel = ItemViewModel(item: item)
         
@@ -52,6 +64,9 @@ struct ViewModelsTests {
     // MARK: - ListViewModel Tests
     
     @Test func testListViewModelInitialization() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let list = List(name: "Test List")
         let viewModel = ListViewModel(list: list)
         
@@ -60,6 +75,9 @@ struct ViewModelsTests {
     }
     
     @Test func testListViewModelLoadItems() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let list = List(name: "Test List")
         let viewModel = ListViewModel(list: list)
         
@@ -71,6 +89,9 @@ struct ViewModelsTests {
     // MARK: - MainViewModel Tests
     
     @Test func testMainViewModelInitialization() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let viewModel = MainViewModel()
         
         #expect(viewModel.isLoading == false)
@@ -79,6 +100,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMainViewModelAddList() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let viewModel = MainViewModel()
         let initialCount = viewModel.lists.count
         
@@ -89,6 +113,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMainViewModelDeleteList() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let viewModel = MainViewModel()
         let initialCount = viewModel.lists.count
         
@@ -104,6 +131,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMainViewModelUpdateList() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let viewModel = MainViewModel()
         
         guard let firstList = viewModel.lists.first else {
@@ -121,6 +151,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMainViewModelLoadLists() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let viewModel = MainViewModel()
         
         // Should load lists from DataManager

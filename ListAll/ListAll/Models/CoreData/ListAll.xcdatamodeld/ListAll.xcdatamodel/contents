@@ -9,6 +9,7 @@
         <attribute name="orderNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="quantity" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="ckServerChangeToken" optional="YES" attributeType="Binary"/>
         <relationship name="images" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ItemImageEntity" inverseName="item" inverseEntity="ItemImageEntity"/>
         <relationship name="list" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ListEntity" inverseName="items" inverseEntity="ListEntity"/>
     </entity>
@@ -17,6 +18,7 @@
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="imageData" optional="YES" attributeType="Binary"/>
         <attribute name="orderNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="ckServerChangeToken" optional="YES" attributeType="Binary"/>
         <relationship name="item" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ItemEntity" inverseName="images" inverseEntity="ItemEntity"/>
     </entity>
     <entity name="ListEntity" representedClassName="ListEntity" syncable="YES" codeGenerationType="class">
@@ -26,6 +28,7 @@
         <attribute name="modifiedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="orderNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="ckServerChangeToken" optional="YES" attributeType="Binary"/>
         <relationship name="items" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ItemEntity" inverseName="list" inverseEntity="ItemEntity"/>
         <relationship name="owner" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="UserDataEntity" inverseName="lists" inverseEntity="UserDataEntity"/>
     </entity>
@@ -36,6 +39,7 @@
         <attribute name="lastSyncDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="showCrossedOutItems" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="userID" optional="YES" attributeType="String"/>
+        <attribute name="ckServerChangeToken" optional="YES" attributeType="Binary"/>
         <relationship name="lists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ListEntity" inverseName="owner" inverseEntity="ListEntity"/>
     </entity>
 </model>

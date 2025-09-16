@@ -10,26 +10,26 @@ class CoreDataManager: ObservableObject {
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "ListAll")
         
-        // Configure for testing - disable CloudKit for now
-        guard let description = container.persistentStoreDescriptions.first else {
+        // Configure store description for migration
+        guard let storeDescription = container.persistentStoreDescriptions.first else {
             fatalError("Failed to retrieve a persistent store description.")
         }
         
-        // Enable history tracking for future CloudKit integration
-        description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
-        description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+        // Enable automatic migration
+        storeDescription.shouldMigrateStoreAutomatically = true
+        storeDescription.shouldInferMappingModelAutomatically = true
         
-        // For testing, use in-memory store to avoid CloudKit issues
-        #if DEBUG
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
-            // Running in tests - use in-memory store
-            description.url = URL(fileURLWithPath: "/dev/null")
-        }
-        #endif
-        
-        container.loadPersistentStores { _, error in
+        container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                print("Core Data error: \(error), \(error.userInfo)")
+                
+                // If migration fails, try to delete and recreate the store
+                if error.code == 134110 { // Migration error
+                    print("Migration failed, attempting to delete and recreate store...")
+                    self?.deleteAndRecreateStore(container: container, storeDescription: storeDescription)
+                } else {
+                    fatalError("Unresolved error \(error), \(error.userInfo)")
+                }
             }
         }
         
@@ -80,11 +80,54 @@ class CoreDataManager: ObservableObject {
     // MARK: - CloudKit Status
     
     func checkCloudKitStatus() async -> CKAccountStatus {
-        // For now, return unavailable since we're not using CloudKit
-        return .couldNotDetermine
+        let container = CKContainer(identifier: "iCloud.io.github.chmc.ListAll")
+        do {
+            return try await container.accountStatus()
+        } catch {
+            print("Failed to check CloudKit status: \(error)")
+            return .couldNotDetermine
+        }
     }
     
     // MARK: - Data Migration
+    
+    private func deleteAndRecreateStore(container: NSPersistentContainer, storeDescription: NSPersistentStoreDescription) {
+        guard let storeURL = storeDescription.url else {
+            print("No store URL available")
+            return
+        }
+        
+        do {
+            // Delete the existing store files
+            let fileManager = FileManager.default
+            let storeDirectory = storeURL.deletingLastPathComponent()
+            
+            // Find all store files
+            let storeFiles = try fileManager.contentsOfDirectory(at: storeDirectory, includingPropertiesForKeys: nil)
+            let storeFileExtensions = ["sqlite", "sqlite-wal", "sqlite-shm"]
+            
+            for file in storeFiles {
+                if storeFileExtensions.contains(file.pathExtension) {
+                    try fileManager.removeItem(at: file)
+                    print("Deleted store file: \(file.lastPathComponent)")
+                }
+            }
+            
+            // Reload the store
+            try container.persistentStoreCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
+            print("Successfully recreated store")
+            
+        } catch {
+            print("Failed to delete and recreate store: \(error)")
+            // If we still can't create the store, use in-memory store as fallback
+            do {
+                try container.persistentStoreCoordinator.addPersistentStore(ofType: NSInMemoryStoreType, configurationName: nil, at: nil, options: nil)
+                print("Using in-memory store as fallback")
+            } catch {
+                fatalError("Failed to create any persistent store: \(error)")
+            }
+        }
+    }
     
     func migrateDataIfNeeded() {
         // Check if we need to migrate from UserDefaults to Core Data

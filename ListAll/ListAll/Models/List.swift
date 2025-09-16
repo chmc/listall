@@ -7,6 +7,7 @@ struct List: Identifiable, Codable, Equatable {
     var orderNumber: Int
     var createdAt: Date
     var modifiedAt: Date
+    var isArchived: Bool
     var items: [Item]
     
     init(name: String) {
@@ -15,6 +16,7 @@ struct List: Identifiable, Codable, Equatable {
         self.orderNumber = 0
         self.createdAt = Date()
         self.modifiedAt = Date()
+        self.isArchived = false
         self.items = []
     }
 }

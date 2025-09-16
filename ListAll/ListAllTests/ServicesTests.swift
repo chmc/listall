@@ -4,9 +4,12 @@ import Foundation
 
 struct ServicesTests {
     
-    // MARK: - DataRepository Tests (Simplified to avoid shared state)
+    // MARK: - DataRepository Tests (Using isolated test environment)
     
     @Test func testDataRepositoryCreateList() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let repository = DataRepository()
         let list = repository.createList(name: "Test List")
         
@@ -16,6 +19,9 @@ struct ServicesTests {
     }
     
     @Test func testDataRepositoryCreateItem() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let repository = DataRepository()
         let list = repository.createList(name: "Test List")
         let item = repository.createItem(in: list, title: "Test Item", description: "Test Description", quantity: 3)
@@ -27,6 +33,9 @@ struct ServicesTests {
     }
     
     @Test func testDataRepositoryCreateItemWithEmptyDescription() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let repository = DataRepository()
         let list = repository.createList(name: "Test List")
         let item = repository.createItem(in: list, title: "Test Item", description: "", quantity: 1)
@@ -36,9 +45,12 @@ struct ServicesTests {
         #expect(item.quantity == 1)
     }
     
-    // MARK: - DataManager Tests (Simplified to avoid shared state)
+    // MARK: - DataManager Tests (Using isolated test environment)
     
     @Test func testDataManagerSingleton() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let manager1 = DataManager.shared
         let manager2 = DataManager.shared
         
@@ -46,6 +58,9 @@ struct ServicesTests {
     }
     
     @Test func testDataManagerGetItemsForNonExistentList() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let manager = DataManager.shared
         let nonExistentListId = UUID()
         
@@ -54,9 +69,12 @@ struct ServicesTests {
         #expect(items.isEmpty)
     }
     
-    // MARK: - Method Existence Tests (No shared state)
+    // MARK: - Method Existence Tests (Using isolated test environment)
     
     @Test func testDataRepositoryMethodsExist() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let repository = DataRepository()
         
         // Test that methods exist and can be called without crashing
@@ -74,6 +92,9 @@ struct ServicesTests {
     }
     
     @Test func testDataManagerMethodsExist() async throws {
+        // Reset shared state before test
+        TestHelpers.resetSharedSingletons()
+        
         let manager = DataManager.shared
         let list = List(name: "Test")
         let item = Item(title: "Test Item")
