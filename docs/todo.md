@@ -1,5 +1,27 @@
 # ListAll App - Development Tasks
 
+## Phase Organization (Updated for Better Context Management)
+**Note**: Large phases have been split into smaller, more manageable chunks (3-5 tasks each) to improve context memory management and ensure consistent adherence to behavioral rules (build validation, testing, etc.).
+
+### Phase Splitting Summary:
+- **Phase 6** → Split into 6A, 6B, 6C (List Management)
+- **Phase 7** → Split into 7A, 7B, 7C, 7D (Item Management)  
+- **Phase 8** → Split into 8A, 8B (Smart Features)
+- **Phase 9** → Split into 9A, 9B, 9C (Image Management)
+- **Phase 10** → Split into 10A, 10B (Data Export)
+- **Phase 11** → Split into 11A, 11B (Data Import)
+- **Phase 13** → Split into 13A, 13B (Settings)
+- **Phase 14** → Split into 14A, 14B (Advanced Features)
+- **Phase 15** → Split into 15A, 15B (Performance)
+
+### Benefits of Smaller Phases:
+- Better context memory management
+- Easier adherence to behavioral rules (build validation, testing)
+- More frequent checkpoints for user review
+- Reduced cognitive load per phase
+- Better error recovery scope
+- Incremental testing approach
+
 ## Phase 1: Project Foundation
 - ✅ Create basic project structure and folder organization
 - ✅ Configure build settings and deployment targets
@@ -82,55 +104,78 @@
 - ❌ Set up SwiftUI view hierarchy
 - ❌ Create basic UI components and styling
 
-## Phase 6: Core List Management
+## Phase 6A: Basic List Display
 - ❌ Implement ListsView (main screen with list of lists)
 - ❌ Create ListRowView component
+- ❌ Set up basic navigation between screens
+
+## Phase 6B: List Creation and Editing
 - ❌ Implement CreateListView for new list creation
-- ❌ Add list editing and deletion functionality
+- ❌ Add list editing functionality
+- ❌ Add list deletion functionality
+
+## Phase 6C: List Interactions
 - ❌ Implement list duplication/cloning
 - ❌ Add drag-to-reorder functionality for lists
 - ❌ Add swipe actions for quick list operations
 
-## Phase 7: Core Item Management
+## Phase 7A: Basic Item Display
 - ❌ Implement ListView (items within a list)
 - ❌ Create ItemRowView component
 - ❌ Create ItemDetailView for viewing item details
+
+## Phase 7B: Item Creation and Editing
 - ❌ Implement ItemEditView for creating/editing items
 - ❌ Add item crossing out functionality
-- ❌ Implement drag-to-reorder for items within lists
-- ❌ Add swipe actions for quick item operations
 - ❌ Create item duplication functionality
 
-## Phase 8: Smart Features
+## Phase 7C: Item Interactions
+- ❌ Implement drag-to-reorder for items within lists
+- ❌ Add swipe actions for quick item operations
+
+## Phase 7D: Item Organization
+- ❌ Add item sorting and filtering options
+
+## Phase 8A: Basic Suggestions
 - ❌ Implement SuggestionService for item recommendations
 - ❌ Create SuggestionListView component
 - ❌ Add fuzzy string matching for suggestions
+
+## Phase 8B: Advanced Suggestions
 - ❌ Implement frequency-based suggestion weighting
 - ❌ Add recent items tracking
 - ❌ Create suggestion cache management
 
-## Phase 9: Image Management
+## Phase 9A: Basic Image Support
 - ❌ Implement ImageService for image processing
 - ❌ Create ImagePickerView component
 - ❌ Add camera integration for taking photos
+
+## Phase 9B: Image Library Integration
 - ❌ Implement photo library access
 - ❌ Add image compression and optimization
+
+## Phase 9C: Image Display and Storage
 - ❌ Create thumbnail generation system
 - ❌ Implement image display in item details
 
-## Phase 10: Data Export/Import
+## Phase 10A: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
-- ❌ Implement plain text export
 - ❌ Create ExportView UI
+
+## Phase 10B: Advanced Export
+- ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 11: Data Import
+## Phase 11A: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
+
+## Phase 11B: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
@@ -143,26 +188,32 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 13: Settings and Preferences
+## Phase 13A: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Add show/hide crossed out items toggle
 - ❌ Implement export preferences
+
+## Phase 13B: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 14: Advanced Features
+## Phase 14A: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
+
+## Phase 14B: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 15: Performance and Optimization
+## Phase 15A: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
+
+## Phase 15B: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
