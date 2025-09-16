@@ -170,12 +170,18 @@ struct UtilsTests {
     }
     
     @Test func testStringAsURL() async throws {
+        // Test valid URLs
         #expect("https://example.com".asURL != nil)
         #expect("http://test.com".asURL != nil)
+        
+        // Test invalid URLs
         #expect("invalid url".asURL == nil)
         #expect("".asURL == nil)
         #expect("not a url".asURL == nil)
+        
+        // Test edge cases
         #expect("ftp://example.com".asURL != nil)
+        #expect("file:///path/to/file".asURL != nil)
     }
     
     @Test func testStringCapitalizedFirst() async throws {
