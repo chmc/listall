@@ -10,7 +10,7 @@ import Foundation
 extension Date {
     
     /// Returns a formatted string representation of the date
-    func formatted() -> String {
+    func customFormatted() -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short

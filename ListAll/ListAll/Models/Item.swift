@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - Item Model
-struct Item: Identifiable, Codable {
+struct Item: Identifiable, Codable, Equatable {
     let id: UUID
     var title: String
     var itemDescription: String?
