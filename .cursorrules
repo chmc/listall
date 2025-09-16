@@ -21,12 +21,14 @@ Follow these steps sequentially for **every** user request and follow behavioral
     * For multi-step workflow (`<develop>`, `<validate>`, `<design>`), break down into sub-tasks.
     * Use `edit_file` to add sub-tasks to `todo.md` (marked ❌). Include development, testing, documentation steps.
     * Inform the user the plan is in `todo.md`.
+    * **IMPORTANT:** Complete ONE logical feature/task at a time, then stop for user review and commit.
 4.  **Workflow Execution:**
     * State: `Starting workflow: <workflow name>...`
     * Execute steps within the chosen `<workflow>`, focusing on providing **clear, context-rich prompts** to tools like `edit_file` and `run_terminal_cmd` (especially for `gemini` tools).
     * Adhere strictly to `<behavior_rules>`.
     * Review outputs and iterate with follow-up prompts if necessary.
-    * State: `Completed Wokflow: <workflow name>.`
+    * **STOP after completing ONE logical feature/task** for user review and commit.
+    * State: `Completed Workflow: <workflow name>. Ready for review and commit.`
 5.  **Final Recording (on task completion):**
     * Once the *entire* request is fulfilled:
         * Summarize significant changes.

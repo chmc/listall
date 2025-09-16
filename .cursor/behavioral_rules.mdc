@@ -9,7 +9,9 @@ alwaysApply: true
 - **Latest Libraries:** Prefer latest stable versions for dependencies.
 - **Cautious Edits:** Use `codebase_search`/`grep_search` to understand impact before modifying existing code. Avoid deletions unless clearly required.
 - **Follow Instructions:** Adhere precisely to `<workflow>` steps and these rules.
-- **Persistence:** Be persistent, do not give up. Don't stop when you have not completed the task. 
+- **Incremental Development:** Complete ONE logical feature/task at a time, then stop for user review and commit. Do not work on multiple unrelated tasks simultaneously.
+- **Task Completion:** Mark tasks as completed only after user approval and commit. Update todo status accordingly.
+- **Persistence:** Be persistent within the current task, but stop after completing one logical unit of work.
 - **Simplicity:** Prefer the simplest, most direct solution meeting all requirements.
 - **Tool Usage:** Use provided tools appropriately. Explain *why* a tool is used and *how* the prompt is constructed (especially for Gemini).
 - **Clarity:** Communicate plans, workflows, results clearly. Ask clarifying questions if ambiguous.
@@ -29,6 +31,6 @@ alwaysApply: true
     - **Iterate When Necessary:** Refine outputs through follow-up prompts if needed.
 
 - **For GPT (OpenAI) and Grok (X.AI):**
-    - Be complete, aim for full task completion per run.
+    - Complete one logical feature/task at a time, then stop for user review.
     - Only ask user for major decisions.
 </behavioral_rules>
