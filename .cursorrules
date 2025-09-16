@@ -10,6 +10,16 @@
 - For web projects: Use `npm run build` or equivalent
 - Document any persistent build issues in `docs/learnings.md`
 
+### Testing Integration (CRITICAL)
+- **Every task must end with successful build AND successful tests.** This is non-negotiable.
+- Write tests as you implement features, not as a separate phase.
+- After ANY code changes, run tests to verify functionality works correctly.
+- If tests fail, immediately fix the issues before considering the task complete.
+- For iOS/macOS projects: Use `xcodebuild test` commands
+- For web projects: Use `npm test` or equivalent
+- Prefer fast test execution during development (skip performance tests, run unit tests only)
+- Document any persistent test issues in `docs/learnings.md`
+
 ### Code Quality Standards
 - Follow the established architecture patterns in the project
 - Ensure proper imports and dependencies
@@ -44,6 +54,8 @@ Follow these steps sequentially for **every** user request and follow behavioral
     * Execute steps within the chosen `<workflow>`, focusing on providing **clear, context-rich prompts** to tools like `edit_file` and `run_terminal_cmd` (especially for `gemini` tools).
     * Adhere strictly to `<behavior_rules>`.
     * **MANDATORY BUILD VALIDATION:** After any code changes, execute `<build_validate>` workflow to ensure the project builds successfully.
+    * **MANDATORY TEST VALIDATION:** After any code changes, run tests to ensure functionality works correctly.
+    * Write tests for new features as you implement them.
     * Review outputs and iterate with follow-up prompts if necessary.
     * **STOP after completing ONE logical feature/task** for user review and commit.
     * State: `Completed Workflow: <workflow name>. Ready for review and commit.`
