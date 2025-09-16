@@ -15,7 +15,7 @@ class CloudKitService: ObservableObject {
     @Published var syncError: String?
     
     private let container = CKContainer(identifier: "iCloud.io.github.chmc.ListAll")
-    private let coreDataManager = CoreDataManager.shared
+    private let dataManager = DataManager.shared
     
     init() {
         // CloudKit is configured through Core Data's CloudKit integration

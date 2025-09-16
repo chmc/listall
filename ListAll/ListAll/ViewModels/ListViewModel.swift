@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import CoreData
+// import CoreData // Removed CoreData import
 import SwiftUI
 
 class ListViewModel: ObservableObject {
@@ -14,13 +14,13 @@ class ListViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let coreDataManager = CoreDataManager.shared
-    private let viewContext: NSManagedObjectContext
+    private let dataManager = DataManager.shared // Changed from coreDataManager
+    // private let viewContext: NSManagedObjectContext // Removed viewContext
     private let list: List
     
     init(list: List) {
         self.list = list
-        self.viewContext = coreDataManager.container.viewContext
+        // self.viewContext = coreDataManager.container.viewContext // Removed CoreData initialization
         loadItems()
     }
     
@@ -28,20 +28,17 @@ class ListViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        let request = NSFetchRequest<Item>(entityName: "Item")
-        request.predicate = NSPredicate(format: "list == %@", list)
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.orderNumber, ascending: true)]
-        
-        do {
-            items = try viewContext.fetch(request)
-        } catch {
-            errorMessage = "Failed to load items: \(error.localizedDescription)"
-        }
+        // Simulate fetching from DataManager
+        items = dataManager.getItems(forListId: list.id)
         
         isLoading = false
     }
     
     func save() {
-        coreDataManager.save()
+        // dataManager.save() // DataManager now handles its own persistence implicitly for simple models
+        // For now, we'll just update the items in the DataManager
+        for item in items {
+            dataManager.updateItem(item)
+        }
     }
 }

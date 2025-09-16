@@ -15,7 +15,7 @@ struct ListRowView: View {
         NavigationLink(destination: ListView(list: list)) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(list.name ?? "Untitled List")
+                    Text(list.name) // Removed nil coalescing operator since name is non-optional
                         .font(.headline)
                         .foregroundColor(.primary)
                     
@@ -38,12 +38,12 @@ struct ListRowView: View {
     }
     
     private func updateItemCount() {
-        itemCount = list.items?.count ?? 0
+        itemCount = list.items.count // Removed optional chaining since items is non-optional
     }
 }
 
 #Preview {
     SwiftUI.List {
-        ListRowView(list: List())
+        ListRowView(list: List(name: "Sample List"))
     }
 }

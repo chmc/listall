@@ -31,7 +31,7 @@ struct ItemRowView: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.title ?? "Untitled Item")
+                    Text(item.title)
                         .font(.body)
                         .strikethrough(item.isCrossedOut)
                         .foregroundColor(item.isCrossedOut ? .secondary : .primary)
@@ -71,6 +71,6 @@ struct ItemRowView: View {
 
 #Preview {
     SwiftUI.List {
-        ItemRowView(item: Item())
+        ItemRowView(item: Item(title: "Sample Item"))
     }
 }

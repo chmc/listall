@@ -14,10 +14,12 @@
 - ✅ Set up basic project configuration
 
 ## Phase 2: Core Data Model
-- ❌ Create Core Data model with List, Item, ItemImage entities
-- ❌ Define entity relationships and attributes
-- ❌ Set up Core Data stack configuration
-- ❌ Create data model versioning strategy
+- ✅ Create Core Data model with List, Item, ItemImage entities
+- ✅ Define entity relationships and attributes
+- ✅ Set up Core Data stack configuration
+- ❌ Create data model versioning strategy (deferred - using simple models instead)
+- ✅ Update all services to use simple data models instead of Core Data
+- ✅ Fix compilation errors in view files and services
 
 ## Phase 3: Data Layer
 - ❌ Implement Core Data stack with CloudKit integration

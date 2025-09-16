@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CoreData
 import SwiftUI
 
 class MainViewModel: ObservableObject {
@@ -14,11 +13,9 @@ class MainViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let coreDataManager = CoreDataManager.shared
-    private let viewContext: NSManagedObjectContext
+    private let dataManager = DataManager.shared
     
     init() {
-        self.viewContext = coreDataManager.container.viewContext
         loadLists()
     }
     
@@ -26,19 +23,30 @@ class MainViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        let request = NSFetchRequest<List>(entityName: "List")
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \List.orderNumber, ascending: true)]
-        
-        do {
-            lists = try viewContext.fetch(request)
-        } catch {
-            errorMessage = "Failed to load lists: \(error.localizedDescription)"
-        }
+        // Get lists from DataManager
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
         
         isLoading = false
     }
     
-    func save() {
-        coreDataManager.save()
+    func addList(name: String) {
+        let newList = List(name: name)
+        dataManager.addList(newList)
+        lists.append(newList)
+    }
+    
+    func deleteList(_ list: List) {
+        dataManager.deleteList(withId: list.id)
+        lists.removeAll { $0.id == list.id }
+    }
+    
+    func updateList(_ list: List, name: String) {
+        var updatedList = list
+        updatedList.name = name
+        updatedList.updateModifiedDate()
+        dataManager.updateList(updatedList)
+        if let index = lists.firstIndex(where: { $0.id == list.id }) {
+            lists[index] = updatedList
+        }
     }
 }

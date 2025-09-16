@@ -73,7 +73,7 @@ struct ItemDetailView: View {
                         .font(.headline)
                         .foregroundColor(.secondary)
                     
-                    Text(item.createdAt?.formatted() ?? "Unknown")
+                    Text(item.createdAt.formatted())
                         .font(.body)
                 }
                 
@@ -97,6 +97,6 @@ struct ItemDetailView: View {
 
 #Preview {
     NavigationView {
-        ItemDetailView(item: Item())
+        ItemDetailView(item: Item(title: "Sample Item"))
     }
 }

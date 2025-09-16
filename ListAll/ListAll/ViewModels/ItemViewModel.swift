@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CoreData
 import SwiftUI
 
 class ItemViewModel: ObservableObject {
@@ -14,21 +13,30 @@ class ItemViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let coreDataManager = CoreDataManager.shared
-    private let viewContext: NSManagedObjectContext
+    private let dataManager = DataManager.shared
     
     init(item: Item) {
         self.item = item
-        self.viewContext = coreDataManager.container.viewContext
     }
     
     func save() {
-        coreDataManager.save()
+        dataManager.updateItem(item)
     }
     
     func toggleCrossedOut() {
-        item.isCrossedOut.toggle()
-        item.modifiedAt = Date()
-        save()
+        var updatedItem = item
+        updatedItem.toggleCrossedOut()
+        dataManager.updateItem(updatedItem)
+        self.item = updatedItem
+    }
+    
+    func updateItem(title: String, description: String, quantity: Int) {
+        var updatedItem = item
+        updatedItem.title = title
+        updatedItem.itemDescription = description.isEmpty ? nil : description
+        updatedItem.quantity = quantity
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+        self.item = updatedItem
     }
 }

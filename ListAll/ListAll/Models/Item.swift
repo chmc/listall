@@ -6,46 +6,95 @@
 //
 
 import Foundation
-import CoreData
 
-@objc(Item)
-public class Item: NSManagedObject {
+// MARK: - Item Model
+struct Item: Identifiable, Codable {
+    let id: UUID
+    var title: String
+    var itemDescription: String?
+    var quantity: Int
+    var orderNumber: Int
+    var isCrossedOut: Bool
+    var createdAt: Date
+    var modifiedAt: Date
+    var listId: UUID?
+    var images: [ItemImage]
     
+    init(title: String, listId: UUID? = nil) {
+        self.id = UUID()
+        self.title = title
+        self.itemDescription = nil
+        self.quantity = 1
+        self.orderNumber = 0
+        self.isCrossedOut = false
+        self.createdAt = Date()
+        self.modifiedAt = Date()
+        self.listId = listId
+        self.images = []
+    }
 }
 
-// MARK: - Generated accessors for images
+// MARK: - Convenience Methods
 extension Item {
     
-    @NSManaged public var id: UUID?
-    @NSManaged public var title: String?
-    @NSManaged public var itemDescription: String?
-    @NSManaged public var quantity: Int32
-    @NSManaged public var orderNumber: Int32
-    @NSManaged public var isCrossedOut: Bool
-    @NSManaged public var createdAt: Date?
-    @NSManaged public var modifiedAt: Date?
-    @NSManaged public var list: List?
-    @NSManaged public var images: NSSet?
+    /// Returns the images as an array sorted by order number
+    var sortedImages: [ItemImage] {
+        return images.sorted { $0.orderNumber < $1.orderNumber }
+    }
     
-}
-
-// MARK: - Generated accessors for images
-extension Item {
+    /// Returns the count of images for this item
+    var imageCount: Int {
+        return images.count
+    }
     
-    @objc(addImagesObject:)
-    @NSManaged public func addToImages(_ value: ItemImage)
+    /// Returns true if the item has images
+    var hasImages: Bool {
+        return imageCount > 0
+    }
     
-    @objc(removeImagesObject:)
-    @NSManaged public func removeFromImages(_ value: ItemImage)
+    /// Returns the display title or a default value
+    var displayTitle: String {
+        return title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled Item" : title
+    }
     
-    @objc(addImages:)
-    @NSManaged public func addToImages(_ values: NSSet)
+    /// Returns the display description or empty string
+    var displayDescription: String {
+        return itemDescription?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
     
-    @objc(removeImages:)
-    @NSManaged public func removeFromImages(_ values: NSSet)
+    /// Returns true if the item has a description
+    var hasDescription: Bool {
+        return !displayDescription.isEmpty
+    }
     
-}
-
-extension Item: Identifiable {
+    /// Updates the modified date
+    mutating func updateModifiedDate() {
+        modifiedAt = Date()
+    }
     
+    /// Toggles the crossed out state
+    mutating func toggleCrossedOut() {
+        isCrossedOut.toggle()
+        updateModifiedDate()
+    }
+    
+    /// Validates the item data
+    func validate() -> Bool {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+        guard quantity > 0 else {
+            return false
+        }
+        return true
+    }
+    
+    /// Returns a formatted quantity string
+    var formattedQuantity: String {
+        if quantity == 1 {
+            return ""
+        } else {
+            return "\(quantity)x"
+        }
+    }
 }

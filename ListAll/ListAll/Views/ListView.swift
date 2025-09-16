@@ -44,7 +44,7 @@ struct ListView: View {
                 }
             }
         }
-        .navigationTitle(list.name ?? "List")
+        .navigationTitle(list.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -63,6 +63,6 @@ struct ListView: View {
 
 #Preview {
     NavigationView {
-        ListView(list: List())
+        ListView(list: List(name: "Sample List"))
     }
 }

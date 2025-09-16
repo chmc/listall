@@ -6,16 +6,14 @@
 //
 
 import Foundation
-import CoreData
 
 class SuggestionService: ObservableObject {
     @Published var suggestions: [String] = []
     
-    private let coreDataManager = CoreDataManager.shared
-    private let viewContext: NSManagedObjectContext
+    private let dataManager = DataManager.shared
     
     init() {
-        self.viewContext = coreDataManager.container.viewContext
+        // Initialize with empty suggestions
     }
     
     func getSuggestions(for searchText: String) {
@@ -24,32 +22,23 @@ class SuggestionService: ObservableObject {
             return
         }
         
-        let request = NSFetchRequest<Item>(entityName: "Item")
-        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchText)
-        request.propertiesToFetch = ["title"]
-        request.returnsDistinctResults = true
-        request.fetchLimit = 10
-        
-        do {
-            let items = try viewContext.fetch(request)
-            suggestions = items.compactMap { $0.title }.filter { !$0.isEmpty }
-        } catch {
-            print("Failed to fetch suggestions: \(error)")
-            suggestions = []
+        let allItems = dataManager.lists.flatMap { $0.items }
+        let matchingItems = allItems.filter { item in
+            item.title.localizedCaseInsensitiveContains(searchText)
         }
+        
+        suggestions = Array(Set(matchingItems.map { $0.title }))
+            .filter { !$0.isEmpty }
+            .prefix(10)
+            .map { String($0) }
     }
     
     func getRecentItems() -> [String] {
-        let request = NSFetchRequest<Item>(entityName: "Item")
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.createdAt, ascending: false)]
-        request.fetchLimit = 20
-        
-        do {
-            let items = try viewContext.fetch(request)
-            return items.compactMap { $0.title }.filter { !$0.isEmpty }
-        } catch {
-            print("Failed to fetch recent items: \(error)")
-            return []
-        }
+        let allItems = dataManager.lists.flatMap { $0.items }
+        return allItems
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(20)
+            .compactMap { $0.title }
+            .filter { !$0.isEmpty }
     }
 }

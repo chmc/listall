@@ -6,81 +6,66 @@
 //
 
 import Foundation
-import CoreData
 
 class DataRepository: ObservableObject {
-    private let coreDataManager = CoreDataManager.shared
-    private let viewContext: NSManagedObjectContext
-    
-    init() {
-        self.viewContext = coreDataManager.container.viewContext
-    }
+    private let dataManager = DataManager.shared
     
     // MARK: - List Operations
     
     func createList(name: String) -> List {
-        let newList = List(context: viewContext)
-        newList.id = UUID()
-        newList.name = name
-        newList.orderNumber = Int32(Date().timeIntervalSince1970)
-        newList.createdAt = Date()
-        newList.modifiedAt = Date()
-        
-        save()
+        let newList = List(name: name)
+        dataManager.addList(newList)
         return newList
     }
     
     func deleteList(_ list: List) {
-        viewContext.delete(list)
-        save()
+        dataManager.deleteList(withId: list.id)
     }
     
     func updateList(_ list: List, name: String) {
-        list.name = name
-        list.modifiedAt = Date()
-        save()
+        var updatedList = list
+        updatedList.name = name
+        updatedList.updateModifiedDate()
+        dataManager.updateList(updatedList)
+    }
+    
+    func getAllLists() -> [List] {
+        return dataManager.lists
     }
     
     // MARK: - Item Operations
     
-    func createItem(in list: List, title: String, description: String = "", quantity: Int32 = 1) -> Item {
-        let newItem = Item(context: viewContext)
-        newItem.id = UUID()
-        newItem.title = title
-        newItem.itemDescription = description
+    func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {
+        var newItem = Item(title: title)
+        newItem.itemDescription = description.isEmpty ? nil : description
         newItem.quantity = quantity
-        newItem.orderNumber = Int32(Date().timeIntervalSince1970)
-        newItem.isCrossedOut = false
-        newItem.createdAt = Date()
-        newItem.modifiedAt = Date()
-        newItem.list = list
-        
-        save()
+        newItem.listId = list.id
+        dataManager.addItem(newItem, to: list.id)
         return newItem
     }
     
     func deleteItem(_ item: Item) {
-        viewContext.delete(item)
-        save()
+        if let listId = item.listId {
+            dataManager.deleteItem(withId: item.id, from: listId)
+        }
     }
     
-    func updateItem(_ item: Item, title: String, description: String, quantity: Int32) {
-        item.title = title
-        item.itemDescription = description
-        item.quantity = quantity
-        item.modifiedAt = Date()
-        save()
+    func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
+        var updatedItem = item
+        updatedItem.title = title
+        updatedItem.itemDescription = description.isEmpty ? nil : description
+        updatedItem.quantity = quantity
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
     }
     
     func toggleItemCrossedOut(_ item: Item) {
-        item.isCrossedOut.toggle()
-        item.modifiedAt = Date()
-        save()
+        var updatedItem = item
+        updatedItem.toggleCrossedOut()
+        dataManager.updateItem(updatedItem)
     }
     
-    // MARK: - Private Methods
-    
-    private func save() {
-        coreDataManager.save()
+    func getItems(for list: List) -> [Item] {
+        return list.sortedItems
     }
 }

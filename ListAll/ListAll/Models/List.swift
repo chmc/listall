@@ -6,42 +6,82 @@
 //
 
 import Foundation
-import CoreData
 
-@objc(List)
-public class List: NSManagedObject {
+// MARK: - List Model
+struct List: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var orderNumber: Int
+    var createdAt: Date
+    var modifiedAt: Date
+    var items: [Item]
     
+    init(name: String) {
+        self.id = UUID()
+        self.name = name
+        self.orderNumber = 0
+        self.createdAt = Date()
+        self.modifiedAt = Date()
+        self.items = []
+    }
 }
 
-// MARK: - Generated accessors for items
+// MARK: - Convenience Methods
 extension List {
     
-    @NSManaged public var id: UUID?
-    @NSManaged public var name: String?
-    @NSManaged public var orderNumber: Int32
-    @NSManaged public var createdAt: Date?
-    @NSManaged public var modifiedAt: Date?
-    @NSManaged public var items: NSSet?
+    /// Returns the items as an array sorted by order number
+    var sortedItems: [Item] {
+        return items.sorted { $0.orderNumber < $1.orderNumber }
+    }
     
-}
-
-// MARK: - Generated accessors for items
-extension List {
+    /// Returns the count of items in this list
+    var itemCount: Int {
+        return items.count
+    }
     
-    @objc(addItemsObject:)
-    @NSManaged public func addToItems(_ value: Item)
+    /// Returns the count of crossed out items
+    var crossedOutItemCount: Int {
+        return items.filter { $0.isCrossedOut }.count
+    }
     
-    @objc(removeItemsObject:)
-    @NSManaged public func removeFromItems(_ value: Item)
+    /// Returns the count of active (not crossed out) items
+    var activeItemCount: Int {
+        return itemCount - crossedOutItemCount
+    }
     
-    @objc(addItems:)
-    @NSManaged public func addToItems(_ values: NSSet)
+    /// Updates the modified date
+    mutating func updateModifiedDate() {
+        modifiedAt = Date()
+    }
     
-    @objc(removeItems:)
-    @NSManaged public func removeFromItems(_ values: NSSet)
+    /// Validates the list data
+    func validate() -> Bool {
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+        return true
+    }
     
-}
-
-extension List: Identifiable {
+    /// Adds an item to the list
+    mutating func addItem(_ item: Item) {
+        var newItem = item
+        newItem.listId = id
+        newItem.orderNumber = itemCount
+        items.append(newItem)
+        updateModifiedDate()
+    }
     
+    /// Removes an item from the list
+    mutating func removeItem(withId itemId: UUID) {
+        items.removeAll { $0.id == itemId }
+        updateModifiedDate()
+    }
+    
+    /// Updates an item in the list
+    mutating func updateItem(_ updatedItem: Item) {
+        if let index = items.firstIndex(where: { $0.id == updatedItem.id }) {
+            items[index] = updatedItem
+            updateModifiedDate()
+        }
+    }
 }

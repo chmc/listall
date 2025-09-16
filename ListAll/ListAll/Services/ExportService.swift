@@ -6,22 +6,21 @@
 //
 
 import Foundation
-import CoreData
+// import CoreData // Removed CoreData import
 
 class ExportService: ObservableObject {
-    private let coreDataManager = CoreDataManager.shared
-    private let viewContext: NSManagedObjectContext
+    private let dataManager = DataManager.shared // Changed from coreDataManager
+    // private let viewContext: NSManagedObjectContext // Removed viewContext
     
     init() {
-        self.viewContext = coreDataManager.container.viewContext
+        // self.viewContext = coreDataManager.container.viewContext // Removed CoreData initialization
     }
     
     func exportToJSON() -> Data? {
-        let request = NSFetchRequest<List>(entityName: "List")
-        request.relationshipKeyPathsForPrefetching = ["items", "items.images"]
+        // Simulate fetching from DataManager
+        let lists = dataManager.lists
         
         do {
-            let lists = try viewContext.fetch(request)
             let exportData = ExportData(lists: lists.map { ListExportData(from: $0) })
             return try JSONEncoder().encode(exportData)
         } catch {
@@ -31,33 +30,26 @@ class ExportService: ObservableObject {
     }
     
     func exportToCSV() -> String? {
-        let request = NSFetchRequest<List>(entityName: "List")
-        request.relationshipKeyPathsForPrefetching = ["items"]
+        // Simulate fetching from DataManager
+        let lists = dataManager.lists
+        var csvContent = "List Name,Item Title,Description,Quantity,Crossed Out,Created Date\n"
         
-        do {
-            let lists = try viewContext.fetch(request)
-            var csvContent = "List Name,Item Title,Description,Quantity,Crossed Out,Created Date\n"
-            
-            for list in lists {
-                let items = list.items?.allObjects as? [Item] ?? []
-                for item in items {
-                    let row = [
-                        list.name ?? "",
-                        item.title ?? "",
-                        item.itemDescription ?? "",
-                        String(item.quantity),
-                        item.isCrossedOut ? "Yes" : "No",
-                        item.createdAt?.formatted() ?? ""
-                    ].joined(separator: ",")
-                    csvContent += row + "\n"
-                }
+        for list in lists {
+            let items = dataManager.getItems(forListId: list.id)
+            for item in items {
+                let row = [
+                    list.name,
+                    item.title,
+                    item.itemDescription ?? "",
+                    String(item.quantity),
+                    item.isCrossedOut ? "Yes" : "No",
+                    item.createdAt.formatted()
+                ].joined(separator: ",")
+                csvContent += row + "\n"
             }
-            
-            return csvContent
-        } catch {
-            print("Failed to export to CSV: \(error)")
-            return nil
         }
+        
+        return csvContent
     }
 }
 
@@ -84,12 +76,12 @@ struct ListExportData: Codable {
     let items: [ItemExportData]
     
     init(from list: List) {
-        self.id = list.id ?? UUID()
-        self.name = list.name ?? ""
-        self.orderNumber = list.orderNumber
-        self.createdAt = list.createdAt ?? Date()
-        self.modifiedAt = list.modifiedAt ?? Date()
-        self.items = (list.items?.allObjects as? [Item] ?? []).map { ItemExportData(from: $0) }
+        self.id = list.id
+        self.name = list.name
+        self.orderNumber = Int32(list.orderNumber)
+        self.createdAt = list.createdAt
+        self.modifiedAt = list.modifiedAt
+        self.items = list.items.map { ItemExportData(from: $0) }
     }
 }
 
@@ -104,13 +96,13 @@ struct ItemExportData: Codable {
     let modifiedAt: Date
     
     init(from item: Item) {
-        self.id = item.id ?? UUID()
-        self.title = item.title ?? ""
+        self.id = item.id
+        self.title = item.title
         self.description = item.itemDescription ?? ""
-        self.quantity = item.quantity
-        self.orderNumber = item.orderNumber
+        self.quantity = Int32(item.quantity)
+        self.orderNumber = Int32(item.orderNumber)
         self.isCrossedOut = item.isCrossedOut
-        self.createdAt = item.createdAt ?? Date()
-        self.modifiedAt = item.modifiedAt ?? Date()
+        self.createdAt = item.createdAt
+        self.modifiedAt = item.modifiedAt
     }
 }
