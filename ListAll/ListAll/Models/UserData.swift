@@ -1,0 +1,50 @@
+import Foundation
+
+// MARK: - UserData Model
+struct UserData: Identifiable, Codable, Equatable {
+    var id: UUID
+    var userID: String
+    var showCrossedOutItems: Bool
+    var exportPreferences: Data?
+    var lastSyncDate: Date?
+    var createdAt: Date
+    
+    init(userID: String) {
+        self.id = UUID()
+        self.userID = userID
+        self.showCrossedOutItems = true
+        self.exportPreferences = nil
+        self.lastSyncDate = nil
+        self.createdAt = Date()
+    }
+}
+
+// MARK: - Convenience Methods
+extension UserData {
+    
+    /// Returns the export preferences as a dictionary
+    var exportPreferencesDict: [String: Any] {
+        guard let data = exportPreferences else { return [:] }
+        return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+    }
+    
+    /// Sets the export preferences from a dictionary
+    mutating func setExportPreferences(_ dict: [String: Any]) {
+        if let data = try? JSONSerialization.data(withJSONObject: dict) {
+            self.exportPreferences = data
+        }
+    }
+    
+    /// Updates the last sync date
+    mutating func updateLastSyncDate() {
+        lastSyncDate = Date()
+    }
+    
+    /// Validates the user data
+    func validate() -> Bool {
+        guard !userID.isEmpty else {
+            return false
+        }
+        return true
+    }
+}

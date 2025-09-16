@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Item Model
 struct Item: Identifiable, Codable, Equatable {
-    let id: UUID
+    var id: UUID
     var title: String
     var itemDescription: String?
     var quantity: Int

@@ -14,7 +14,22 @@ extension String {
     
     /// Returns a URL if the string is a valid URL
     var asURL: URL? {
-        return URL(string: self)
+        // First try direct URL creation
+        if let url = URL(string: self) {
+            return url
+        }
+        
+        // If that fails, try adding a scheme for common cases
+        if self.hasPrefix("www.") {
+            return URL(string: "https://" + self)
+        }
+        
+        // For file paths, try file:// scheme
+        if self.hasPrefix("/") {
+            return URL(string: "file://" + self)
+        }
+        
+        return nil
     }
     
     /// Capitalizes the first letter of the string

@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - List Model
 struct List: Identifiable, Codable, Equatable {
-    let id: UUID
+    var id: UUID
     var name: String
     var orderNumber: Int
     var createdAt: Date

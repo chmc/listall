@@ -1,11 +1,154 @@
 import Foundation
+import CoreData
 import CloudKit
 
-// MARK: - Data Manager
+// MARK: - Core Data Manager
+class CoreDataManager: ObservableObject {
+    static let shared = CoreDataManager()
+    
+    // MARK: - Core Data Stack
+    lazy var persistentContainer: NSPersistentContainer = {
+        let container = NSPersistentContainer(name: "ListAll")
+        
+        // Configure for testing - disable CloudKit for now
+        guard let description = container.persistentStoreDescriptions.first else {
+            fatalError("Failed to retrieve a persistent store description.")
+        }
+        
+        // Enable history tracking for future CloudKit integration
+        description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+        description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+        
+        // For testing, use in-memory store to avoid CloudKit issues
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            // Running in tests - use in-memory store
+            description.url = URL(fileURLWithPath: "/dev/null")
+        }
+        #endif
+        
+        container.loadPersistentStores { _, error in
+            if let error = error as NSError? {
+                fatalError("Unresolved error \(error), \(error.userInfo)")
+            }
+        }
+        
+        // Configure view context
+        container.viewContext.automaticallyMergesChangesFromParent = true
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        
+        return container
+    }()
+    
+    // MARK: - Contexts
+    var viewContext: NSManagedObjectContext {
+        return persistentContainer.viewContext
+    }
+    
+    var backgroundContext: NSManagedObjectContext {
+        return persistentContainer.newBackgroundContext()
+    }
+    
+    private init() {
+        // Initialize Core Data stack
+    }
+    
+    // MARK: - Core Data Operations
+    
+    func save() {
+        let context = persistentContainer.viewContext
+        
+        if context.hasChanges {
+            do {
+                try context.save()
+            } catch {
+                print("Failed to save context: \(error)")
+            }
+        }
+    }
+    
+    func saveContext(_ context: NSManagedObjectContext) {
+        if context.hasChanges {
+            do {
+                try context.save()
+            } catch {
+                print("Failed to save context: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - CloudKit Status
+    
+    func checkCloudKitStatus() async -> CKAccountStatus {
+        // For now, return unavailable since we're not using CloudKit
+        return .couldNotDetermine
+    }
+    
+    // MARK: - Data Migration
+    
+    func migrateDataIfNeeded() {
+        // Check if we need to migrate from UserDefaults to Core Data
+        if UserDefaults.standard.object(forKey: "saved_lists") != nil {
+            migrateFromUserDefaults()
+        }
+    }
+    
+    private func migrateFromUserDefaults() {
+        guard let data = UserDefaults.standard.data(forKey: "saved_lists"),
+              let lists = try? JSONDecoder().decode([List].self, from: data) else {
+            return
+        }
+        
+        let context = backgroundContext
+        context.perform {
+            for listData in lists {
+                let list = ListEntity(context: context)
+                list.id = listData.id
+                list.name = listData.name
+                list.orderNumber = Int32(listData.orderNumber)
+                list.createdAt = listData.createdAt
+                list.modifiedAt = listData.modifiedAt
+                list.isArchived = false
+                
+                for itemData in listData.items {
+                    let item = ItemEntity(context: context)
+                    item.id = itemData.id
+                    item.title = itemData.title
+                    item.itemDescription = itemData.itemDescription
+                    item.quantity = Int32(itemData.quantity)
+                    item.orderNumber = Int32(itemData.orderNumber)
+                    item.isCrossedOut = itemData.isCrossedOut
+                    item.createdAt = itemData.createdAt
+                    item.modifiedAt = itemData.modifiedAt
+                    item.list = list
+                    
+                    for imageData in itemData.images {
+                        let image = ItemImageEntity(context: context)
+                        image.id = imageData.id
+                        image.imageData = imageData.imageData
+                        image.orderNumber = Int32(imageData.orderNumber)
+                        image.createdAt = imageData.createdAt
+                        image.item = item
+                    }
+                }
+            }
+            
+            self.saveContext(context)
+            
+            // Clear UserDefaults data after migration
+            DispatchQueue.main.async {
+                UserDefaults.standard.removeObject(forKey: "saved_lists")
+            }
+        }
+    }
+}
+
+// MARK: - Legacy Data Manager (for backward compatibility)
 class DataManager: ObservableObject {
     static let shared = DataManager()
     
     @Published var lists: [List] = []
+    private let coreDataManager = CoreDataManager.shared
     
     private init() {
         loadData()
@@ -14,68 +157,156 @@ class DataManager: ObservableObject {
     // MARK: - Data Operations
     
     func loadData() {
-        // For now, load sample data
-        // In the future, this will load from Core Data + CloudKit
-        if lists.isEmpty {
-            createSampleData()
+        // Load from Core Data
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
+        
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            lists = listEntities.map { $0.toList() }
+        } catch {
+            print("Failed to fetch lists: \(error)")
+            // Fallback to sample data
+            if lists.isEmpty {
+                createSampleData()
+            }
         }
     }
     
     func saveData() {
-        // For now, just save to UserDefaults as a temporary solution
-        // In the future, this will save to Core Data + CloudKit
-        if let encoded = try? JSONEncoder().encode(lists) {
-            UserDefaults.standard.set(encoded, forKey: "saved_lists")
-        }
+        coreDataManager.save()
     }
     
     // MARK: - List Operations
     
     func addList(_ list: List) {
-        lists.append(list)
+        let context = coreDataManager.viewContext
+        let listEntity = ListEntity(context: context)
+        listEntity.id = list.id
+        listEntity.name = list.name
+        listEntity.orderNumber = Int32(list.orderNumber)
+        listEntity.createdAt = list.createdAt
+        listEntity.modifiedAt = list.modifiedAt
+        listEntity.isArchived = false
+        
         saveData()
+        loadData() // Refresh the published array
     }
     
     func updateList(_ list: List) {
-        if let index = lists.firstIndex(where: { $0.id == list.id }) {
-            lists[index] = list
-            saveData()
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", list.id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            if let listEntity = results.first {
+                listEntity.name = list.name
+                listEntity.orderNumber = Int32(list.orderNumber)
+                listEntity.modifiedAt = list.modifiedAt
+                saveData()
+                loadData()
+            }
+        } catch {
+            print("Failed to update list: \(error)")
         }
     }
     
     func deleteList(withId id: UUID) {
-        lists.removeAll { $0.id == id }
-        saveData()
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            for listEntity in results {
+                coreDataManager.viewContext.delete(listEntity)
+            }
+            saveData()
+            loadData()
+        } catch {
+            print("Failed to delete list: \(error)")
+        }
     }
     
     // MARK: - Item Operations
     
     func addItem(_ item: Item, to listId: UUID) {
-        if let index = lists.firstIndex(where: { $0.id == listId }) {
-            lists[index].addItem(item)
-            saveData()
+        let context = coreDataManager.viewContext
+        
+        // Find the list
+        let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        listRequest.predicate = NSPredicate(format: "id == %@", listId as CVarArg)
+        
+        do {
+            let listResults = try context.fetch(listRequest)
+            if let listEntity = listResults.first {
+                let itemEntity = ItemEntity(context: context)
+                itemEntity.id = item.id
+                itemEntity.title = item.title
+                itemEntity.itemDescription = item.itemDescription
+                itemEntity.quantity = Int32(item.quantity)
+                itemEntity.orderNumber = Int32(item.orderNumber)
+                itemEntity.isCrossedOut = item.isCrossedOut
+                itemEntity.createdAt = item.createdAt
+                itemEntity.modifiedAt = item.modifiedAt
+                itemEntity.list = listEntity
+                
+                saveData()
+                loadData()
+            }
+        } catch {
+            print("Failed to add item: \(error)")
         }
     }
     
     func updateItem(_ item: Item) {
-        if let listIndex = lists.firstIndex(where: { $0.id == item.listId }) {
-            lists[listIndex].updateItem(item)
-            saveData()
+        let request: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", item.id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            if let itemEntity = results.first {
+                itemEntity.title = item.title
+                itemEntity.itemDescription = item.itemDescription
+                itemEntity.quantity = Int32(item.quantity)
+                itemEntity.orderNumber = Int32(item.orderNumber)
+                itemEntity.isCrossedOut = item.isCrossedOut
+                itemEntity.modifiedAt = item.modifiedAt
+                saveData()
+                loadData()
+            }
+        } catch {
+            print("Failed to update item: \(error)")
         }
     }
     
     func deleteItem(withId id: UUID, from listId: UUID) {
-        if let listIndex = lists.firstIndex(where: { $0.id == listId }) {
-            lists[listIndex].removeItem(withId: id)
+        let request: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            for itemEntity in results {
+                coreDataManager.viewContext.delete(itemEntity)
+            }
             saveData()
+            loadData()
+        } catch {
+            print("Failed to delete item: \(error)")
         }
     }
     
     func getItems(forListId listId: UUID) -> [Item] {
-        if let list = lists.first(where: { $0.id == listId }) {
-            return list.items
+        let request: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "list.id == %@", listId as CVarArg)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ItemEntity.orderNumber, ascending: true)]
+        
+        do {
+            let itemEntities = try coreDataManager.viewContext.fetch(request)
+            return itemEntities.map { $0.toItem() }
+        } catch {
+            print("Failed to fetch items: \(error)")
+            return []
         }
-        return []
     }
     
     // MARK: - Sample Data
@@ -94,19 +325,16 @@ class DataManager: ObservableObject {
         list2.addItem(Item(title: "Brushes"))
         
         lists = [list1, list2]
-        saveData()
+        
+        // Save sample data to Core Data
+        for list in lists {
+            addList(list)
+        }
     }
     
-    // MARK: - CloudKit Status (Placeholder)
+    // MARK: - CloudKit Status (Delegated to Core Data Manager)
     
     func checkCloudKitStatus() async -> CKAccountStatus {
-        return await withCheckedContinuation { continuation in
-            CKContainer.default().accountStatus { status, error in
-                if let error = error {
-                    print("CloudKit account status error: \(error)")
-                }
-                continuation.resume(returning: status)
-            }
-        }
+        return await coreDataManager.checkCloudKitStatus()
     }
 }

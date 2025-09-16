@@ -1,6 +1,8 @@
 import Foundation
+import CoreData
 
 class DataRepository: ObservableObject {
+    private let coreDataManager = CoreDataManager.shared
     private let dataManager = DataManager.shared
     
     // MARK: - List Operations
@@ -24,6 +26,10 @@ class DataRepository: ObservableObject {
     
     func getAllLists() -> [List] {
         return dataManager.lists
+    }
+    
+    func getList(by id: UUID) -> List? {
+        return dataManager.lists.first { $0.id == id }
     }
     
     // MARK: - Item Operations
@@ -60,5 +66,177 @@ class DataRepository: ObservableObject {
     
     func getItems(for list: List) -> [Item] {
         return list.sortedItems
+    }
+    
+    func getItem(by id: UUID) -> Item? {
+        for list in dataManager.lists {
+            if let item = list.items.first(where: { $0.id == id }) {
+                return item
+            }
+        }
+        return nil
+    }
+    
+    // MARK: - Image Operations
+    
+    func addImage(to item: Item, imageData: Data) -> ItemImage {
+        var itemImage = ItemImage(imageData: imageData, itemId: item.id)
+        itemImage.compressImage()
+        
+        // Update the item with the new image
+        var updatedItem = item
+        updatedItem.images.append(itemImage)
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+        
+        return itemImage
+    }
+    
+    func removeImage(_ image: ItemImage, from item: Item) {
+        var updatedItem = item
+        updatedItem.images.removeAll { $0.id == image.id }
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+    }
+    
+    func updateImageOrder(for item: Item, images: [ItemImage]) {
+        var updatedItem = item
+        updatedItem.images = images
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+    }
+    
+    // MARK: - User Data Operations
+    
+    func getCurrentUser() -> UserData? {
+        let request: NSFetchRequest<UserDataEntity> = UserDataEntity.fetchRequest()
+        request.fetchLimit = 1
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            return results.first?.toUserData()
+        } catch {
+            print("Failed to fetch user data: \(error)")
+            return nil
+        }
+    }
+    
+    func createOrUpdateUser(userID: String) -> UserData {
+        let request: NSFetchRequest<UserDataEntity> = UserDataEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "userID == %@", userID)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            if let existingUser = results.first {
+                return existingUser.toUserData()
+            } else {
+                let newUser = UserData(userID: userID)
+                let userEntity = UserDataEntity.fromUserData(newUser, context: coreDataManager.viewContext)
+                coreDataManager.save()
+                return newUser
+            }
+        } catch {
+            print("Failed to create/update user: \(error)")
+            return UserData(userID: userID)
+        }
+    }
+    
+    func updateUserPreferences(_ userData: UserData) {
+        let request: NSFetchRequest<UserDataEntity> = UserDataEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", userData.id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            if let userEntity = results.first {
+                userEntity.showCrossedOutItems = userData.showCrossedOutItems
+                userEntity.exportPreferences = userData.exportPreferences
+                userEntity.lastSyncDate = userData.lastSyncDate
+                coreDataManager.save()
+            }
+        } catch {
+            print("Failed to update user preferences: \(error)")
+        }
+    }
+    
+    // MARK: - Data Validation
+    
+    func validateList(_ list: List) -> ValidationResult {
+        if list.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .failure("List name cannot be empty")
+        }
+        
+        if list.name.count > 100 {
+            return .failure("List name must be 100 characters or less")
+        }
+        
+        return .success
+    }
+    
+    func validateItem(_ item: Item) -> ValidationResult {
+        if item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .failure("Item title cannot be empty")
+        }
+        
+        if item.title.count > 200 {
+            return .failure("Item title must be 200 characters or less")
+        }
+        
+        if let description = item.itemDescription, description.count > 50000 {
+            return .failure("Item description must be 50,000 characters or less")
+        }
+        
+        if item.quantity < 1 {
+            return .failure("Item quantity must be at least 1")
+        }
+        
+        return .success
+    }
+    
+    func validateImage(_ image: ItemImage) -> ValidationResult {
+        guard let imageData = image.imageData else {
+            return .failure("Image data is required")
+        }
+        
+        if imageData.count > 5 * 1024 * 1024 { // 5MB limit
+            return .failure("Image size must be 5MB or less")
+        }
+        
+        return .success
+    }
+    
+    // MARK: - Search Operations
+    
+    func searchLists(query: String) -> [List] {
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "name CONTAINS[cd] %@", query)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
+        
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            return listEntities.map { $0.toList() }
+        } catch {
+            print("Failed to search lists: \(error)")
+            return []
+        }
+    }
+    
+    func searchItems(query: String) -> [Item] {
+        let request: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@ OR itemDescription CONTAINS[cd] %@", query, query)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ItemEntity.createdAt, ascending: false)]
+        
+        do {
+            let itemEntities = try coreDataManager.viewContext.fetch(request)
+            return itemEntities.map { $0.toItem() }
+        } catch {
+            print("Failed to search items: \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Data Migration
+    
+    func performDataMigration() {
+        coreDataManager.migrateDataIfNeeded()
     }
 }

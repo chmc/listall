@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22000" systemVersion="16F6" minimumToolsVersion="22000" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ListEntity" representedClassName="ListEntity" syncable="YES">
+        <attribute name="id" optional="NO" attributeType="UUID" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="orderNumber" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="modifiedAt" optional="NO" attributeType="Date" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="isArchived" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <relationship name="items" optional="YES" toMany="YES" ordered="YES" deletionRule="Cascade" destinationEntity="ItemEntity" inverseName="list" inverseEntity="ItemEntity"/>
+        <relationship name="owner" optional="YES" toMany="NO" deletionRule="Nullify" destinationEntity="UserDataEntity" inverseName="lists" inverseEntity="UserDataEntity"/>
+    </entity>
+    <entity name="ItemEntity" representedClassName="ItemEntity" syncable="YES">
+        <attribute name="id" optional="NO" attributeType="UUID" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="title" optional="NO" attributeType="String" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="itemDescription" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="quantity" optional="NO" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="orderNumber" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="isCrossedOut" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="modifiedAt" optional="NO" attributeType="Date" defaultValueString="" usesScalarValueType="NO"/>
+        <relationship name="list" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ListEntity" inverseName="items" inverseEntity="ListEntity"/>
+        <relationship name="images" optional="YES" toMany="YES" ordered="YES" deletionRule="Cascade" destinationEntity="ItemImageEntity" inverseName="item" inverseEntity="ItemImageEntity"/>
+    </entity>
+    <entity name="ItemImageEntity" representedClassName="ItemImageEntity" syncable="YES">
+        <attribute name="id" optional="NO" attributeType="UUID" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="imageData" optional="YES" attributeType="Binary" usesScalarValueType="NO"/>
+        <attribute name="orderNumber" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" defaultValueString="" usesScalarValueType="NO"/>
+        <relationship name="item" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ItemEntity" inverseName="images" inverseEntity="ItemEntity"/>
+    </entity>
+    <entity name="UserDataEntity" representedClassName="UserDataEntity" syncable="YES">
+        <attribute name="id" optional="NO" attributeType="UUID" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="userID" optional="NO" attributeType="String" defaultValueString="" usesScalarValueType="NO"/>
+        <attribute name="showCrossedOutItems" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="exportPreferences" optional="YES" attributeType="Binary" usesScalarValueType="NO"/>
+        <attribute name="lastSyncDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" defaultValueString="" usesScalarValueType="NO"/>
+        <relationship name="lists" optional="YES" toMany="YES" ordered="YES" deletionRule="Cascade" destinationEntity="ListEntity" inverseName="owner" inverseEntity="ListEntity"/>
+    </entity>
+</model>
