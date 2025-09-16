@@ -68,6 +68,14 @@
 - **Application**: Implemented timestamp-based last-write-wins with user notification
 - **Benefit**: Data consistency across devices with minimal user intervention
 
+## Code Quality Standards
+
+### No File Headers
+- **Learning**: File headers with author names, creation dates, and project names add no value and create maintenance overhead
+- **Application**: Never add any kind of file headers to any files, including author comments, creation dates, or project information
+- **Benefit**: Cleaner code, reduced maintenance burden, and focus on actual functionality
+- **Rule**: Files should start directly with imports and code, no header comments of any kind
+
 ## Testing Best Practices
 
 ### Test Only Existing Code
