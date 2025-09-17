@@ -75,6 +75,7 @@ struct MainView: View {
                         }) {
                             Image(systemName: Constants.UI.addIcon)
                         }
+                        .accessibilityIdentifier("AddListButton")
                     }
                 }
             }

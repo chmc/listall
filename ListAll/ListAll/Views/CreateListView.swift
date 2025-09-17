@@ -14,6 +14,7 @@ struct CreateListView: View {
                 Section(header: Text("List Details")) {
                     TextField("List Name", text: $listName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .accessibilityIdentifier("ListNameTextField")
                 }
             }
             .navigationTitle("New List")
@@ -23,6 +24,7 @@ struct CreateListView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("CancelButton")
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -30,6 +32,7 @@ struct CreateListView: View {
                         createList()
                     }
                     .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
+                    .accessibilityIdentifier("CreateButton")
                 }
             }
         }

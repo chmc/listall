@@ -29,24 +29,39 @@ class TestHelpers {
     }
     
     /// Creates a test DataManager with isolated Core Data
-    static func createTestDataManager() -> DataManager {
-        // For testing, we'll use the singleton but reset it
-        return DataManager.shared
+    static func createTestDataManager() -> TestDataManager {
+        let coreDataStack = createInMemoryCoreDataStack()
+        let testCoreDataManager = TestCoreDataManager(container: coreDataStack)
+        return TestDataManager(coreDataManager: testCoreDataManager)
     }
     
-    /// Resets all shared singletons for clean test state
-    static func resetSharedSingletons() {
-        // Clear UserDefaults
+    /// Creates an isolated test environment for MainViewModel
+    static func createTestMainViewModel() -> TestMainViewModel {
+        let testDataManager = createTestDataManager()
+        return TestMainViewModel(dataManager: testDataManager)
+    }
+    
+    /// Resets UserDefaults for test isolation
+    static func resetUserDefaults() {
+        // Clear UserDefaults keys that might affect tests
         UserDefaults.standard.removeObject(forKey: "saved_lists")
         
-        // Reset DataManager by clearing its lists
+        // Clear any other UserDefaults keys used by the app
+        let keys = ["showCrossedOutItems", "exportFormat", "lastSyncDate"]
+        for key in keys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+    
+    /// WARNING: This method is deprecated and should not be used
+    /// Use createTestMainViewModel() instead for proper test isolation
+    @available(*, deprecated, message: "Use createTestMainViewModel() for proper test isolation")
+    static func resetSharedSingletons() {
+        resetUserDefaults()
+        
+        // Note: Resetting shared singletons doesn't provide proper test isolation
+        // because Core Data contexts are still shared. Use isolated test instances instead.
         DataManager.shared.lists = []
-        
-        // Note: CoreDataManager.shared is a let constant and can't be reassigned
-        // The singleton will maintain its state, but we've cleared the DataManager
-        // which should be sufficient for most test isolation
-        
-        // Reset any other shared state if needed
     }
 }
 

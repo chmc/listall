@@ -22,6 +22,7 @@ struct EditListView: View {
                 Section(header: Text("List Details")) {
                     TextField("List Name", text: $listName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .accessibilityIdentifier("EditListNameTextField")
                 }
             }
             .navigationTitle("Edit List")
@@ -31,6 +32,7 @@ struct EditListView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("EditCancelButton")
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -40,6 +42,7 @@ struct EditListView: View {
                     .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
                              isUpdating ||
                              listName.trimmingCharacters(in: .whitespacesAndNewlines) == list.name)
+                    .accessibilityIdentifier("EditSaveButton")
                 }
             }
         }

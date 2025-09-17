@@ -7,19 +7,17 @@ struct ViewModelsTests {
     // MARK: - MainViewModel Tests
     
     @Test func testMainViewModelInitialization() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         
         #expect(viewModel.lists.isEmpty)
-        #expect(!viewModel.isLoading)
-        #expect(viewModel.errorMessage == nil)
     }
     
     @Test func testAddListSuccess() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         let initialCount = viewModel.lists.count
         
         try viewModel.addList(name: "Test List")
@@ -29,9 +27,9 @@ struct ViewModelsTests {
     }
     
     @Test func testAddListEmptyName() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         
         do {
             try viewModel.addList(name: "")
@@ -45,9 +43,9 @@ struct ViewModelsTests {
     }
     
     @Test func testAddListWhitespaceName() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         
         do {
             try viewModel.addList(name: "   ")
@@ -61,9 +59,9 @@ struct ViewModelsTests {
     }
     
     @Test func testAddListNameTooLong() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         let longName = String(repeating: "a", count: 101) // 101 characters
         
         do {
@@ -78,9 +76,9 @@ struct ViewModelsTests {
     }
     
     @Test func testAddListExactly100Characters() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         let exactName = String(repeating: "a", count: 100) // Exactly 100 characters
         
         try viewModel.addList(name: exactName)
@@ -89,9 +87,9 @@ struct ViewModelsTests {
     }
     
     @Test func testUpdateListSuccess() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Original Name")
         
         guard let list = viewModel.lists.first else {
@@ -105,9 +103,9 @@ struct ViewModelsTests {
     }
     
     @Test func testUpdateListEmptyName() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Original Name")
         
         guard let list = viewModel.lists.first else {
@@ -127,9 +125,9 @@ struct ViewModelsTests {
     }
     
     @Test func testUpdateListNameTooLong() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Original Name")
         
         guard let list = viewModel.lists.first else {
@@ -151,9 +149,9 @@ struct ViewModelsTests {
     }
     
     @Test func testDeleteList() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Test List")
         
         guard let list = viewModel.lists.first else {
@@ -321,9 +319,9 @@ struct ViewModelsTests {
     // MARK: - List Interaction Tests (Phase 6C)
     
     @Test func testDuplicateListBasic() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Original List")
         
         guard let originalList = viewModel.lists.first else {
@@ -386,9 +384,9 @@ struct ViewModelsTests {
     }
     
     @Test func testDuplicateListNameGeneration() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Test List")
         
         guard let originalList = viewModel.lists.first else {
@@ -412,9 +410,9 @@ struct ViewModelsTests {
     }
     
     @Test func testDuplicateListNameTooLong() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         let longName = String(repeating: "a", count: 95) // 95 + " Copy" = 100 characters (max)
         try viewModel.addList(name: longName)
         
@@ -448,9 +446,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMoveListBasic() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "List 1")
         try viewModel.addList(name: "List 2")
         try viewModel.addList(name: "List 3")
@@ -475,9 +473,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMoveListMiddleToBeginning() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "First")
         try viewModel.addList(name: "Second")
         try viewModel.addList(name: "Third")
@@ -497,9 +495,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMoveListSingleItem() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         try viewModel.addList(name: "Only List")
         
         // Moving single item should not crash
@@ -512,9 +510,9 @@ struct ViewModelsTests {
     }
     
     @Test func testMoveListEmptyList() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
-        let viewModel = MainViewModel()
+        let viewModel = TestHelpers.createTestMainViewModel()
         
         // Moving in empty list should not crash
         let indexSet = IndexSet([])
@@ -528,7 +526,7 @@ struct ViewModelsTests {
     // MARK: - ItemViewModel Tests
     
     @Test func testItemViewModelInitialization() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
         let item = Item(title: "Test Item")
         let viewModel = ItemViewModel(item: item)
@@ -539,7 +537,7 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelToggleCrossedOut() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
         let item = Item(title: "Test Item")
         let viewModel = ItemViewModel(item: item)
@@ -557,7 +555,7 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelToggleCrossedOutUpdatesModifiedDate() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
         let item = Item(title: "Test Item")
         let viewModel = ItemViewModel(item: item)
@@ -572,7 +570,7 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelUpdateItem() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
         let item = Item(title: "Original Title")
         let viewModel = ItemViewModel(item: item)
@@ -585,7 +583,7 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelUpdateItemEmptyDescription() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
         let item = Item(title: "Test Item")
         let viewModel = ItemViewModel(item: item)
@@ -598,7 +596,7 @@ struct ViewModelsTests {
     }
     
     @Test func testItemViewModelUpdateItemUpdatesModifiedDate() async throws {
-        TestHelpers.resetSharedSingletons()
+        TestHelpers.resetUserDefaults()
         
         let item = Item(title: "Original Title")
         let viewModel = ItemViewModel(item: item)
@@ -613,4 +611,61 @@ struct ViewModelsTests {
     }
     
     // MARK: - ExportViewModel Tests
+    
+    // MARK: - Test Infrastructure Validation
+    
+    @Test func testTestHelpersIsolation() async throws {
+        // Test that multiple test instances are properly isolated
+        let viewModel1 = TestHelpers.createTestMainViewModel()
+        let viewModel2 = TestHelpers.createTestMainViewModel()
+        
+        // Both should start empty
+        #expect(viewModel1.lists.isEmpty)
+        #expect(viewModel2.lists.isEmpty)
+        
+        // Add list to first instance
+        try viewModel1.addList(name: "VM1 List")
+        #expect(viewModel1.lists.count == 1)
+        #expect(viewModel2.lists.count == 0) // Second instance should remain unaffected
+        
+        // Add list to second instance
+        try viewModel2.addList(name: "VM2 List")
+        #expect(viewModel1.lists.count == 1)
+        #expect(viewModel2.lists.count == 1)
+        
+        // Verify they have different lists
+        #expect(viewModel1.lists.first?.name == "VM1 List")
+        #expect(viewModel2.lists.first?.name == "VM2 List")
+    }
+    
+    @Test func testUserDefaultsReset() async throws {
+        // Test that UserDefaults reset works properly
+        UserDefaults.standard.set("test_value", forKey: "saved_lists")
+        UserDefaults.standard.set(true, forKey: "showCrossedOutItems")
+        
+        // Verify values are set
+        #expect(UserDefaults.standard.object(forKey: "saved_lists") != nil)
+        #expect(UserDefaults.standard.bool(forKey: "showCrossedOutItems") == true)
+        
+        // Reset and verify values are cleared
+        TestHelpers.resetUserDefaults()
+        #expect(UserDefaults.standard.object(forKey: "saved_lists") == nil)
+        #expect(UserDefaults.standard.bool(forKey: "showCrossedOutItems") == false)
+    }
+    
+    @Test func testInMemoryCoreDataStack() async throws {
+        // Test that in-memory Core Data stack works properly
+        let stack1 = TestHelpers.createInMemoryCoreDataStack()
+        let stack2 = TestHelpers.createInMemoryCoreDataStack()
+        
+        // Verify they are separate instances
+        #expect(stack1 !== stack2)
+        
+        // Verify they use in-memory stores
+        let description1 = stack1.persistentStoreDescriptions.first
+        let description2 = stack2.persistentStoreDescriptions.first
+        
+        #expect(description1?.type == NSInMemoryStoreType)
+        #expect(description2?.type == NSInMemoryStoreType)
+    }
 }

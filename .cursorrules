@@ -11,13 +11,16 @@
 - Document any persistent build issues in `docs/learnings.md`
 
 ### Testing Integration (CRITICAL)
-- **Every task must end with successful build AND successful tests.** This is non-negotiable.
+- **Every task must end with successful build AND 100% successful tests.** This is non-negotiable.
+- **ALL TESTS MUST ACTUALLY PASS** - Never consider a task complete with failing tests.
 - Write tests as you implement features, not as a separate phase.
 - After ANY code changes, run tests to verify functionality works correctly.
 - If tests fail, immediately fix the issues before considering the task complete.
-- For iOS/macOS projects: Use `xcodebuild test` commands
-- For web projects: Use `npm test` or equivalent
+- **MANDATORY**: Run actual test commands and verify 100% pass rate before task completion.
+- For iOS/macOS projects: Use `xcodebuild test` commands and verify "Test Succeeded" output
+- For web projects: Use `npm test` or equivalent and verify all tests pass
 - Prefer fast test execution during development (skip performance tests, run unit tests only)
+- **NO EXCEPTIONS**: Tasks are incomplete until tests actually pass, not just expected to pass
 - Document any persistent test issues in `docs/learnings.md`
 
 ### Documentation (CRITICAL)
@@ -61,7 +64,8 @@ Follow these steps sequentially for **every** user request and follow behavioral
     * Execute steps within the chosen `<workflow>`, focusing on providing **clear, context-rich prompts** to tools like `edit_file` and `run_terminal_cmd` (especially for `gemini` tools).
     * Adhere strictly to `<behavior_rules>`.
     * **MANDATORY BUILD VALIDATION:** After any code changes, execute `<build_validate>` workflow to ensure the project builds successfully.
-    * **MANDATORY TEST VALIDATION:** After any code changes, run tests to ensure functionality works correctly.
+    * **MANDATORY TEST VALIDATION:** After any code changes, run actual test commands and verify 100% pass rate.
+    * **CRITICAL**: Tests must actually pass - use `xcodebuild test` or equivalent and verify success output.
     * Write tests for new features as you implement them.
     * Review outputs and iterate with follow-up prompts if necessary.
     * **STOP after completing ONE logical feature/task** for user review and commit.

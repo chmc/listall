@@ -206,7 +206,8 @@ final class ListAllUITests: XCTestCase {
     @MainActor
     func testCreateListViewPresentation() throws {
         // Test that CreateListView is presented when add button is tapped
-        let addButton = app.navigationBars.buttons.matching(identifier: "Add").firstMatch
+        // The add button is an image with the system add icon (plus symbol)
+        let addButton = app.buttons["AddListButton"].firstMatch
         if addButton.exists {
             addButton.tap()
             
@@ -215,11 +216,11 @@ final class ListAllUITests: XCTestCase {
             XCTAssertTrue(createListTitle.waitForExistence(timeout: 2))
             
             // Verify Cancel button exists
-            let cancelButton = app.buttons["Cancel"].firstMatch
+            let cancelButton = app.buttons["CancelButton"].firstMatch
             XCTAssertTrue(cancelButton.exists)
             
             // Verify Create button exists but is disabled initially
-            let createButton = app.buttons["Create"].firstMatch
+            let createButton = app.buttons["CreateButton"].firstMatch
             XCTAssertTrue(createButton.exists)
             
             // Test Cancel functionality
@@ -231,7 +232,7 @@ final class ListAllUITests: XCTestCase {
     @MainActor
     func testCreateListWithValidName() throws {
         // Test creating a list with valid name
-        let addButton = app.navigationBars.buttons.matching(identifier: "Add").firstMatch
+        let addButton = app.buttons["AddListButton"].firstMatch
         if addButton.exists {
             addButton.tap()
             
@@ -239,14 +240,14 @@ final class ListAllUITests: XCTestCase {
             let createListTitle = app.navigationBars["New List"].firstMatch
             XCTAssertTrue(createListTitle.waitForExistence(timeout: 2))
             
-            // Find and tap the text field
-            let textField = app.textFields["List Name"].firstMatch
+            // Find and tap the text field - it should have placeholder "List Name"
+            let textField = app.textFields["ListNameTextField"].firstMatch
             if textField.exists {
                 textField.tap()
                 textField.typeText("UI Test List")
                 
                 // Create button should now be enabled
-                let createButton = app.buttons["Create"].firstMatch
+                let createButton = app.buttons["CreateButton"].firstMatch
                 XCTAssertTrue(createButton.exists)
                 createButton.tap()
                 
@@ -263,7 +264,7 @@ final class ListAllUITests: XCTestCase {
     @MainActor
     func testCreateListValidationEmptyName() throws {
         // Test validation for empty list name
-        let addButton = app.navigationBars.buttons.matching(identifier: "Add").firstMatch
+        let addButton = app.buttons["AddListButton"].firstMatch
         if addButton.exists {
             addButton.tap()
             
@@ -271,14 +272,14 @@ final class ListAllUITests: XCTestCase {
             XCTAssertTrue(createListTitle.waitForExistence(timeout: 2))
             
             // Try to create with empty name
-            let createButton = app.buttons["Create"].firstMatch
+            let createButton = app.buttons["CreateButton"].firstMatch
             XCTAssertTrue(createButton.exists)
             
             // Create button should be disabled with empty text
             XCTAssertFalse(createButton.isEnabled)
             
             // Try with whitespace only
-            let textField = app.textFields["List Name"].firstMatch
+            let textField = app.textFields["ListNameTextField"].firstMatch
             if textField.exists {
                 textField.tap()
                 textField.typeText("   ")
@@ -313,7 +314,7 @@ final class ListAllUITests: XCTestCase {
                 XCTAssertTrue(editListTitle.waitForExistence(timeout: 2))
                 
                 // Verify the text field is pre-populated
-                let textField = app.textFields["List Name"].firstMatch
+                let textField = app.textFields["ListNameTextField"].firstMatch
                 XCTAssertTrue(textField.exists)
                 
                 // Test Cancel functionality
@@ -341,7 +342,7 @@ final class ListAllUITests: XCTestCase {
                 XCTAssertTrue(editListTitle.waitForExistence(timeout: 2))
                 
                 // Clear and enter new name
-                let textField = app.textFields["List Name"].firstMatch
+                let textField = app.textFields["ListNameTextField"].firstMatch
                 if textField.exists {
                     // Clear existing text by selecting all and typing over it
                     textField.tap()
