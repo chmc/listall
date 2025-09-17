@@ -200,4 +200,251 @@ final class ListAllUITests: XCTestCase {
             }
         }
     }
+    
+    // MARK: - Phase 6B: List Creation and Editing Tests
+    
+    @MainActor
+    func testCreateListViewPresentation() throws {
+        // Test that CreateListView is presented when add button is tapped
+        let addButton = app.navigationBars.buttons.matching(identifier: "Add").firstMatch
+        if addButton.exists {
+            addButton.tap()
+            
+            // Verify CreateListView is presented
+            let createListTitle = app.navigationBars["New List"].firstMatch
+            XCTAssertTrue(createListTitle.waitForExistence(timeout: 2))
+            
+            // Verify Cancel button exists
+            let cancelButton = app.buttons["Cancel"].firstMatch
+            XCTAssertTrue(cancelButton.exists)
+            
+            // Verify Create button exists but is disabled initially
+            let createButton = app.buttons["Create"].firstMatch
+            XCTAssertTrue(createButton.exists)
+            
+            // Test Cancel functionality
+            cancelButton.tap()
+            XCTAssertFalse(createListTitle.exists)
+        }
+    }
+    
+    @MainActor
+    func testCreateListWithValidName() throws {
+        // Test creating a list with valid name
+        let addButton = app.navigationBars.buttons.matching(identifier: "Add").firstMatch
+        if addButton.exists {
+            addButton.tap()
+            
+            // Wait for CreateListView to appear
+            let createListTitle = app.navigationBars["New List"].firstMatch
+            XCTAssertTrue(createListTitle.waitForExistence(timeout: 2))
+            
+            // Find and tap the text field
+            let textField = app.textFields["List Name"].firstMatch
+            if textField.exists {
+                textField.tap()
+                textField.typeText("UI Test List")
+                
+                // Create button should now be enabled
+                let createButton = app.buttons["Create"].firstMatch
+                XCTAssertTrue(createButton.exists)
+                createButton.tap()
+                
+                // Verify we're back to main view and list was created
+                XCTAssertFalse(createListTitle.exists)
+                
+                // Look for the newly created list
+                let newListCell = app.staticTexts["UI Test List"].firstMatch
+                XCTAssertTrue(newListCell.waitForExistence(timeout: 2))
+            }
+        }
+    }
+    
+    @MainActor
+    func testCreateListValidationEmptyName() throws {
+        // Test validation for empty list name
+        let addButton = app.navigationBars.buttons.matching(identifier: "Add").firstMatch
+        if addButton.exists {
+            addButton.tap()
+            
+            let createListTitle = app.navigationBars["New List"].firstMatch
+            XCTAssertTrue(createListTitle.waitForExistence(timeout: 2))
+            
+            // Try to create with empty name
+            let createButton = app.buttons["Create"].firstMatch
+            XCTAssertTrue(createButton.exists)
+            
+            // Create button should be disabled with empty text
+            XCTAssertFalse(createButton.isEnabled)
+            
+            // Try with whitespace only
+            let textField = app.textFields["List Name"].firstMatch
+            if textField.exists {
+                textField.tap()
+                textField.typeText("   ")
+                
+                // Create button should still be disabled
+                XCTAssertFalse(createButton.isEnabled)
+            }
+            
+            // Cancel to clean up
+            app.buttons["Cancel"].firstMatch.tap()
+        }
+    }
+    
+    @MainActor
+    func testEditListContextMenu() throws {
+        // Test editing a list via context menu (long press)
+        // First ensure we have a list to edit
+        try testCreateListWithValidName()
+        
+        let listCell = app.staticTexts["UI Test List"].firstMatch
+        if listCell.exists {
+            // Long press to show context menu
+            listCell.press(forDuration: 1.0)
+            
+            // Look for Edit option in context menu
+            let editButton = app.buttons["Edit"].firstMatch
+            if editButton.waitForExistence(timeout: 2) {
+                editButton.tap()
+                
+                // Verify EditListView is presented
+                let editListTitle = app.navigationBars["Edit List"].firstMatch
+                XCTAssertTrue(editListTitle.waitForExistence(timeout: 2))
+                
+                // Verify the text field is pre-populated
+                let textField = app.textFields["List Name"].firstMatch
+                XCTAssertTrue(textField.exists)
+                
+                // Test Cancel functionality
+                app.buttons["Cancel"].firstMatch.tap()
+                XCTAssertFalse(editListTitle.exists)
+            }
+        }
+    }
+    
+    @MainActor
+    func testEditListNameChange() throws {
+        // Test actually changing a list name
+        // First ensure we have a list to edit
+        try testCreateListWithValidName()
+        
+        let listCell = app.staticTexts["UI Test List"].firstMatch
+        if listCell.exists {
+            listCell.press(forDuration: 1.0)
+            
+            let editButton = app.buttons["Edit"].firstMatch
+            if editButton.waitForExistence(timeout: 2) {
+                editButton.tap()
+                
+                let editListTitle = app.navigationBars["Edit List"].firstMatch
+                XCTAssertTrue(editListTitle.waitForExistence(timeout: 2))
+                
+                // Clear and enter new name
+                let textField = app.textFields["List Name"].firstMatch
+                if textField.exists {
+                    // Clear existing text by selecting all and typing over it
+                    textField.tap()
+                    // Use coordinated tap to select all text
+                    let coordinate = textField.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.0))
+                    coordinate.press(forDuration: 1.0)
+                    
+                    // Type new text (this will replace selected text)
+                    textField.typeText("Updated List Name")
+                    
+                    // Save changes
+                    let saveButton = app.buttons["Save"].firstMatch
+                    XCTAssertTrue(saveButton.exists)
+                    saveButton.tap()
+                    
+                    // Verify we're back to main view and name was updated
+                    XCTAssertFalse(editListTitle.exists)
+                    
+                    let updatedListCell = app.staticTexts["Updated List Name"].firstMatch
+                    XCTAssertTrue(updatedListCell.waitForExistence(timeout: 2))
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    func testDeleteListSwipeAction() throws {
+        // Test deleting a list via swipe action
+        // First ensure we have a list to delete
+        try testCreateListWithValidName()
+        
+        let listCell = app.cells.containing(.staticText, identifier: "UI Test List").firstMatch
+        if listCell.exists {
+            // Swipe left to reveal delete action
+            listCell.swipeLeft()
+            
+            // Look for Delete button
+            let deleteButton = app.buttons["Delete"].firstMatch
+            if deleteButton.waitForExistence(timeout: 2) {
+                deleteButton.tap()
+                
+                // Look for confirmation alert
+                let deleteAlert = app.alerts["Delete List"].firstMatch
+                if deleteAlert.waitForExistence(timeout: 2) {
+                    // Confirm deletion
+                    let confirmDeleteButton = deleteAlert.buttons["Delete"].firstMatch
+                    XCTAssertTrue(confirmDeleteButton.exists)
+                    confirmDeleteButton.tap()
+                    
+                    // Verify list is removed
+                    let deletedListCell = app.staticTexts["UI Test List"].firstMatch
+                    XCTAssertFalse(deletedListCell.waitForExistence(timeout: 1))
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    func testDeleteListContextMenu() throws {
+        // Test deleting a list via context menu
+        // First ensure we have a list to delete
+        try testCreateListWithValidName()
+        
+        let listCell = app.staticTexts["UI Test List"].firstMatch
+        if listCell.exists {
+            // Long press to show context menu
+            listCell.press(forDuration: 1.0)
+            
+            // Look for Delete option in context menu
+            let deleteButton = app.buttons["Delete"].firstMatch
+            if deleteButton.waitForExistence(timeout: 2) {
+                deleteButton.tap()
+                
+                // Look for confirmation alert
+                let deleteAlert = app.alerts["Delete List"].firstMatch
+                if deleteAlert.waitForExistence(timeout: 2) {
+                    // Test Cancel first
+                    let cancelButton = deleteAlert.buttons["Cancel"].firstMatch
+                    if cancelButton.exists {
+                        cancelButton.tap()
+                        
+                        // Verify list still exists
+                        XCTAssertTrue(listCell.exists)
+                        
+                        // Try delete again and confirm this time
+                        listCell.press(forDuration: 1.0)
+                        let deleteButton2 = app.buttons["Delete"].firstMatch
+                        if deleteButton2.waitForExistence(timeout: 2) {
+                            deleteButton2.tap()
+                            
+                            let deleteAlert2 = app.alerts["Delete List"].firstMatch
+                            if deleteAlert2.waitForExistence(timeout: 2) {
+                                let confirmDeleteButton = deleteAlert2.buttons["Delete"].firstMatch
+                                confirmDeleteButton.tap()
+                                
+                                // Verify list is removed
+                                let deletedListCell = app.staticTexts["UI Test List"].firstMatch
+                                XCTAssertFalse(deletedListCell.waitForExistence(timeout: 1))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

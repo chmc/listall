@@ -2,7 +2,10 @@ import SwiftUI
 
 struct ListRowView: View {
     let list: List
+    @ObservedObject var mainViewModel: MainViewModel
     @State private var itemCount: Int = 0
+    @State private var showingEditSheet = false
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         NavigationLink(destination: ListView(list: list)) {
@@ -28,6 +31,44 @@ struct ListRowView: View {
         .onAppear {
             updateItemCount()
         }
+        .contextMenu {
+            Button(action: {
+                showingEditSheet = true
+            }) {
+                Label("Edit", systemImage: "pencil")
+            }
+            
+            Button(role: .destructive, action: {
+                showingDeleteAlert = true
+            }) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: {
+                showingDeleteAlert = true
+            }) {
+                Label("Delete", systemImage: "trash")
+            }
+            
+            Button(action: {
+                showingEditSheet = true
+            }) {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(.blue)
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            EditListView(list: list, mainViewModel: mainViewModel)
+        }
+        .alert("Delete List", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                mainViewModel.deleteList(list)
+            }
+        } message: {
+            Text("Are you sure you want to delete \"\(list.name)\"? This action cannot be undone.")
+        }
     }
     
     private func updateItemCount() {
@@ -37,6 +78,6 @@ struct ListRowView: View {
 
 #Preview {
     SwiftUI.List {
-        ListRowView(list: List(name: "Sample List"))
+        ListRowView(list: List(name: "Sample List"), mainViewModel: MainViewModel())
     }
 }

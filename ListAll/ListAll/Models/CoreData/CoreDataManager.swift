@@ -233,7 +233,9 @@ class DataManager: ObservableObject {
         listEntity.isArchived = false
         
         saveData()
-        loadData() // Refresh the published array
+        // Add to local array and sort instead of reloading
+        lists.append(list)
+        lists.sort { $0.orderNumber < $1.orderNumber }
     }
     
     func updateList(_ list: List) {
@@ -247,7 +249,10 @@ class DataManager: ObservableObject {
                 listEntity.orderNumber = Int32(list.orderNumber)
                 listEntity.modifiedAt = list.modifiedAt
                 saveData()
-                loadData()
+                // Update local array instead of reloading
+                if let index = lists.firstIndex(where: { $0.id == list.id }) {
+                    lists[index] = list
+                }
             }
         } catch {
             print("Failed to update list: \(error)")
@@ -264,7 +269,8 @@ class DataManager: ObservableObject {
                 coreDataManager.viewContext.delete(listEntity)
             }
             saveData()
-            loadData()
+            // Remove from local array instead of reloading
+            lists.removeAll { $0.id == id }
         } catch {
             print("Failed to delete list: \(error)")
         }

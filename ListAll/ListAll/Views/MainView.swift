@@ -5,6 +5,7 @@ struct MainView: View {
     @StateObject private var cloudKitService = CloudKitService()
     @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
     @State private var selectedTab = 0
+    @State private var showingCreateList = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -37,7 +38,7 @@ struct MainView: View {
                     } else {
                         SwiftUI.List {
                             ForEach(viewModel.lists) { list in
-                                ListRowView(list: list)
+                                ListRowView(list: list, mainViewModel: viewModel)
                             }
                         }
                     }
@@ -57,7 +58,7 @@ struct MainView: View {
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
-                            // TODO: Add create list functionality
+                            showingCreateList = true
                         }) {
                             Image(systemName: Constants.UI.addIcon)
                         }
@@ -100,6 +101,9 @@ struct MainView: View {
             Task {
                 await conflictManager.checkForConflicts()
             }
+        }
+        .sheet(isPresented: $showingCreateList) {
+            CreateListView(mainViewModel: viewModel)
         }
     }
 }

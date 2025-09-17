@@ -1,6 +1,20 @@
 import Foundation
 import SwiftUI
 
+enum ValidationError: LocalizedError {
+    case emptyName
+    case nameTooLong
+    
+    var errorDescription: String? {
+        switch self {
+        case .emptyName:
+            return "Please enter a list name"
+        case .nameTooLong:
+            return "List name must be 100 characters or less"
+        }
+    }
+}
+
 class MainViewModel: ObservableObject {
     @Published var lists: [List] = []
     @Published var isLoading = false
@@ -22,10 +36,21 @@ class MainViewModel: ObservableObject {
         isLoading = false
     }
     
-    func addList(name: String) {
-        let newList = List(name: name)
+    func addList(name: String) throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty else {
+            throw ValidationError.emptyName
+        }
+        
+        guard trimmedName.count <= 100 else {
+            throw ValidationError.nameTooLong
+        }
+        
+        let newList = List(name: trimmedName)
         dataManager.addList(newList)
         lists.append(newList)
+        lists.sort { $0.orderNumber < $1.orderNumber }
     }
     
     func deleteList(_ list: List) {
@@ -33,9 +58,19 @@ class MainViewModel: ObservableObject {
         lists.removeAll { $0.id == list.id }
     }
     
-    func updateList(_ list: List, name: String) {
+    func updateList(_ list: List, name: String) throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty else {
+            throw ValidationError.emptyName
+        }
+        
+        guard trimmedName.count <= 100 else {
+            throw ValidationError.nameTooLong
+        }
+        
         var updatedList = list
-        updatedList.name = name
+        updatedList.name = trimmedName
         updatedList.updateModifiedDate()
         dataManager.updateList(updatedList)
         if let index = lists.firstIndex(where: { $0.id == list.id }) {

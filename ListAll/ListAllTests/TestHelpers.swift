@@ -121,7 +121,9 @@ class TestDataManager: ObservableObject {
         listEntity.isArchived = false
         
         saveData()
-        loadData() // Refresh the published array
+        // Add to local array and sort instead of reloading
+        lists.append(list)
+        lists.sort { $0.orderNumber < $1.orderNumber }
     }
     
     func updateList(_ list: List) {
@@ -138,7 +140,10 @@ class TestDataManager: ObservableObject {
                 listEntity.isArchived = list.isArchived
                 
                 saveData()
-                loadData()
+                // Update local array instead of reloading
+                if let index = lists.firstIndex(where: { $0.id == list.id }) {
+                    lists[index] = list
+                }
             }
         } catch {
             print("Failed to update list: \(error)")
@@ -157,7 +162,8 @@ class TestDataManager: ObservableObject {
             }
             
             saveData()
-            loadData()
+            // Remove from local array instead of reloading
+            lists.removeAll { $0.id == id }
         } catch {
             print("Failed to delete list: \(error)")
         }
@@ -248,5 +254,61 @@ class TestDataManager: ObservableObject {
             print("Failed to fetch items: \(error)")
             return []
         }
+    }
+}
+
+/// Test-specific MainViewModel that uses isolated DataManager
+class TestMainViewModel: ObservableObject {
+    @Published var lists: [List] = []
+    private let dataManager: TestDataManager
+    
+    init(dataManager: TestDataManager) {
+        self.dataManager = dataManager
+        loadLists()
+    }
+    
+    private func loadLists() {
+        lists = dataManager.lists
+    }
+    
+    func addList(name: String) throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty else {
+            throw ValidationError.emptyName
+        }
+        
+        guard trimmedName.count <= 100 else {
+            throw ValidationError.nameTooLong
+        }
+        
+        let newList = List(name: trimmedName)
+        dataManager.addList(newList)
+        lists.append(newList)
+    }
+    
+    func updateList(_ list: List, name: String) throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty else {
+            throw ValidationError.emptyName
+        }
+        
+        guard trimmedName.count <= 100 else {
+            throw ValidationError.nameTooLong
+        }
+        
+        var updatedList = list
+        updatedList.name = trimmedName
+        updatedList.updateModifiedDate()
+        dataManager.updateList(updatedList)
+        if let index = lists.firstIndex(where: { $0.id == list.id }) {
+            lists[index] = updatedList
+        }
+    }
+    
+    func deleteList(_ list: List) {
+        dataManager.deleteList(withId: list.id)
+        lists.removeAll { $0.id == list.id }
     }
 }

@@ -113,6 +113,24 @@
 - **Benefit**: More reliable test execution and easier debugging when issues occur
 - **Rule**: Prefer simple, focused tests over complex multi-assertion tests when possible
 
+### Test Isolation and Singleton State Management
+- **Learning**: Shared singleton state between parallel test executions creates race conditions and unreliable test results
+- **Application**: Implemented isolated test infrastructure using TestDataManager, TestCoreDataManager, and TestMainViewModel with in-memory Core Data stacks
+- **Benefit**: Tests run reliably in parallel without state conflicts, enabling comprehensive testing of race condition fixes
+- **Rule**: Always use isolated test dependencies instead of shared singletons; create test-specific instances for each test execution
+
+### Core Data Race Conditions in SwiftUI
+- **Learning**: Calling loadData() after Core Data operations while SwiftUI is animating collection view changes causes crashes due to data source mismatches
+- **Application**: Fixed both production DataManager and TestDataManager to manually update local arrays instead of reloading from Core Data after add/update/delete operations
+- **Benefit**: Eliminates SwiftUI collection view crashes when users perform rapid operations like delete-then-recreate with same names
+- **Rule**: In SwiftUI + Core Data apps, maintain local array consistency manually rather than reloading after each operation to avoid animation conflicts
+
+### Testing Race Condition Fixes
+- **Learning**: Race condition bugs require specific test scenarios that reproduce the exact timing and sequence of operations that cause failures
+- **Application**: Created tests for delete-recreate-same-name, multiple quick operations, and special character handling to verify the Core Data race condition fix
+- **Benefit**: Ensures race condition fixes work correctly and prevents regression of critical user-facing bugs
+- **Rule**: Write tests that specifically reproduce the race condition scenario, not just the individual operations in isolation
+
 ## Future Considerations
 
 ### Platform Expansion

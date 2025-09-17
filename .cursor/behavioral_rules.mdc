@@ -15,6 +15,7 @@ alwaysApply: true
 - **Simplicity:** Prefer the simplest, most direct solution meeting all requirements.
 - **Tool Usage:** Use provided tools appropriately. Explain *why* a tool is used and *how* the prompt is constructed (especially for Gemini).
 - **Clarity:** Communicate plans, workflows, results clearly. Ask clarifying questions if ambiguous.
+- **CRITICAL - Testing Integration:** All new code must be tested. Write tests for every new feature, service, component, or function implemented. Tests must verify the written code behavior, ensuring it works as intended. Do NOT change implementation to fix tests unless implementation is truly impossible to test.
 
 ### Model-Specific Behavior:
 - **For Claude (Anthropic):**

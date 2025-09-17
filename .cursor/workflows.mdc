@@ -97,8 +97,10 @@ Define high-level tasks. Follow the `## Request Processing Steps` below to execu
    - **Steps:**
      1. Fetch relevant rules (`implement-*.mdc`) using `fetch_rules`.
      2. Use `edit_file` to implement the required code changes across necessary files (components, API routes, types, etc.). Ensure imports and dependencies are handled.
-     3. **MANDATORY BUILD VALIDATION:** Use `run_terminal_cmd` to build the project and ensure it compiles successfully. If build fails, use the `<fix>` workflow to resolve compilation errors before proceeding.
-     4. **NO EXCEPTIONS:** Code must always build successfully. Never leave the project in a broken state.
+     3. **MANDATORY TESTING:** Write tests for ALL new code implemented. Use `edit_file` to create/update test files that verify the behavior of new features, services, components, and functions.
+     4. **MANDATORY BUILD VALIDATION:** Use `run_terminal_cmd` to build the project and ensure it compiles successfully. If build fails, use the `<fix>` workflow to resolve compilation errors before proceeding.
+     5. **MANDATORY TEST EXECUTION:** Use `run_terminal_cmd` to run tests and ensure they pass. If tests fail, use the `<fix>` workflow to resolve issues.
+     6. **NO EXCEPTIONS:** Code must always build successfully and tests must pass. Never leave the project in a broken state.
   </develop>
 
   <build_validate>

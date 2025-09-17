@@ -1,12 +1,20 @@
 import SwiftUI
 
-struct CreateListView: View {
+struct EditListView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var mainViewModel: MainViewModel
-    @State private var listName = ""
+    @State private var listName: String
     @State private var showingAlert = false
     @State private var alertMessage = ""
-    @State private var isCreating = false
+    @State private var isUpdating = false
+    
+    let list: List
+    
+    init(list: List, mainViewModel: MainViewModel) {
+        self.list = list
+        self.mainViewModel = mainViewModel
+        self._listName = State(initialValue: list.name)
+    }
     
     var body: some View {
         NavigationView {
@@ -16,7 +24,7 @@ struct CreateListView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                 }
             }
-            .navigationTitle("New List")
+            .navigationTitle("Edit List")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -26,10 +34,12 @@ struct CreateListView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
-                        createList()
+                    Button("Save") {
+                        updateList()
                     }
-                    .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
+                    .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
+                             isUpdating ||
+                             listName.trimmingCharacters(in: .whitespacesAndNewlines) == list.name)
                 }
             }
         }
@@ -40,7 +50,7 @@ struct CreateListView: View {
         }
     }
     
-    private func createList() {
+    private func updateList() {
         let trimmedName = listName.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedName.isEmpty else {
@@ -55,19 +65,24 @@ struct CreateListView: View {
             return
         }
         
-        isCreating = true
+        guard trimmedName != list.name else {
+            dismiss()
+            return
+        }
+        
+        isUpdating = true
         
         do {
-            try mainViewModel.addList(name: trimmedName)
+            try mainViewModel.updateList(list, name: trimmedName)
             dismiss()
         } catch {
-            alertMessage = "Failed to create list: \(error.localizedDescription)"
+            alertMessage = "Failed to update list: \(error.localizedDescription)"
             showingAlert = true
-            isCreating = false
+            isUpdating = false
         }
     }
 }
 
 #Preview {
-    CreateListView(mainViewModel: MainViewModel())
+    EditListView(list: List(name: "Sample List"), mainViewModel: MainViewModel())
 }
