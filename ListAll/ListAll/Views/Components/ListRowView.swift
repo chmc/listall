@@ -7,21 +7,21 @@ struct ListRowView: View {
     var body: some View {
         NavigationLink(destination: ListView(list: list)) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(list.name) // Removed nil coalescing operator since name is non-optional
-                        .font(.headline)
+                        .font(Theme.Typography.headline)
                         .foregroundColor(.primary)
                     
                     Text("\(itemCount) items")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.secondary)
                 }
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Image(systemName: Constants.UI.chevronIcon)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.secondary)
             }
             .padding(.vertical, 4)
         }

@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import ListAll
 
-struct ListAllTests {
+struct ModelTests {
 
     // MARK: - Item Model Tests
     
@@ -384,5 +384,4 @@ struct ListAllTests {
         // We'll just verify the method was called
         #expect(true) // Placeholder assertion
     }
-
 }

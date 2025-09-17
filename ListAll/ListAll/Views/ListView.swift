@@ -14,21 +14,18 @@ struct ListView: View {
             if viewModel.isLoading {
                 ProgressView("Loading items...")
             } else if viewModel.items.isEmpty {
-                VStack(spacing: 20) {
+                VStack(spacing: Theme.Spacing.lg) {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 60))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Theme.Colors.secondary)
                     
                     Text("No Items Yet")
-                        .font(.title2)
-                        .fontWeight(.medium)
+                        .font(Theme.Typography.title)
                     
                     Text("Add your first item to get started")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                        .font(Theme.Typography.body)
+                        .emptyStateStyle()
                 }
-                .padding()
             } else {
                 SwiftUI.List {
                     ForEach(viewModel.items) { item in
@@ -44,7 +41,7 @@ struct ListView: View {
                 Button(action: {
                     // TODO: Add create item functionality
                 }) {
-                    Image(systemName: "plus")
+                    Image(systemName: Constants.UI.addIcon)
                 }
             }
         }
