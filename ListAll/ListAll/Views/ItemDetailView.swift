@@ -3,6 +3,7 @@ import SwiftUI
 struct ItemDetailView: View {
     let item: Item
     @StateObject private var viewModel: ItemViewModel
+    @State private var showingEditView = false
     
     init(item: Item) {
         self.item = item
@@ -11,79 +12,184 @@ struct ItemDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Title
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Title")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                // Main Title Section
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text(viewModel.item.displayTitle)
+                        .font(Theme.Typography.largeTitle)
+                        .fontWeight(.bold)
+                        .strikethrough(viewModel.item.isCrossedOut, color: Theme.Colors.secondary)
+                        .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.secondary : .primary)
+                        .animation(Theme.Animation.quick, value: viewModel.item.isCrossedOut)
                     
-                    Text(item.title ?? "Untitled")
-                        .font(.title2)
-                        .fontWeight(.medium)
+                    // Status indicator
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: viewModel.item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
+                            .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
+                            .font(.title3)
+                        
+                        Text(viewModel.item.isCrossedOut ? "Completed" : "Pending")
+                            .font(Theme.Typography.callout)
+                            .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
+                    }
+                    .animation(Theme.Animation.quick, value: viewModel.item.isCrossedOut)
                 }
                 
-                // Description
-                if let description = item.itemDescription, !description.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                
+                // Description Section
+                if viewModel.item.hasDescription {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         Text("Description")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
+                            .font(Theme.Typography.headline)
+                            .foregroundColor(Theme.Colors.secondary)
                         
-                        Text(description)
-                            .font(.body)
+                        Text(viewModel.item.displayDescription)
+                            .font(Theme.Typography.body)
+                            .opacity(viewModel.item.isCrossedOut ? 0.7 : 1.0)
+                    }
+                    .cardStyle()
+                    .padding(Theme.Spacing.md)
+                }
+                
+                // Details Grid
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: Theme.Spacing.md) {
+                    
+                    // Quantity
+                    DetailCard(
+                        title: "Quantity",
+                        value: "\(viewModel.item.quantity)",
+                        icon: "number",
+                        color: Theme.Colors.info
+                    )
+                    
+                    // Images count
+                    DetailCard(
+                        title: "Images",
+                        value: "\(viewModel.item.imageCount)",
+                        icon: "photo",
+                        color: Theme.Colors.warning
+                    )
+                }
+                
+                // Images Section (if available)
+                if viewModel.item.hasImages {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("Images")
+                            .font(Theme.Typography.headline)
+                            .foregroundColor(Theme.Colors.secondary)
+                        
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: Theme.Spacing.sm) {
+                            ForEach(viewModel.item.sortedImages, id: \.id) { image in
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                                    .fill(Theme.Colors.groupedBackground)
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .overlay(
+                                        Image(systemName: "photo")
+                                            .foregroundColor(Theme.Colors.secondary)
+                                            .font(.title2)
+                                    )
+                            }
+                        }
+                    }
+                    .cardStyle()
+                    .padding(Theme.Spacing.md)
+                }
+                
+                Divider()
+                
+                // Metadata Section
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Details")
+                        .font(Theme.Typography.headline)
+                        .foregroundColor(Theme.Colors.secondary)
+                    
+                    VStack(spacing: Theme.Spacing.sm) {
+                        MetadataRow(label: "Created", value: viewModel.item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        MetadataRow(label: "Modified", value: viewModel.item.modifiedAt.formatted(date: .abbreviated, time: .shortened))
                     }
                 }
+                .cardStyle()
+                .padding(Theme.Spacing.md)
                 
-                // Quantity
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Quantity")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("\(item.quantity)")
-                        .font(.body)
-                }
-                
-                // Status
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Status")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(item.isCrossedOut ? .green : .secondary)
-                        
-                        Text(item.isCrossedOut ? "Completed" : "Pending")
-                            .font(.body)
-                    }
-                }
-                
-                // Dates
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Created")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    Text(item.createdAt.formatted())
-                        .font(.body)
-                }
-                
-                Spacer()
+                Spacer(minLength: Theme.Spacing.xl)
             }
-            .padding()
+            .padding(Theme.Spacing.md)
         }
         .navigationTitle("Item Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button(action: {
                     viewModel.toggleCrossedOut()
                 }) {
-                    Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: viewModel.item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
+                        .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
+                }
+                
+                Button("Edit") {
+                    showingEditView = true
                 }
             }
+        }
+        .sheet(isPresented: $showingEditView) {
+            // TODO: Implement ItemEditView in Phase 7B
+            Text("Edit Item - Coming in Phase 7B")
+                .padding()
+        }
+    }
+}
+
+// MARK: - Supporting Views
+
+struct DetailCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(Theme.Typography.title)
+                .fontWeight(.semibold)
+            
+            Text(title)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(Theme.Spacing.md)
+        .cardStyle()
+    }
+}
+
+struct MetadataRow: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(Theme.Typography.callout)
+                .foregroundColor(Theme.Colors.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(Theme.Typography.callout)
+                .foregroundColor(.primary)
         }
     }
 }

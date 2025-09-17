@@ -11,7 +11,7 @@ struct ItemRowView: View {
     
     var body: some View {
         NavigationLink(destination: ItemDetailView(item: item)) {
-            HStack {
+            HStack(spacing: Theme.Spacing.md) {
                 // Checkbox
                 Button(action: {
                     viewModel.toggleCrossedOut()
@@ -19,46 +19,64 @@ struct ItemRowView: View {
                     Image(systemName: item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
                         .foregroundColor(item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
                         .font(.title2)
+                        .animation(Theme.Animation.quick, value: item.isCrossedOut)
                 }
                 .buttonStyle(PlainButtonStyle())
                 
                 // Content
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(item.title)
+                    // Title with strikethrough animation
+                    Text(item.displayTitle)
                         .font(Theme.Typography.body)
-                        .strikethrough(item.isCrossedOut)
+                        .strikethrough(item.isCrossedOut, color: Theme.Colors.secondary)
                         .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
+                        .animation(Theme.Animation.quick, value: item.isCrossedOut)
                     
-                    if let description = item.itemDescription, !description.isEmpty {
-                        Text(description)
+                    // Description (if available)
+                    if item.hasDescription {
+                        Text(item.displayDescription)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
                             .lineLimit(2)
+                            .opacity(item.isCrossedOut ? 0.6 : 1.0)
                     }
                     
-                    if item.quantity > 1 {
-                        Text("Qty: \(item.quantity)")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondary)
+                    // Secondary info row
+                    HStack(spacing: Theme.Spacing.sm) {
+                        // Quantity indicator (only if > 1)
+                        if item.quantity > 1 {
+                            Text(item.formattedQuantity)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.secondary)
+                                .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                        }
+                        
+                        // Image count indicator (if item has images)
+                        if item.hasImages {
+                            HStack(spacing: 2) {
+                                Image(systemName: "photo")
+                                    .font(.caption2)
+                                Text("\(item.imageCount)")
+                                    .font(Theme.Typography.caption)
+                            }
+                            .foregroundColor(Theme.Colors.info)
+                            .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                        }
                     }
                 }
                 
                 Spacer()
                 
-                // Quantity badge
-                if item.quantity > 1 {
-                    Text("\(item.quantity)")
-                        .font(Theme.Typography.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, Theme.Spacing.sm)
-                        .padding(.vertical, Theme.Spacing.xs)
-                        .background(Theme.Colors.info)
-                        .clipShape(Capsule())
-                }
+                // Navigation chevron
+                Image(systemName: Constants.UI.chevronIcon)
+                    .font(.caption)
+                    .foregroundColor(Theme.Colors.secondary)
+                    .opacity(0.6)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, Theme.Spacing.xs)
+            .contentShape(Rectangle()) // Makes entire row tappable
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

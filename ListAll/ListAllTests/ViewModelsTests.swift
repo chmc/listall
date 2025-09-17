@@ -527,5 +527,90 @@ struct ViewModelsTests {
     
     // MARK: - ItemViewModel Tests
     
+    @Test func testItemViewModelInitialization() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let item = Item(title: "Test Item")
+        let viewModel = ItemViewModel(item: item)
+        
+        #expect(viewModel.item.title == "Test Item")
+        #expect(!viewModel.isLoading)
+        #expect(viewModel.errorMessage == nil)
+    }
+    
+    @Test func testItemViewModelToggleCrossedOut() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let item = Item(title: "Test Item")
+        let viewModel = ItemViewModel(item: item)
+        
+        // Initially not crossed out
+        #expect(!viewModel.item.isCrossedOut)
+        
+        // Toggle to crossed out
+        viewModel.toggleCrossedOut()
+        #expect(viewModel.item.isCrossedOut)
+        
+        // Toggle back to not crossed out
+        viewModel.toggleCrossedOut()
+        #expect(!viewModel.item.isCrossedOut)
+    }
+    
+    @Test func testItemViewModelToggleCrossedOutUpdatesModifiedDate() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let item = Item(title: "Test Item")
+        let viewModel = ItemViewModel(item: item)
+        let originalModifiedDate = viewModel.item.modifiedAt
+        
+        // Wait a small amount to ensure time difference
+        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        
+        viewModel.toggleCrossedOut()
+        
+        #expect(viewModel.item.modifiedAt > originalModifiedDate)
+    }
+    
+    @Test func testItemViewModelUpdateItem() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let item = Item(title: "Original Title")
+        let viewModel = ItemViewModel(item: item)
+        
+        viewModel.updateItem(title: "Updated Title", description: "New Description", quantity: 5)
+        
+        #expect(viewModel.item.title == "Updated Title")
+        #expect(viewModel.item.itemDescription == "New Description")
+        #expect(viewModel.item.quantity == 5)
+    }
+    
+    @Test func testItemViewModelUpdateItemEmptyDescription() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let item = Item(title: "Test Item")
+        let viewModel = ItemViewModel(item: item)
+        
+        viewModel.updateItem(title: "Updated Title", description: "", quantity: 1)
+        
+        #expect(viewModel.item.title == "Updated Title")
+        #expect(viewModel.item.itemDescription == nil) // Empty description should be nil
+        #expect(viewModel.item.quantity == 1)
+    }
+    
+    @Test func testItemViewModelUpdateItemUpdatesModifiedDate() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let item = Item(title: "Original Title")
+        let viewModel = ItemViewModel(item: item)
+        let originalModifiedDate = viewModel.item.modifiedAt
+        
+        // Wait a small amount to ensure time difference
+        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        
+        viewModel.updateItem(title: "Updated Title", description: "Description", quantity: 2)
+        
+        #expect(viewModel.item.modifiedAt > originalModifiedDate)
+    }
+    
     // MARK: - ExportViewModel Tests
 }

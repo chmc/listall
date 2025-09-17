@@ -20,6 +20,13 @@
 - Prefer fast test execution during development (skip performance tests, run unit tests only)
 - Document any persistent test issues in `docs/learnings.md`
 
+### Documentation (CRITICAL)
+- **Every completed task must be recorded in ai_changelog.md.** This is non-negotiable.
+- After completing ANY significant work, update the changelog with comprehensive details.
+- Include technical details, files modified, build status, and next steps.
+- Document any persistent issues or learnings in appropriate files.
+- Never skip the recording step - it's as critical as build validation.
+
 ### Code Quality Standards
 - Follow the established architecture patterns in the project
 - Ensure proper imports and dependencies
@@ -59,8 +66,9 @@ Follow these steps sequentially for **every** user request and follow behavioral
     * Review outputs and iterate with follow-up prompts if necessary.
     * **STOP after completing ONE logical feature/task** for user review and commit.
     * State: `Completed Workflow: <workflow name>. Ready for review and commit.`
-5.  **Final Recording (on task completion):**
+    * **REMINDER**: Don't forget final recording step if this completes the entire request.
+5.  **Final Recording (MANDATORY on task completion):**
     * Once the *entire* request is fulfilled:
         * Summarize significant changes.
-        * Execute `<record>` workflow (update `ai_changelog.md`, `todo.md`).
+        * **MANDATORY**: Execute `<record>` workflow (update `ai_changelog.md`, `todo.md`).
         * Ensure `learnings.md` was updated during `<fix>` or `<invent>` workflows if applicable.
