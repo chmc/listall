@@ -77,4 +77,63 @@ class MainViewModel: ObservableObject {
             lists[index] = updatedList
         }
     }
+    
+    func duplicateList(_ list: List) throws {
+        // Create a duplicate name with "Copy" suffix
+        let duplicateName = generateDuplicateName(for: list.name)
+        
+        guard duplicateName.count <= 100 else {
+            throw ValidationError.nameTooLong
+        }
+        
+        // Create new list with duplicate name
+        let duplicatedList = List(name: duplicateName)
+        
+        // Get items from the original list
+        let originalItems = dataManager.getItems(forListId: list.id)
+        
+        // Add the duplicated list first
+        dataManager.addList(duplicatedList)
+        
+        // Duplicate all items from the original list
+        for originalItem in originalItems {
+            var duplicatedItem = originalItem
+            duplicatedItem.id = UUID() // Generate new ID
+            duplicatedItem.listId = duplicatedList.id // Associate with new list
+            duplicatedItem.createdAt = Date()
+            duplicatedItem.modifiedAt = Date()
+            
+            dataManager.addItem(duplicatedItem, to: duplicatedList.id)
+        }
+        
+        // Add to local lists array and sort
+        lists.append(duplicatedList)
+        lists.sort { $0.orderNumber < $1.orderNumber }
+    }
+    
+    private func generateDuplicateName(for originalName: String) -> String {
+        let baseName = originalName
+        var duplicateNumber = 1
+        var candidateName = "\(baseName) Copy"
+        
+        // Check if a list with this name already exists
+        while lists.contains(where: { $0.name == candidateName }) {
+            duplicateNumber += 1
+            candidateName = "\(baseName) Copy \(duplicateNumber)"
+        }
+        
+        return candidateName
+    }
+    
+    func moveList(from source: IndexSet, to destination: Int) {
+        lists.move(fromOffsets: source, toOffset: destination)
+        
+        // Update order numbers for all lists
+        for (index, list) in lists.enumerated() {
+            var updatedList = list
+            updatedList.orderNumber = Int(index)
+            dataManager.updateList(updatedList)
+            lists[index] = updatedList
+        }
+    }
 }

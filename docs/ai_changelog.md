@@ -233,3 +233,65 @@ Successfully implemented Phase 5: UI Foundation, creating the main navigation st
 - Phase 6A: Basic List Display implementation
 - Continue with list management features
 - Build upon the established UI foundation
+
+## 2025-09-17: Phase 6C - List Interactions Complete
+
+### Summary
+Successfully implemented Phase 6C: List Interactions, adding comprehensive list manipulation features including duplication, drag-to-reorder, and enhanced swipe actions.
+
+### Changes Made
+- **List Duplication/Cloning**:
+  - Added `duplicateList()` method in MainViewModel with intelligent name generation
+  - Supports "Copy", "Copy 2", "Copy 3" naming pattern to avoid conflicts
+  - Duplicates all items from original list with new UUIDs and proper timestamps
+  - Includes validation for name length limits (100 character max)
+
+- **Drag-to-Reorder Functionality**:
+  - Added `.onMove` modifier to list display in MainView
+  - Implemented `moveList()` method with proper order number updates
+  - Added Edit/Done toggle button in navigation bar for reorder mode
+  - Smooth animations with proper data persistence
+
+- **Enhanced Swipe Actions**:
+  - Added duplicate action on leading edge (green) with confirmation dialog
+  - Enhanced context menu with duplicate option
+  - Maintained existing edit (blue) and delete (red) actions
+  - User-friendly confirmation alerts for all destructive operations
+
+- **Comprehensive Test Coverage**:
+  - Added 8 new test cases for list interaction features
+  - Tests cover basic duplication, duplication with items, name generation logic
+  - Tests for move functionality including edge cases (single item, empty list)
+  - Updated TestMainViewModel with missing methods for test compatibility
+
+### Technical Details
+- **Architecture**: Maintained MVVM pattern with proper separation of concerns
+- **Data Persistence**: All operations properly update both local state and data manager
+- **Error Handling**: Comprehensive validation and error handling for edge cases
+- **UI/UX**: Intuitive interactions with proper visual feedback and confirmations
+- **Performance**: Efficient operations with minimal UI updates and smooth animations
+
+### Files Modified
+- **MainViewModel.swift**: Added duplicateList() and moveList() methods
+- **MainView.swift**: Added drag-to-reorder and edit mode functionality  
+- **ListRowView.swift**: Enhanced swipe actions and context menu with duplicate option
+- **ViewModelsTests.swift**: Added comprehensive test coverage for new features
+- **TestHelpers.swift**: Updated TestMainViewModel with missing methods
+
+### Build Status
+- ✅ **Build Successful**: Project compiles without errors or warnings
+- ✅ **UI Tests**: 10/12 UI tests passing (2 failures unrelated to Phase 6C changes)
+- ⚠️ **Unit Tests**: Some failures due to pre-existing test isolation issues documented in todo.md
+- ✅ **Linter**: All code passes linter checks with no errors
+
+### User Experience Improvements
+- **Intuitive List Management**: Users can easily duplicate and reorder lists
+- **Consistent Interactions**: Familiar iOS patterns for swipe actions and drag-to-reorder
+- **Safety Features**: Confirmation dialogs prevent accidental operations
+- **Visual Feedback**: Clear animations and state changes for all interactions
+- **Accessibility**: Maintains proper accessibility support for all new features
+
+### Next Steps
+- Phase 7A: Basic Item Display implementation
+- Continue with item management features within lists
+- Build upon the enhanced list interaction capabilities

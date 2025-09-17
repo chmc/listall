@@ -318,6 +318,211 @@ struct ViewModelsTests {
         }
     }
     
+    // MARK: - List Interaction Tests (Phase 6C)
+    
+    @Test func testDuplicateListBasic() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        try viewModel.addList(name: "Original List")
+        
+        guard let originalList = viewModel.lists.first else {
+            #expect(Bool(false), "Original list should exist")
+            return
+        }
+        
+        let initialCount = viewModel.lists.count
+        try viewModel.duplicateList(originalList)
+        
+        #expect(viewModel.lists.count == initialCount + 1)
+        #expect(viewModel.lists.contains { $0.name == "Original List Copy" })
+        
+        // Verify original list still exists
+        #expect(viewModel.lists.contains { $0.id == originalList.id })
+    }
+    
+    @Test func testDuplicateListWithItems() async throws {
+        // Create isolated test environment to avoid singleton issues
+        let coreDataStack = TestHelpers.createInMemoryCoreDataStack()
+        let testCoreDataManager = TestCoreDataManager(container: coreDataStack)
+        let testDataManager = TestDataManager(coreDataManager: testCoreDataManager)
+        let viewModel = TestMainViewModel(dataManager: testDataManager)
+        
+        // Create list with items
+        try viewModel.addList(name: "Shopping List")
+        guard let originalList = viewModel.lists.first else {
+            #expect(Bool(false), "Original list should exist")
+            return
+        }
+        
+        // Add items to the original list
+        let item1 = Item(title: "Milk", listId: originalList.id)
+        let item2 = Item(title: "Bread", listId: originalList.id)
+        testDataManager.addItem(item1, to: originalList.id)
+        testDataManager.addItem(item2, to: originalList.id)
+        
+        // Duplicate the list
+        try viewModel.duplicateList(originalList)
+        
+        #expect(viewModel.lists.count == 2)
+        
+        guard let duplicatedList = viewModel.lists.first(where: { $0.name == "Shopping List Copy" }) else {
+            #expect(Bool(false), "Duplicated list should exist")
+            return
+        }
+        
+        // Verify items were duplicated
+        let duplicatedItems = testDataManager.getItems(forListId: duplicatedList.id)
+        #expect(duplicatedItems.count == 2)
+        #expect(duplicatedItems.contains { $0.title == "Milk" })
+        #expect(duplicatedItems.contains { $0.title == "Bread" })
+        
+        // Verify items have different IDs but same content
+        let originalItems = testDataManager.getItems(forListId: originalList.id)
+        for duplicatedItem in duplicatedItems {
+            #expect(!originalItems.contains { $0.id == duplicatedItem.id })
+            #expect(originalItems.contains { $0.title == duplicatedItem.title })
+        }
+    }
+    
+    @Test func testDuplicateListNameGeneration() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        try viewModel.addList(name: "Test List")
+        
+        guard let originalList = viewModel.lists.first else {
+            #expect(Bool(false), "Original list should exist")
+            return
+        }
+        
+        // First duplicate should be "Test List Copy"
+        try viewModel.duplicateList(originalList)
+        #expect(viewModel.lists.contains { $0.name == "Test List Copy" })
+        
+        // Second duplicate should be "Test List Copy 2"
+        try viewModel.duplicateList(originalList)
+        #expect(viewModel.lists.contains { $0.name == "Test List Copy 2" })
+        
+        // Third duplicate should be "Test List Copy 3"
+        try viewModel.duplicateList(originalList)
+        #expect(viewModel.lists.contains { $0.name == "Test List Copy 3" })
+        
+        #expect(viewModel.lists.count == 4) // Original + 3 copies
+    }
+    
+    @Test func testDuplicateListNameTooLong() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        let longName = String(repeating: "a", count: 95) // 95 + " Copy" = 100 characters (max)
+        try viewModel.addList(name: longName)
+        
+        guard let originalList = viewModel.lists.first else {
+            #expect(Bool(false), "Original list should exist")
+            return
+        }
+        
+        // Should work for exactly 95 characters (95 + 5 = 100)
+        try viewModel.duplicateList(originalList)
+        #expect(viewModel.lists.count == 2)
+        
+        // Now test with 96 characters (would be 101 with " Copy")
+        let tooLongName = String(repeating: "b", count: 96)
+        try viewModel.addList(name: tooLongName)
+        
+        guard let tooLongList = viewModel.lists.first(where: { $0.name == tooLongName }) else {
+            #expect(Bool(false), "Long list should exist")
+            return
+        }
+        
+        do {
+            try viewModel.duplicateList(tooLongList)
+            #expect(Bool(false), "Should have thrown ValidationError.nameTooLong")
+        } catch ValidationError.nameTooLong {
+            // Expected error
+            #expect(Bool(true))
+        } catch {
+            #expect(Bool(false), "Unexpected error type: \(error)")
+        }
+    }
+    
+    @Test func testMoveListBasic() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        try viewModel.addList(name: "List 1")
+        try viewModel.addList(name: "List 2")
+        try viewModel.addList(name: "List 3")
+        
+        #expect(viewModel.lists.count == 3)
+        #expect(viewModel.lists[0].name == "List 1")
+        #expect(viewModel.lists[1].name == "List 2")
+        #expect(viewModel.lists[2].name == "List 3")
+        
+        // Move first item to the end (index 0 to index 3)
+        let indexSet = IndexSet([0])
+        viewModel.moveList(from: indexSet, to: 3)
+        
+        #expect(viewModel.lists[0].name == "List 2")
+        #expect(viewModel.lists[1].name == "List 3")
+        #expect(viewModel.lists[2].name == "List 1")
+        
+        // Verify order numbers were updated correctly
+        #expect(viewModel.lists[0].orderNumber == 0)
+        #expect(viewModel.lists[1].orderNumber == 1)
+        #expect(viewModel.lists[2].orderNumber == 2)
+    }
+    
+    @Test func testMoveListMiddleToBeginning() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        try viewModel.addList(name: "First")
+        try viewModel.addList(name: "Second")
+        try viewModel.addList(name: "Third")
+        
+        // Move middle item to beginning (index 1 to index 0)
+        let indexSet = IndexSet([1])
+        viewModel.moveList(from: indexSet, to: 0)
+        
+        #expect(viewModel.lists[0].name == "Second")
+        #expect(viewModel.lists[1].name == "First")
+        #expect(viewModel.lists[2].name == "Third")
+        
+        // Verify order numbers
+        #expect(viewModel.lists[0].orderNumber == 0)
+        #expect(viewModel.lists[1].orderNumber == 1)
+        #expect(viewModel.lists[2].orderNumber == 2)
+    }
+    
+    @Test func testMoveListSingleItem() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        try viewModel.addList(name: "Only List")
+        
+        // Moving single item should not crash
+        let indexSet = IndexSet([0])
+        viewModel.moveList(from: indexSet, to: 1)
+        
+        #expect(viewModel.lists.count == 1)
+        #expect(viewModel.lists[0].name == "Only List")
+        #expect(viewModel.lists[0].orderNumber == 0)
+    }
+    
+    @Test func testMoveListEmptyList() async throws {
+        TestHelpers.resetSharedSingletons()
+        
+        let viewModel = MainViewModel()
+        
+        // Moving in empty list should not crash
+        let indexSet = IndexSet([])
+        viewModel.moveList(from: indexSet, to: 0)
+        
+        #expect(viewModel.lists.isEmpty)
+    }
+    
     // MARK: - ListViewModel Tests
     
     // MARK: - ItemViewModel Tests

@@ -6,6 +6,7 @@ struct ListRowView: View {
     @State private var itemCount: Int = 0
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
+    @State private var showingDuplicateAlert = false
     
     var body: some View {
         NavigationLink(destination: ListView(list: list)) {
@@ -38,6 +39,12 @@ struct ListRowView: View {
                 Label("Edit", systemImage: "pencil")
             }
             
+            Button(action: {
+                showingDuplicateAlert = true
+            }) {
+                Label("Duplicate", systemImage: "doc.on.doc")
+            }
+            
             Button(role: .destructive, action: {
                 showingDeleteAlert = true
             }) {
@@ -50,6 +57,14 @@ struct ListRowView: View {
             }) {
                 Label("Delete", systemImage: "trash")
             }
+        }
+        .swipeActions(edge: .leading) {
+            Button(action: {
+                showingDuplicateAlert = true
+            }) {
+                Label("Duplicate", systemImage: "doc.on.doc")
+            }
+            .tint(.green)
             
             Button(action: {
                 showingEditSheet = true
@@ -68,6 +83,19 @@ struct ListRowView: View {
             }
         } message: {
             Text("Are you sure you want to delete \"\(list.name)\"? This action cannot be undone.")
+        }
+        .alert("Duplicate List", isPresented: $showingDuplicateAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Duplicate") {
+                do {
+                    try mainViewModel.duplicateList(list)
+                } catch {
+                    // Handle error (could add error alert here if needed)
+                    print("Error duplicating list: \(error)")
+                }
+            }
+        } message: {
+            Text("This will create a copy of \"\(list.name)\" with all its items.")
         }
     }
     

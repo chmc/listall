@@ -6,6 +6,7 @@ struct MainView: View {
     @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
     @State private var selectedTab = 0
     @State private var showingCreateList = false
+    @State private var editMode: EditMode = .inactive
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -40,20 +41,32 @@ struct MainView: View {
                             ForEach(viewModel.lists) { list in
                                 ListRowView(list: list, mainViewModel: viewModel)
                             }
+                            .onMove(perform: viewModel.moveList)
                         }
+                        .environment(\.editMode, $editMode)
                     }
                 }
                 .navigationTitle("Lists")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: {
-                            Task {
-                                await cloudKitService.sync()
+                        HStack {
+                            Button(action: {
+                                Task {
+                                    await cloudKitService.sync()
+                                }
+                            }) {
+                                Image(systemName: Constants.UI.syncIcon)
                             }
-                        }) {
-                            Image(systemName: Constants.UI.syncIcon)
+                            .disabled(cloudKitService.isSyncing)
+                            
+                            if !viewModel.lists.isEmpty {
+                                Button(editMode == .inactive ? "Edit" : "Done") {
+                                    withAnimation {
+                                        editMode = editMode == .inactive ? .active : .inactive
+                                    }
+                                }
+                            }
                         }
-                        .disabled(cloudKitService.isSyncing)
                     }
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
