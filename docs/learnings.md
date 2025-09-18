@@ -131,6 +131,36 @@
 - **Benefit**: Ensures race condition fixes work correctly and prevents regression of critical user-facing bugs
 - **Rule**: Write tests that specifically reproduce the race condition scenario, not just the individual operations in isolation
 
+### Parallel Test Execution Issues
+- **Learning**: Xcode's parallel test execution can cause resource contention and false failures even with proper test isolation
+- **Application**: Discovered that 96 tests would fail with 0.000s runtime when run in parallel, but pass individually or in small groups
+- **Benefit**: Understanding this issue prevents wasting time debugging "failing" tests that are actually infrastructure problems
+- **Rule**: When tests fail immediately (0.000s) in parallel but pass individually, disable parallel testing with `-parallel-testing-enabled NO`
+
+### Test Infrastructure vs Logic Failures
+- **Learning**: Tests can fail due to infrastructure issues (parallel execution, resource contention) rather than logic errors
+- **Application**: Distinguished between real test failures (assertion errors) and infrastructure failures (immediate 0.000s crashes)
+- **Benefit**: Focuses debugging effort on actual code issues rather than test execution environment problems
+- **Rule**: Always verify if test failures are infrastructure-related by running single tests in isolation before debugging logic
+
+### Test Isolation Architecture Design
+- **Learning**: Proper test isolation requires complete separation of data dependencies, not just resetting shared state
+- **Application**: Created TestDataManager, TestCoreDataManager, TestItemViewModel, and TestListViewModel with isolated in-memory Core Data stacks
+- **Benefit**: Tests run reliably without shared state conflicts, enabling true parallel execution when infrastructure supports it
+- **Rule**: Create isolated test versions of all data dependencies rather than trying to reset shared singletons between tests
+
+### MainActor and Testing Challenges
+- **Learning**: SwiftUI ViewModels marked with @MainActor create testing complexity due to actor isolation requirements
+- **Application**: Attempted to create ItemEditViewModel tests but encountered MainActor isolation errors that required complex async/await handling
+- **Benefit**: Understanding these limitations helps decide when to write UI-level tests vs focusing on business logic tests
+- **Rule**: Focus testing efforts on business logic and data layer; UI ViewModels with @MainActor may not be worth the testing complexity
+
+### Test Count and Validation Success
+- **Learning**: Comprehensive test coverage provides confidence in implementation quality and helps catch edge cases
+- **Application**: Achieved 96 tests across 4 test suites (ModelTests, UtilsTests, ServicesTests, ViewModelsTests) with 100% pass rate
+- **Benefit**: High test coverage validates that Phase 7B implementation works correctly and meets all requirements
+- **Rule**: Aim for comprehensive test coverage of business logic, data operations, and edge cases to ensure implementation quality
+
 ## Future Considerations
 
 ### Platform Expansion

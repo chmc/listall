@@ -2,28 +2,38 @@ import SwiftUI
 
 struct ItemRowView: View {
     let item: Item
-    @StateObject private var viewModel: ItemViewModel
+    let onToggle: (() -> Void)?
+    let onEdit: (() -> Void)?
+    let onDuplicate: (() -> Void)?
+    let onDelete: (() -> Void)?
     
-    init(item: Item) {
+    init(item: Item, 
+         onToggle: (() -> Void)? = nil,
+         onEdit: (() -> Void)? = nil,
+         onDuplicate: (() -> Void)? = nil,
+         onDelete: (() -> Void)? = nil) {
         self.item = item
-        self._viewModel = StateObject(wrappedValue: ItemViewModel(item: item))
+        self.onToggle = onToggle
+        self.onEdit = onEdit
+        self.onDuplicate = onDuplicate
+        self.onDelete = onDelete
     }
     
     var body: some View {
-        NavigationLink(destination: ItemDetailView(item: item)) {
-            HStack(spacing: Theme.Spacing.md) {
-                // Checkbox
-                Button(action: {
-                    viewModel.toggleCrossedOut()
-                }) {
-                    Image(systemName: item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
-                        .foregroundColor(item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
-                        .font(.title2)
-                        .animation(Theme.Animation.quick, value: item.isCrossedOut)
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Content
+        HStack(spacing: Theme.Spacing.md) {
+            // Checkbox
+            Button(action: {
+                onToggle?()
+            }) {
+                Image(systemName: item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
+                    .foregroundColor(item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
+                    .font(.title2)
+                    .animation(Theme.Animation.quick, value: item.isCrossedOut)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Content - NavigationLink to detail view
+            NavigationLink(destination: ItemDetailView(item: item)) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     // Title with strikethrough animation
                     Text(item.displayTitle)
@@ -62,21 +72,66 @@ struct ItemRowView: View {
                             .foregroundColor(Theme.Colors.info)
                             .opacity(item.isCrossedOut ? 0.6 : 1.0)
                         }
+                        
+                        Spacer()
+                        
+                        // Navigation chevron
+                        Image(systemName: Constants.UI.chevronIcon)
+                            .font(.caption)
+                            .foregroundColor(Theme.Colors.secondary)
+                            .opacity(0.6)
                     }
                 }
-                
-                Spacer()
-                
-                // Navigation chevron
-                Image(systemName: Constants.UI.chevronIcon)
-                    .font(.caption)
-                    .foregroundColor(Theme.Colors.secondary)
-                    .opacity(0.6)
             }
-            .padding(.vertical, Theme.Spacing.xs)
-            .contentShape(Rectangle()) // Makes entire row tappable
+            .buttonStyle(PlainButtonStyle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.vertical, Theme.Spacing.xs)
+        .contentShape(Rectangle()) // Makes entire row tappable
+        .contextMenu {
+            // Context menu actions
+            Button(action: {
+                onEdit?()
+            }) {
+                Label("Edit", systemImage: "pencil")
+            }
+            
+            Button(action: {
+                onDuplicate?()
+            }) {
+                Label("Duplicate", systemImage: "doc.on.doc")
+            }
+            
+            Divider()
+            
+            Button(action: {
+                onDelete?()
+            }) {
+                Label("Delete", systemImage: "trash")
+            }
+            .foregroundColor(.red)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(action: {
+                onDelete?()
+            }) {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(.red)
+            
+            Button(action: {
+                onDuplicate?()
+            }) {
+                Label("Duplicate", systemImage: "doc.on.doc")
+            }
+            .tint(.blue)
+            
+            Button(action: {
+                onEdit?()
+            }) {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(.orange)
+        }
     }
 }
 

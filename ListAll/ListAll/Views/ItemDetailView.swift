@@ -140,9 +140,18 @@ struct ItemDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditView) {
-            // TODO: Implement ItemEditView in Phase 7B
-            Text("Edit Item - Coming in Phase 7B")
-                .padding()
+            if let listId = viewModel.item.listId,
+               let list = DataManager.shared.lists.first(where: { $0.id == listId }) {
+                ItemEditView(list: list, item: viewModel.item)
+            } else {
+                Text("Unable to edit item - list not found")
+                    .padding()
+            }
+        }
+        .onChange(of: showingEditView) { _ in
+            if !showingEditView {
+                viewModel.refreshItem() // Refresh item after editing
+            }
         }
     }
 }

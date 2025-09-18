@@ -2,6 +2,7 @@ import Foundation
 import CoreData
 @testable import ListAll
 
+
 /// Test helper for setting up isolated test environments
 class TestHelpers {
     
@@ -39,6 +40,18 @@ class TestHelpers {
     static func createTestMainViewModel() -> TestMainViewModel {
         let testDataManager = createTestDataManager()
         return TestMainViewModel(dataManager: testDataManager)
+    }
+    
+    /// Creates an isolated test environment for ItemViewModel
+    static func createTestItemViewModel(with item: Item) -> TestItemViewModel {
+        let testDataManager = createTestDataManager()
+        return TestItemViewModel(item: item, dataManager: testDataManager)
+    }
+    
+    /// Creates an isolated test environment for ListViewModel
+    static func createTestListViewModel(with list: List) -> TestListViewModel {
+        let testDataManager = createTestDataManager()
+        return TestListViewModel(list: list, dataManager: testDataManager)
     }
     
     /// Resets UserDefaults for test isolation
@@ -269,6 +282,217 @@ class TestDataManager: ObservableObject {
             print("Failed to fetch items: \(error)")
             return []
         }
+    }
+}
+
+/// Test-specific ItemViewModel that uses isolated DataManager
+class TestItemViewModel: ObservableObject {
+    @Published var item: Item
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let dataManager: TestDataManager
+    private let dataRepository: TestDataRepository
+    
+    init(item: Item, dataManager: TestDataManager) {
+        self.item = item
+        self.dataManager = dataManager
+        self.dataRepository = TestDataRepository(dataManager: dataManager)
+    }
+    
+    func save() {
+        dataManager.updateItem(item)
+    }
+    
+    func toggleCrossedOut() {
+        var updatedItem = item
+        updatedItem.toggleCrossedOut()
+        dataManager.updateItem(updatedItem)
+        self.item = updatedItem
+    }
+    
+    func updateItem(title: String, description: String, quantity: Int) {
+        var updatedItem = item
+        updatedItem.title = title
+        updatedItem.itemDescription = description.isEmpty ? nil : description
+        updatedItem.quantity = quantity
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+        self.item = updatedItem
+    }
+    
+    func duplicateItem(in list: List) -> Item? {
+        guard item.listId != nil else { return nil }
+        
+        let duplicatedItem = dataRepository.createItem(
+            in: list,
+            title: "\(item.title) (Copy)",
+            description: item.itemDescription ?? "",
+            quantity: item.quantity
+        )
+        
+        return duplicatedItem
+    }
+    
+    func deleteItem() {
+        dataRepository.deleteItem(item)
+    }
+    
+    func validateItem() -> ValidationResult {
+        return dataRepository.validateItem(item)
+    }
+    
+    func refreshItem() {
+        if let refreshedItem = dataRepository.getItem(by: item.id) {
+            self.item = refreshedItem
+        }
+    }
+}
+
+/// Test-specific ListViewModel that uses isolated DataManager
+class TestListViewModel: ObservableObject {
+    @Published var items: [Item] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let dataManager: TestDataManager
+    private let dataRepository: TestDataRepository
+    private let list: List
+    
+    init(list: List, dataManager: TestDataManager) {
+        self.list = list
+        self.dataManager = dataManager
+        self.dataRepository = TestDataRepository(dataManager: dataManager)
+        loadItems()
+    }
+    
+    func loadItems() {
+        isLoading = true
+        errorMessage = nil
+        
+        items = dataManager.getItems(forListId: list.id)
+        
+        isLoading = false
+    }
+    
+    func save() {
+        for item in items {
+            dataManager.updateItem(item)
+        }
+    }
+    
+    func createItem(title: String, description: String = "", quantity: Int = 1) {
+        let _ = dataRepository.createItem(in: list, title: title, description: description, quantity: quantity)
+        loadItems()
+    }
+    
+    func deleteItem(_ item: Item) {
+        dataRepository.deleteItem(item)
+        loadItems()
+    }
+    
+    func duplicateItem(_ item: Item) {
+        let _ = dataRepository.createItem(
+            in: list,
+            title: "\(item.title) (Copy)",
+            description: item.itemDescription ?? "",
+            quantity: item.quantity
+        )
+        loadItems()
+    }
+    
+    func toggleItemCrossedOut(_ item: Item) {
+        dataRepository.toggleItemCrossedOut(item)
+        loadItems()
+    }
+    
+    func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
+        dataRepository.updateItem(item, title: title, description: description, quantity: quantity)
+        loadItems()
+    }
+    
+    func refreshItems() {
+        loadItems()
+    }
+    
+    var sortedItems: [Item] {
+        return items.sorted { $0.orderNumber < $1.orderNumber }
+    }
+    
+    var activeItems: [Item] {
+        return items.filter { !$0.isCrossedOut }
+    }
+    
+    var completedItems: [Item] {
+        return items.filter { $0.isCrossedOut }
+    }
+}
+
+/// Test-specific DataRepository that uses isolated DataManager
+class TestDataRepository {
+    private let dataManager: TestDataManager
+    
+    init(dataManager: TestDataManager) {
+        self.dataManager = dataManager
+    }
+    
+    func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {
+        var newItem = Item(title: title)
+        newItem.itemDescription = description.isEmpty ? nil : description
+        newItem.quantity = quantity
+        newItem.listId = list.id
+        dataManager.addItem(newItem, to: list.id)
+        return newItem
+    }
+    
+    func deleteItem(_ item: Item) {
+        if let listId = item.listId {
+            dataManager.deleteItem(withId: item.id, from: listId)
+        }
+    }
+    
+    func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
+        var updatedItem = item
+        updatedItem.title = title
+        updatedItem.itemDescription = description.isEmpty ? nil : description
+        updatedItem.quantity = quantity
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+    }
+    
+    func toggleItemCrossedOut(_ item: Item) {
+        var updatedItem = item
+        updatedItem.toggleCrossedOut()
+        dataManager.updateItem(updatedItem)
+    }
+    
+    func getItem(by id: UUID) -> Item? {
+        for list in dataManager.lists {
+            if let item = list.items.first(where: { $0.id == id }) {
+                return item
+            }
+        }
+        return nil
+    }
+    
+    func validateItem(_ item: Item) -> ValidationResult {
+        if item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .failure("Item title cannot be empty")
+        }
+        
+        if item.title.count > 200 {
+            return .failure("Item title must be 200 characters or less")
+        }
+        
+        if let description = item.itemDescription, description.count > 50000 {
+            return .failure("Item description must be 50,000 characters or less")
+        }
+        
+        if item.quantity < 1 {
+            return .failure("Item quantity must be at least 1")
+        }
+        
+        return .success
     }
 }
 

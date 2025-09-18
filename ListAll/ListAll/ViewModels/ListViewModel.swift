@@ -8,6 +8,7 @@ class ListViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private let dataManager = DataManager.shared // Changed from coreDataManager
+    private let dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
     private let list: List
     
@@ -33,5 +34,55 @@ class ListViewModel: ObservableObject {
         for item in items {
             dataManager.updateItem(item)
         }
+    }
+    
+    // MARK: - Item Management Operations
+    
+    func createItem(title: String, description: String = "", quantity: Int = 1) {
+        let _ = dataRepository.createItem(in: list, title: title, description: description, quantity: quantity)
+        loadItems() // Refresh the list
+    }
+    
+    func deleteItem(_ item: Item) {
+        dataRepository.deleteItem(item)
+        loadItems() // Refresh the list
+    }
+    
+    func duplicateItem(_ item: Item) {
+        let _ = dataRepository.createItem(
+            in: list,
+            title: "\(item.title) (Copy)",
+            description: item.itemDescription ?? "",
+            quantity: item.quantity
+        )
+        loadItems() // Refresh the list
+    }
+    
+    func toggleItemCrossedOut(_ item: Item) {
+        dataRepository.toggleItemCrossedOut(item)
+        loadItems() // Refresh the list
+    }
+    
+    func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
+        dataRepository.updateItem(item, title: title, description: description, quantity: quantity)
+        loadItems() // Refresh the list
+    }
+    
+    // MARK: - Utility Methods
+    
+    func refreshItems() {
+        loadItems()
+    }
+    
+    var sortedItems: [Item] {
+        return items.sorted { $0.orderNumber < $1.orderNumber }
+    }
+    
+    var activeItems: [Item] {
+        return items.filter { !$0.isCrossedOut }
+    }
+    
+    var completedItems: [Item] {
+        return items.filter { $0.isCrossedOut }
     }
 }

@@ -3,6 +3,9 @@ import SwiftUI
 struct ListView: View {
     let list: List
     @StateObject private var viewModel: ListViewModel
+    @State private var showingCreateItem = false
+    @State private var showingEditItem = false
+    @State private var selectedItem: Item?
     
     init(list: List) {
         self.list = list
@@ -25,28 +28,91 @@ struct ListView: View {
                     Text("Add your first item to get started")
                         .font(Theme.Typography.body)
                         .emptyStateStyle()
+                    
+                    Button(action: {
+                        showingCreateItem = true
+                    }) {
+                        HStack {
+                            Image(systemName: Constants.UI.addIcon)
+                            Text("Add Item")
+                        }
+                        .font(Theme.Typography.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Theme.Colors.primary)
+                        .cornerRadius(Theme.CornerRadius.md)
+                    }
                 }
             } else {
                 SwiftUI.List {
                     ForEach(viewModel.items) { item in
-                        ItemRowView(item: item)
+                        ItemRowView(
+                            item: item,
+                            onToggle: {
+                                viewModel.toggleItemCrossedOut(item)
+                            },
+                            onEdit: {
+                                selectedItem = item
+                                showingEditItem = true
+                            },
+                            onDuplicate: {
+                                viewModel.duplicateItem(item)
+                            },
+                            onDelete: {
+                                viewModel.deleteItem(item)
+                            }
+                        )
                     }
+                    .onDelete(perform: deleteItems)
+                }
+                .refreshable {
+                    viewModel.loadItems()
                 }
             }
         }
         .navigationTitle(list.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if !viewModel.items.isEmpty {
+                    EditButton()
+                }
+                
                 Button(action: {
-                    // TODO: Add create item functionality
+                    showingCreateItem = true
                 }) {
                     Image(systemName: Constants.UI.addIcon)
                 }
             }
         }
+        .sheet(isPresented: $showingCreateItem) {
+            ItemEditView(list: list)
+        }
+        .sheet(isPresented: $showingEditItem) {
+            if let item = selectedItem {
+                ItemEditView(list: list, item: item)
+            }
+        }
         .onAppear {
             viewModel.loadItems()
+        }
+        .onChange(of: showingCreateItem) { _ in
+            if !showingCreateItem {
+                viewModel.loadItems() // Refresh after creating
+            }
+        }
+        .onChange(of: showingEditItem) { _ in
+            if !showingEditItem {
+                selectedItem = nil
+                viewModel.loadItems() // Refresh after editing
+            }
+        }
+    }
+    
+    private func deleteItems(offsets: IndexSet) {
+        for index in offsets {
+            let item = viewModel.items[index]
+            viewModel.deleteItem(item)
         }
     }
 }

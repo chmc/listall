@@ -124,10 +124,10 @@
 - ✅ Create ItemRowView component
 - ✅ Create ItemDetailView for viewing item details
 
-## Phase 7B: Item Creation and Editing
-- ❌ Implement ItemEditView for creating/editing items
-- ❌ Add item crossing out functionality
-- ❌ Create item duplication functionality
+## Phase 7B: Item Creation and Editing ✅ COMPLETED
+- ✅ Implement ItemEditView for creating/editing items
+- ✅ Add item crossing out functionality
+- ✅ Create item duplication functionality
 
 ## Phase 7C: Item Interactions
 - ❌ Implement drag-to-reorder for items within lists
