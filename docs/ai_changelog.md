@@ -1,5 +1,21 @@
 # AI Changelog
 
+## 2025-09-18 - Fixed Create Button Visibility Issue
+
+### Bug Fix: Create Button Missing from Navigation Bar
+- **Issue**: Create button completely missing from navigation bar when adding new items
+- **Root Cause**: Custom `foregroundColor` styling was making the disabled button invisible to users
+- **Solution**: Removed custom color styling to use default system appearance for toolbar buttons
+- **Files Modified**: `ListAll/ListAll/Views/ItemEditView.swift` (removed line 133 foregroundColor modifier)
+- **Testing**: Build successful, UI tests passed, Create button now visible with proper system styling
+- **Impact**: Users can now see the Create button at all times, with proper visual feedback for disabled states
+
+### Technical Details
+- The custom styling `Theme.Colors.primary.opacity(0.6)` rendered disabled buttons nearly invisible
+- Default system styling provides better accessibility and visual consistency
+- Button validation logic remains unchanged - still disables when title is empty
+- NavigationView structure works correctly for modal sheet presentations
+
 ## 2024-01-15 - Initial App Planning
 
 ### Created Documentation Structure

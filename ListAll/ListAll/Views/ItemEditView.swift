@@ -130,7 +130,6 @@ struct ItemEditView: View {
                         }
                     }
                     .disabled(!viewModel.isValid || viewModel.isSaving)
-                    .foregroundColor(viewModel.isValid ? Theme.Colors.primary : Theme.Colors.secondary)
                 }
             }
             .alert("Discard Changes?", isPresented: $showingDiscardAlert) {

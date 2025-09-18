@@ -1,5 +1,21 @@
 # Technical Learnings
 
+## SwiftUI Debugging and UI Issues
+
+### Invisible Button Debugging (September 2025)
+- **Issue**: Create button completely missing from navigation bar in modal sheets
+- **Initial Hypothesis**: NavigationView vs NavigationStack compatibility with modal presentations
+- **Root Cause**: Custom `foregroundColor` styling making disabled buttons invisible
+- **Learning**: Custom styling can override system accessibility features and create invisible UI elements
+- **Solution**: Remove custom styling and rely on system defaults for toolbar buttons
+- **Key Insights**:
+  - System default styling provides better accessibility and visual consistency
+  - Custom opacity values (like `0.6`) can render elements nearly invisible on some devices/themes
+  - UI tests can pass even when buttons are invisible to users (they test functionality, not visibility)
+  - Always test UI changes on actual devices/simulators, not just through automated tests
+  - When debugging missing UI elements, check styling modifiers before architectural changes
+- **Prevention**: Use system styling for standard UI elements, especially toolbar buttons and navigation items
+
 ## App Planning and Architecture
 
 ### Documentation-First Approach
