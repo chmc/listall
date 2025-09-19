@@ -103,21 +103,6 @@ struct ItemDetailView: View {
                     .padding(Theme.Spacing.md)
                 }
                 
-                Divider()
-                
-                // Metadata Section
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text("Details")
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(Theme.Colors.secondary)
-                    
-                    VStack(spacing: Theme.Spacing.sm) {
-                        MetadataRow(label: "Created", value: viewModel.item.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        MetadataRow(label: "Modified", value: viewModel.item.modifiedAt.formatted(date: .abbreviated, time: .shortened))
-                    }
-                }
-                .cardStyle()
-                .padding(Theme.Spacing.md)
                 
                 Spacer(minLength: Theme.Spacing.xl)
             }

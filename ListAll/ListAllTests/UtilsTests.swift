@@ -7,8 +7,6 @@ struct UtilsTests {
     // MARK: - ValidationHelper Tests
     
     @Test func testValidateListNameSuccess() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateListName("Valid List Name")
         
@@ -17,8 +15,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateListNameEmpty() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateListName("")
         
@@ -27,8 +23,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateListNameWhitespace() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateListName("   ")
         
@@ -37,8 +31,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateListNameTooLong() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let longName = String(repeating: "a", count: 101)
         let result = ValidationHelper.validateListName(longName)
@@ -48,8 +40,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateListNameExactly100Characters() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let name = String(repeating: "a", count: 100)
         let result = ValidationHelper.validateListName(name)
@@ -59,8 +49,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemTitleSuccess() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemTitle("Valid Item Title")
         
@@ -69,8 +57,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemTitleEmpty() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemTitle("")
         
@@ -79,8 +65,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemTitleWhitespace() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemTitle("   ")
         
@@ -89,8 +73,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemTitleTooLong() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let longTitle = String(repeating: "a", count: 201)
         let result = ValidationHelper.validateItemTitle(longTitle)
@@ -100,8 +82,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemTitleExactly200Characters() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let title = String(repeating: "a", count: 200)
         let result = ValidationHelper.validateItemTitle(title)
@@ -111,8 +91,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemDescriptionSuccess() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemDescription("Valid description")
         
@@ -121,8 +99,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemDescriptionEmpty() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemDescription("")
         
@@ -131,8 +107,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemDescriptionTooLong() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let longDescription = String(repeating: "a", count: 1001)
         let result = ValidationHelper.validateItemDescription(longDescription)
@@ -142,8 +116,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemDescriptionExactly1000Characters() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let description = String(repeating: "a", count: 1000)
         let result = ValidationHelper.validateItemDescription(description)
@@ -153,8 +125,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemQuantitySuccess() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemQuantity(5)
         
@@ -163,8 +133,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemQuantityZero() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemQuantity(0)
         
@@ -173,8 +141,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemQuantityNegative() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemQuantity(-1)
         
@@ -183,8 +149,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemQuantityTooHigh() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemQuantity(10000)
         
@@ -193,8 +157,6 @@ struct UtilsTests {
     }
     
     @Test func testValidateItemQuantityExactly9999() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationHelper.validateItemQuantity(9999)
         
@@ -205,8 +167,6 @@ struct UtilsTests {
     // MARK: - String Extensions Tests
     
     @Test func testStringIsBlank() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         #expect("".isBlank == true)
         #expect("   ".isBlank == true)
@@ -216,8 +176,6 @@ struct UtilsTests {
     }
     
     @Test func testStringTrimmed() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         #expect("  hello  ".trimmed == "hello")
         #expect("\n\tworld\n\t".trimmed == "world")
@@ -229,8 +187,6 @@ struct UtilsTests {
     // The String.asURL extension is working correctly in the app
     
     @Test func testStringCapitalizedFirst() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         #expect("hello".capitalizedFirst == "Hello")
         #expect("HELLO".capitalizedFirst == "HELLO")
@@ -241,8 +197,6 @@ struct UtilsTests {
     // MARK: - Date Extensions Tests
     
     @Test func testDateFormatted() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let date = Date()
         let formatted = date.customFormatted()
@@ -252,8 +206,6 @@ struct UtilsTests {
     }
     
     @Test func testDateListFormatted() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let date = Date()
         let formatted = date.listFormatted()
@@ -263,8 +215,6 @@ struct UtilsTests {
     }
     
     @Test func testDateRelativeFormatted() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let now = Date()
         let past = now.addingTimeInterval(-3600) // 1 hour ago
@@ -278,8 +228,6 @@ struct UtilsTests {
     // MARK: - ValidationResult Tests
     
     @Test func testValidationResultSuccess() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let result = ValidationResult.success
         
@@ -288,8 +236,6 @@ struct UtilsTests {
     }
     
     @Test func testValidationResultFailure() async throws {
-        // Reset shared state before test
-        TestHelpers.resetSharedSingletons()
         
         let errorMessage = "Test error message"
         let result = ValidationResult.failure(errorMessage)

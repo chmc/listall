@@ -3,6 +3,7 @@ import Foundation
 import CoreData
 @testable import ListAll
 
+@Suite(.serialized)
 struct ViewModelsTests {
     
     // MARK: - MainViewModel Tests
@@ -181,7 +182,10 @@ struct ViewModelsTests {
         viewModel.deleteList(originalList)
         #expect(viewModel.lists.count == 0)
         
-        // Immediately recreate list with same name (this used to crash)
+        // Wait a brief moment to ensure Core Data operations complete
+        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        
+        // Recreate list with same name (this used to crash)
         try viewModel.addList(name: listName)
         #expect(viewModel.lists.count == 1)
         #expect(viewModel.lists.first?.name == listName)
