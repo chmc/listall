@@ -45,38 +45,17 @@ struct ItemDetailView: View {
                             .font(Theme.Typography.headline)
                             .foregroundColor(Theme.Colors.secondary)
                         
-                        if URLHelper.containsURL(viewModel.item.displayDescription) {
-                            // For URLs, create a custom Text with Link
-                            let urls = URLHelper.detectURLs(in: viewModel.item.displayDescription)
-                            if let firstURL = urls.first {
-                                Link(destination: firstURL) {
-                                    Text(viewModel.item.displayDescription)
-                                        .font(Theme.Typography.body)
-                                        .foregroundColor(.blue)
-                                        .underline()
-                                        .opacity(viewModel.item.isCrossedOut ? 0.7 : 1.0)
-                                        .multilineTextAlignment(.leading)
-                                        .lineLimit(nil) // Allow unlimited lines
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            } else {
-                                // Fallback if URL detection fails
-                                Text(viewModel.item.displayDescription)
-                                    .font(Theme.Typography.body)
-                                    .opacity(viewModel.item.isCrossedOut ? 0.7 : 1.0)
-                                    .multilineTextAlignment(.leading)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        } else {
-                            // Plain text without URLs
-                            Text(viewModel.item.displayDescription)
-                                .font(Theme.Typography.body)
-                                .opacity(viewModel.item.isCrossedOut ? 0.7 : 1.0)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(nil) // Allow unlimited lines
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        MixedTextView(
+                            text: viewModel.item.displayDescription,
+                            font: Theme.Typography.body,
+                            textColor: .primary,
+                            linkColor: .blue,
+                            isCrossedOut: viewModel.item.isCrossedOut,
+                            opacity: viewModel.item.isCrossedOut ? 0.7 : 1.0
+                        )
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(nil) // Allow unlimited lines
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .cardStyle()
                     .padding(Theme.Spacing.md)

@@ -1,6 +1,19 @@
 import Foundation
 import SwiftUI
 
+/// Represents a text component that can be either normal text or a URL
+struct TextComponent {
+    let text: String
+    let isURL: Bool
+    let url: URL?
+    
+    init(text: String, isURL: Bool = false, url: URL? = nil) {
+        self.text = text
+        self.isURL = isURL
+        self.url = url
+    }
+}
+
 /// Helper utility for URL detection and handling in text
 struct URLHelper {
     
@@ -43,163 +56,120 @@ struct URLHelper {
         UIApplication.shared.open(url)
     }
     
-    /// Creates an attributed string with clickable links for URLs that can wrap properly
-    static func createAttributedString(from text: String, 
-                                     font: UIFont = UIFont.systemFont(ofSize: 16),
-                                     textColor: UIColor = .label,
-                                     linkColor: UIColor = .systemBlue) -> NSAttributedString {
-        let attributedString = NSMutableAttributedString(string: text)
-        
-        // Create paragraph style that forces character-level wrapping ANYWHERE
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineBreakMode = .byCharWrapping // Break anywhere, even within words/URLs
-        paragraphStyle.alignment = .left
-        paragraphStyle.lineSpacing = 0
-        paragraphStyle.paragraphSpacing = 0
-        paragraphStyle.headIndent = 0
-        paragraphStyle.tailIndent = 0
-        paragraphStyle.firstLineHeadIndent = 0
-        paragraphStyle.minimumLineHeight = font.lineHeight
-        paragraphStyle.maximumLineHeight = font.lineHeight * 1.2
-        
-        // Set default attributes with FORCED line breaking
-        attributedString.addAttributes([
-            .font: font,
-            .foregroundColor: textColor,
-            .paragraphStyle: paragraphStyle
-        ], range: NSRange(location: 0, length: text.count))
-        
-        // Find and style URLs - but DON'T override the paragraph style
+    /// Parses text into components separating normal text from URLs
+    static func parseTextComponents(from text: String) -> [TextComponent] {
+        var components: [TextComponent] = []
         let urls = detectURLs(in: text)
-        for url in urls {
+        
+        // If no URLs found, return the entire text as a single component
+        guard !urls.isEmpty else {
+            return [TextComponent(text: text)]
+        }
+        
+        var processedLength = 0
+        
+        // Sort URLs by their position in the text
+        let sortedURLRanges = urls.compactMap { url -> (url: URL, range: NSRange)? in
             let urlString = url.absoluteString
-            var searchStartIndex = 0
+            let range = (text as NSString).range(of: urlString)
+            return range.location != NSNotFound ? (url: url, range: range) : nil
+        }.sorted { $0.range.location < $1.range.location }
+        
+        for (url, range) in sortedURLRanges {
+            let urlString = url.absoluteString
             
-            // Find all occurrences of this URL
-            while searchStartIndex < text.count {
-                let remainingRange = NSRange(location: searchStartIndex, length: text.count - searchStartIndex)
-                let foundRange = (text as NSString).range(of: urlString, options: [], range: remainingRange)
-                
-                if foundRange.location == NSNotFound {
-                    break
+            // Add text before the URL (if any)
+            if range.location > processedLength {
+                let beforeURLRange = NSRange(location: processedLength, length: range.location - processedLength)
+                let beforeURLText = (text as NSString).substring(with: beforeURLRange)
+                if !beforeURLText.isEmpty {
+                    components.append(TextComponent(text: beforeURLText))
                 }
-                
-                // Apply URL attributes WITHOUT changing the paragraph style
-                attributedString.addAttributes([
-                    .foregroundColor: linkColor,
-                    .underlineStyle: NSUnderlineStyle.single.rawValue,
-                    .link: url
-                ], range: foundRange)
-                
-                searchStartIndex = foundRange.location + foundRange.length
+            }
+            
+            // Add the URL component
+            components.append(TextComponent(text: urlString, isURL: true, url: url))
+            processedLength = range.location + range.length
+        }
+        
+        // Add any remaining text after the last URL
+        if processedLength < text.count {
+            let remainingRange = NSRange(location: processedLength, length: text.count - processedLength)
+            let remainingText = (text as NSString).substring(with: remainingRange)
+            if !remainingText.isEmpty {
+                components.append(TextComponent(text: remainingText))
             }
         }
         
-        return attributedString
+        return components
     }
 }
 
-/// SwiftUI view for displaying text with clickable URLs using UILabel approach
-struct ClickableTextView: UIViewRepresentable {
+/// SwiftUI view for displaying mixed text with normal text and clickable URLs
+struct MixedTextView: View {
     let text: String
-    let font: UIFont
-    let textColor: UIColor
-    let linkColor: UIColor
-    let lineLimit: Int?
+    let font: Font
+    let textColor: Color
+    let linkColor: Color
+    let isCrossedOut: Bool
+    let opacity: Double
     
-    init(text: String, 
-         font: UIFont = UIFont.systemFont(ofSize: 16),
-         textColor: UIColor = .label,
-         linkColor: UIColor = .systemBlue,
-         lineLimit: Int? = nil) {
+    init(text: String,
+         font: Font = .body,
+         textColor: Color = .primary,
+         linkColor: Color = .blue,
+         isCrossedOut: Bool = false,
+         opacity: Double = 1.0) {
         self.text = text
         self.font = font
         self.textColor = textColor
         self.linkColor = linkColor
-        self.lineLimit = lineLimit
+        self.isCrossedOut = isCrossedOut
+        self.opacity = opacity
     }
     
-    func makeUIView(context: Context) -> UILabel {
-        let label = UILabel()
-        label.numberOfLines = 0 // Allow unlimited lines
-        label.lineBreakMode = .byCharWrapping // Force character-level breaking
-        label.font = font
-        label.textColor = textColor
-        label.backgroundColor = .clear
-        label.isUserInteractionEnabled = true
+    var body: some View {
+        let components = URLHelper.parseTextComponents(from: text)
         
-        return label
-    }
-    
-    func updateUIView(_ uiView: UILabel, context: Context) {
-        // Check if text contains URLs
-        if URLHelper.containsURL(text) {
-            // Create attributed string with clickable URLs
-            let attributedString = URLHelper.createAttributedString(
-                from: text,
-                font: font,
-                textColor: textColor,
-                linkColor: linkColor
-            )
-            uiView.attributedText = attributedString
+        // Use a flexible layout that wraps text components
+        ViewThatFits(in: .horizontal) {
+            // Try single line first
+            HStack(spacing: 0) {
+                ForEach(Array(components.enumerated()), id: \.offset) { _, component in
+                    componentView(for: component)
+                }
+            }
             
-            // Add tap gesture for URL handling
-            uiView.gestureRecognizers?.removeAll()
-            let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
-            uiView.addGestureRecognizer(tapGesture)
-        } else {
-            // Plain text without URLs
-            uiView.text = text
-            uiView.gestureRecognizers?.removeAll()
-        }
-        
-        // Ensure proper line breaking
-        uiView.lineBreakMode = .byCharWrapping
-        uiView.numberOfLines = 0
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject {
-        let parent: ClickableTextView
-        
-        init(_ parent: ClickableTextView) {
-            self.parent = parent
-        }
-        
-        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard let label = gesture.view as? UILabel,
-                  let attributedText = label.attributedText else { return }
-            
-            let layoutManager = NSLayoutManager()
-            let textContainer = NSTextContainer(size: label.bounds.size)
-            let textStorage = NSTextStorage(attributedString: attributedText)
-            
-            textContainer.lineFragmentPadding = 0
-            textContainer.maximumNumberOfLines = label.numberOfLines
-            textContainer.lineBreakMode = label.lineBreakMode
-            
-            layoutManager.addTextContainer(textContainer)
-            textStorage.addLayoutManager(layoutManager)
-            
-            let locationOfTouchInLabel = gesture.location(in: label)
-            let textBoundingBox = layoutManager.usedRect(for: textContainer)
-            let textContainerOffset = CGPoint(x: (label.bounds.width - textBoundingBox.width) * 0.0, 
-                                            y: (label.bounds.height - textBoundingBox.height) * 0.0)
-            let locationOfTouchInTextContainer = CGPoint(x: locationOfTouchInLabel.x - textContainerOffset.x,
-                                                       y: locationOfTouchInLabel.y - textContainerOffset.y)
-            let indexOfCharacter = layoutManager.characterIndex(for: locationOfTouchInTextContainer, 
-                                                               in: textContainer, 
-                                                               fractionOfDistanceBetweenInsertionPoints: nil)
-            
-            // Check if tapped character has a link attribute
-            if indexOfCharacter < attributedText.length {
-                if let url = attributedText.attribute(.link, at: indexOfCharacter, effectiveRange: nil) as? URL {
-                    URLHelper.openURL(url)
+            // Fall back to wrapping layout
+            LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 0) {
+                ForEach(Array(components.enumerated()), id: \.offset) { _, component in
+                    componentView(for: component)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
     }
+    
+    @ViewBuilder
+    private func componentView(for component: TextComponent) -> some View {
+        if component.isURL, let url = component.url {
+            // Clickable URL
+            Link(destination: url) {
+                Text(component.text)
+                    .font(font)
+                    .foregroundColor(linkColor)
+                    .underline()
+                    .opacity(opacity)
+                    .strikethrough(isCrossedOut, color: textColor.opacity(0.7))
+            }
+        } else {
+            // Normal text
+            Text(component.text)
+                .font(font)
+                .foregroundColor(textColor)
+                .opacity(opacity)
+                .strikethrough(isCrossedOut, color: textColor.opacity(0.7))
+        }
+    }
 }
+
