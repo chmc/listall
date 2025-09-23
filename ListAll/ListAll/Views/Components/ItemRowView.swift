@@ -81,12 +81,6 @@ struct ItemRowView: View {
                         }
                         
                         Spacer()
-                        
-                        // Navigation chevron
-                        Image(systemName: Constants.UI.chevronIcon)
-                            .font(.caption)
-                            .foregroundColor(Theme.Colors.secondary)
-                            .opacity(0.6)
                     }
                 }
             }
