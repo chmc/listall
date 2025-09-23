@@ -22,10 +22,6 @@ struct ListRowView: View {
                 }
                 
                 Spacer()
-                
-                Image(systemName: Constants.UI.chevronIcon)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.secondary)
             }
             .padding(.vertical, 4)
         }
