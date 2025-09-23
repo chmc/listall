@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ItemRowView: View {
     let item: Item
@@ -42,13 +43,42 @@ struct ItemRowView: View {
                         .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
                         .animation(Theme.Animation.quick, value: item.isCrossedOut)
                     
-                    // Description (if available)
+                    // Description (if available) - now with full visibility and clickable URLs
                     if item.hasDescription {
-                        Text(item.displayDescription)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondary)
-                            .lineLimit(2)
-                            .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                        if URLHelper.containsURL(item.displayDescription) {
+                            // For URLs, create a custom Text with Link
+                            let urls = URLHelper.detectURLs(in: item.displayDescription)
+                            if let firstURL = urls.first {
+                                Link(destination: firstURL) {
+                                    Text(item.displayDescription)
+                                        .font(Theme.Typography.caption)
+                                        .foregroundColor(.blue)
+                                        .underline()
+                                        .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(nil) // Allow unlimited lines
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            } else {
+                                // Fallback if URL detection fails
+                                Text(item.displayDescription)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.secondary)
+                                    .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        } else {
+                            // Plain text without URLs
+                            Text(item.displayDescription)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.secondary)
+                                .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil) // Allow unlimited lines
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     
                     // Secondary info row

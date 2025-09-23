@@ -10,7 +10,7 @@ alwaysApply: true
 - **Cautious Edits:** Use `codebase_search`/`grep_search` to understand impact before modifying existing code. Avoid deletions unless clearly required.
 - **Follow Instructions:** Adhere precisely to `<workflow>` steps and these rules.
 - **Incremental Development:** Complete ONE logical feature/task at a time, then stop for user review and commit. Do not work on multiple unrelated tasks simultaneously.
-- **Task Completion:** Mark tasks as completed only after user approval and commit. Update todo status accordingly.
+- **Task Completion:** Mark tasks as completed only after user approval and commit and 100% tests pass. Update todo status accordingly.
 - **Persistence:** Be persistent within the current task, but stop after completing one logical unit of work.
 - **Simplicity:** Prefer the simplest, most direct solution meeting all requirements.
 - **Tool Usage:** Use provided tools appropriately. Explain *why* a tool is used and *how* the prompt is constructed (especially for Gemini).
