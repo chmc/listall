@@ -68,6 +68,18 @@ class ListViewModel: ObservableObject {
         loadItems() // Refresh the list
     }
     
+    func reorderItems(from sourceIndex: Int, to destinationIndex: Int) {
+        dataRepository.reorderItems(in: list, from: sourceIndex, to: destinationIndex)
+        loadItems() // Refresh the list
+    }
+    
+    func moveItems(from source: IndexSet, to destination: Int) {
+        // Handle the SwiftUI List onMove callback
+        guard let sourceIndex = source.first else { return }
+        let destinationIndex = destination > sourceIndex ? destination - 1 : destination
+        reorderItems(from: sourceIndex, to: destinationIndex)
+    }
+    
     // MARK: - Utility Methods
     
     func refreshItems() {

@@ -135,9 +135,9 @@
 ## Phase 7B 3: Lists list two arrow icons ✅ COMPLETED
 - ✅ Remove another arrow icon, only one is needed
 
-## Phase 7C: Item Interactions
-- ❌ Implement drag-to-reorder for items within lists
-- ❌ Add swipe actions for quick item operations
+## Phase 7C: Item Interactions ✅ COMPLETED
+- ✅ Implement drag-to-reorder for items within lists
+- ✅ Add swipe actions for quick item operations
 
 ## Phase 7D: Item Organization
 - ❌ Add item sorting and filtering options

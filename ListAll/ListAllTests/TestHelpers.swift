@@ -411,6 +411,17 @@ class TestListViewModel: ObservableObject {
         loadItems()
     }
     
+    func reorderItems(from sourceIndex: Int, to destinationIndex: Int) {
+        dataRepository.reorderItems(in: list, from: sourceIndex, to: destinationIndex)
+        loadItems()
+    }
+    
+    func moveItems(from source: IndexSet, to destination: Int) {
+        guard let sourceIndex = source.first else { return }
+        let destinationIndex = destination > sourceIndex ? destination - 1 : destination
+        reorderItems(from: sourceIndex, to: destinationIndex)
+    }
+    
     func refreshItems() {
         loadItems()
     }
@@ -441,6 +452,11 @@ class TestDataRepository {
         newItem.itemDescription = description.isEmpty ? nil : description
         newItem.quantity = quantity
         newItem.listId = list.id
+        
+        // Set order number based on existing items count
+        let existingItems = dataManager.getItems(forListId: list.id)
+        newItem.orderNumber = existingItems.count
+        
         dataManager.addItem(newItem, to: list.id)
         return newItem
     }
@@ -473,6 +489,32 @@ class TestDataRepository {
             }
         }
         return nil
+    }
+    
+    func reorderItems(in list: List, from sourceIndex: Int, to destinationIndex: Int) {
+        // Get current items for this list
+        let currentItems = dataManager.getItems(forListId: list.id)
+        
+        // Ensure indices are valid
+        guard sourceIndex >= 0,
+              destinationIndex >= 0,
+              sourceIndex < currentItems.count,
+              destinationIndex < currentItems.count,
+              sourceIndex != destinationIndex else {
+            return
+        }
+        
+        // Create a mutable copy and reorder
+        var reorderedItems = currentItems
+        let movedItem = reorderedItems.remove(at: sourceIndex)
+        reorderedItems.insert(movedItem, at: destinationIndex)
+        
+        // Update order numbers and save each item
+        for (index, var item) in reorderedItems.enumerated() {
+            item.orderNumber = index
+            item.updateModifiedDate()
+            dataManager.updateItem(item)
+        }
     }
     
     func validateItem(_ item: Item) -> ValidationResult {

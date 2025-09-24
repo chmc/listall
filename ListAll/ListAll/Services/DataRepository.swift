@@ -77,6 +77,40 @@ class DataRepository: ObservableObject {
         return nil
     }
     
+    func reorderItems(in list: List, from sourceIndex: Int, to destinationIndex: Int) {
+        // Get current items for this list
+        let currentItems = dataManager.getItems(forListId: list.id)
+        
+        // Ensure indices are valid
+        guard sourceIndex >= 0,
+              destinationIndex >= 0,
+              sourceIndex < currentItems.count,
+              destinationIndex < currentItems.count,
+              sourceIndex != destinationIndex else {
+            return
+        }
+        
+        // Create a mutable copy and reorder
+        var reorderedItems = currentItems
+        let movedItem = reorderedItems.remove(at: sourceIndex)
+        reorderedItems.insert(movedItem, at: destinationIndex)
+        
+        // Update order numbers and save each item
+        for (index, var item) in reorderedItems.enumerated() {
+            item.orderNumber = index
+            item.updateModifiedDate()
+            dataManager.updateItem(item)
+        }
+    }
+    
+    func updateItemOrderNumbers(for list: List, items: [Item]) {
+        for (index, var item) in items.enumerated() {
+            item.orderNumber = index
+            item.updateModifiedDate()
+            dataManager.updateItem(item)
+        }
+    }
+    
     // MARK: - Image Operations
     
     func addImage(to item: Item, imageData: Data) -> ItemImage {

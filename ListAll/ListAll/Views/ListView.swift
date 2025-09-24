@@ -64,6 +64,7 @@ struct ListView: View {
                         )
                     }
                     .onDelete(perform: deleteItems)
+                    .onMove(perform: viewModel.moveItems)
                 }
                 .refreshable {
                     viewModel.loadItems()
