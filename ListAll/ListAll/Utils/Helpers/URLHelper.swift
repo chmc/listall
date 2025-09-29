@@ -153,7 +153,7 @@ struct MixedTextView: View {
     @ViewBuilder
     private func componentView(for component: TextComponent) -> some View {
         if component.isURL, let url = component.url {
-            // Clickable URL
+            // Clickable URL that opens in browser with explicit gesture priority
             Link(destination: url) {
                 Text(component.text)
                     .font(font)
@@ -162,13 +162,17 @@ struct MixedTextView: View {
                     .opacity(opacity)
                     .strikethrough(isCrossedOut, color: textColor.opacity(0.7))
             }
+            .buttonStyle(PlainButtonStyle()) // Ensure clean button style
+            .contentShape(Rectangle()) // Make the entire URL area tappable
+            .allowsHitTesting(true) // Explicitly allow hit testing
         } else {
-            // Normal text
+            // Normal text - not clickable, allows parent gestures
             Text(component.text)
                 .font(font)
                 .foregroundColor(textColor)
                 .opacity(opacity)
                 .strikethrough(isCrossedOut, color: textColor.opacity(0.7))
+                .allowsHitTesting(false) // Allow gestures to pass through to parent
         }
     }
 }

@@ -33,7 +33,7 @@ struct ItemRowView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Content - NavigationLink to detail view
+            // Content - NavigationLink to detail view with proper gesture handling
             NavigationLink(destination: ItemDetailView(item: item)) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     // Title with strikethrough animation
@@ -56,6 +56,7 @@ struct ItemRowView: View {
                         .multilineTextAlignment(.leading)
                         .lineLimit(nil) // Allow unlimited lines
                         .fixedSize(horizontal: false, vertical: true)
+                        .allowsHitTesting(true) // Allow URL links to be tapped
                     }
                     
                     // Secondary info row
@@ -85,6 +86,7 @@ struct ItemRowView: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .simultaneousGesture(TapGesture(), including: .subviews) // Allow child gestures to take precedence
         }
         .padding(.vertical, Theme.Spacing.xs)
         .contentShape(Rectangle()) // Makes entire row tappable
