@@ -4,9 +4,12 @@ struct ItemEditView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: ItemEditViewModel
     @StateObject private var suggestionService = SuggestionService()
+    @StateObject private var imageService = ImageService.shared
     @State private var showingDiscardAlert = false
     @State private var showingSuggestions = false
     @State private var showAllSuggestions = false
+    @State private var showingImageSourceSelection = false
+    @State private var selectedImage: UIImage?
     @FocusState private var isTitleFieldFocused: Bool
     
     let list: List
@@ -118,19 +121,70 @@ struct ItemEditView: View {
                     }
                 }
                 
-                // Images Section (Future Phase - placeholder for now)
+                // Images Section
                 Section("Images") {
                     VStack(spacing: Theme.Spacing.md) {
-                        HStack {
-                            Image(systemName: "photo")
-                                .foregroundColor(Theme.Colors.secondary)
-                            Text("Image support coming soon")
-                                .foregroundColor(Theme.Colors.secondary)
-                            Spacer()
+                        // Add Image Button
+                        Button(action: {
+                            showingImageSourceSelection = true
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(Theme.Colors.primary)
+                                    .font(.title2)
+                                
+                                Text("Add Photo")
+                                    .foregroundColor(Theme.Colors.primary)
+                                    .font(.headline)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "camera.fill")
+                                    .foregroundColor(Theme.Colors.secondary)
+                                Image(systemName: "photo.fill")
+                                    .foregroundColor(Theme.Colors.secondary)
+                            }
+                            .padding(Theme.Spacing.md)
+                            .background(Theme.Colors.groupedBackground)
+                            .cornerRadius(Theme.CornerRadius.md)
                         }
-                        .padding(Theme.Spacing.md)
-                        .background(Theme.Colors.groupedBackground)
-                        .cornerRadius(Theme.CornerRadius.md)
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Display existing images
+                        if !viewModel.images.isEmpty {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: Theme.Spacing.sm) {
+                                ForEach(viewModel.images.indices, id: \.self) { index in
+                                    ImageThumbnailView(
+                                        itemImage: viewModel.images[index],
+                                        onDelete: {
+                                            viewModel.removeImage(at: index)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Image count and size info
+                        if !viewModel.images.isEmpty {
+                            HStack {
+                                Image(systemName: "photo.stack")
+                                    .foregroundColor(Theme.Colors.secondary)
+                                Text("\(viewModel.images.count) image\(viewModel.images.count == 1 ? "" : "s")")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.secondary)
+                                
+                                Spacer()
+                                
+                                let totalSize = viewModel.images.compactMap { $0.imageData?.count }.reduce(0, +)
+                                Text(imageService.formatFileSize(totalSize))
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.secondary)
+                            }
+                        }
                     }
                 }
             }
@@ -186,6 +240,15 @@ struct ItemEditView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingImageSourceSelection) {
+            ImageSourceSelectionView(selectedImage: $selectedImage)
+        }
+        .onChange(of: selectedImage) { newImage in
+            if let image = newImage {
+                handleImageSelection(image)
+                selectedImage = nil // Reset for next selection
+            }
+        }
     }
     
     // MARK: - Helper Methods
@@ -235,6 +298,22 @@ struct ItemEditView: View {
             // The user can tap to edit any field they want to modify
         }
     }
+    
+    // MARK: - Image Handling
+    
+    private func handleImageSelection(_ image: UIImage) {
+        // Process and add image using ImageService
+        switch imageService.processImage(image) {
+        case .success(let imageData):
+            let itemImage = ItemImage(imageData: imageData, itemId: editingItem?.id)
+            viewModel.addImage(itemImage)
+            
+        case .failure(let error):
+            // Show error alert
+            viewModel.errorMessage = error.localizedDescription
+            viewModel.showingErrorAlert = true
+        }
+    }
 }
 
 // MARK: - ItemEditViewModel
@@ -244,6 +323,7 @@ class ItemEditViewModel: ObservableObject {
     @Published var title: String = ""
     @Published var description: String = ""
     @Published var quantity: Int = 1
+    @Published var images: [ItemImage] = []
     @Published var isSaving = false
     @Published var errorMessage: String?
     @Published var showingErrorAlert = false
@@ -322,6 +402,8 @@ class ItemEditViewModel: ObservableObject {
             title = item.title
             description = item.itemDescription ?? ""
             quantity = item.quantity
+            images = item.images
+            originalItem = item
         }
     }
     
@@ -343,6 +425,38 @@ class ItemEditViewModel: ObservableObject {
         showQuantityError = quantity < 1
     }
     
+    // MARK: - Image Management
+    
+    func addImage(_ itemImage: ItemImage) {
+        var newImage = itemImage
+        newImage.orderNumber = images.count
+        images.append(newImage)
+    }
+    
+    func removeImage(at index: Int) {
+        guard index >= 0 && index < images.count else { return }
+        images.remove(at: index)
+        
+        // Reorder remaining images
+        for i in 0..<images.count {
+            images[i].orderNumber = i
+        }
+    }
+    
+    func moveImage(from sourceIndex: Int, to destinationIndex: Int) {
+        guard sourceIndex >= 0 && sourceIndex < images.count &&
+              destinationIndex >= 0 && destinationIndex < images.count &&
+              sourceIndex != destinationIndex else { return }
+        
+        let movedImage = images.remove(at: sourceIndex)
+        images.insert(movedImage, at: destinationIndex)
+        
+        // Update order numbers
+        for i in 0..<images.count {
+            images[i].orderNumber = i
+        }
+    }
+    
     func save() async {
         validateFields()
         
@@ -353,30 +467,44 @@ class ItemEditViewModel: ObservableObject {
         isSaving = true
         errorMessage = nil
         
-        do {
-            let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if let existingItem = editingItem {
+            // Update existing item
+            var updatedItem = existingItem
+            updatedItem.title = trimmedTitle
+            updatedItem.itemDescription = trimmedDescription.isEmpty ? nil : trimmedDescription
+            updatedItem.quantity = quantity
+            updatedItem.images = images
+            updatedItem.updateModifiedDate()
             
-            if let existingItem = editingItem {
-                // Update existing item
-                dataRepository.updateItem(
-                    existingItem,
-                    title: trimmedTitle,
-                    description: trimmedDescription,
-                    quantity: quantity
-                )
-            } else {
-                // Create new item
-                let _ = dataRepository.createItem(
-                    in: list,
-                    title: trimmedTitle,
-                    description: trimmedDescription,
-                    quantity: quantity
-                )
-            }
-        } catch {
-            errorMessage = "Failed to save item: \(error.localizedDescription)"
-            showingErrorAlert = true
+            dataRepository.updateItem(
+                updatedItem,
+                title: trimmedTitle,
+                description: trimmedDescription,
+                quantity: quantity
+            )
+        } else {
+            // Create new item
+            var newItem = dataRepository.createItem(
+                in: list,
+                title: trimmedTitle,
+                description: trimmedDescription,
+                quantity: quantity
+            )
+            
+            // Add images to the new item
+            newItem.images = images
+            newItem.updateModifiedDate()
+            
+            // Update the item with images
+            dataRepository.updateItem(
+                newItem,
+                title: trimmedTitle,
+                description: trimmedDescription,
+                quantity: quantity
+            )
         }
         
         isSaving = false

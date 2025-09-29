@@ -86,30 +86,9 @@ struct ItemDetailView: View {
                 
                 // Images Section (if available)
                 if viewModel.item.hasImages {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Text("Images")
-                            .font(Theme.Typography.headline)
-                            .foregroundColor(Theme.Colors.secondary)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: Theme.Spacing.sm) {
-                            ForEach(viewModel.item.sortedImages, id: \.id) { image in
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                                    .fill(Theme.Colors.groupedBackground)
-                                    .aspectRatio(1, contentMode: .fit)
-                                    .overlay(
-                                        Image(systemName: "photo")
-                                            .foregroundColor(Theme.Colors.secondary)
-                                            .font(.title2)
-                                    )
-                            }
-                        }
-                    }
-                    .cardStyle()
-                    .padding(Theme.Spacing.md)
+                    ImageGalleryView(images: viewModel.item.sortedImages)
+                        .cardStyle()
+                        .padding(Theme.Spacing.md)
                 }
                 
                 

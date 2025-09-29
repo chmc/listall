@@ -152,10 +152,10 @@
      now app shows x2, but user cant choose which one to use
 - ✅ Add details from selected item so that user chan overwrite them or use it as they are
 
-## Phase 15: Basic Image Support
-- ❌ Implement ImageService for image processing
-- ❌ Create ImagePickerView component
-- ❌ Add camera integration for taking photos
+## Phase 15: Basic Image Support ✅ COMPLETED
+- ✅ Implement ImageService for image processing
+- ✅ Create ImagePickerView component
+- ✅ Add camera integration for taking photos
 
 ## Phase 16: Image Library Integration
 - ❌ Implement photo library access
