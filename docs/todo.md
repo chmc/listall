@@ -125,6 +125,7 @@
 
 ## Phase 8: Show/Hide Crossed Out Items Toggle ✅ COMPLETED
 - ✅ Add show/hide crossed out items toggle
+- ✅ Fix Show/Hide Crossed Out Items Toggle bug - toggle button was not working because filteredItems used currentFilterOption enum but toggle used showCrossedOutItems boolean
 
 ## Phase 9: Item Organization ✅ COMPLETED
 - ✅ Add item sorting and filtering options

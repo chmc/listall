@@ -120,7 +120,12 @@ class ListViewModel: ObservableObject {
     private func applyFilter(to items: [Item]) -> [Item] {
         switch currentFilterOption {
         case .all:
-            return items
+            // Respect the showCrossedOutItems setting for the "all" filter
+            if showCrossedOutItems {
+                return items
+            } else {
+                return items.filter { !$0.isCrossedOut }
+            }
         case .active:
             return items.filter { !$0.isCrossedOut }
         case .completed:
