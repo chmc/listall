@@ -139,6 +139,9 @@
 - ✅ Implement drag-to-reorder for items within lists
 - ✅ Add swipe actions for quick item operations
 
+## Phase 7C 1: Click link to open it in default browser
+- ❌ When item description link is clicked, it should always open it in default browser. Not just when user is in edit item screen.
+
 ## Phase 7D: Item Organization
 - ❌ Add item sorting and filtering options
 
