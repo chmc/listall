@@ -1,26 +1,7 @@
 # ListAll App - Development Tasks
 
-## Phase Organization (Updated for Better Context Management)
-**Note**: Large phases have been split into smaller, more manageable chunks (3-5 tasks each) to improve context memory management and ensure consistent adherence to behavioral rules (build validation, testing, etc.).
-
-### Phase Splitting Summary:
-- **Phase 6** → Split into 6A, 6B, 6C (List Management)
-- **Phase 7** → Split into 7A, 7B, 7C, 7D (Item Management)  
-- **Phase 8** → Split into 8A, 8B (Smart Features)
-- **Phase 9** → Split into 9A, 9B, 9C (Image Management)
-- **Phase 10** → Split into 10A, 10B (Data Export)
-- **Phase 11** → Split into 11A, 11B (Data Import)
-- **Phase 13** → Split into 13A, 13B (Settings)
-- **Phase 14** → Split into 14A, 14B (Advanced Features)
-- **Phase 15** → Split into 15A, 15B (Performance)
-
-### Benefits of Smaller Phases:
-- Better context memory management
-- Easier adherence to behavioral rules (build validation, testing)
-- More frequent checkpoints for user review
-- Reduced cognitive load per phase
-- Better error recovery scope
-- Incremental testing approach
+## Phase Organization
+**Note**: Phases are organized as sequential numbered phases for better task management and clear progression tracking.
 
 ## Phase 1: Project Foundation
 - ✅ Create basic project structure and folder organization
@@ -142,54 +123,57 @@
 ## Phase 7C 1: Click link to open it in default browser ✅ COMPLETED
 - ✅ When item description link is clicked, it should always open it in default browser. Not just when user is in edit item screen.
 
-## Phase 7D: Item Organization
+## Phase 8: Show/Hide Crossed Out Items Toggle
+- ❌ Add show/hide crossed out items toggle
+
+## Phase 9: Item Organization
 - ❌ Add item sorting and filtering options
 
-## Phase 8A: Basic Suggestions
+## Phase 10: Basic Suggestions
 - ❌ Implement SuggestionService for item recommendations
 - ❌ Create SuggestionListView component
 - ❌ Add fuzzy string matching for suggestions
 
-## Phase 8B: Advanced Suggestions
+## Phase 11: Advanced Suggestions
 - ❌ Implement frequency-based suggestion weighting
 - ❌ Add recent items tracking
 - ❌ Create suggestion cache management
 
-## Phase 9A: Basic Image Support
+## Phase 12: Basic Image Support
 - ❌ Implement ImageService for image processing
 - ❌ Create ImagePickerView component
 - ❌ Add camera integration for taking photos
 
-## Phase 9B: Image Library Integration
+## Phase 13: Image Library Integration
 - ❌ Implement photo library access
 - ❌ Add image compression and optimization
 
-## Phase 9C: Image Display and Storage
+## Phase 14: Image Display and Storage
 - ❌ Create thumbnail generation system
 - ❌ Implement image display in item details
 
-## Phase 10A: Basic Export
+## Phase 15: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 10B: Advanced Export
+## Phase 16: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 11A: Basic Import
+## Phase 17: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 11B: Advanced Import
+## Phase 18: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 12: Sharing Features
+## Phase 19: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -197,37 +181,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 13A: Basic Settings
+## Phase 20: Basic Settings
 - ❌ Create SettingsView for app preferences
-- ❌ Add show/hide crossed out items toggle
 - ❌ Implement export preferences
 
-## Phase 13B: Advanced Settings
+## Phase 21: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 14A: Search and Filtering
+## Phase 22: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 14B: Templates and Accessibility
+## Phase 23: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 15A: Performance Basics
+## Phase 24: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 15B: Advanced Performance
+## Phase 25: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 16: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 26: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -263,7 +246,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 17: Polish and Release
+## Phase 27: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -272,7 +255,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 18: Documentation
+## Phase 28: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -280,7 +263,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 19: Future Platform Support
+## Phase 29: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
