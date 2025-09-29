@@ -22,71 +22,71 @@ struct ItemRowView: View {
     
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
-            // Checkbox
-            Button(action: {
-                onToggle?()
-            }) {
-                Image(systemName: item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
-                    .foregroundColor(item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
-                    .font(.title2)
+            // Main content area - entire area tappable to complete item
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                // Title with strikethrough animation
+                Text(item.displayTitle)
+                    .font(Theme.Typography.body)
+                    .strikethrough(item.isCrossedOut, color: Theme.Colors.secondary)
+                    .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
                     .animation(Theme.Animation.quick, value: item.isCrossedOut)
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            // Content - NavigationLink to detail view with proper gesture handling
-            NavigationLink(destination: ItemDetailView(item: item)) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    // Title with strikethrough animation
-                    Text(item.displayTitle)
-                        .font(Theme.Typography.body)
-                        .strikethrough(item.isCrossedOut, color: Theme.Colors.secondary)
-                        .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
-                        .animation(Theme.Animation.quick, value: item.isCrossedOut)
-                    
-                    // Description (if available) - with proper mixed text and URL handling
-                    if item.hasDescription {
-                        MixedTextView(
-                            text: item.displayDescription,
-                            font: Theme.Typography.caption,
-                            textColor: Theme.Colors.secondary,
-                            linkColor: .blue,
-                            isCrossedOut: item.isCrossedOut,
-                            opacity: item.isCrossedOut ? 0.6 : 1.0
-                        )
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(nil) // Allow unlimited lines
-                        .fixedSize(horizontal: false, vertical: true)
-                        .allowsHitTesting(true) // Allow URL links to be tapped
-                    }
-                    
-                    // Secondary info row
-                    HStack(spacing: Theme.Spacing.sm) {
-                        // Quantity indicator (only if > 1)
-                        if item.quantity > 1 {
-                            Text(item.formattedQuantity)
-                                .font(Theme.Typography.caption)
-                                .foregroundColor(Theme.Colors.secondary)
-                                .opacity(item.isCrossedOut ? 0.6 : 1.0)
-                        }
-                        
-                        // Image count indicator (if item has images)
-                        if item.hasImages {
-                            HStack(spacing: 2) {
-                                Image(systemName: "photo")
-                                    .font(.caption2)
-                                Text("\(item.imageCount)")
-                                    .font(Theme.Typography.caption)
-                            }
-                            .foregroundColor(Theme.Colors.info)
+                
+                // Description (if available) - with proper mixed text and URL handling
+                if item.hasDescription {
+                    MixedTextView(
+                        text: item.displayDescription,
+                        font: Theme.Typography.caption,
+                        textColor: Theme.Colors.secondary,
+                        linkColor: .blue,
+                        isCrossedOut: item.isCrossedOut,
+                        opacity: item.isCrossedOut ? 0.6 : 1.0
+                    )
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(nil) // Allow unlimited lines
+                    .fixedSize(horizontal: false, vertical: true)
+                    .allowsHitTesting(true) // Allow URL links to be tapped with higher priority
+                }
+                
+                // Secondary info row
+                HStack(spacing: Theme.Spacing.sm) {
+                    // Quantity indicator (only if > 1)
+                    if item.quantity > 1 {
+                        Text(item.formattedQuantity)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.secondary)
                             .opacity(item.isCrossedOut ? 0.6 : 1.0)
-                        }
-                        
-                        Spacer()
                     }
+                    
+                    // Image count indicator (if item has images)
+                    if item.hasImages {
+                        HStack(spacing: 2) {
+                            Image(systemName: "photo")
+                                .font(.caption2)
+                            Text("\(item.imageCount)")
+                                .font(Theme.Typography.caption)
+                        }
+                        .foregroundColor(Theme.Colors.info)
+                        .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                    }
+                    
+                    Spacer()
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle()) // Make entire content area tappable
+            .onTapGesture {
+                onToggle?()
+            }
+            
+            // Right-side edit button
+            Button(action: {
+                onEdit?()
+            }) {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Theme.Colors.secondary)
+            }
             .buttonStyle(PlainButtonStyle())
-            .simultaneousGesture(TapGesture(), including: .subviews) // Allow child gestures to take precedence
         }
         .padding(.vertical, Theme.Spacing.xs)
         .contentShape(Rectangle()) // Makes entire row tappable

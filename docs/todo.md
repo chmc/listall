@@ -129,10 +129,10 @@
 ## Phase 9: Item Organization ✅ COMPLETED
 - ✅ Add item sorting and filtering options
 
-## Phase 10: Simplify UI
-- ❌ Just default action to click item (not url), completes item
-- ❌ Remove item list checkbox complete
-- ❌ Clicking right side item anchor opens item edit screen
+## Phase 10: Simplify UI ✅ COMPLETED
+- ✅ Just default action to click item (not url), completes item
+- ✅ Remove item list checkbox complete
+- ✅ Clicking right side item anchor opens item edit screen
 
 ## Phase 11: Basic Suggestions
 - ❌ Implement SuggestionService for item recommendations
