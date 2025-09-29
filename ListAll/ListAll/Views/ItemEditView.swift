@@ -140,6 +140,8 @@ struct ItemEditView: View {
                         Task {
                             await viewModel.save()
                             if !viewModel.hasValidationErrors {
+                                // Invalidate suggestion cache since we've added/modified an item
+                                suggestionService.invalidateCacheForDataChanges()
                                 dismiss()
                             }
                         }

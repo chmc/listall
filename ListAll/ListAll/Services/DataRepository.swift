@@ -40,12 +40,19 @@ class DataRepository: ObservableObject {
         newItem.quantity = quantity
         newItem.listId = list.id
         dataManager.addItem(newItem, to: list.id)
+        
+        // Notify suggestion service of data change
+        NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
+        
         return newItem
     }
     
     func deleteItem(_ item: Item) {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)
+            
+            // Notify suggestion service of data change
+            NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
         }
     }
     
@@ -56,12 +63,18 @@ class DataRepository: ObservableObject {
         updatedItem.quantity = quantity
         updatedItem.updateModifiedDate()
         dataManager.updateItem(updatedItem)
+        
+        // Notify suggestion service of data change
+        NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
     }
     
     func toggleItemCrossedOut(_ item: Item) {
         var updatedItem = item
         updatedItem.toggleCrossedOut()
         dataManager.updateItem(updatedItem)
+        
+        // Notify suggestion service of data change
+        NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
     }
     
     func getItems(for list: List) -> [Item] {

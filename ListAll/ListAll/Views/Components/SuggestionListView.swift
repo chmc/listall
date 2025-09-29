@@ -77,15 +77,36 @@ struct SuggestionRowView: View {
                 
                 Spacer()
                 
-                // Score indicator (for debugging/development)
-                if suggestion.frequency > 1 {
-                    Text("\(suggestion.frequency)×")
-                        .font(.caption2)
-                        .foregroundColor(Theme.Colors.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Theme.Colors.secondary.opacity(0.1))
-                        .cornerRadius(8)
+                // Advanced metrics display
+                HStack(spacing: 4) {
+                    // Frequency indicator
+                    if suggestion.frequency > 1 {
+                        Text("\(suggestion.frequency)×")
+                            .font(.caption2)
+                            .foregroundColor(Theme.Colors.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.Colors.secondary.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    
+                    // Recency indicator (for very recent items)
+                    if suggestion.recencyScore >= 90 {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                    } else if suggestion.recencyScore >= 70 {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                    
+                    // High usage frequency indicator
+                    if suggestion.frequencyScore >= 80 {
+                        Image(systemName: "flame")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
@@ -123,10 +144,10 @@ struct SuggestionRowView: View {
 
 #Preview("Suggestions List") {
     let sampleSuggestions = [
-        ItemSuggestion(title: "Milk", description: "2% low fat", frequency: 5, score: 95.0),
-        ItemSuggestion(title: "Bread", description: "Whole wheat", frequency: 3, score: 85.0),
-        ItemSuggestion(title: "Eggs", frequency: 2, score: 75.0),
-        ItemSuggestion(title: "Butter", frequency: 1, score: 65.0)
+        ItemSuggestion(title: "Milk", description: "2% low fat", frequency: 5, lastUsed: Date().addingTimeInterval(-3600), score: 95.0, recencyScore: 95.0, frequencyScore: 85.0, totalOccurrences: 5),
+        ItemSuggestion(title: "Bread", description: "Whole wheat", frequency: 3, lastUsed: Date().addingTimeInterval(-86400), score: 85.0, recencyScore: 75.0, frequencyScore: 70.0, totalOccurrences: 3),
+        ItemSuggestion(title: "Eggs", frequency: 2, lastUsed: Date().addingTimeInterval(-86400 * 3), score: 75.0, recencyScore: 60.0, frequencyScore: 50.0, totalOccurrences: 2),
+        ItemSuggestion(title: "Butter", frequency: 1, lastUsed: Date().addingTimeInterval(-86400 * 7), score: 65.0, recencyScore: 40.0, frequencyScore: 30.0, totalOccurrences: 1)
     ]
     
     return VStack {
