@@ -145,41 +145,43 @@
 - ✅ Add recent items tracking
 - ✅ Create suggestion cache management
 
-## Phase 13: Basic Image Support
+## Phase 13: Autofocus Item title on create new item ✅ COMPLETED
+
+## Phase 14: Basic Image Support
 - ❌ Implement ImageService for image processing
 - ❌ Create ImagePickerView component
 - ❌ Add camera integration for taking photos
 
-## Phase 14: Image Library Integration
+## Phase 15: Image Library Integration
 - ❌ Implement photo library access
 - ❌ Add image compression and optimization
 
-## Phase 15: Image Display and Storage
+## Phase 16: Image Display and Storage
 - ❌ Create thumbnail generation system
 - ❌ Implement image display in item details
 
-## Phase 16: Basic Export
+## Phase 17: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 17: Advanced Export
+## Phase 18: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 18: Basic Import
+## Phase 19: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 19: Advanced Import
+## Phase 20: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 20: Sharing Features
+## Phase 21: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -187,36 +189,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 21: Basic Settings
+## Phase 22: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 22: Advanced Settings
+## Phase 23: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 23: Search and Filtering
+## Phase 24: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 24: Templates and Accessibility
+## Phase 25: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 25: Performance Basics
+## Phase 26: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 26: Advanced Performance
+## Phase 27: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 27: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 28: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -252,7 +254,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 28: Polish and Release
+## Phase 29: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -261,7 +263,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 29: Documentation
+## Phase 30: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -269,7 +271,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 30: Future Platform Support
+## Phase 31: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements

@@ -6,6 +6,7 @@ struct ItemEditView: View {
     @StateObject private var suggestionService = SuggestionService()
     @State private var showingDiscardAlert = false
     @State private var showingSuggestions = false
+    @FocusState private var isTitleFieldFocused: Bool
     
     let list: List
     let editingItem: Item?
@@ -26,6 +27,7 @@ struct ItemEditView: View {
                             .textFieldStyle(.roundedBorder)
                             .autocapitalization(.words)
                             .disableAutocorrection(false)
+                            .focused($isTitleFieldFocused)
                             .onChange(of: viewModel.title) { newValue in
                                 handleTitleChange(newValue)
                             }
@@ -165,6 +167,14 @@ struct ItemEditView: View {
         }
         .onAppear {
             viewModel.setupForEditing()
+            
+            // Focus the title field when creating a new item
+            if !viewModel.isEditing {
+                // Use a small delay to ensure the view is fully presented
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isTitleFieldFocused = true
+                }
+            }
         }
     }
     
