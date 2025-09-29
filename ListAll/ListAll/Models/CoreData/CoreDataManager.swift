@@ -317,12 +317,27 @@ class DataManager: ObservableObject {
         do {
             let results = try coreDataManager.viewContext.fetch(request)
             if let itemEntity = results.first {
+                // Update basic properties
                 itemEntity.title = item.title
                 itemEntity.itemDescription = item.itemDescription
                 itemEntity.quantity = Int32(item.quantity)
                 itemEntity.orderNumber = Int32(item.orderNumber)
                 itemEntity.isCrossedOut = item.isCrossedOut
                 itemEntity.modifiedAt = item.modifiedAt
+                
+                // Update images: First delete existing image entities
+                if let existingImages = itemEntity.images?.allObjects as? [ItemImageEntity] {
+                    for imageEntity in existingImages {
+                        coreDataManager.viewContext.delete(imageEntity)
+                    }
+                }
+                
+                // Create new image entities from the item's images
+                for itemImage in item.images {
+                    let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: coreDataManager.viewContext)
+                    imageEntity.item = itemEntity
+                }
+                
                 saveData()
                 loadData()
                 

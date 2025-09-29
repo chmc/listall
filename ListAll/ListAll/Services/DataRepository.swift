@@ -65,6 +65,13 @@ class DataRepository: ObservableObject {
         // Notification is now sent from DataManager after loadData() completes
     }
     
+    /// Updates an item with all its properties including images
+    func updateItem(_ item: Item) {
+        dataManager.updateItem(item)
+        
+        // Notification is now sent from DataManager after loadData() completes
+    }
+    
     func toggleItemCrossedOut(_ item: Item) {
         var updatedItem = item
         updatedItem.toggleCrossedOut()

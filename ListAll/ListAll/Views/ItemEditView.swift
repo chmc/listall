@@ -479,12 +479,8 @@ class ItemEditViewModel: ObservableObject {
             updatedItem.images = images
             updatedItem.updateModifiedDate()
             
-            dataRepository.updateItem(
-                updatedItem,
-                title: trimmedTitle,
-                description: trimmedDescription,
-                quantity: quantity
-            )
+            // Use the method that preserves all properties including images
+            dataRepository.updateItem(updatedItem)
         } else {
             // Create new item
             var newItem = dataRepository.createItem(
@@ -498,13 +494,8 @@ class ItemEditViewModel: ObservableObject {
             newItem.images = images
             newItem.updateModifiedDate()
             
-            // Update the item with images
-            dataRepository.updateItem(
-                newItem,
-                title: trimmedTitle,
-                description: trimmedDescription,
-                quantity: quantity
-            )
+            // Update the item with images using the method that preserves all properties
+            dataRepository.updateItem(newItem)
         }
         
         isSaving = false
