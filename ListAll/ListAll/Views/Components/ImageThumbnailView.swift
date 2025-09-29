@@ -9,7 +9,7 @@ struct ImageThumbnailView: View {
     
     var body: some View {
         ZStack {
-            // Thumbnail Image
+            // Thumbnail Image with tap gesture
             if let thumbnail = imageService.swiftUIThumbnail(from: itemImage) {
                 thumbnail
                     .resizable()
@@ -35,9 +35,12 @@ struct ImageThumbnailView: View {
                                 .foregroundColor(Theme.Colors.secondary)
                         }
                     )
+                    .onTapGesture {
+                        showingFullImage = true
+                    }
             }
             
-            // Delete Button
+            // Delete Button - positioned on top with gesture that prevents propagation
             VStack {
                 HStack {
                     Spacer()
@@ -50,6 +53,13 @@ struct ImageThumbnailView: View {
                             .clipShape(Circle())
                             .font(.title3)
                     }
+                    .buttonStyle(PlainButtonStyle())
+                    .simultaneousGesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                // This prevents the underlying tap gesture from firing
+                            }
+                    )
                     .padding(4)
                 }
                 Spacer()
