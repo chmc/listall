@@ -129,51 +129,56 @@
 ## Phase 9: Item Organization ✅ COMPLETED
 - ✅ Add item sorting and filtering options
 
-## Phase 10: Basic Suggestions
+## Phase 10: Simplify UI
+- ❌ Just default action to click item (not url), completes item
+- ❌ Remove item list checkbox complete
+- ❌ Clicking right side item anchor opens item edit screen
+
+## Phase 11: Basic Suggestions
 - ❌ Implement SuggestionService for item recommendations
 - ❌ Create SuggestionListView component
 - ❌ Add fuzzy string matching for suggestions
 
-## Phase 11: Advanced Suggestions
+## Phase 12: Advanced Suggestions
 - ❌ Implement frequency-based suggestion weighting
 - ❌ Add recent items tracking
 - ❌ Create suggestion cache management
 
-## Phase 12: Basic Image Support
+## Phase 13: Basic Image Support
 - ❌ Implement ImageService for image processing
 - ❌ Create ImagePickerView component
 - ❌ Add camera integration for taking photos
 
-## Phase 13: Image Library Integration
+## Phase 14: Image Library Integration
 - ❌ Implement photo library access
 - ❌ Add image compression and optimization
 
-## Phase 14: Image Display and Storage
+## Phase 15: Image Display and Storage
 - ❌ Create thumbnail generation system
 - ❌ Implement image display in item details
 
-## Phase 15: Basic Export
+## Phase 16: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 16: Advanced Export
+## Phase 17: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 17: Basic Import
+## Phase 18: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 18: Advanced Import
+## Phase 19: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 19: Sharing Features
+## Phase 20: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -181,36 +186,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 20: Basic Settings
+## Phase 21: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 21: Advanced Settings
+## Phase 22: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 22: Search and Filtering
+## Phase 23: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 23: Templates and Accessibility
+## Phase 24: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 24: Performance Basics
+## Phase 25: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 25: Advanced Performance
+## Phase 26: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 26: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 27: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -221,7 +226,7 @@
 - **Required Action**: Upgrade to paid Apple Developer Program ($99/year)
 - **Alternative**: Continue development without CloudKit sync (app works locally only)
 - **Impact**: Without CloudKit capability, sync features will show "offline" status
-- **Timing**: Complete this before Phase 17 (Polish and Release) when preparing for App Store
+- **Timing**: Complete this before Phase 28 (Polish and Release) when preparing for App Store
 
 ## Testing Strategy (Integrated Throughout All Phases)
 - ✅ Test infrastructure is set up and working
@@ -246,7 +251,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 27: Polish and Release
+## Phase 28: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -255,7 +260,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 28: Documentation
+## Phase 29: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -263,7 +268,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 29: Future Platform Support
+## Phase 30: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
