@@ -126,8 +126,8 @@
 ## Phase 8: Show/Hide Crossed Out Items Toggle ✅ COMPLETED
 - ✅ Add show/hide crossed out items toggle
 
-## Phase 9: Item Organization
-- ❌ Add item sorting and filtering options
+## Phase 9: Item Organization ✅ COMPLETED
+- ✅ Add item sorting and filtering options
 
 ## Phase 10: Basic Suggestions
 - ❌ Implement SuggestionService for item recommendations

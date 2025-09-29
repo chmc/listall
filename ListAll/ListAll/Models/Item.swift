@@ -1,5 +1,74 @@
 import Foundation
 
+// MARK: - Item Sorting Options
+enum ItemSortOption: String, CaseIterable, Identifiable, Codable {
+    case orderNumber = "Order"
+    case title = "Title"
+    case createdAt = "Created Date"
+    case modifiedAt = "Modified Date"
+    case quantity = "Quantity"
+    
+    var id: String { rawValue }
+    
+    var systemImage: String {
+        switch self {
+        case .orderNumber:
+            return "list.number"
+        case .title:
+            return "textformat.abc"
+        case .createdAt:
+            return "calendar"
+        case .modifiedAt:
+            return "clock"
+        case .quantity:
+            return "number"
+        }
+    }
+}
+
+// MARK: - Item Filter Options
+enum ItemFilterOption: String, CaseIterable, Identifiable, Codable {
+    case all = "All Items"
+    case active = "Active Only"
+    case completed = "Crossed Out Only"
+    case hasDescription = "With Description"
+    case hasImages = "With Images"
+    
+    var id: String { rawValue }
+    
+    var systemImage: String {
+        switch self {
+        case .all:
+            return "list.bullet"
+        case .active:
+            return "circle"
+        case .completed:
+            return "checkmark.circle.fill"
+        case .hasDescription:
+            return "text.alignleft"
+        case .hasImages:
+            return "photo"
+        }
+    }
+}
+
+// MARK: - Sort Direction
+enum SortDirection: String, CaseIterable, Identifiable, Codable {
+    case ascending = "Ascending"
+    case descending = "Descending"
+    
+    var id: String { rawValue }
+    
+    var systemImage: String {
+        switch self {
+        case .ascending:
+            return "arrow.up"
+        case .descending:
+            return "arrow.down"
+        }
+    }
+}
+
 // MARK: - Item Model
 struct Item: Identifiable, Codable, Equatable {
     var id: UUID

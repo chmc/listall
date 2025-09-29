@@ -76,7 +76,16 @@ struct ListView: View {
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if !viewModel.items.isEmpty {
-                    // Show/Hide crossed out items toggle
+                    // Organization options button
+                    Button(action: {
+                        viewModel.showingOrganizationOptions = true
+                    }) {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .foregroundColor(.primary)
+                    }
+                    .help("Sort and filter options")
+                    
+                    // Show/Hide crossed out items toggle (legacy support)
                     Button(action: {
                         viewModel.toggleShowCrossedOutItems()
                     }) {
@@ -102,6 +111,9 @@ struct ListView: View {
             if let item = selectedItem {
                 ItemEditView(list: list, item: item)
             }
+        }
+        .sheet(isPresented: $viewModel.showingOrganizationOptions) {
+            ItemOrganizationView(viewModel: viewModel)
         }
         .onAppear {
             viewModel.loadItems()

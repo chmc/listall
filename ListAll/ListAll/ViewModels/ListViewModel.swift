@@ -8,6 +8,12 @@ class ListViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showCrossedOutItems = true
     
+    // Item Organization Properties
+    @Published var currentSortOption: ItemSortOption = .orderNumber
+    @Published var currentSortDirection: SortDirection = .ascending
+    @Published var currentFilterOption: ItemFilterOption = .all
+    @Published var showingOrganizationOptions = false
+    
     private let dataManager = DataManager.shared // Changed from coreDataManager
     private let dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
@@ -100,13 +106,49 @@ class ListViewModel: ObservableObject {
         return items.filter { $0.isCrossedOut }
     }
     
-    /// Returns filtered items based on the showCrossedOutItems setting
+    /// Returns filtered and sorted items based on current organization settings
     var filteredItems: [Item] {
-        if showCrossedOutItems {
+        // First apply filtering
+        let filtered = applyFilter(to: items)
+        
+        // Then apply sorting
+        return applySorting(to: filtered)
+    }
+    
+    // MARK: - Item Organization Methods
+    
+    private func applyFilter(to items: [Item]) -> [Item] {
+        switch currentFilterOption {
+        case .all:
             return items
-        } else {
-            return activeItems
+        case .active:
+            return items.filter { !$0.isCrossedOut }
+        case .completed:
+            return items.filter { $0.isCrossedOut }
+        case .hasDescription:
+            return items.filter { $0.hasDescription }
+        case .hasImages:
+            return items.filter { $0.hasImages }
         }
+    }
+    
+    private func applySorting(to items: [Item]) -> [Item] {
+        let sorted = items.sorted { item1, item2 in
+            switch currentSortOption {
+            case .orderNumber:
+                return item1.orderNumber < item2.orderNumber
+            case .title:
+                return item1.title.localizedCaseInsensitiveCompare(item2.title) == .orderedAscending
+            case .createdAt:
+                return item1.createdAt < item2.createdAt
+            case .modifiedAt:
+                return item1.modifiedAt < item2.modifiedAt
+            case .quantity:
+                return item1.quantity < item2.quantity
+            }
+        }
+        
+        return currentSortDirection == .ascending ? sorted : sorted.reversed()
     }
     
     // MARK: - User Preferences
@@ -115,6 +157,9 @@ class ListViewModel: ObservableObject {
         // Load user preferences from DataRepository
         if let userData = dataRepository.getUserData() {
             showCrossedOutItems = userData.showCrossedOutItems
+            currentSortOption = userData.defaultSortOption
+            currentSortDirection = userData.defaultSortDirection
+            currentFilterOption = userData.defaultFilterOption
         }
     }
     
@@ -123,10 +168,34 @@ class ListViewModel: ObservableObject {
         saveUserPreferences()
     }
     
+    func updateSortOption(_ sortOption: ItemSortOption) {
+        currentSortOption = sortOption
+        saveUserPreferences()
+    }
+    
+    func updateSortDirection(_ direction: SortDirection) {
+        currentSortDirection = direction
+        saveUserPreferences()
+    }
+    
+    func updateFilterOption(_ filterOption: ItemFilterOption) {
+        currentFilterOption = filterOption
+        // Update the legacy showCrossedOutItems based on filter
+        if filterOption == .completed {
+            showCrossedOutItems = true
+        } else if filterOption == .active {
+            showCrossedOutItems = false
+        }
+        saveUserPreferences()
+    }
+    
     private func saveUserPreferences() {
         // Save user preferences to DataRepository
         var userData = dataRepository.getUserData() ?? UserData(userID: "default")
         userData.showCrossedOutItems = showCrossedOutItems
+        userData.defaultSortOption = currentSortOption
+        userData.defaultSortDirection = currentSortDirection
+        userData.defaultFilterOption = currentFilterOption
         dataRepository.saveUserData(userData)
     }
 }

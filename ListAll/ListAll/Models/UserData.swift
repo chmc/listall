@@ -9,6 +9,11 @@ struct UserData: Identifiable, Codable, Equatable {
     var lastSyncDate: Date?
     var createdAt: Date
     
+    // Item Organization Preferences
+    var defaultSortOption: ItemSortOption
+    var defaultSortDirection: SortDirection
+    var defaultFilterOption: ItemFilterOption
+    
     init(userID: String) {
         self.id = UUID()
         self.userID = userID
@@ -16,6 +21,11 @@ struct UserData: Identifiable, Codable, Equatable {
         self.exportPreferences = nil
         self.lastSyncDate = nil
         self.createdAt = Date()
+        
+        // Set default organization preferences
+        self.defaultSortOption = .orderNumber
+        self.defaultSortDirection = .ascending
+        self.defaultFilterOption = .all
     }
 }
 
