@@ -41,8 +41,7 @@ class DataRepository: ObservableObject {
         newItem.listId = list.id
         dataManager.addItem(newItem, to: list.id)
         
-        // Notify suggestion service of data change
-        NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
+        // Notification is now sent from DataManager after loadData() completes
         
         return newItem
     }
@@ -51,8 +50,7 @@ class DataRepository: ObservableObject {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)
             
-            // Notify suggestion service of data change
-            NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
+            // Notification is now sent from DataManager after loadData() completes
         }
     }
     
@@ -64,8 +62,7 @@ class DataRepository: ObservableObject {
         updatedItem.updateModifiedDate()
         dataManager.updateItem(updatedItem)
         
-        // Notify suggestion service of data change
-        NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
+        // Notification is now sent from DataManager after loadData() completes
     }
     
     func toggleItemCrossedOut(_ item: Item) {
@@ -73,8 +70,7 @@ class DataRepository: ObservableObject {
         updatedItem.toggleCrossedOut()
         dataManager.updateItem(updatedItem)
         
-        // Notify suggestion service of data change
-        NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
+        // Notification is now sent from DataManager after loadData() completes
     }
     
     func getItems(for list: List) -> [Item] {

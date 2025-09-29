@@ -142,7 +142,7 @@ final class ServicesTests: XCTestCase {
         XCTAssertTrue(suggestionService.suggestions.count >= 0, "Multiple matches should not crash")
     }
     
-    func testSuggestionServiceFrequencyTracking() throws {
+    func testSuggestionServiceIndividualItems() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
         let suggestionService = SuggestionService(dataRepository: testRepository)
@@ -153,21 +153,33 @@ final class ServicesTests: XCTestCase {
         testDataManager.addList(groceryList)
         testDataManager.addList(shoppingList)
         
-        // Add the same item to multiple lists
-        let _ = testRepository.createItem(in: groceryList, title: "Milk", description: "")
-        let _ = testRepository.createItem(in: shoppingList, title: "Milk", description: "")
-        let _ = testRepository.createItem(in: groceryList, title: "Bread", description: "")
+        // Add the same item to multiple lists - should show as separate suggestions
+        let milk1 = testRepository.createItem(in: groceryList, title: "Milk", description: "")
+        let milk2 = testRepository.createItem(in: shoppingList, title: "Milk", description: "")
+        let bread1 = testRepository.createItem(in: groceryList, title: "Bread", description: "")
         
-        // Test global suggestions (across all lists)
+        // Verify items were created correctly
+        XCTAssertEqual(milk1.title, "Milk")
+        XCTAssertEqual(milk2.title, "Milk")
+        XCTAssertEqual(bread1.title, "Bread")
+        
+        // Test individual item suggestions for "Milk" (should show 2 separate Milk items)
         suggestionService.getSuggestions(for: "Mi", in: nil)
         
-        let milkSuggestion = suggestionService.suggestions.first { $0.title == "Milk" }
-        XCTAssertNotNil(milkSuggestion)
-        XCTAssertEqual(milkSuggestion?.frequency, 2) // Should appear in 2 lists
+        let milkSuggestions = suggestionService.suggestions.filter { $0.title == "Milk" }
+        XCTAssertEqual(milkSuggestions.count, 2, "Should find 2 separate Milk suggestions when searching for 'Mi'")
         
-        let breadSuggestion = suggestionService.suggestions.first { $0.title == "Bread" }
-        XCTAssertNotNil(breadSuggestion)
-        XCTAssertEqual(breadSuggestion?.frequency, 1) // Should appear in 1 list
+        // Each individual item should have frequency=1
+        for milkSuggestion in milkSuggestions {
+            XCTAssertEqual(milkSuggestion.frequency, 1, "Individual items should have frequency=1")
+        }
+        
+        // Test individual item suggestions for "Bread" (should show 1 Bread item)
+        suggestionService.getSuggestions(for: "Br", in: nil)
+        
+        let breadSuggestions = suggestionService.suggestions.filter { $0.title == "Bread" }
+        XCTAssertEqual(breadSuggestions.count, 1, "Should find 1 Bread suggestion when searching for 'Br'")
+        XCTAssertEqual(breadSuggestions.first?.frequency, 1, "Individual items should have frequency=1")
     }
     
     func testSuggestionServiceRecentItems() throws {
@@ -398,6 +410,117 @@ final class ServicesTests: XCTestCase {
         // Verify functionality still works after cache invalidation
         suggestionService.getSuggestions(for: "Invalidation", in: testList)
         XCTAssertTrue(suggestionService.suggestions.count >= 0, "Cache invalidation should not break basic functionality")
+    }
+    
+    // MARK: - Phase 14 Tests: Show All Suggestions
+    
+    func testGetSuggestionsWithoutLimit() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: repository)
+        
+        // Create a list with multiple items that would match a search
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        
+        let _ = repository.createItem(in: list, title: "Apple Juice", description: "Fresh apple juice")
+        let _ = repository.createItem(in: list, title: "Apple Pie", description: "Homemade apple pie")
+        let _ = repository.createItem(in: list, title: "Apple Sauce", description: "Sweet apple sauce")
+        let _ = repository.createItem(in: list, title: "Apple Cider", description: "Hot apple cider")
+        let _ = repository.createItem(in: list, title: "Apple Tart", description: "French apple tart")
+        let _ = repository.createItem(in: list, title: "Apple Crisp", description: "Warm apple crisp")
+        let _ = repository.createItem(in: list, title: "Green Apple", description: "Fresh green apple")
+        let _ = repository.createItem(in: list, title: "Red Apple", description: "Sweet red apple")
+        let _ = repository.createItem(in: list, title: "Apple Butter", description: "Smooth apple butter")
+        let _ = repository.createItem(in: list, title: "Apple Chips", description: "Dried apple chips")
+        let _ = repository.createItem(in: list, title: "Apple Smoothie", description: "Healthy apple smoothie")
+        let _ = repository.createItem(in: list, title: "Apple Muffin", description: "Fresh apple muffin")
+        
+        // Test without limit (should show all matching suggestions)
+        let noLimit: Int? = nil
+        suggestionService.getSuggestions(for: "apple", in: list, limit: noLimit)
+        
+        XCTAssertTrue(suggestionService.suggestions.count >= 10, "Should return all matching suggestions when no limit is specified")
+        XCTAssertTrue(suggestionService.suggestions.count <= 12, "Should not return more suggestions than available items")
+        
+        // Verify suggestions are sorted by score
+        for i in 1..<suggestionService.suggestions.count {
+            XCTAssertGreaterThanOrEqual(suggestionService.suggestions[i-1].score, suggestionService.suggestions[i].score, 
+                                      "Suggestions should be sorted by score in descending order")
+        }
+    }
+    
+    func testGetSuggestionsWithLimit() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: repository)
+        
+        // Create a list with multiple items
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        
+        for i in 1...15 {
+            let _ = repository.createItem(in: list, title: "Item \(i)", description: "Description \(i)")
+        }
+        
+        // Test with limit
+        suggestionService.getSuggestions(for: "item", in: list, limit: 5)
+        
+        XCTAssertEqual(suggestionService.suggestions.count, 5, "Should respect the limit parameter")
+        
+        // Test with different limit
+        suggestionService.getSuggestions(for: "item", in: list, limit: 3)
+        
+        XCTAssertEqual(suggestionService.suggestions.count, 3, "Should respect the updated limit parameter")
+    }
+    
+    func testSuggestionCachingWithLimits() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: repository)
+        
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        let _ = repository.createItem(in: list, title: "Test Item", description: "Test Description")
+        
+        // Test that different limits create different cache entries
+        suggestionService.getSuggestions(for: "test", in: list, limit: 5)
+        let limitedResults = suggestionService.suggestions.count
+        
+        let noLimit: Int? = nil
+        suggestionService.getSuggestions(for: "test", in: list, limit: noLimit)
+        let unlimitedResults = suggestionService.suggestions.count
+        
+        // Should be able to get both cached results
+        suggestionService.getSuggestions(for: "test", in: list, limit: 5)
+        XCTAssertEqual(suggestionService.suggestions.count, limitedResults, "Should return cached limited results")
+        
+        suggestionService.getSuggestions(for: "test", in: list, limit: noLimit)
+        XCTAssertEqual(suggestionService.suggestions.count, unlimitedResults, "Should return cached unlimited results")
+    }
+    
+    func testSuggestionDetailsIncluded() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: repository)
+        
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        let item = repository.createItem(in: list, title: "Detailed Item", description: "This is a detailed description")
+        
+        // Update item to make it more recent
+        repository.updateItem(item, title: "Detailed Item", description: "This is a detailed description", quantity: 2)
+        
+        suggestionService.getSuggestions(for: "detailed", in: list)
+        
+        XCTAssertFalse(suggestionService.suggestions.isEmpty, "Should find matching suggestion")
+        
+        let suggestion = suggestionService.suggestions.first!
+        XCTAssertEqual(suggestion.title, "Detailed Item", "Should preserve item title")
+        XCTAssertEqual(suggestion.description, "This is a detailed description", "Should preserve item description")
+        XCTAssertGreaterThan(suggestion.score, 0, "Should have a valid score")
+        XCTAssertGreaterThan(suggestion.frequency, 0, "Should have frequency data")
+        XCTAssertEqual(suggestion.totalOccurrences, 1, "Should track total occurrences")
     }
     
     func testPlaceholder() throws {

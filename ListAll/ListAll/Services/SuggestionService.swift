@@ -124,12 +124,16 @@ class SuggestionService: ObservableObject {
     }
     
     @objc private func handleDataChange() {
-        invalidateCacheForDataChanges()
+        // Ensure UI updates happen on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.invalidateCacheForDataChanges()
+            self?.suggestions = []
+        }
     }
     
     // MARK: - Public Methods
     
-    func getSuggestions(for searchText: String, in list: List? = nil) {
+    func getSuggestions(for searchText: String, in list: List? = nil, limit: Int? = nil) {
         guard !searchText.isEmpty else {
             suggestions = []
             return
@@ -137,24 +141,76 @@ class SuggestionService: ObservableObject {
         
         // Create cache key
         let listId = list?.id.uuidString ?? "global"
-        let cacheKey = "\(searchText.lowercased())_\(listId)"
+        let limitKey = limit != nil ? "_limit\(limit!)" : "_unlimited"
+        let cacheKey = "\(searchText.lowercased())_\(listId)\(limitKey)"
         
-        // Check cache first
-        if let cachedSuggestions = suggestionCache.getCachedSuggestions(for: cacheKey) {
-            suggestions = cachedSuggestions
-            return
+        // Check cache first (temporarily disabled to ensure fresh data after deletions)
+        // TODO: Re-enable cache after fixing deletion synchronization
+        // if let cachedSuggestions = suggestionCache.getCachedSuggestions(for: cacheKey) {
+        //     suggestions = cachedSuggestions
+        //     return
+        // }
+        
+        // Phase 14 Enhancement: Search current list first, then expand to all lists if needed
+        let allItems = getAllItems(from: list)
+        var matchingSuggestions = generateAdvancedSuggestions(from: allItems, searchText: searchText)
+        
+        // If we have less than 3 suggestions from current list, expand search to all lists
+        if matchingSuggestions.count < 3 && list != nil {
+            let globalItems = getAllItems(from: nil) // Search all lists
+            let globalSuggestions = generateAdvancedSuggestions(from: globalItems, searchText: searchText)
+            
+            // Merge suggestions, prioritizing current list items
+            var combinedSuggestions: [ItemSuggestion] = []
+            var addedSuggestionKeys: Set<String> = []
+            
+            // Add current list suggestions first (higher priority)
+            for suggestion in matchingSuggestions {
+                // Create unique key based on title + description to avoid duplicating identical items
+                let key = "\(suggestion.title.lowercased())|\(suggestion.description ?? "")"
+                if !addedSuggestionKeys.contains(key) {
+                    combinedSuggestions.append(suggestion)
+                    addedSuggestionKeys.insert(key)
+                }
+            }
+            
+            // Add global suggestions that aren't already included
+            for suggestion in globalSuggestions {
+                // Create unique key based on title + description to avoid duplicating identical items
+                let key = "\(suggestion.title.lowercased())|\(suggestion.description ?? "")"
+                if !addedSuggestionKeys.contains(key) {
+                    // Slightly reduce score for global items to prioritize current list
+                    let globalSuggestion = ItemSuggestion(
+                        title: suggestion.title,
+                        description: suggestion.description,
+                        frequency: suggestion.frequency,
+                        lastUsed: suggestion.lastUsed,
+                        score: suggestion.score * 0.9, // Reduced score for global items
+                        recencyScore: suggestion.recencyScore,
+                        frequencyScore: suggestion.frequencyScore,
+                        totalOccurrences: suggestion.totalOccurrences,
+                        averageUsageGap: suggestion.averageUsageGap
+                    )
+                    combinedSuggestions.append(globalSuggestion)
+                    addedSuggestionKeys.insert(key)
+                }
+            }
+            
+            matchingSuggestions = combinedSuggestions
         }
         
-        let allItems = getAllItems(from: list)
-        let matchingSuggestions = generateAdvancedSuggestions(from: allItems, searchText: searchText)
+        let sortedSuggestions = matchingSuggestions.sorted { $0.score > $1.score }
         
-        let finalSuggestions = matchingSuggestions
-            .sorted { $0.score > $1.score }
-            .prefix(10)
-            .map { $0 }
+        let finalSuggestions: [ItemSuggestion]
+        if let limit = limit {
+            finalSuggestions = Array(sortedSuggestions.prefix(limit))
+        } else {
+            // Show all matching suggestions (Phase 14 requirement)
+            finalSuggestions = sortedSuggestions
+        }
         
         // Cache the results
-        let context = "search:\(searchText)_list:\(listId)"
+        let context = "search:\(searchText)_list:\(listId)_limit:\(limit?.description ?? "unlimited")"
         suggestionCache.cacheSuggestions(finalSuggestions, for: cacheKey, context: context)
         
         suggestions = finalSuggestions
@@ -236,32 +292,23 @@ class SuggestionService: ObservableObject {
         let searchLower = searchText.lowercased()
         let now = Date()
         
-        // Group items by title to calculate advanced metrics
-        var itemGroups: [String: [Item]] = [:]
-        for item in items {
-            guard !item.title.isEmpty else { continue }
-            let key = item.title.lowercased()
-            itemGroups[key, default: []].append(item)
-        }
-        
         var suggestions: [ItemSuggestion] = []
         
-        for (titleKey, itemsGroup) in itemGroups {
-            let matchScore = calculateMatchScore(searchText: searchLower, itemTitle: titleKey)
+        // Phase 14 Fix: Show individual items as separate suggestions, not grouped by title
+        for item in items {
+            guard !item.title.isEmpty else { continue }
+            
+            let matchScore = calculateMatchScore(searchText: searchLower, itemTitle: item.title.lowercased())
             
             if matchScore > 0 {
-                // Use the most recently modified item as the representative
-                let representativeItem = itemsGroup.max { 
-                    $0.modifiedAt < $1.modifiedAt 
-                } ?? itemsGroup.first!
-                
-                let lastUsed = representativeItem.modifiedAt
+                let lastUsed = item.modifiedAt
                 let recencyScore = calculateRecencyScore(for: lastUsed, currentTime: now)
-                let frequencyScore = calculateFrequencyScore(frequency: itemsGroup.count, maxFrequency: 10)
                 
-                // Calculate average usage gap
-                let sortedDates = itemsGroup.map { $0.createdAt }.sorted()
-                let averageGap = calculateAverageUsageGap(dates: sortedDates)
+                // For individual items, frequency is always 1
+                let frequencyScore = calculateFrequencyScore(frequency: 1, maxFrequency: 10)
+                
+                // For individual items, no usage gap calculation needed
+                let averageGap: TimeInterval = 0
                 
                 // Combine all scores with weights
                 let combinedScore = (matchScore * matchWeight) + 
@@ -269,14 +316,14 @@ class SuggestionService: ObservableObject {
                                   (frequencyScore * frequencyWeight)
                 
                 let suggestion = ItemSuggestion(
-                    title: representativeItem.title,
-                    description: representativeItem.itemDescription,
-                    frequency: itemsGroup.count,
+                    title: item.title,
+                    description: item.itemDescription,
+                    frequency: 1, // Individual item frequency is always 1
                     lastUsed: lastUsed,
                     score: combinedScore,
                     recencyScore: recencyScore,
                     frequencyScore: frequencyScore,
-                    totalOccurrences: itemsGroup.count,
+                    totalOccurrences: 1, // Individual item occurrence is always 1
                     averageUsageGap: averageGap
                 )
                 

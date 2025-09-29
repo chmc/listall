@@ -301,6 +301,9 @@ class DataManager: ObservableObject {
                 
                 saveData()
                 loadData()
+                
+                // Notify after data is fully loaded
+                NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
             }
         } catch {
             print("Failed to add item: \(error)")
@@ -322,6 +325,9 @@ class DataManager: ObservableObject {
                 itemEntity.modifiedAt = item.modifiedAt
                 saveData()
                 loadData()
+                
+                // Notify after data is fully loaded
+                NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
             }
         } catch {
             print("Failed to update item: \(error)")
@@ -339,6 +345,9 @@ class DataManager: ObservableObject {
             }
             saveData()
             loadData()
+            
+            // Notify after data is fully loaded
+            NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
         } catch {
             print("Failed to delete item: \(error)")
         }

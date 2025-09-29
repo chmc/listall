@@ -147,41 +147,46 @@
 
 ## Phase 13: Autofocus Item title on create new item ✅ COMPLETED
 
-## Phase 14: Basic Image Support
+## Phase 14: Show all suggestions ✅ COMPLETED
+- ✅ List all filtered suggestions so that user can choose which one to use,
+     now app shows x2, but user cant choose which one to use
+- ✅ Add details from selected item so that user chan overwrite them or use it as they are
+
+## Phase 15: Basic Image Support
 - ❌ Implement ImageService for image processing
 - ❌ Create ImagePickerView component
 - ❌ Add camera integration for taking photos
 
-## Phase 15: Image Library Integration
+## Phase 16: Image Library Integration
 - ❌ Implement photo library access
 - ❌ Add image compression and optimization
 
-## Phase 16: Image Display and Storage
+## Phase 17: Image Display and Storage
 - ❌ Create thumbnail generation system
 - ❌ Implement image display in item details
 
-## Phase 17: Basic Export
+## Phase 18: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 18: Advanced Export
+## Phase 19: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 19: Basic Import
+## Phase 20: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 20: Advanced Import
+## Phase 21: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 21: Sharing Features
+## Phase 22: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -189,36 +194,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 22: Basic Settings
+## Phase 23: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 23: Advanced Settings
+## Phase 24: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 24: Search and Filtering
+## Phase 25: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 25: Templates and Accessibility
+## Phase 26: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 26: Performance Basics
+## Phase 27: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 27: Advanced Performance
+## Phase 28: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 28: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 29: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -229,7 +234,7 @@
 - **Required Action**: Upgrade to paid Apple Developer Program ($99/year)
 - **Alternative**: Continue development without CloudKit sync (app works locally only)
 - **Impact**: Without CloudKit capability, sync features will show "offline" status
-- **Timing**: Complete this before Phase 28 (Polish and Release) when preparing for App Store
+- **Timing**: Complete this before Phase 30 (Polish and Release) when preparing for App Store
 
 ## Testing Strategy (Integrated Throughout All Phases)
 - ✅ Test infrastructure is set up and working
@@ -254,7 +259,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 29: Polish and Release
+## Phase 30: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -263,7 +268,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 30: Documentation
+## Phase 31: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -271,7 +276,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 31: Future Platform Support
+## Phase 32: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements

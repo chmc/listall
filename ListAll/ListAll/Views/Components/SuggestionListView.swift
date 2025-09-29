@@ -3,34 +3,67 @@ import SwiftUI
 struct SuggestionListView: View {
     let suggestions: [ItemSuggestion]
     let onSuggestionTapped: (ItemSuggestion) -> Void
+    let showAllSuggestions: Bool
+    let onShowAllToggled: (() -> Void)?
+    
+    // Default initializer for backward compatibility
+    init(suggestions: [ItemSuggestion], onSuggestionTapped: @escaping (ItemSuggestion) -> Void) {
+        self.suggestions = suggestions
+        self.onSuggestionTapped = onSuggestionTapped
+        self.showAllSuggestions = true
+        self.onShowAllToggled = nil
+    }
+    
+    // Enhanced initializer for Phase 14
+    init(suggestions: [ItemSuggestion], 
+         onSuggestionTapped: @escaping (ItemSuggestion) -> Void,
+         showAllSuggestions: Bool = true,
+         onShowAllToggled: (() -> Void)? = nil) {
+        self.suggestions = suggestions
+        self.onSuggestionTapped = onSuggestionTapped
+        self.showAllSuggestions = showAllSuggestions
+        self.onShowAllToggled = onShowAllToggled
+    }
     
     var body: some View {
         if suggestions.isEmpty {
             EmptyView()
         } else {
             VStack(alignment: .leading, spacing: 0) {
-                // Header
+                // Header with Show All toggle
                 HStack {
                     Image(systemName: "lightbulb")
                         .foregroundColor(Theme.Colors.primary)
                         .font(.caption)
-                    Text("Suggestions")
+                    Text("Suggestions (\(suggestions.count))")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
                     Spacer()
+                    
+                    // Show All toggle button if we have more than 3 suggestions
+                    if suggestions.count > 3, let onShowAllToggled = onShowAllToggled {
+                        Button(action: onShowAllToggled) {
+                            Text(showAllSuggestions ? "Show Top 3" : "Show All")
+                                .font(.caption2)
+                                .foregroundColor(Theme.Colors.primary)
+                        }
+                    }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.top, Theme.Spacing.sm)
                 
                 // Suggestions List
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(suggestions.indices, id: \.self) { index in
+                    let displayedSuggestions = showAllSuggestions ? suggestions : Array(suggestions.prefix(3))
+                    
+                    ForEach(displayedSuggestions.indices, id: \.self) { index in
                         SuggestionRowView(
-                            suggestion: suggestions[index],
-                            onTapped: onSuggestionTapped
+                            suggestion: displayedSuggestions[index],
+                            onTapped: onSuggestionTapped,
+                            showExtendedDetails: showAllSuggestions
                         )
                         
-                        if index < suggestions.count - 1 {
+                        if index < displayedSuggestions.count - 1 {
                             Divider()
                                 .padding(.leading, Theme.Spacing.md)
                         }
@@ -47,6 +80,21 @@ struct SuggestionListView: View {
 struct SuggestionRowView: View {
     let suggestion: ItemSuggestion
     let onTapped: (ItemSuggestion) -> Void
+    let showExtendedDetails: Bool
+    
+    // Default initializer for backward compatibility
+    init(suggestion: ItemSuggestion, onTapped: @escaping (ItemSuggestion) -> Void) {
+        self.suggestion = suggestion
+        self.onTapped = onTapped
+        self.showExtendedDetails = false
+    }
+    
+    // Enhanced initializer for Phase 14
+    init(suggestion: ItemSuggestion, onTapped: @escaping (ItemSuggestion) -> Void, showExtendedDetails: Bool = false) {
+        self.suggestion = suggestion
+        self.onTapped = onTapped
+        self.showExtendedDetails = showExtendedDetails
+    }
     
     var body: some View {
         Button(action: {
@@ -63,15 +111,31 @@ struct SuggestionRowView: View {
                     Text(suggestion.title)
                         .font(Theme.Typography.body)
                         .foregroundColor(.primary)
-                        .lineLimit(1)
+                        .lineLimit(showExtendedDetails ? 2 : 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     if let description = suggestion.description, !description.isEmpty {
                         Text(description)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
-                            .lineLimit(1)
+                            .lineLimit(showExtendedDetails ? 3 : 1)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    // Extended details for Phase 14
+                    if showExtendedDetails {
+                        HStack(spacing: 8) {
+                            // Score indicator
+                            Text("Score: \(Int(suggestion.score))")
+                                .font(.caption2)
+                                .foregroundColor(Theme.Colors.secondary)
+                            
+                            // Last used indicator
+                            Text("Used: \(formatRelativeDate(suggestion.lastUsed))")
+                                .font(.caption2)
+                                .foregroundColor(Theme.Colors.secondary)
+                        }
+                        .padding(.top, 2)
                     }
                 }
                 
@@ -138,6 +202,26 @@ struct SuggestionRowView: View {
             return Theme.Colors.primary.opacity(0.7)
         } else {
             return Theme.Colors.secondary
+        }
+    }
+    
+    // Helper function for formatting relative dates
+    private func formatRelativeDate(_ date: Date) -> String {
+        let now = Date()
+        let daysSince = Int(now.timeIntervalSince(date) / 86400)
+        
+        if daysSince == 0 {
+            return "Today"
+        } else if daysSince == 1 {
+            return "Yesterday"
+        } else if daysSince < 7 {
+            return "\(daysSince)d ago"
+        } else if daysSince < 30 {
+            let weeks = daysSince / 7
+            return "\(weeks)w ago"
+        } else {
+            let months = daysSince / 30
+            return "\(months)mo ago"
         }
     }
 }

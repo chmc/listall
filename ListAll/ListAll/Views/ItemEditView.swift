@@ -6,6 +6,7 @@ struct ItemEditView: View {
     @StateObject private var suggestionService = SuggestionService()
     @State private var showingDiscardAlert = false
     @State private var showingSuggestions = false
+    @State private var showAllSuggestions = false
     @FocusState private var isTitleFieldFocused: Bool
     
     let list: List
@@ -32,11 +33,20 @@ struct ItemEditView: View {
                                 handleTitleChange(newValue)
                             }
                         
-                        // Suggestions
+                        // Suggestions with enhanced Phase 14 functionality
                         if showingSuggestions && !suggestionService.suggestions.isEmpty {
-                            SuggestionListView(suggestions: suggestionService.suggestions) { suggestion in
-                                applySuggestion(suggestion)
-                            }
+                            SuggestionListView(
+                                suggestions: suggestionService.suggestions,
+                                onSuggestionTapped: { suggestion in
+                                    applySuggestion(suggestion)
+                                },
+                                showAllSuggestions: showAllSuggestions,
+                                onShowAllToggled: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        showAllSuggestions.toggle()
+                                    }
+                                }
+                            )
                             .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
                         }
                         
@@ -197,20 +207,33 @@ struct ItemEditView: View {
     }
     
     private func applySuggestion(_ suggestion: ItemSuggestion) {
+        // Phase 14 enhancement: Apply all available details from suggestion
         viewModel.title = suggestion.title
         
-        // If the suggestion has a description and the current description is empty, apply it
+        // Apply description if available (user can overwrite if needed)
         if let suggestionDescription = suggestion.description,
-           !suggestionDescription.isEmpty,
-           viewModel.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            viewModel.description = suggestionDescription
+           !suggestionDescription.isEmpty {
+            // Only auto-fill if current description is empty, otherwise preserve user's work
+            if viewModel.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                viewModel.description = suggestionDescription
+            }
         }
+        
+        // For Phase 14: We could add quantity suggestions here in the future
+        // Currently quantity defaults to 1, which is reasonable
         
         // Hide suggestions after applying
         withAnimation(.easeInOut(duration: 0.2)) {
             showingSuggestions = false
+            showAllSuggestions = false // Reset to collapsed state
         }
         suggestionService.clearSuggestions()
+        
+        // Focus on description field to let user review/edit the applied suggestion
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // We could focus on description field here, but let's keep it simple for now
+            // The user can tap to edit any field they want to modify
+        }
     }
 }
 
