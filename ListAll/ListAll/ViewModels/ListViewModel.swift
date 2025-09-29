@@ -6,6 +6,7 @@ class ListViewModel: ObservableObject {
     @Published var items: [Item] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var showCrossedOutItems = true
     
     private let dataManager = DataManager.shared // Changed from coreDataManager
     private let dataRepository = DataRepository()
@@ -15,6 +16,7 @@ class ListViewModel: ObservableObject {
     init(list: List) {
         self.list = list
         // self.viewContext = coreDataManager.container.viewContext // Removed CoreData initialization
+        loadUserPreferences()
         loadItems()
     }
     
@@ -96,5 +98,35 @@ class ListViewModel: ObservableObject {
     
     var completedItems: [Item] {
         return items.filter { $0.isCrossedOut }
+    }
+    
+    /// Returns filtered items based on the showCrossedOutItems setting
+    var filteredItems: [Item] {
+        if showCrossedOutItems {
+            return items
+        } else {
+            return activeItems
+        }
+    }
+    
+    // MARK: - User Preferences
+    
+    func loadUserPreferences() {
+        // Load user preferences from DataRepository
+        if let userData = dataRepository.getUserData() {
+            showCrossedOutItems = userData.showCrossedOutItems
+        }
+    }
+    
+    func toggleShowCrossedOutItems() {
+        showCrossedOutItems.toggle()
+        saveUserPreferences()
+    }
+    
+    private func saveUserPreferences() {
+        // Save user preferences to DataRepository
+        var userData = dataRepository.getUserData() ?? UserData(userID: "default")
+        userData.showCrossedOutItems = showCrossedOutItems
+        dataRepository.saveUserData(userData)
     }
 }

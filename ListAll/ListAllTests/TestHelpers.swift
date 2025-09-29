@@ -354,6 +354,7 @@ class TestListViewModel: ObservableObject {
     @Published var items: [Item] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var showCrossedOutItems = true
     
     private let dataManager: TestDataManager
     private let dataRepository: TestDataRepository
@@ -436,6 +437,19 @@ class TestListViewModel: ObservableObject {
     
     var completedItems: [Item] {
         return items.filter { $0.isCrossedOut }
+    }
+    
+    /// Returns filtered items based on the showCrossedOutItems setting
+    var filteredItems: [Item] {
+        if showCrossedOutItems {
+            return items
+        } else {
+            return activeItems
+        }
+    }
+    
+    func toggleShowCrossedOutItems() {
+        showCrossedOutItems.toggle()
     }
 }
 

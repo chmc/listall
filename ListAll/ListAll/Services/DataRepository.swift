@@ -268,6 +268,16 @@ class DataRepository: ObservableObject {
         }
     }
     
+    // MARK: - Convenience Methods for User Data
+    
+    func getUserData() -> UserData? {
+        return getCurrentUser()
+    }
+    
+    func saveUserData(_ userData: UserData) {
+        updateUserPreferences(userData)
+    }
+    
     // MARK: - Data Migration
     
     func performDataMigration() {

@@ -16,16 +16,16 @@ struct ListView: View {
         VStack {
             if viewModel.isLoading {
                 ProgressView("Loading items...")
-            } else if viewModel.items.isEmpty {
+            } else if viewModel.filteredItems.isEmpty {
                 VStack(spacing: Theme.Spacing.lg) {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 60))
                         .foregroundColor(Theme.Colors.secondary)
                     
-                    Text("No Items Yet")
+                    Text(viewModel.items.isEmpty ? "No Items Yet" : "No Active Items")
                         .font(Theme.Typography.title)
                     
-                    Text("Add your first item to get started")
+                    Text(viewModel.items.isEmpty ? "Add your first item to get started" : "All items are crossed out. Toggle the eye icon to show them.")
                         .font(Theme.Typography.body)
                         .emptyStateStyle()
                     
@@ -45,7 +45,7 @@ struct ListView: View {
                 }
             } else {
                 SwiftUI.List {
-                    ForEach(viewModel.items) { item in
+                    ForEach(viewModel.filteredItems) { item in
                         ItemRowView(
                             item: item,
                             onToggle: {
@@ -76,6 +76,15 @@ struct ListView: View {
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if !viewModel.items.isEmpty {
+                    // Show/Hide crossed out items toggle
+                    Button(action: {
+                        viewModel.toggleShowCrossedOutItems()
+                    }) {
+                        Image(systemName: viewModel.showCrossedOutItems ? "eye.slash" : "eye")
+                            .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
+                    }
+                    .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
+                    
                     EditButton()
                 }
                 
@@ -112,7 +121,7 @@ struct ListView: View {
     
     private func deleteItems(offsets: IndexSet) {
         for index in offsets {
-            let item = viewModel.items[index]
+            let item = viewModel.filteredItems[index]
             viewModel.deleteItem(item)
         }
     }

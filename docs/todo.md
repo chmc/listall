@@ -123,8 +123,8 @@
 ## Phase 7C 1: Click link to open it in default browser ✅ COMPLETED
 - ✅ When item description link is clicked, it should always open it in default browser. Not just when user is in edit item screen.
 
-## Phase 8: Show/Hide Crossed Out Items Toggle
-- ❌ Add show/hide crossed out items toggle
+## Phase 8: Show/Hide Crossed Out Items Toggle ✅ COMPLETED
+- ✅ Add show/hide crossed out items toggle
 
 ## Phase 9: Item Organization
 - ❌ Add item sorting and filtering options
@@ -241,8 +241,8 @@
 - ✅ UtilsTests: 100% passing (26/26 tests) - Fixed by removing deprecated resetSharedSingletons() calls
 - ✅ ServicesTests: 100% passing (1/1 tests) - Fixed by removing deprecated resetSharedSingletons() calls  
 - ✅ ModelTests: 100% passing (24/24 tests) - Fixed by adding @Suite(.serialized) for test isolation
-- ✅ ViewModelsTests: 100% passing (41/41 tests) - Fixed by adding @Suite(.serialized) + async timing fix
-- 🎯 **OVERALL UNIT TESTS: 100% PASSING (96/96 tests)** - COMPLETE SUCCESS!
+- ✅ ViewModelsTests: 100% passing (46/46 tests) - Fixed by adding @Suite(.serialized) + async timing fix + Phase 8 show/hide tests
+- 🎯 **OVERALL UNIT TESTS: 100% PASSING (101/101 tests)** - COMPLETE SUCCESS!
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
