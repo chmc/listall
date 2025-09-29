@@ -3,7 +3,9 @@ import SwiftUI
 struct ItemEditView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: ItemEditViewModel
+    @StateObject private var suggestionService = SuggestionService()
     @State private var showingDiscardAlert = false
+    @State private var showingSuggestions = false
     
     let list: List
     let editingItem: Item?
@@ -19,15 +21,28 @@ struct ItemEditView: View {
             Form {
                 // Title Section
                 Section("Item Title") {
-                    TextField("Enter item name", text: $viewModel.title)
-                        .textFieldStyle(.roundedBorder)
-                        .autocapitalization(.words)
-                        .disableAutocorrection(false)
-                    
-                    if viewModel.showTitleError {
-                        Text(viewModel.titleErrorMessage)
-                            .foregroundColor(Theme.Colors.error)
-                            .font(Theme.Typography.caption)
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        TextField("Enter item name", text: $viewModel.title)
+                            .textFieldStyle(.roundedBorder)
+                            .autocapitalization(.words)
+                            .disableAutocorrection(false)
+                            .onChange(of: viewModel.title) { newValue in
+                                handleTitleChange(newValue)
+                            }
+                        
+                        // Suggestions
+                        if showingSuggestions && !suggestionService.suggestions.isEmpty {
+                            SuggestionListView(suggestions: suggestionService.suggestions) { suggestion in
+                                applySuggestion(suggestion)
+                            }
+                            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+                        }
+                        
+                        if viewModel.showTitleError {
+                            Text(viewModel.titleErrorMessage)
+                                .foregroundColor(Theme.Colors.error)
+                                .font(Theme.Typography.caption)
+                        }
                     }
                 }
                 
@@ -149,6 +164,41 @@ struct ItemEditView: View {
         .onAppear {
             viewModel.setupForEditing()
         }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func handleTitleChange(_ newValue: String) {
+        let trimmedValue = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if trimmedValue.count >= 2 {
+            suggestionService.getSuggestions(for: trimmedValue, in: list)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = true
+            }
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = false
+            }
+            suggestionService.clearSuggestions()
+        }
+    }
+    
+    private func applySuggestion(_ suggestion: ItemSuggestion) {
+        viewModel.title = suggestion.title
+        
+        // If the suggestion has a description and the current description is empty, apply it
+        if let suggestionDescription = suggestion.description,
+           !suggestionDescription.isEmpty,
+           viewModel.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            viewModel.description = suggestionDescription
+        }
+        
+        // Hide suggestions after applying
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showingSuggestions = false
+        }
+        suggestionService.clearSuggestions()
     }
 }
 

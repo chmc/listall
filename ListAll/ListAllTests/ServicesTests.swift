@@ -71,6 +71,246 @@ class ServicesTests: XCTestCase {
         XCTAssertEqual(finalItems[1].title, initialItems[1].title)
     }
     
+    // MARK: - SuggestionService Tests
+    
+    func testSuggestionServiceBasicSuggestions() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list and items
+        let testList = List(name: "Grocery List")
+        testDataManager.addList(testList)
+        
+        let _ = testRepository.createItem(in: testList, title: "Milk", description: "2% low fat")
+        let _ = testRepository.createItem(in: testList, title: "Bread", description: "Whole wheat")
+        let _ = testRepository.createItem(in: testList, title: "Eggs", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Butter", description: "")
+        
+        // Test exact match
+        suggestionService.getSuggestions(for: "Milk", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1)
+        XCTAssertEqual(suggestionService.suggestions.first?.title, "Milk")
+        XCTAssertEqual(suggestionService.suggestions.first?.score, 100.0)
+        
+        // Test prefix match
+        suggestionService.getSuggestions(for: "Br", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1)
+        XCTAssertEqual(suggestionService.suggestions.first?.title, "Bread")
+        XCTAssertEqual(suggestionService.suggestions.first?.score, 90.0)
+        
+        // Test contains match
+        suggestionService.getSuggestions(for: "gg", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1)
+        XCTAssertEqual(suggestionService.suggestions.first?.title, "Eggs")
+        XCTAssertEqual(suggestionService.suggestions.first?.score, 70.0)
+    }
+    
+    func testSuggestionServiceFuzzyMatching() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list and items
+        let testList = List(name: "Shopping List")
+        testDataManager.addList(testList)
+        
+        let _ = testRepository.createItem(in: testList, title: "Bananas", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Apples", description: "")
+        
+        // Test fuzzy matching with typos
+        suggestionService.getSuggestions(for: "Banan", in: testList) // Missing 'a'
+        XCTAssertGreaterThan(suggestionService.suggestions.count, 0)
+        
+        let bananaSuggestion = suggestionService.suggestions.first { $0.title == "Bananas" }
+        XCTAssertNotNil(bananaSuggestion)
+        XCTAssertGreaterThan(bananaSuggestion?.score ?? 0, 30.0) // Should have reasonable fuzzy score
+        
+        // Test with more typos
+        suggestionService.getSuggestions(for: "Aples", in: testList) // Missing 'p'
+        XCTAssertGreaterThan(suggestionService.suggestions.count, 0)
+        
+        let appleSuggestion = suggestionService.suggestions.first { $0.title == "Apples" }
+        XCTAssertNotNil(appleSuggestion)
+        XCTAssertGreaterThan(appleSuggestion?.score ?? 0, 30.0)
+    }
+    
+    func testSuggestionServiceEmptySearch() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list and items
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
+        
+        // Test empty search
+        suggestionService.getSuggestions(for: "", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0)
+        
+        // Test whitespace only search
+        suggestionService.getSuggestions(for: "   ", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0)
+    }
+    
+    func testSuggestionServiceMultipleMatches() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list and items with similar names
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        
+        let _ = testRepository.createItem(in: testList, title: "Apple Juice", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Apple Pie", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Pineapple", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Orange", description: "")
+        
+        // Test search that matches multiple items
+        suggestionService.getSuggestions(for: "Apple", in: testList)
+        XCTAssertGreaterThanOrEqual(suggestionService.suggestions.count, 2)
+        
+        // Verify suggestions are sorted by score (highest first)
+        for i in 0..<(suggestionService.suggestions.count - 1) {
+            XCTAssertGreaterThanOrEqual(
+                suggestionService.suggestions[i].score,
+                suggestionService.suggestions[i + 1].score
+            )
+        }
+        
+        // Exact matches should have highest scores
+        let exactMatches = suggestionService.suggestions.filter { $0.score >= 90.0 }
+        XCTAssertGreaterThan(exactMatches.count, 0)
+    }
+    
+    func testSuggestionServiceFrequencyTracking() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create multiple lists with duplicate items
+        let groceryList = List(name: "Grocery List")
+        let shoppingList = List(name: "Shopping List")
+        testDataManager.addList(groceryList)
+        testDataManager.addList(shoppingList)
+        
+        // Add the same item to multiple lists
+        let _ = testRepository.createItem(in: groceryList, title: "Milk", description: "")
+        let _ = testRepository.createItem(in: shoppingList, title: "Milk", description: "")
+        let _ = testRepository.createItem(in: groceryList, title: "Bread", description: "")
+        
+        // Test global suggestions (across all lists)
+        suggestionService.getSuggestions(for: "Mi", in: nil)
+        
+        let milkSuggestion = suggestionService.suggestions.first { $0.title == "Milk" }
+        XCTAssertNotNil(milkSuggestion)
+        XCTAssertEqual(milkSuggestion?.frequency, 2) // Should appear in 2 lists
+        
+        let breadSuggestion = suggestionService.suggestions.first { $0.title == "Bread" }
+        XCTAssertNotNil(breadSuggestion)
+        XCTAssertEqual(breadSuggestion?.frequency, 1) // Should appear in 1 list
+    }
+    
+    func testSuggestionServiceRecentItems() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list and items with different creation dates
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        
+        let oldItem = testRepository.createItem(in: testList, title: "Old Item", description: "")
+        let recentItem = testRepository.createItem(in: testList, title: "Recent Item", description: "")
+        
+        // Manually update creation dates to test sorting
+        var updatedOldItem = oldItem
+        updatedOldItem.createdAt = Date().addingTimeInterval(-86400) // 1 day ago
+        testDataManager.updateItem(updatedOldItem)
+        
+        var updatedRecentItem = recentItem
+        updatedRecentItem.createdAt = Date() // Now
+        testDataManager.updateItem(updatedRecentItem)
+        
+        // Test recent items
+        let recentItems = suggestionService.getRecentItems(limit: 10)
+        XCTAssertGreaterThan(recentItems.count, 0)
+        
+        // Recent items should be sorted by creation date (most recent first)
+        if recentItems.count >= 2 {
+            XCTAssertEqual(recentItems[0].title, "Recent Item")
+            XCTAssertEqual(recentItems[1].title, "Old Item")
+        }
+    }
+    
+    func testSuggestionServiceClearSuggestions() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test data
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
+        
+        // Get suggestions
+        suggestionService.getSuggestions(for: "Test", in: testList)
+        XCTAssertGreaterThan(suggestionService.suggestions.count, 0)
+        
+        // Clear suggestions
+        suggestionService.clearSuggestions()
+        XCTAssertEqual(suggestionService.suggestions.count, 0)
+    }
+    
+    func testSuggestionServiceMaxResults() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list with many items
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        
+        // Create 15 items that all match the search term
+        for i in 1...15 {
+            let _ = testRepository.createItem(in: testList, title: "Test Item \(i)", description: "")
+        }
+        
+        // Test that suggestions are limited to 10
+        suggestionService.getSuggestions(for: "Test", in: testList)
+        XCTAssertLessThanOrEqual(suggestionService.suggestions.count, 10)
+    }
+    
+    func testSuggestionServiceFuzzyMatchingEdgeCases() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+        
+        // Create test list and items for edge case testing
+        let testList = List(name: "Edge Case List")
+        testDataManager.addList(testList)
+        
+        let _ = testRepository.createItem(in: testList, title: "test", description: "")
+        let _ = testRepository.createItem(in: testList, title: "best", description: "")
+        let _ = testRepository.createItem(in: testList, title: "apple", description: "")
+        
+        // Test close matches should return suggestions
+        suggestionService.getSuggestions(for: "tst", in: testList) // Missing 'e'
+        let testSuggestion = suggestionService.suggestions.first { $0.title == "test" }
+        XCTAssertNotNil(testSuggestion, "Should find fuzzy match for 'tst' -> 'test'")
+        
+        // Test single character difference
+        suggestionService.getSuggestions(for: "bst", in: testList) // 'b' instead of 't'
+        let bestSuggestion = suggestionService.suggestions.first { $0.title == "best" }
+        XCTAssertNotNil(bestSuggestion, "Should find fuzzy match for 'bst' -> 'best'")
+        
+        // Test completely different strings should not match
+        suggestionService.getSuggestions(for: "zebra", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Should not find matches for completely different strings")
+    }
+    
     func testPlaceholder() throws {
         // Placeholder test to ensure the test suite compiles
         XCTAssertTrue(true)

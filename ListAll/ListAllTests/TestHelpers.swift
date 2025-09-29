@@ -454,14 +454,24 @@ class TestListViewModel: ObservableObject {
 }
 
 /// Test-specific DataRepository that uses isolated DataManager
-class TestDataRepository {
+class TestDataRepository: DataRepository {
     private let dataManager: TestDataManager
+    
+    override init() {
+        // This should not be used - use init(dataManager:) instead
+        fatalError("Use init(dataManager:) for test instances")
+    }
     
     init(dataManager: TestDataManager) {
         self.dataManager = dataManager
+        super.init()
     }
     
-    func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {
+    override func getAllLists() -> [List] {
+        return dataManager.lists
+    }
+    
+    override func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {
         var newItem = Item(title: title)
         newItem.itemDescription = description.isEmpty ? nil : description
         newItem.quantity = quantity
@@ -475,13 +485,13 @@ class TestDataRepository {
         return newItem
     }
     
-    func deleteItem(_ item: Item) {
+    override func deleteItem(_ item: Item) {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)
         }
     }
     
-    func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
+    override func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
         var updatedItem = item
         updatedItem.title = title
         updatedItem.itemDescription = description.isEmpty ? nil : description
@@ -490,13 +500,13 @@ class TestDataRepository {
         dataManager.updateItem(updatedItem)
     }
     
-    func toggleItemCrossedOut(_ item: Item) {
+    override func toggleItemCrossedOut(_ item: Item) {
         var updatedItem = item
         updatedItem.toggleCrossedOut()
         dataManager.updateItem(updatedItem)
     }
     
-    func getItem(by id: UUID) -> Item? {
+    override func getItem(by id: UUID) -> Item? {
         for list in dataManager.lists {
             if let item = list.items.first(where: { $0.id == id }) {
                 return item
@@ -505,7 +515,7 @@ class TestDataRepository {
         return nil
     }
     
-    func reorderItems(in list: List, from sourceIndex: Int, to destinationIndex: Int) {
+    override func reorderItems(in list: List, from sourceIndex: Int, to destinationIndex: Int) {
         // Get current items for this list
         let currentItems = dataManager.getItems(forListId: list.id)
         
@@ -531,7 +541,7 @@ class TestDataRepository {
         }
     }
     
-    func validateItem(_ item: Item) -> ValidationResult {
+    override func validateItem(_ item: Item) -> ValidationResult {
         if item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return .failure("Item title cannot be empty")
         }
