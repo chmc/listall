@@ -245,6 +245,10 @@ struct ItemEditView: View {
         }
         .onChange(of: selectedImage) { newImage in
             if let image = newImage {
+                // Dismiss the image source selection sheet first
+                showingImageSourceSelection = false
+                
+                // Then handle the image selection
                 handleImageSelection(image)
                 selectedImage = nil // Reset for next selection
             }

@@ -207,11 +207,6 @@ struct ImageSourceSelectionView: View {
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagePickerView(selectedImage: $selectedImage, sourceType: imageSource)
-                .onDisappear {
-                    if selectedImage != nil {
-                        dismiss()
-                    }
-                }
         }
     }
 }

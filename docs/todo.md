@@ -157,8 +157,8 @@
 - ✅ Create ImagePickerView component
 - ✅ Add camera integration for taking photos
 
-## Phase 16: Add image bug
-- ❌ After image is selected, Add photo screen is visible, 
+## Phase 16: Add image bug ✅ COMPLETED
+- ✅ After image is selected, Add photo screen is visible, 
      but should go to edit item screen with newly added image
 
 ## Phase 17: Image Library Integration
