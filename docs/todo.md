@@ -177,8 +177,8 @@
 - ✅ Implement image display in item details
 - ✅ Default image display fit to screen
 
-## Phase 20: Items list default mode
-- ❌ Change items list default view mode to show only active items (non completed)
+## Phase 20: Items list default mode ✅ COMPLETED
+- ✅ Change items list default view mode to show only active items (non completed)
 
 ## Phase 21: Basic Export
 - ❌ Implement ExportService for data export

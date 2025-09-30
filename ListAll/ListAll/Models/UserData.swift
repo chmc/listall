@@ -17,7 +17,7 @@ struct UserData: Identifiable, Codable, Equatable {
     init(userID: String) {
         self.id = UUID()
         self.userID = userID
-        self.showCrossedOutItems = true
+        self.showCrossedOutItems = false  // Changed to match .active filter default
         self.exportPreferences = nil
         self.lastSyncDate = nil
         self.createdAt = Date()
@@ -25,7 +25,7 @@ struct UserData: Identifiable, Codable, Equatable {
         // Set default organization preferences
         self.defaultSortOption = .orderNumber
         self.defaultSortDirection = .ascending
-        self.defaultFilterOption = .all
+        self.defaultFilterOption = .active
     }
 }
 

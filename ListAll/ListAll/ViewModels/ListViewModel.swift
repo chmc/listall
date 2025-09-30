@@ -11,7 +11,7 @@ class ListViewModel: ObservableObject {
     // Item Organization Properties
     @Published var currentSortOption: ItemSortOption = .orderNumber
     @Published var currentSortDirection: SortDirection = .ascending
-    @Published var currentFilterOption: ItemFilterOption = .all
+    @Published var currentFilterOption: ItemFilterOption = .active
     @Published var showingOrganizationOptions = false
     
     private let dataManager = DataManager.shared // Changed from coreDataManager
@@ -165,11 +165,28 @@ class ListViewModel: ObservableObject {
             currentSortOption = userData.defaultSortOption
             currentSortDirection = userData.defaultSortDirection
             currentFilterOption = userData.defaultFilterOption
+        } else {
+            // Apply default preferences for new users
+            let defaultUserData = UserData(userID: "default")
+            showCrossedOutItems = defaultUserData.showCrossedOutItems
+            currentSortOption = defaultUserData.defaultSortOption
+            currentSortDirection = defaultUserData.defaultSortDirection
+            currentFilterOption = defaultUserData.defaultFilterOption
         }
     }
     
     func toggleShowCrossedOutItems() {
         showCrossedOutItems.toggle()
+        
+        // Synchronize the filter option with the eye button state
+        if showCrossedOutItems {
+            // When showing crossed out items, switch to "All Items" filter
+            currentFilterOption = .all
+        } else {
+            // When hiding crossed out items, switch to "Active Only" filter
+            currentFilterOption = .active
+        }
+        
         saveUserPreferences()
     }
     
@@ -190,7 +207,10 @@ class ListViewModel: ObservableObject {
             showCrossedOutItems = true
         } else if filterOption == .active {
             showCrossedOutItems = false
+        } else if filterOption == .all {
+            showCrossedOutItems = true
         }
+        // For other filters (.hasDescription, .hasImages), keep current showCrossedOutItems state
         saveUserPreferences()
     }
     

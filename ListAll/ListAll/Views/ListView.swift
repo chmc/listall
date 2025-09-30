@@ -89,7 +89,7 @@ struct ListView: View {
                     Button(action: {
                         viewModel.toggleShowCrossedOutItems()
                     }) {
-                        Image(systemName: viewModel.showCrossedOutItems ? "eye.slash" : "eye")
+                        Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
                             .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
                     }
                     .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
