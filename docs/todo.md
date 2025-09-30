@@ -188,28 +188,32 @@
 - ✅ In item list, make clickable arrow area bigger
 - ✅ Keep arrow as is, but enlarge the clickable area
 
-## Phase 23: Basic Export
+## Phase 23: Clean item edit UI
+- ❌ Remove edit box borders to make UI more clean
+- ❌ Fix quantity buttons. They dont work. And move them both to right side of screen.
+
+## Phase 24: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 24: Advanced Export
+## Phase 25: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 25: Basic Import
+## Phase 26: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 26: Advanced Import
+## Phase 27: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 27: Sharing Features
+## Phase 28: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -217,36 +221,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 28: Basic Settings
+## Phase 29: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 29: Advanced Settings
+## Phase 30: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 30: Search and Filtering
+## Phase 31: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 31: Templates and Accessibility
+## Phase 32: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 32: Performance Basics
+## Phase 33: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 33: Advanced Performance
+## Phase 34: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 34: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 35: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -282,7 +286,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 35: Polish and Release
+## Phase 36: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -291,7 +295,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 36: Documentation
+## Phase 37: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -299,7 +303,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 37: Future Platform Support
+## Phase 38: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
