@@ -11,6 +11,7 @@ struct ItemEditView: View {
     @State private var showingImageSourceSelection = false
     @State private var selectedImage: UIImage?
     @FocusState private var isTitleFieldFocused: Bool
+    @State private var localQuantity: Int = 1
     
     let list: List
     let editingItem: Item?
@@ -28,7 +29,7 @@ struct ItemEditView: View {
                 Section("Item Title") {
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         TextField("Enter item name", text: $viewModel.title)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
                             .autocapitalization(.words)
                             .disableAutocorrection(false)
                             .focused($isTitleFieldFocused)
@@ -65,10 +66,6 @@ struct ItemEditView: View {
                 Section("Description (Optional)") {
                     TextEditor(text: $viewModel.description)
                         .frame(minHeight: 80, maxHeight: 200)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                .stroke(Theme.Colors.secondary.opacity(0.3), lineWidth: 1)
-                        )
                     
                     Text("\(viewModel.description.count)/50,000 characters")
                         .font(Theme.Typography.caption)
@@ -84,33 +81,64 @@ struct ItemEditView: View {
                 
                 // Quantity Section
                 Section("Quantity") {
-                    HStack {
-                        Button(action: {
-                            viewModel.decrementQuantity()
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundColor(viewModel.quantity > 1 ? Theme.Colors.primary : Theme.Colors.secondary)
+                    VStack(spacing: Theme.Spacing.md) {
+                        // Option 1: SwiftUI Stepper (Recommended)
+                        HStack {
+                            Text("Quantity")
                                 .font(.title2)
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            Stepper(
+                                value: $localQuantity,
+                                in: 1...9999,
+                                step: 1
+                            ) {
+                                Text("\(localQuantity)")
+                                    .font(.title2)
+                                    .fontWeight(.medium)
+                            }
+                            .onChange(of: localQuantity) { newValue in
+                                viewModel.quantity = newValue
+                            }
                         }
-                        .disabled(viewModel.quantity <= 1)
                         
-                        Spacer()
-                        
-                        TextField("Quantity", value: $viewModel.quantity, format: .number)
-                            .textFieldStyle(.roundedBorder)
-                            .keyboardType(.numberPad)
-                            .frame(width: 80)
-                            .multilineTextAlignment(.center)
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            viewModel.incrementQuantity()
-                        }) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(Theme.Colors.primary)
+                        // Option 2: Simplified Custom Buttons (Fallback)
+                        // Uncomment if Stepper doesn't work:
+                        /*
+                        HStack {
+                            Text("Quantity: \(localQuantity)")
                                 .font(.title2)
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 16) {
+                                Button("-") {
+                                    if localQuantity > 1 {
+                                        localQuantity -= 1
+                                        viewModel.quantity = localQuantity
+                                    }
+                                }
+                                .font(.title)
+                                .frame(width: 44, height: 44)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(8)
+                                
+                                Button("+") {
+                                    if localQuantity < 9999 {
+                                        localQuantity += 1
+                                        viewModel.quantity = localQuantity
+                                    }
+                                }
+                                .font(.title)
+                                .frame(width: 44, height: 44)
+                                .background(Color.blue.opacity(0.2))
+                                .cornerRadius(8)
+                            }
                         }
+                        */
                     }
                     .padding(.vertical, Theme.Spacing.sm)
                     
@@ -232,12 +260,12 @@ struct ItemEditView: View {
         .onAppear {
             viewModel.setupForEditing()
             
-            // Focus the title field when creating a new item
-            if !viewModel.isEditing {
-                // Use a small delay to ensure the view is fully presented
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isTitleFieldFocused = true
-                }
+            // Initialize local quantity from ViewModel
+            localQuantity = viewModel.quantity
+            
+            // Focus the title field for all item edit screens (new and existing)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isTitleFieldFocused = true
             }
         }
         .sheet(isPresented: $showingImageSourceSelection) {
@@ -412,15 +440,13 @@ class ItemEditViewModel: ObservableObject {
     }
     
     func incrementQuantity() {
-        if quantity < Int.max {
-            quantity += 1
-        }
+        guard quantity < 9999 else { return }
+        quantity += 1
     }
     
     func decrementQuantity() {
-        if quantity > 1 {
-            quantity -= 1
-        }
+        guard quantity > 1 else { return }
+        quantity -= 1
     }
     
     func validateFields() {

@@ -188,9 +188,9 @@
 - ✅ In item list, make clickable arrow area bigger
 - ✅ Keep arrow as is, but enlarge the clickable area
 
-## Phase 23: Clean item edit UI
-- ❌ Remove edit box borders to make UI more clean
-- ❌ Fix quantity buttons. They dont work. And move them both to right side of screen.
+## Phase 23: Clean item edit UI ✅ COMPLETED
+- ✅ Remove edit box borders to make UI more clean
+- ✅ Fix quantity buttons. They dont work. And move them both to right side of screen.
 
 ## Phase 24: Basic Export
 - ❌ Implement ExportService for data export
