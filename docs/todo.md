@@ -180,28 +180,32 @@
 ## Phase 20: Items list default mode ✅ COMPLETED
 - ✅ Change items list default view mode to show only active items (non completed)
 
-## Phase 21: Basic Export
+## Phase 21: List item count
+- ❌ Change to show count of active items and count of all items in (count) 
+- ❌ Example: 5 (7) items
+
+## Phase 22: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 22: Advanced Export
+## Phase 23: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 23: Basic Import
+## Phase 24: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 24: Advanced Import
+## Phase 25: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 25: Sharing Features
+## Phase 26: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -209,36 +213,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 26: Basic Settings
+## Phase 27: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 27: Advanced Settings
+## Phase 28: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 28: Search and Filtering
+## Phase 29: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 29: Templates and Accessibility
+## Phase 30: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 30: Performance Basics
+## Phase 31: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 31: Advanced Performance
+## Phase 32: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 32: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 33: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -274,7 +278,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 33: Polish and Release
+## Phase 34: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -283,7 +287,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 34: Documentation
+## Phase 35: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -291,7 +295,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 35: Future Platform Support
+## Phase 36: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
