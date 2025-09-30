@@ -184,28 +184,32 @@
 - ✅ Change to show count of active items and count of all items in (count) 
 - ✅ Example: 5 (7) items
 
-## Phase 22: Basic Export
+## Phase 22: Item list arrow clickable area 
+- ❌ In item list, make clickable arrow area bitter
+- ❌ Keep arrow as is, but enlarge the clickable area
+
+## Phase 23: Basic Export
 - ❌ Implement ExportService for data export
 - ❌ Create JSON export format
 - ❌ Add CSV export format
 - ❌ Create ExportView UI
 
-## Phase 23: Advanced Export
+## Phase 24: Advanced Export
 - ❌ Implement plain text export
 - ❌ Add export options and customization
 - ❌ Implement clipboard export functionality
 
-## Phase 24: Basic Import
+## Phase 25: Basic Import
 - ❌ Implement ImportService for data import
 - ❌ Add JSON import functionality
 - ❌ Create import validation and error handling
 
-## Phase 25: Advanced Import
+## Phase 26: Advanced Import
 - ❌ Implement conflict resolution for imports
 - ❌ Add import preview functionality
 - ❌ Create import progress indicators
 
-## Phase 26: Sharing Features
+## Phase 27: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -213,36 +217,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 27: Basic Settings
+## Phase 28: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 28: Advanced Settings
+## Phase 29: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 29: Search and Filtering
+## Phase 30: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 30: Templates and Accessibility
+## Phase 31: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 31: Performance Basics
+## Phase 32: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 32: Advanced Performance
+## Phase 33: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 33: CloudKit Capability Setup (Pre-Release Requirement)
+## Phase 34: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -253,7 +257,7 @@
 - **Required Action**: Upgrade to paid Apple Developer Program ($99/year)
 - **Alternative**: Continue development without CloudKit sync (app works locally only)
 - **Impact**: Without CloudKit capability, sync features will show "offline" status
-- **Timing**: Complete this before Phase 33 (Polish and Release) when preparing for App Store
+- **Timing**: Complete this before Phase 35 (Polish and Release) when preparing for App Store
 
 ## Testing Strategy (Integrated Throughout All Phases)
 - ✅ Test infrastructure is set up and working
@@ -278,7 +282,7 @@
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 
-## Phase 34: Polish and Release
+## Phase 35: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -287,7 +291,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 35: Documentation
+## Phase 36: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -295,7 +299,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 36: Future Platform Support
+## Phase 37: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
