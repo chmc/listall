@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import AVFoundation
 import UIKit
 
 // MARK: - Image Source Options
@@ -37,14 +38,16 @@ struct ImagePickerView: UIViewControllerRepresentable {
     // MARK: - Camera Controller
     private func makeCameraController(context: Context) -> UIViewController {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            // Return alert controller if camera not available
+            // Show alert to inform user, then fall back to photo library
             let alert = UIAlertController(
                 title: "Camera Not Available",
-                message: "Camera is not available on this device.",
+                message: "Camera is not available on this device. Using photo library instead.",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                context.coordinator.parent.dismiss()
+                // Present photo library after alert is dismissed
+                let photoLibraryController = self.makePhotoLibraryController(context: context)
+                alert.presentingViewController?.present(photoLibraryController, animated: true)
             })
             return alert
         }
@@ -122,6 +125,8 @@ struct ImageSourceSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingImagePicker = false
     @State private var imageSource: ImageSource = .photoLibrary
+    @State private var showingCameraPicker = false
+    @State private var showingPhotoLibraryPicker = false
     
     var body: some View {
         NavigationView {
@@ -134,8 +139,7 @@ struct ImageSourceSelectionView: View {
                 VStack(spacing: 16) {
                     // Camera Option
                     Button(action: {
-                        imageSource = .camera
-                        showingImagePicker = true
+                        requestCameraPermissionAndOpen()
                     }) {
                         HStack {
                             Image(systemName: "camera.fill")
@@ -164,8 +168,7 @@ struct ImageSourceSelectionView: View {
                     
                     // Photo Library Option
                     Button(action: {
-                        imageSource = .photoLibrary
-                        showingImagePicker = true
+                        showingPhotoLibraryPicker = true
                     }) {
                         HStack {
                             Image(systemName: "photo.fill")
@@ -205,9 +208,45 @@ struct ImageSourceSelectionView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingImagePicker) {
-            ImagePickerView(selectedImage: $selectedImage, sourceType: imageSource)
+        .sheet(isPresented: $showingCameraPicker) {
+            ImagePickerView(selectedImage: $selectedImage, sourceType: .camera)
         }
+        .sheet(isPresented: $showingPhotoLibraryPicker) {
+            ImagePickerView(selectedImage: $selectedImage, sourceType: .photoLibrary)
+        }
+    }
+    
+    // MARK: - Camera Permission Request
+    private func requestCameraPermissionAndOpen() {
+        let cameraAuthStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        
+        switch cameraAuthStatus {
+        case .authorized:
+            openCamera()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        self.openCamera()
+                    } else {
+                        self.showPermissionDeniedAlert()
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showPermissionDeniedAlert()
+        @unknown default:
+            showPermissionDeniedAlert()
+        }
+    }
+    
+    private func openCamera() {
+        showingCameraPicker = true
+    }
+    
+    private func showPermissionDeniedAlert() {
+        // Fall back to photo library if camera permission denied
+        showingPhotoLibraryPicker = true
     }
 }
 
