@@ -349,3 +349,16 @@
 - **Achievement**: 92 tests passed, 2 intentionally skipped, 100% success rate for executed tests
 - **Benefit**: Demonstrates ability to meet strict requirements while maintaining code quality
 - **Rule**: When facing non-negotiable test requirements, prioritize business functionality and document all decisions clearly
+
+## iOS Simulator Debug Messages and Infrastructure Warnings
+
+### Xcode Simulator Known Issues (September 2025)
+- **Learning**: iOS Simulator generates harmless debug warnings that appear as errors but don't affect app functionality
+- **Common Messages**:
+  - `load_eligibility_plist: Failed to open .../eligibility.plist: No such file or directory(2)`
+  - `Failed to send CA Event for app launch measurements for ca_event_type: 0/1`
+- **Root Cause**: Known Xcode 15/16 simulator bugs related to missing simulator infrastructure files
+- **Impact**: **None** - These are cosmetic warnings that don't affect app behavior or performance
+- **Action Required**: **None** - These should be ignored, not fixed
+- **Real Device Behavior**: These warnings don't appear when running on actual iOS devices
+- **Rule**: Don't attempt to fix simulator infrastructure warnings; focus debugging efforts on actual app functionality issues
