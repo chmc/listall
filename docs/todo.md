@@ -184,9 +184,9 @@
 - ✅ Change to show count of active items and count of all items in (count) 
 - ✅ Example: 5 (7) items
 
-## Phase 22: Item list arrow clickable area 
-- ❌ In item list, make clickable arrow area bitter
-- ❌ Keep arrow as is, but enlarge the clickable area
+## Phase 22: Item list arrow clickable area ✅ COMPLETED
+- ✅ In item list, make clickable arrow area bigger
+- ✅ Keep arrow as is, but enlarge the clickable area
 
 ## Phase 23: Basic Export
 - ❌ Implement ExportService for data export

@@ -78,13 +78,15 @@ struct ItemRowView: View {
                 onToggle?()
             }
             
-            // Right-side edit button
+            // Right-side edit button with larger clickable area
             Button(action: {
                 onEdit?()
             }) {
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(Theme.Colors.secondary)
+                    .frame(width: 44, height: 44) // Larger tap target (44x44 is Apple's recommended minimum)
+                    .contentShape(Rectangle()) // Ensure entire frame is tappable
             }
             .buttonStyle(PlainButtonStyle())
         }
