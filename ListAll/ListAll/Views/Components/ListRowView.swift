@@ -3,7 +3,6 @@ import SwiftUI
 struct ListRowView: View {
     let list: List
     @ObservedObject var mainViewModel: MainViewModel
-    @State private var itemCount: Int = 0
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
     @State private var showingDuplicateAlert = false
@@ -16,7 +15,7 @@ struct ListRowView: View {
                         .font(Theme.Typography.headline)
                         .foregroundColor(.primary)
                     
-                    Text("\(itemCount) items")
+                    Text("\(list.activeItemCount) (\(list.itemCount)) items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
                 }
@@ -24,9 +23,6 @@ struct ListRowView: View {
                 Spacer()
             }
             .padding(.vertical, 4)
-        }
-        .onAppear {
-            updateItemCount()
         }
         .contextMenu {
             Button(action: {
@@ -93,10 +89,6 @@ struct ListRowView: View {
         } message: {
             Text("This will create a copy of \"\(list.name)\" with all its items.")
         }
-    }
-    
-    private func updateItemCount() {
-        itemCount = list.items.count // Removed optional chaining since items is non-optional
     }
 }
 

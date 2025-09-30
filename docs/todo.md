@@ -180,9 +180,9 @@
 ## Phase 20: Items list default mode ✅ COMPLETED
 - ✅ Change items list default view mode to show only active items (non completed)
 
-## Phase 21: List item count
-- ❌ Change to show count of active items and count of all items in (count) 
-- ❌ Example: 5 (7) items
+## Phase 21: List item count ✅ COMPLETED
+- ✅ Change to show count of active items and count of all items in (count) 
+- ✅ Example: 5 (7) items
 
 ## Phase 22: Basic Export
 - ❌ Implement ExportService for data export

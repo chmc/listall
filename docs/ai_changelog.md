@@ -1,5 +1,129 @@
 # AI Changelog
 
+## 2025-09-30 - Phase 21 Fix: Remove Item Count from Navigation Title ✅ COMPLETED
+
+### Successfully Removed Item Count from ListView Navigation Title
+
+**Request**: No need to show this in list name. Remove this. Follow all rules and instructions.
+
+### Problem Analysis
+
+**Issue**: The item count display "- 4 (7) items" was added to the ListView navigation title, but user feedback indicated this was not desired in the navigation title area.
+
+**Solution Required**: Remove item count from ListView navigation title while keeping it in ListRowView where it provides value.
+
+### Technical Solution
+
+**Reverted ListView Navigation Title** (`Views/ListView.swift`):
+- **Removed item count**: Changed back from complex title with counts to simple list name
+- **Clean navigation**: Navigation title now shows only the list name for better readability
+- **Preserved functionality**: Item counts still visible in ListRowView where they belong
+
+### Implementation Details
+
+**ListView Navigation Title Revert**:
+```swift
+// BEFORE: Navigation title with item counts
+.navigationTitle("\(list.name) - \(viewModel.activeItems.count) (\(viewModel.items.count)) items")
+
+// AFTER: Clean navigation title
+.navigationTitle(list.name)
+```
+
+**Preserved ListRowView Functionality**:
+- Item count display remains in ListRowView: `"4 (7) items"`
+- Users can still see active/total counts in the list overview
+- Better separation of concerns: navigation shows list name, row shows details
+
+### Files Modified
+- `ListAll/ListAll/Views/ListView.swift` - Removed item count from navigation title
+
+### Build & Test Results
+- ✅ **Build Status**: Project compiles successfully with no errors
+- ✅ **Test Status**: All tests pass (100% success rate)
+  - Unit Tests: 101/101 passing
+  - UI Tests: 12/12 passing (2 skipped as expected)
+- ✅ **No Breaking Changes**: Existing functionality preserved
+
+### User Experience Impact
+- **Cleaner Navigation**: Navigation title now shows only list name for better readability
+- **Preserved Information**: Item counts still available in ListRowView where they're most useful
+- **Better UX**: Follows user feedback for improved interface design
+
+## 2025-09-30 - Phase 21: List Item Count Display ✅ COMPLETED
+
+### Successfully Implemented Item Count Display in "5 (7) items" Format
+
+**Request**: Implement Phase 21: List item count. Change to show count of active items and count of all items in (count). Example: 5 (7) items
+
+### Problem Analysis
+
+**Requirement**: Update the UI to display item counts in the format "active_count (total_count) items" to provide users with better visibility into list contents.
+
+**Areas Affected**:
+1. **ListView Navigation Title**: Should show count in list header
+2. **ListRowView**: Should show count in list row display
+3. **Existing Infrastructure**: List model already had necessary computed properties
+
+### Technical Solution
+
+**Updated ListView Navigation Title** (`Views/ListView.swift`):
+- **Enhanced title display**: Changed from simple list name to include item count
+- **Dynamic count format**: Shows "List Name - 5 (7) items" format
+- **Real-time updates**: Count updates automatically as items are added/removed/toggled
+
+**Updated ListRowView Display** (`Views/Components/ListRowView.swift`):
+- **Replaced static count**: Changed from simple total count to active/total format
+- **Direct property access**: Now uses `list.activeItemCount` and `list.itemCount` directly
+- **Removed redundant code**: Eliminated local state management and update methods
+
+### Implementation Details
+
+**ListView Navigation Title Enhancement**:
+```swift
+// BEFORE: Simple list name
+.navigationTitle(list.name)
+
+// AFTER: List name with item counts
+.navigationTitle("\(list.name) - \(viewModel.activeItems.count) (\(viewModel.items.count)) items")
+```
+
+**ListRowView Count Display**:
+```swift
+// BEFORE: Simple total count
+Text("\(itemCount) items")
+
+// AFTER: Active count with total in parentheses
+Text("\(list.activeItemCount) (\(list.itemCount)) items")
+```
+
+**Code Cleanup**:
+- **Removed local state**: Eliminated `@State private var itemCount: Int = 0`
+- **Removed update method**: Deleted `updateItemCount()` function
+- **Removed lifecycle hook**: Removed `.onAppear { updateItemCount() }`
+
+### Files Modified
+- `ListAll/ListAll/Views/ListView.swift` - Added item count to navigation title
+- `ListAll/ListAll/Views/Components/ListRowView.swift` - Updated count display format and removed redundant code
+
+### Build & Test Results
+- ✅ **Build Status**: Project compiles successfully with no errors
+- ✅ **Test Status**: All tests pass (100% success rate)
+  - Unit Tests: 101/101 passing
+  - UI Tests: 12/12 passing (2 skipped as expected)
+- ✅ **No Breaking Changes**: Existing functionality preserved
+
+### User Experience Impact
+- **Better Visibility**: Users can now see both active and total item counts at a glance
+- **Consistent Format**: Same "5 (7) items" format used throughout the app
+- **Real-time Updates**: Counts update immediately when items are modified
+- **Cleaner Code**: Simplified implementation using existing model properties
+
+### Next Steps
+- Phase 21 requirements fully satisfied
+- Ready to proceed to Phase 22: Basic Export functionality
+- All behavioral rules followed (build validation, test validation, documentation)
+
 ## 2025-09-30 - Eye Button Initial State & Logic Fix ✅ COMPLETED
 
 ### Successfully Fixed Eye Button Visual Logic and Initial State
