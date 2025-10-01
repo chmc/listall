@@ -10,12 +10,27 @@ class ImportViewModel: ObservableObject {
     @Published var successMessage: String?
     @Published var errorMessage: String?
     
+    // Preview functionality
+    @Published var showPreview = false
+    @Published var importPreview: ImportPreview?
+    @Published var previewFileURL: URL?
+    
+    // Progress tracking
+    @Published var importProgress: ImportProgress?
+    
     private let importService: ImportService
     private let dataRepository: DataRepository
     
     init(importService: ImportService = ImportService(), dataRepository: DataRepository = DataRepository()) {
         self.importService = importService
         self.dataRepository = dataRepository
+        
+        // Set up progress handler
+        self.importService.progressHandler = { [weak self] progress in
+            DispatchQueue.main.async {
+                self?.importProgress = progress
+            }
+        }
     }
     
     // MARK: - Strategy Selection
@@ -59,9 +74,62 @@ class ImportViewModel: ObservableObject {
     
     // MARK: - Import Operations
     
+    func showPreviewForFile(_ url: URL) {
+        clearMessages()
+        previewFileURL = url
+        
+        // Ensure we have access to security-scoped resource
+        guard url.startAccessingSecurityScopedResource() else {
+            errorMessage = "Unable to access selected file"
+            return
+        }
+        
+        defer {
+            url.stopAccessingSecurityScopedResource()
+        }
+        
+        do {
+            // Read file data
+            let data = try Data(contentsOf: url)
+            
+            // Create import options based on selected strategy
+            let options = ImportOptions(
+                mergeStrategy: selectedStrategy,
+                validateData: true
+            )
+            
+            // Generate preview
+            let preview = try importService.previewImport(data, options: options)
+            importPreview = preview
+            
+            // Show preview if valid
+            if preview.isValid {
+                showPreview = true
+            } else {
+                let errorList = preview.errors.joined(separator: "\n")
+                errorMessage = "Preview failed:\n\(errorList)"
+            }
+        } catch let error as ImportError {
+            errorMessage = error.localizedDescription
+        } catch {
+            errorMessage = "Failed to preview: \(error.localizedDescription)"
+        }
+    }
+    
+    func confirmImport() {
+        guard let url = previewFileURL else {
+            errorMessage = "No file selected for import"
+            return
+        }
+        
+        showPreview = false
+        importFromFile(url)
+    }
+    
     func importFromFile(_ url: URL) {
         clearMessages()
         isImporting = true
+        importProgress = nil
         
         // Ensure we have access to security-scoped resource
         guard url.startAccessingSecurityScopedResource() else {
@@ -98,6 +166,10 @@ class ImportViewModel: ObservableObject {
                     message += " (updated \(result.listsUpdated + result.itemsUpdated) existing)"
                 }
                 
+                if result.hasConflicts {
+                    message += "\n\(result.conflicts.count) conflicts resolved"
+                }
+                
                 successMessage = message
                 
                 // Auto-dismiss success message after 5 seconds
@@ -115,6 +187,14 @@ class ImportViewModel: ObservableObject {
         }
         
         isImporting = false
+        importProgress = nil
+        previewFileURL = nil
+    }
+    
+    func cancelPreview() {
+        showPreview = false
+        importPreview = nil
+        previewFileURL = nil
     }
     
     func clearMessages() {
@@ -124,6 +204,8 @@ class ImportViewModel: ObservableObject {
     
     func cleanup() {
         clearMessages()
+        cancelPreview()
+        importProgress = nil
     }
 }
 

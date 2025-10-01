@@ -449,15 +449,49 @@ struct ImportView: View {
                     }
                     
                     if viewModel.isImporting {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            Text("Importing...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        VStack(spacing: 12) {
+                            if let progress = viewModel.importProgress {
+                                // Detailed progress
+                                VStack(spacing: 8) {
+                                    HStack {
+                                        Text("Importing...")
+                                            .font(.headline)
+                                        Spacer()
+                                        Text("\(progress.progressPercentage)%")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    ProgressView(value: progress.overallProgress)
+                                        .progressViewStyle(LinearProgressViewStyle())
+                                    
+                                    Text(progress.currentOperation)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    
+                                    HStack {
+                                        Text("Lists: \(progress.processedLists)/\(progress.totalLists)")
+                                            .font(.caption2)
+                                        Spacer()
+                                        Text("Items: \(progress.processedItems)/\(progress.totalItems)")
+                                            .font(.caption2)
+                                    }
+                                    .foregroundColor(.secondary)
+                                }
+                            } else {
+                                // Simple progress
+                                HStack(spacing: 12) {
+                                    ProgressView()
+                                    Text("Importing...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.gray.opacity(0.1))
+                        .background(Color.blue.opacity(0.1))
                         .cornerRadius(8)
                     }
                     
@@ -483,12 +517,157 @@ struct ImportView: View {
                 switch result {
                 case .success(let urls):
                     if let url = urls.first {
-                        viewModel.importFromFile(url)
+                        viewModel.showPreviewForFile(url)
                     }
                 case .failure(let error):
                     viewModel.errorMessage = "Failed to select file: \(error.localizedDescription)"
                 }
             }
+            .sheet(isPresented: $viewModel.showPreview) {
+                if let preview = viewModel.importPreview {
+                    ImportPreviewView(preview: preview, viewModel: viewModel)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Import Preview View
+
+struct ImportPreviewView: View {
+    let preview: ImportPreview
+    @ObservedObject var viewModel: ImportViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Summary Card
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Import Summary")
+                            .font(.headline)
+                        
+                        if preview.listsToCreate > 0 {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("\(preview.listsToCreate) new \(preview.listsToCreate == 1 ? "list" : "lists")")
+                            }
+                        }
+                        
+                        if preview.listsToUpdate > 0 {
+                            HStack {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .foregroundColor(.orange)
+                                Text("\(preview.listsToUpdate) \(preview.listsToUpdate == 1 ? "list" : "lists") to update")
+                            }
+                        }
+                        
+                        if preview.itemsToCreate > 0 {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("\(preview.itemsToCreate) new \(preview.itemsToCreate == 1 ? "item" : "items")")
+                            }
+                        }
+                        
+                        if preview.itemsToUpdate > 0 {
+                            HStack {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .foregroundColor(.orange)
+                                Text("\(preview.itemsToUpdate) \(preview.itemsToUpdate == 1 ? "item" : "items") to update")
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(12)
+                    
+                    // Conflicts Section
+                    if preview.hasConflicts {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                Text("Conflicts (\(preview.conflicts.count))")
+                                    .font(.headline)
+                            }
+                            
+                            ForEach(Array(preview.conflicts.prefix(5).enumerated()), id: \.offset) { _, conflict in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(conflict.entityName)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Text(conflict.message)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            
+                            if preview.conflicts.count > 5 {
+                                Text("And \(preview.conflicts.count - 5) more...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Strategy Info
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Import Strategy")
+                            .font(.headline)
+                        HStack {
+                            Image(systemName: viewModel.strategyIcon(viewModel.selectedStrategy))
+                            Text(viewModel.strategyName(viewModel.selectedStrategy))
+                                .font(.subheadline)
+                        }
+                        Text(viewModel.strategyDescription(viewModel.selectedStrategy))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
+                    
+                    // Action Buttons
+                    VStack(spacing: 12) {
+                        Button(action: {
+                            dismiss()
+                            viewModel.confirmImport()
+                        }) {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Confirm Import")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        
+                        Button(action: {
+                            dismiss()
+                            viewModel.cancelPreview()
+                        }) {
+                            Text("Cancel")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.gray.opacity(0.2))
+                                .foregroundColor(.primary)
+                                .cornerRadius(12)
+                        }
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Import Preview")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

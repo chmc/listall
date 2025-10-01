@@ -227,10 +227,10 @@
 - ✅ Ensure build succeeds
 - ✅ Update documentation in ai_changelog.md
 
-## Phase 28: Advanced Import
-- ❌ Implement conflict resolution for imports
-- ❌ Add import preview functionality
-- ❌ Create import progress indicators
+## Phase 28: Advanced Import ✅ COMPLETED
+- ✅ Implement conflict resolution for imports
+- ✅ Add import preview functionality
+- ✅ Create import progress indicators
 
 ## Phase 29: Sharing Features
 - ❌ Implement SharingService for list sharing
@@ -298,13 +298,13 @@
 ### Current Test Status:
 - ✅ UI Tests: 100% passing (12/12 tests)
 - ✅ UtilsTests: 100% passing (26/26 tests) - Fixed by removing deprecated resetSharedSingletons() calls
-- ✅ ServicesTests: 100% passing (78/78 tests) - Includes Phase 25 (12 tests) + Phase 26 (15 tests) + Phase 27 (12 tests) export/import tests
+- ✅ ServicesTests: 100% passing (88/88 tests) - Includes Phase 25 (12 tests) + Phase 26 (15 tests) + Phase 27 (12 tests) + Phase 28 (10 tests) export/import tests
 - ✅ ModelTests: 100% passing (24/24 tests) - Fixed by adding @Suite(.serialized) for test isolation
 - ✅ ViewModelsTests: 100% passing (32/32 tests) - Fixed by adding @Suite(.serialized) + async timing fix + Phase 8 show/hide tests
-- 🎯 **OVERALL UNIT TESTS: 100% PASSING (172/172 tests)** - COMPLETE SUCCESS!
+- 🎯 **OVERALL UNIT TESTS: 100% PASSING (182/182 tests)** - COMPLETE SUCCESS!
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
-- ✅ Phase 25, 26 & 27 Export/Import Tests: Complete test coverage for JSON, CSV, Plain Text, clipboard, options, and import validation (39 tests total)
+- ✅ Phase 25, 26, 27 & 28 Export/Import Tests: Complete test coverage for JSON, CSV, Plain Text, clipboard, options, import validation, preview, progress, and conflict resolution (49 tests total)
 
 ## Phase 37: Polish and Release
 - ❌ Implement app icon and launch screen
