@@ -202,11 +202,13 @@
 - ✅ Write comprehensive tests for undo functionality
 - ✅ Update test infrastructure to support undo testing
 
-## Phase 25: Basic Export
-- ❌ Implement ExportService for data export
-- ❌ Create JSON export format
-- ❌ Add CSV export format
-- ❌ Create ExportView UI
+## Phase 25: Basic Export ✅ COMPLETED
+- ✅ Implement ExportService for data export
+- ✅ Create JSON export format
+- ✅ Add CSV export format
+- ✅ Create ExportView UI
+- ✅ Add file sharing via iOS share sheet
+- ✅ Write comprehensive export tests (12 tests)
 
 ## Phase 26: Advanced Export
 - ❌ Implement plain text export

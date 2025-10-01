@@ -63,19 +63,85 @@ struct ExportView: View {
         NavigationView {
             VStack(spacing: 20) {
                 if viewModel.isExporting {
-                    ProgressView("Exporting...")
-                        .progressViewStyle(CircularProgressViewStyle())
+                    VStack(spacing: 12) {
+                        ProgressView("Exporting...")
+                            .progressViewStyle(CircularProgressViewStyle())
+                        Text("Preparing your data...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 } else {
                     VStack(spacing: 16) {
-                        Button("Export to JSON") {
-                            viewModel.exportToJSON()
+                        // Export format description
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Export your lists and items")
+                                .font(.headline)
+                            Text("Choose a format to share or backup your data")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 8)
                         
-                        Button("Export to CSV") {
-                            viewModel.exportToCSV()
+                        // Export buttons
+                        Button(action: {
+                            viewModel.exportToJSON()
+                        }) {
+                            HStack {
+                                Image(systemName: "doc.text")
+                                VStack(alignment: .leading) {
+                                    Text("Export to JSON")
+                                        .font(.headline)
+                                    Text("Complete data with all details")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(10)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            viewModel.exportToCSV()
+                        }) {
+                            HStack {
+                                Image(systemName: "tablecells")
+                                VStack(alignment: .leading) {
+                                    Text("Export to CSV")
+                                        .font(.headline)
+                                    Text("Spreadsheet-compatible format")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    // Status messages
+                    if let errorMessage = viewModel.errorMessage {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.top, 8)
+                    }
+                    
+                    if let successMessage = viewModel.successMessage {
+                        Text(successMessage)
+                            .font(.caption)
+                            .foregroundColor(.green)
+                            .padding(.top, 8)
                     }
                 }
                 
@@ -87,11 +153,35 @@ struct ExportView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
+                        viewModel.cleanup()
                         dismiss()
                     }
                 }
             }
+            .sheet(isPresented: $viewModel.showShareSheet) {
+                if let fileURL = viewModel.exportedFileURL {
+                    ShareSheet(items: [fileURL])
+                }
+            }
+            .onDisappear {
+                viewModel.cleanup()
+            }
         }
+    }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
     }
 }
 
