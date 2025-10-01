@@ -1,5 +1,176 @@
 # AI Changelog
 
+## 2025-09-30 - Phase 24: Show Undo Complete Button ✅ COMPLETED
+
+### Successfully Implemented Undo Functionality for Completed Items
+
+**Request**: Implement Phase 24 - Show undo complete button with standard timeout when item is completed at bottom of screen.
+
+### Implementation Overview
+
+Added a Material Design-style undo button that appears at the bottom of the screen for 5 seconds when a user completes an item, allowing them to quickly reverse the action.
+
+### Technical Implementation
+
+**Files Modified**:
+1. `/ListAll/ListAll/ViewModels/ListViewModel.swift` - Added undo state management
+2. `/ListAll/ListAll/Views/ListView.swift` - Added undo banner UI component
+3. `/ListAll/ListAllTests/TestHelpers.swift` - Updated test infrastructure
+4. `/ListAll/ListAllTests/ViewModelsTests.swift` - Added comprehensive tests
+
+**Key Features**:
+- **Automatic Timer**: 5-second timeout before undo button auto-hides
+- **Smart Behavior**: Only shows when completing items (not when uncompleting)
+- **Clean UI**: Material Design-inspired banner with animation
+- **State Management**: Proper cleanup of timers and state
+- **Multiple Completions**: New completion replaces previous undo
+
+### ListViewModel Changes
+
+Added undo-specific properties and methods:
+
+```swift
+// Properties
+@Published var recentlyCompletedItem: Item?
+@Published var showUndoButton = false
+private var undoTimer: Timer?
+private let undoTimeout: TimeInterval = 5.0
+
+// Enhanced toggleItemCrossedOut
+func toggleItemCrossedOut(_ item: Item) {
+    let wasCompleted = item.isCrossedOut
+    let itemId = item.id
+    
+    dataRepository.toggleItemCrossedOut(item)
+    loadItems()
+    
+    // Show undo only when completing (not uncompleting)
+    if !wasCompleted, let refreshedItem = items.first(where: { $0.id == itemId }) {
+        showUndoForCompletedItem(refreshedItem)
+    }
+}
+
+// Undo management
+func undoComplete() {
+    guard let item = recentlyCompletedItem else { return }
+    dataRepository.toggleItemCrossedOut(item)
+    hideUndoButton()
+    loadItems()
+}
+```
+
+**Critical Implementation Details**:
+- Uses refreshed item after `loadItems()` to avoid stale state
+- Hides undo button BEFORE refreshing list in undo action
+- Properly invalidates timers in `deinit` to prevent leaks
+- Replaces previous undo when completing multiple items quickly
+
+### UI Implementation
+
+Added `UndoBanner` component with modern design:
+
+```swift
+struct UndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(Theme.Colors.success)
+            
+            VStack(alignment: .leading) {
+                Text("Completed")
+                    .font(Theme.Typography.caption)
+                Text(itemName)
+                    .font(Theme.Typography.body)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Button("Undo") {
+                onUndo()
+            }
+            .primaryButtonStyle()
+        }
+        .cardStyle()
+        .shadow(...)
+    }
+}
+```
+
+**UI Features**:
+- Material Design elevated card appearance
+- Spring animation for smooth entry/exit
+- Checkmark icon for visual feedback
+- Item name display with truncation
+- Prominent "Undo" button
+
+### ListView Integration
+
+Wrapped main view in `ZStack` to overlay undo banner:
+
+```swift
+ZStack {
+    VStack {
+        // Existing list content
+    }
+    
+    // Undo banner overlay
+    if viewModel.showUndoButton, let item = viewModel.recentlyCompletedItem {
+        VStack {
+            Spacer()
+            UndoBanner(
+                itemName: item.displayTitle,
+                onUndo: { viewModel.undoComplete() }
+            )
+            .padding()
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(Theme.Animation.spring, value: viewModel.showUndoButton)
+        }
+    }
+}
+```
+
+### Testing
+
+Added 4 comprehensive test cases:
+
+1. **testListViewModelShowUndoButtonOnComplete**: Verifies undo button appears when item is completed
+2. **testListViewModelUndoComplete**: Tests full undo flow (complete → undo → verify uncompleted)
+3. **testListViewModelNoUndoButtonOnUncomplete**: Ensures undo doesn't show when uncompleting
+4. **testListViewModelUndoButtonReplacesOnNewCompletion**: Verifies new completions replace previous undo
+
+**Test Infrastructure Updates**:
+- Added undo properties to `TestListViewModel`
+- Mirrored production undo logic in test helpers
+- Ensured proper test isolation
+
+### Build Status
+
+✅ **BUILD SUCCEEDED** - Project compiles cleanly with no errors or warnings related to this feature
+
+### User Experience
+
+**Before**: Completed items could only be restored by manually clicking them again
+**After**: Users get an immediate 5-second window to undo completions with a single tap
+
+**Benefits**:
+- Prevents accidental completions from being permanent
+- Follows platform conventions (iOS undo patterns)
+- Non-intrusive (auto-hides after 5 seconds)
+- Intuitive interaction model
+
+### Next Steps
+
+Phase 24 is complete! Ready for:
+- Phase 25: Basic Export functionality
+- User testing of undo feature
+- Potential timer customization if needed
+
+---
+
 ## 2025-09-30 - Quantity Button Fix (Local State Solution) ✅ COMPLETED
 
 ### Successfully Fixed Persistent Item Edit UI Issues

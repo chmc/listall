@@ -13,10 +13,11 @@ struct ListView: View {
     }
     
     var body: some View {
-        VStack {
-            if viewModel.isLoading {
-                ProgressView("Loading items...")
-            } else if viewModel.filteredItems.isEmpty {
+        ZStack {
+            VStack {
+                if viewModel.isLoading {
+                    ProgressView("Loading items...")
+                } else if viewModel.filteredItems.isEmpty {
                 VStack(spacing: Theme.Spacing.lg) {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 60))
@@ -68,6 +69,24 @@ struct ListView: View {
                 }
                 .refreshable {
                     viewModel.loadItems()
+                }
+            }
+            }
+            
+            // Undo Complete Banner
+            if viewModel.showUndoButton, let item = viewModel.recentlyCompletedItem {
+                VStack {
+                    Spacer()
+                    UndoBanner(
+                        itemName: item.displayTitle,
+                        onUndo: {
+                            viewModel.undoComplete()
+                        }
+                    )
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.bottom, Theme.Spacing.md)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(Theme.Animation.spring, value: viewModel.showUndoButton)
                 }
             }
         }
@@ -136,6 +155,50 @@ struct ListView: View {
             let item = viewModel.filteredItems[index]
             viewModel.deleteItem(item)
         }
+    }
+}
+
+// MARK: - Undo Banner Component
+
+struct UndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(Theme.Colors.success)
+                .font(.title3)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Completed")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(itemName)
+                    .font(Theme.Typography.body)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.primary)
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                .fill(Theme.Colors.background)
+                .shadow(color: Theme.Shadow.largeColor, radius: Theme.Shadow.largeRadius, x: Theme.Shadow.largeX, y: Theme.Shadow.largeY)
+        )
     }
 }
 

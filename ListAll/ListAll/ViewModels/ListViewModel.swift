@@ -1,6 +1,7 @@
 import Foundation
 // import CoreData // Removed CoreData import
 import SwiftUI
+import Combine
 
 class ListViewModel: ObservableObject {
     @Published var items: [Item] = []
@@ -14,10 +15,16 @@ class ListViewModel: ObservableObject {
     @Published var currentFilterOption: ItemFilterOption = .active
     @Published var showingOrganizationOptions = false
     
+    // Undo Complete Properties
+    @Published var recentlyCompletedItem: Item?
+    @Published var showUndoButton = false
+    
     private let dataManager = DataManager.shared // Changed from coreDataManager
     private let dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
     private let list: List
+    private var undoTimer: Timer?
+    private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
     
     init(list: List) {
         self.list = list
@@ -67,8 +74,56 @@ class ListViewModel: ObservableObject {
     }
     
     func toggleItemCrossedOut(_ item: Item) {
+        // Check if item is being completed (not already crossed out)
+        let wasCompleted = item.isCrossedOut
+        let itemId = item.id
+        
         dataRepository.toggleItemCrossedOut(item)
         loadItems() // Refresh the list
+        
+        // Show undo button only when completing an item (not when uncompleting)
+        if !wasCompleted, let refreshedItem = items.first(where: { $0.id == itemId }) {
+            showUndoForCompletedItem(refreshedItem)
+        }
+    }
+    
+    // MARK: - Undo Complete Functionality
+    
+    private func showUndoForCompletedItem(_ item: Item) {
+        // Cancel any existing timer
+        undoTimer?.invalidate()
+        
+        // Store the completed item
+        recentlyCompletedItem = item
+        showUndoButton = true
+        
+        // Set up timer to hide undo button after timeout
+        undoTimer = Timer.scheduledTimer(withTimeInterval: undoTimeout, repeats: false) { [weak self] _ in
+            self?.hideUndoButton()
+        }
+    }
+    
+    func undoComplete() {
+        guard let item = recentlyCompletedItem else { return }
+        
+        // Directly toggle the item back to incomplete without triggering undo logic
+        dataRepository.toggleItemCrossedOut(item)
+        
+        // Hide undo button immediately BEFORE loading items
+        hideUndoButton()
+        
+        loadItems() // Refresh the list
+    }
+    
+    private func hideUndoButton() {
+        undoTimer?.invalidate()
+        undoTimer = nil
+        showUndoButton = false
+        recentlyCompletedItem = nil
+    }
+    
+    deinit {
+        undoTimer?.invalidate()
     }
     
     func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
