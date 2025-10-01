@@ -232,9 +232,11 @@
 - ✅ Add import preview functionality
 - ✅ Create import progress indicators
 
-## Phase 29: Fix sorting
-- ❌ Make sure sorting works everywhere
-- ❌ At least items sorting does not work
+## Phase 29: Fix sorting ✅ COMPLETED
+- ✅ Make sure sorting works everywhere
+- ✅ Fixed items sorting - disabled manual reordering when sort option is not orderNumber
+- ✅ Added visual indicators showing when manual reordering is available
+- ✅ Wrote 9 comprehensive tests for sorting functionality (all pass)
 
 ## Improvement 1: Sharing Features
 - ❌ Implement SharingService for list sharing

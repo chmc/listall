@@ -68,6 +68,27 @@ struct ItemOrganizationView: View {
                             .buttonStyle(PlainButtonStyle())
                             .foregroundColor(.blue)
                         }
+                        
+                        // Manual reordering note
+                        if viewModel.currentSortOption == .orderNumber {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                Image(systemName: "hand.draw")
+                                    .foregroundColor(.green)
+                                Text("Drag-to-reorder enabled")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, Theme.Spacing.xs)
+                        } else {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                Image(systemName: "hand.raised.slash")
+                                    .foregroundColor(.orange)
+                                Text("Drag-to-reorder disabled (change to 'Order' to enable)")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, Theme.Spacing.xs)
+                        }
                     }
                 } header: {
                     Label("Sorting", systemImage: "arrow.up.arrow.down")

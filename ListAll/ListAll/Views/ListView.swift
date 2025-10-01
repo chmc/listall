@@ -65,7 +65,8 @@ struct ListView: View {
                         )
                     }
                     .onDelete(perform: deleteItems)
-                    .onMove(perform: viewModel.moveItems)
+                    // Only allow manual reordering when sorted by order number
+                    .onMove(perform: viewModel.currentSortOption == .orderNumber ? viewModel.moveItems : nil)
                 }
                 .refreshable {
                     viewModel.loadItems()

@@ -385,6 +385,11 @@ class TestListViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showCrossedOutItems = true
     
+    // Item Organization Properties
+    @Published var currentSortOption: ItemSortOption = .orderNumber
+    @Published var currentSortDirection: SortDirection = .ascending
+    @Published var currentFilterOption: ItemFilterOption = .active
+    
     // Undo Complete Properties
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
@@ -501,9 +506,33 @@ class TestListViewModel: ObservableObject {
     }
     
     func moveItems(from source: IndexSet, to destination: Int) {
-        guard let sourceIndex = source.first else { return }
-        let destinationIndex = destination > sourceIndex ? destination - 1 : destination
-        reorderItems(from: sourceIndex, to: destinationIndex)
+        // Handle the SwiftUI List onMove callback
+        // IMPORTANT: source and destination are indices in filteredItems, 
+        // but we need to map them to indices in the full items array
+        
+        guard let filteredSourceIndex = source.first else { return }
+        
+        // Get the actual items from filteredItems
+        let movedItem = filteredItems[filteredSourceIndex]
+        
+        // Calculate destination in filtered array
+        let filteredDestIndex = destination > filteredSourceIndex ? destination - 1 : destination
+        let destinationItem = filteredDestIndex < filteredItems.count ? filteredItems[filteredDestIndex] : filteredItems.last
+        
+        // Find the actual indices in the full items array
+        guard let actualSourceIndex = items.firstIndex(where: { $0.id == movedItem.id }) else { return }
+        
+        // For destination, we need to find where to insert relative to the destination item
+        let actualDestIndex: Int
+        if let destItem = destinationItem,
+           let destIndex = items.firstIndex(where: { $0.id == destItem.id }) {
+            actualDestIndex = destIndex
+        } else {
+            // If no destination item (moving to end), use the last index
+            actualDestIndex = items.count - 1
+        }
+        
+        reorderItems(from: actualSourceIndex, to: actualDestIndex)
     }
     
     func refreshItems() {
@@ -522,17 +551,89 @@ class TestListViewModel: ObservableObject {
         return items.filter { $0.isCrossedOut }
     }
     
-    /// Returns filtered items based on the showCrossedOutItems setting
+    /// Returns filtered and sorted items based on current organization settings
     var filteredItems: [Item] {
-        if showCrossedOutItems {
-            return items
-        } else {
-            return activeItems
+        // First apply filtering
+        let filtered = applyFilter(to: items)
+        
+        // Then apply sorting
+        return applySorting(to: filtered)
+    }
+    
+    // MARK: - Item Organization Methods
+    
+    private func applyFilter(to items: [Item]) -> [Item] {
+        switch currentFilterOption {
+        case .all:
+            // Respect the showCrossedOutItems setting for the "all" filter
+            if showCrossedOutItems {
+                return items
+            } else {
+                return items.filter { !$0.isCrossedOut }
+            }
+        case .active:
+            // For backward compatibility: if showCrossedOutItems is explicitly true, show all items
+            if showCrossedOutItems && currentFilterOption == .active {
+                return items
+            }
+            return items.filter { !$0.isCrossedOut }
+        case .completed:
+            return items.filter { $0.isCrossedOut }
+        case .hasDescription:
+            return items.filter { $0.hasDescription }
+        case .hasImages:
+            return items.filter { $0.hasImages }
         }
+    }
+    
+    private func applySorting(to items: [Item]) -> [Item] {
+        let sorted = items.sorted { item1, item2 in
+            switch currentSortOption {
+            case .orderNumber:
+                return item1.orderNumber < item2.orderNumber
+            case .title:
+                return item1.title.localizedCaseInsensitiveCompare(item2.title) == .orderedAscending
+            case .createdAt:
+                return item1.createdAt < item2.createdAt
+            case .modifiedAt:
+                return item1.modifiedAt < item2.modifiedAt
+            case .quantity:
+                return item1.quantity < item2.quantity
+            }
+        }
+        
+        return currentSortDirection == .ascending ? sorted : sorted.reversed()
     }
     
     func toggleShowCrossedOutItems() {
         showCrossedOutItems.toggle()
+        
+        // Synchronize the filter option with the eye button state
+        if showCrossedOutItems {
+            currentFilterOption = .all
+        } else {
+            currentFilterOption = .active
+        }
+    }
+    
+    func updateSortOption(_ sortOption: ItemSortOption) {
+        currentSortOption = sortOption
+    }
+    
+    func updateSortDirection(_ direction: SortDirection) {
+        currentSortDirection = direction
+    }
+    
+    func updateFilterOption(_ filterOption: ItemFilterOption) {
+        currentFilterOption = filterOption
+        // Update the legacy showCrossedOutItems based on filter
+        if filterOption == .completed {
+            showCrossedOutItems = true
+        } else if filterOption == .active {
+            showCrossedOutItems = false
+        } else if filterOption == .all {
+            showCrossedOutItems = true
+        }
     }
 }
 

@@ -138,9 +138,32 @@ class ListViewModel: ObservableObject {
     
     func moveItems(from source: IndexSet, to destination: Int) {
         // Handle the SwiftUI List onMove callback
-        guard let sourceIndex = source.first else { return }
-        let destinationIndex = destination > sourceIndex ? destination - 1 : destination
-        reorderItems(from: sourceIndex, to: destinationIndex)
+        // IMPORTANT: source and destination are indices in filteredItems, 
+        // but we need to map them to indices in the full items array
+        
+        guard let filteredSourceIndex = source.first else { return }
+        
+        // Get the actual items from filteredItems
+        let movedItem = filteredItems[filteredSourceIndex]
+        
+        // Calculate destination in filtered array
+        let filteredDestIndex = destination > filteredSourceIndex ? destination - 1 : destination
+        let destinationItem = filteredDestIndex < filteredItems.count ? filteredItems[filteredDestIndex] : filteredItems.last
+        
+        // Find the actual indices in the full items array
+        guard let actualSourceIndex = items.firstIndex(where: { $0.id == movedItem.id }) else { return }
+        
+        // For destination, we need to find where to insert relative to the destination item
+        let actualDestIndex: Int
+        if let destItem = destinationItem,
+           let destIndex = items.firstIndex(where: { $0.id == destItem.id }) {
+            actualDestIndex = destIndex
+        } else {
+            // If no destination item (moving to end), use the last index
+            actualDestIndex = items.count - 1
+        }
+        
+        reorderItems(from: actualSourceIndex, to: actualDestIndex)
     }
     
     // MARK: - Utility Methods
