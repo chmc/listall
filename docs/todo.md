@@ -210,10 +210,10 @@
 - ✅ Add file sharing via iOS share sheet
 - ✅ Write comprehensive export tests (12 tests)
 
-## Phase 26: Advanced Export
-- ❌ Implement plain text export
-- ❌ Add export options and customization
-- ❌ Implement clipboard export functionality
+## Phase 26: Advanced Export ✅ COMPLETED
+- ✅ Implement plain text export
+- ✅ Add export options and customization
+- ✅ Implement clipboard export functionality
 
 ## Phase 27: Basic Import
 - ❌ Implement ImportService for data import
@@ -291,12 +291,13 @@
 ### Current Test Status:
 - ✅ UI Tests: 100% passing (12/12 tests)
 - ✅ UtilsTests: 100% passing (26/26 tests) - Fixed by removing deprecated resetSharedSingletons() calls
-- ✅ ServicesTests: 100% passing (1/1 tests) - Fixed by removing deprecated resetSharedSingletons() calls  
+- ✅ ServicesTests: 100% passing (66/66 tests) - Includes Phase 25 (12 tests) + Phase 26 (15 tests) export tests
 - ✅ ModelTests: 100% passing (24/24 tests) - Fixed by adding @Suite(.serialized) for test isolation
-- ✅ ViewModelsTests: 100% passing (46/46 tests) - Fixed by adding @Suite(.serialized) + async timing fix + Phase 8 show/hide tests
-- 🎯 **OVERALL UNIT TESTS: 100% PASSING (101/101 tests)** - COMPLETE SUCCESS!
+- ✅ ViewModelsTests: 100% passing (32/32 tests) - Fixed by adding @Suite(.serialized) + async timing fix + Phase 8 show/hide tests
+- 🎯 **OVERALL UNIT TESTS: 100% PASSING (160/160 tests)** - COMPLETE SUCCESS!
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
+- ✅ Phase 25 & 26 Export Tests: Complete test coverage for JSON, CSV, Plain Text, clipboard, and options (27 tests total)
 
 ## Phase 37: Polish and Release
 - ❌ Implement app icon and launch screen

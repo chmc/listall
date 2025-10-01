@@ -10,6 +10,10 @@ class ExportViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var successMessage: String?
     
+    // Export options
+    @Published var exportOptions = ExportOptions.default
+    @Published var showOptionsSheet = false
+    
     private let exportService: ExportService
     
     init(exportService: ExportService = ExportService()) {
@@ -26,7 +30,7 @@ class ExportViewModel: ObservableObject {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            guard let jsonData = self.exportService.exportToJSON() else {
+            guard let jsonData = self.exportService.exportToJSON(options: self.exportOptions) else {
                 DispatchQueue.main.async {
                     self.errorMessage = "Failed to export data to JSON"
                     self.isExporting = false
@@ -59,7 +63,7 @@ class ExportViewModel: ObservableObject {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            guard let csvString = self.exportService.exportToCSV() else {
+            guard let csvString = self.exportService.exportToCSV(options: self.exportOptions) else {
                 DispatchQueue.main.async {
                     self.errorMessage = "Failed to export data to CSV"
                     self.isExporting = false
@@ -90,6 +94,83 @@ class ExportViewModel: ObservableObject {
                 }
                 self.isExporting = false
             }
+        }
+    }
+    
+    /// Exports data to plain text format and presents share sheet
+    func exportToPlainText() {
+        isExporting = true
+        errorMessage = nil
+        successMessage = nil
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            guard let plainText = self.exportService.exportToPlainText(options: self.exportOptions) else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to export data to plain text"
+                    self.isExporting = false
+                }
+                return
+            }
+            
+            // Convert string to data
+            guard let textData = plainText.data(using: .utf8) else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to encode text data"
+                    self.isExporting = false
+                }
+                return
+            }
+            
+            // Create temporary file
+            let fileName = "ListAll-Export-\(self.formatDateForFilename(Date())).txt"
+            let fileURL = self.createTemporaryFile(data: textData, fileName: fileName)
+            
+            DispatchQueue.main.async {
+                if let fileURL = fileURL {
+                    self.exportedFileURL = fileURL
+                    self.showShareSheet = true
+                    self.successMessage = "Plain text export ready"
+                } else {
+                    self.errorMessage = "Failed to create export file"
+                }
+                self.isExporting = false
+            }
+        }
+    }
+    
+    // MARK: - Clipboard Export Methods
+    
+    /// Copies export data to clipboard in specified format
+    func copyToClipboard(format: ExportFormat) {
+        errorMessage = nil
+        successMessage = nil
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            let success = self.exportService.copyToClipboard(format: format, options: self.exportOptions)
+            
+            DispatchQueue.main.async {
+                if success {
+                    let formatName = self.formatName(for: format)
+                    self.successMessage = "Copied \(formatName) to clipboard"
+                } else {
+                    self.errorMessage = "Failed to copy to clipboard"
+                }
+            }
+        }
+    }
+    
+    /// Returns a human-readable name for the export format
+    private func formatName(for format: ExportFormat) -> String {
+        switch format {
+        case .json:
+            return "JSON"
+        case .csv:
+            return "CSV"
+        case .plainText:
+            return "text"
         }
     }
     

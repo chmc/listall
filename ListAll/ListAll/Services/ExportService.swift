@@ -1,4 +1,58 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
+
+// MARK: - Export Format
+
+/// Supported export formats
+enum ExportFormat {
+    case json
+    case csv
+    case plainText
+}
+
+// MARK: - Export Options
+
+/// Configuration options for export operations
+struct ExportOptions {
+    /// Whether to include crossed out items in export
+    var includeCrossedOutItems: Bool
+    
+    /// Whether to include item descriptions
+    var includeDescriptions: Bool
+    
+    /// Whether to include item quantities
+    var includeQuantities: Bool
+    
+    /// Whether to include dates (created/modified)
+    var includeDates: Bool
+    
+    /// Whether to include archived lists
+    var includeArchivedLists: Bool
+    
+    /// Default export options with all fields included
+    static var `default`: ExportOptions {
+        ExportOptions(
+            includeCrossedOutItems: true,
+            includeDescriptions: true,
+            includeQuantities: true,
+            includeDates: true,
+            includeArchivedLists: false
+        )
+    }
+    
+    /// Minimal export options (only essential fields)
+    static var minimal: ExportOptions {
+        ExportOptions(
+            includeCrossedOutItems: false,
+            includeDescriptions: false,
+            includeQuantities: false,
+            includeDates: false,
+            includeArchivedLists: false
+        )
+    }
+}
 
 /// Service responsible for exporting app data to various formats
 class ExportService: ObservableObject {
@@ -11,9 +65,11 @@ class ExportService: ObservableObject {
     // MARK: - JSON Export
     
     /// Exports all lists and items to JSON format
+    /// - Parameter options: Export options for customization
     /// - Returns: JSON data if successful, nil if export fails
-    func exportToJSON() -> Data? {
-        let lists = dataRepository.getAllLists()
+    func exportToJSON(options: ExportOptions = .default) -> Data? {
+        let allLists = dataRepository.getAllLists()
+        let lists = filterLists(allLists, options: options)
         
         do {
             let encoder = JSONEncoder()
@@ -21,7 +77,8 @@ class ExportService: ObservableObject {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             
             let exportData = ExportData(lists: lists.map { list in
-                let items = dataRepository.getItems(for: list)
+                var items = dataRepository.getItems(for: list)
+                items = filterItems(items, options: options)
                 return ListExportData(from: list, items: items)
             })
             
@@ -35,14 +92,17 @@ class ExportService: ObservableObject {
     // MARK: - CSV Export
     
     /// Exports all lists and items to CSV format
+    /// - Parameter options: Export options for customization
     /// - Returns: CSV string if successful, nil if export fails
-    func exportToCSV() -> String? {
-        let lists = dataRepository.getAllLists()
+    func exportToCSV(options: ExportOptions = .default) -> String? {
+        let allLists = dataRepository.getAllLists()
+        let lists = filterLists(allLists, options: options)
         
         var csvContent = "List Name,Item Title,Description,Quantity,Crossed Out,Created Date,Modified Date,Order\n"
         
         for list in lists {
-            let items = dataRepository.getItems(for: list)
+            var items = dataRepository.getItems(for: list)
+            items = filterItems(items, options: options)
             
             // If list has no items, still add a row for the list itself
             if items.isEmpty {
@@ -78,7 +138,126 @@ class ExportService: ObservableObject {
         return csvContent
     }
     
+    // MARK: - Plain Text Export
+    
+    /// Exports all lists and items to plain text format
+    /// - Parameter options: Export options for customization
+    /// - Returns: Plain text string if successful, nil if export fails
+    func exportToPlainText(options: ExportOptions = .default) -> String? {
+        let allLists = dataRepository.getAllLists()
+        let lists = filterLists(allLists, options: options)
+        
+        var textContent = "ListAll Export\n"
+        textContent += "=" + String(repeating: "=", count: 50) + "\n"
+        textContent += "Exported: \(formatDateForPlainText(Date()))\n"
+        textContent += String(repeating: "=", count: 52) + "\n\n"
+        
+        for list in lists {
+            var items = dataRepository.getItems(for: list)
+            items = filterItems(items, options: options)
+            
+            // List header
+            textContent += "\(list.name)\n"
+            textContent += String(repeating: "-", count: list.name.count) + "\n"
+            
+            if options.includeDates {
+                textContent += "Created: \(formatDateForPlainText(list.createdAt))\n"
+            }
+            
+            // List items
+            if items.isEmpty {
+                textContent += "(No items)\n"
+            } else {
+                textContent += "\n"
+                for (index, item) in items.enumerated() {
+                    let itemNumber = index + 1
+                    let crossMark = item.isCrossedOut ? "[✓] " : "[ ] "
+                    
+                    textContent += "\(itemNumber). \(crossMark)\(item.title)"
+                    
+                    if options.includeQuantities && item.quantity > 1 {
+                        textContent += " (×\(item.quantity))"
+                    }
+                    
+                    textContent += "\n"
+                    
+                    if options.includeDescriptions, let description = item.itemDescription, !description.isEmpty {
+                        textContent += "   \(description)\n"
+                    }
+                    
+                    if options.includeDates {
+                        textContent += "   Created: \(formatDateForPlainText(item.createdAt))\n"
+                    }
+                    
+                    textContent += "\n"
+                }
+            }
+            
+            textContent += "\n"
+        }
+        
+        return textContent
+    }
+    
+    // MARK: - Clipboard Export
+    
+    /// Copies export data to clipboard
+    /// - Parameters:
+    ///   - format: The export format (json, csv, plainText)
+    ///   - options: Export options for customization
+    /// - Returns: True if copy was successful, false otherwise
+    func copyToClipboard(format: ExportFormat, options: ExportOptions = .default) -> Bool {
+        #if canImport(UIKit)
+        let pasteboard = UIPasteboard.general
+        
+        switch format {
+        case .json:
+            guard let jsonData = exportToJSON(options: options),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                return false
+            }
+            pasteboard.string = jsonString
+            return true
+            
+        case .csv:
+            guard let csvString = exportToCSV(options: options) else {
+                return false
+            }
+            pasteboard.string = csvString
+            return true
+            
+        case .plainText:
+            guard let plainText = exportToPlainText(options: options) else {
+                return false
+            }
+            pasteboard.string = plainText
+            return true
+        }
+        #else
+        // For macOS or other platforms without UIKit
+        return false
+        #endif
+    }
+    
     // MARK: - Helper Methods
+    
+    /// Filters lists based on export options
+    private func filterLists(_ lists: [List], options: ExportOptions) -> [List] {
+        if options.includeArchivedLists {
+            return lists
+        } else {
+            return lists.filter { !$0.isArchived }
+        }
+    }
+    
+    /// Filters items based on export options
+    private func filterItems(_ items: [Item], options: ExportOptions) -> [Item] {
+        if options.includeCrossedOutItems {
+            return items
+        } else {
+            return items.filter { !$0.isCrossedOut }
+        }
+    }
     
     /// Escapes special characters in CSV fields
     private func escapeCSV(_ field: String) -> String {
@@ -92,6 +271,14 @@ class ExportService: ObservableObject {
     /// Formats date consistently for CSV export
     private func formatDate(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
+        return formatter.string(from: date)
+    }
+    
+    /// Formats date for plain text export (human-readable)
+    private func formatDateForPlainText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
         return formatter.string(from: date)
     }
 }
