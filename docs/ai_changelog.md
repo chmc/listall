@@ -1,5 +1,177 @@
 # AI Changelog
 
+## 2025-10-01 - Phase 27: Basic Import ✅ COMPLETED
+
+### Successfully Implemented Data Import with JSON Support and Multiple Merge Strategies
+
+**Request**: Implement Phase 27 - Basic Import with JSON import functionality, validation, error handling, and comprehensive testing.
+
+### Implementation Overview
+
+Created a complete import system that allows users to restore data from JSON exports with three different merge strategies (replace, merge, append). The system includes robust validation, error handling, and proper test isolation to ensure reliable data import operations.
+
+### Technical Implementation
+
+**Files Created**:
+1. `/ListAll/ListAll/Services/ImportService.swift` - Complete import service with validation and merge strategies
+
+**Files Modified**:
+2. `/ListAll/ListAll/Services/DataRepository.swift` - Added import-specific methods for proper data handling
+3. `/ListAll/ListAllTests/TestHelpers.swift` - Enhanced TestDataRepository with import method overrides and clearAll() method
+4. `/ListAll/ListAllTests/ServicesTests.swift` - Added 12 comprehensive tests for Phase 27 features
+5. `/docs/todo.md` - Updated test counts and phase completion status
+
+**Key Features**:
+- **JSON Import**: Full support for importing data from JSON exports
+- **Three Merge Strategies**: Replace (delete existing + import), Merge (update existing + add new), Append (duplicate as new)
+- **Data Validation**: Comprehensive validation for list names, item titles, quantities, and data integrity
+- **Error Handling**: Detailed ImportError enum with specific error types and messages
+- **Import Results**: Detailed result tracking (lists/items created/updated, errors encountered)
+- **Test Isolation**: Proper test infrastructure to ensure tests don't interfere with production data
+
+### ImportService Architecture
+
+**Import Error Types**:
+```swift
+enum ImportError: Error, LocalizedError {
+    case invalidData
+    case invalidFormat
+    case decodingFailed(String)
+    case validationFailed(String)
+    case repositoryError(String)
+}
+```
+
+**Import Options**:
+```swift
+struct ImportOptions {
+    enum MergeStrategy {
+        case replace  // Replace all existing data
+        case merge    // Merge with existing data (skip duplicates)
+        case append   // Append as new items (ignore IDs)
+    }
+    var mergeStrategy: MergeStrategy
+    var validateData: Bool
+}
+```
+
+**Import Result**:
+```swift
+struct ImportResult {
+    let listsCreated: Int
+    let listsUpdated: Int
+    let itemsCreated: Int
+    let itemsUpdated: Int
+    let errors: [String]
+    var wasSuccessful: Bool { errors.isEmpty }
+    var totalChanges: Int { listsCreated + listsUpdated + itemsCreated + itemsUpdated }
+}
+```
+
+### Import Flow
+
+1. **Decode JSON**: Parse export data with proper date handling
+2. **Validate**: Check for empty names, negative quantities, version compatibility
+3. **Execute Strategy**:
+   - **Replace**: Delete all existing data, import fresh
+   - **Merge**: Update existing items by ID, create new ones
+   - **Append**: Create all as new with fresh IDs
+4. **Return Results**: Detailed statistics and error messages
+
+### Test Infrastructure Enhancements
+
+**Added to TestHelpers**:
+- `clearAll()` method to TestDataManager for proper test cleanup
+- Import method overrides in TestDataRepository for test isolation
+- Proper data manager delegation for import operations
+
+**DataRepository Extensions**:
+- `addListForImport(_:)` - Add pre-configured list with all properties
+- `updateListForImport(_:)` - Update list preserving all properties
+- `addItemForImport(_:to:)` - Add pre-configured item with all properties
+- `updateItemForImport(_:)` - Update item preserving all properties
+
+These methods ensure test isolation by allowing TestDataRepository to override and use its own TestDataManager instead of the production DataManager.shared.
+
+### Test Coverage (12 New Tests)
+
+**Phase 27 Import Tests**:
+1. `testImportServiceInitialization` - Service creates successfully
+2. `testImportFromJSONBasic` - Basic import with single list and item
+3. `testImportFromJSONMultipleLists` - Import multiple lists with items
+4. `testImportFromJSONInvalidData` - Handle invalid JSON gracefully
+5. `testImportFromJSONReplaceStrategy` - Replace all existing data
+6. `testImportFromJSONMergeStrategy` - Merge and update existing data
+7. `testImportFromJSONAppendStrategy` - Append as duplicates with new IDs
+8. `testImportValidationEmptyListName` - Reject empty list names
+9. `testImportValidationEmptyItemTitle` - Reject empty item titles
+10. `testImportValidationNegativeQuantity` - Reject negative quantities
+11. `testImportResult` - Verify result calculation and success flag
+12. `testImportOptions` - Verify option presets and merge strategies
+
+### Build and Test Results
+
+✅ **Build Status**: SUCCESSFUL
+✅ **All Tests**: 172/172 passing (100%)
+- UI Tests: 12/12 passing
+- Utils Tests: 26/26 passing
+- Services Tests: 78/78 passing (includes 12 new import tests)
+- Model Tests: 24/24 passing
+- ViewModel Tests: 32/32 passing
+
+### Key Implementation Challenges Solved
+
+1. **Test Isolation Issue**: Initial implementation used `DataManager.shared` directly, breaking test isolation
+   - **Solution**: Added import-specific methods to DataRepository that can be overridden by TestDataRepository
+
+2. **Test Type Casting**: Couldn't cast DataRepository to TestDataRepository from production code
+   - **Solution**: Used method overriding instead of type casting for proper abstraction
+
+3. **Delete Operation in Tests**: Test replace strategy was failing due to deleteList using wrong data manager
+   - **Solution**: Added `deleteList` override in TestDataRepository to use test data manager
+
+4. **Export Data Initialization**: Tests needed proper initialization of Export data structures
+   - **Solution**: Used proper `List` and `Item` objects with `ListExportData(from:items:)` initializer
+
+### UI Implementation (Added)
+
+**Files Created**:
+6. `/ListAll/ListAll/ViewModels/ImportViewModel.swift` - ViewModel for import UI operations
+
+**Files Modified**:
+7. `/ListAll/ListAll/Views/SettingsView.swift` - Replaced placeholder ImportView with full implementation
+
+**UI Features**:
+- **File Picker**: Native iOS file importer for selecting JSON files
+- **Strategy Selection**: Visual cards for choosing merge strategy (Merge/Replace/Append)
+- **Import Button**: Clear call-to-action with file selection
+- **Progress Indicator**: Shows importing status during operation
+- **Result Messages**: Success (green) and error (red) feedback with detailed statistics
+- **Clean Design**: Modern iOS design with proper spacing and visual hierarchy
+
+**User Flow**:
+1. Open Settings → Import Data
+2. Select import strategy (defaults to Merge)
+3. Tap "Select File to Import"
+4. Choose JSON file from Files app
+5. View detailed import results or error messages
+6. Success messages auto-dismiss after 5 seconds
+
+### Next Steps
+
+Phase 27 is now complete with full import functionality including UI. Next phase (Phase 28) will add:
+- Conflict resolution UI for imports
+- Import preview before applying changes
+- Progress indicators for large imports
+
+### Documentation Updates
+
+- Updated todo.md with Phase 27 completion (including UI tasks)
+- Updated test counts: 172 total tests (was 160)
+- Added comprehensive changelog entry
+
+---
+
 ## 2025-10-01 - Phase 26: Advanced Export ✅ COMPLETED
 
 ### Successfully Implemented Advanced Export with Plain Text, Options, and Clipboard Support

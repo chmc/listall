@@ -299,4 +299,26 @@ class DataRepository: ObservableObject {
     func performDataMigration() {
         coreDataManager.migrateDataIfNeeded()
     }
+    
+    // MARK: - Import Operations
+    
+    /// Adds a fully-configured list (for import operations)
+    func addListForImport(_ list: List) {
+        dataManager.addList(list)
+    }
+    
+    /// Updates a fully-configured list (for import operations)
+    func updateListForImport(_ list: List) {
+        dataManager.updateList(list)
+    }
+    
+    /// Adds a fully-configured item (for import operations)
+    func addItemForImport(_ item: Item, to listId: UUID) {
+        dataManager.addItem(item, to: listId)
+    }
+    
+    /// Updates a fully-configured item (for import operations)
+    func updateItemForImport(_ item: Item) {
+        dataManager.updateItem(item)
+    }
 }

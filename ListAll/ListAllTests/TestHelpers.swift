@@ -197,6 +197,35 @@ class TestDataManager: ObservableObject {
         }
     }
     
+    func clearAll() {
+        let context = coreDataManager.viewContext
+        
+        // Delete all items
+        let itemRequest: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        do {
+            let items = try context.fetch(itemRequest)
+            for item in items {
+                context.delete(item)
+            }
+        } catch {
+            print("Failed to delete items: \(error)")
+        }
+        
+        // Delete all lists
+        let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        do {
+            let lists = try context.fetch(listRequest)
+            for list in lists {
+                context.delete(list)
+            }
+        } catch {
+            print("Failed to delete lists: \(error)")
+        }
+        
+        saveData()
+        loadData()
+    }
+    
     // MARK: - Item Operations
     
     func addItem(_ item: Item, to listId: UUID) {
@@ -509,7 +538,7 @@ class TestListViewModel: ObservableObject {
 
 /// Test-specific DataRepository that uses isolated DataManager
 class TestDataRepository: DataRepository {
-    private let dataManager: TestDataManager
+    let dataManager: TestDataManager  // Made internal for ImportService access
     
     override init() {
         // This should not be used - use init(dataManager:) instead
@@ -523,6 +552,10 @@ class TestDataRepository: DataRepository {
     
     override func getAllLists() -> [List] {
         return dataManager.lists
+    }
+    
+    override func deleteList(_ list: List) {
+        dataManager.deleteList(withId: list.id)
     }
     
     override func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {
@@ -613,6 +646,24 @@ class TestDataRepository: DataRepository {
         }
         
         return .success
+    }
+    
+    // MARK: - Import Operations Override
+    
+    override func addListForImport(_ list: List) {
+        dataManager.addList(list)
+    }
+    
+    override func updateListForImport(_ list: List) {
+        dataManager.updateList(list)
+    }
+    
+    override func addItemForImport(_ item: Item, to listId: UUID) {
+        dataManager.addItem(item, to: listId)
+    }
+    
+    override func updateItemForImport(_ item: Item) {
+        dataManager.updateItem(item)
     }
 }
 

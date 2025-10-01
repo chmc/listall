@@ -215,10 +215,17 @@
 - ✅ Add export options and customization
 - ✅ Implement clipboard export functionality
 
-## Phase 27: Basic Import
-- ❌ Implement ImportService for data import
-- ❌ Add JSON import functionality
-- ❌ Create import validation and error handling
+## Phase 27: Basic Import ✅ COMPLETED
+- ✅ Implement ImportService for data import
+- ✅ Add JSON import functionality
+- ✅ Create import validation and error handling
+- ✅ Write comprehensive tests for ImportService (12 tests)
+- ✅ Add basic import UI with file picker
+- ✅ Wire up ImportService to UI
+- ✅ Add merge strategy selection
+- ✅ Display import results
+- ✅ Ensure build succeeds
+- ✅ Update documentation in ai_changelog.md
 
 ## Phase 28: Advanced Import
 - ❌ Implement conflict resolution for imports
@@ -291,13 +298,13 @@
 ### Current Test Status:
 - ✅ UI Tests: 100% passing (12/12 tests)
 - ✅ UtilsTests: 100% passing (26/26 tests) - Fixed by removing deprecated resetSharedSingletons() calls
-- ✅ ServicesTests: 100% passing (66/66 tests) - Includes Phase 25 (12 tests) + Phase 26 (15 tests) export tests
+- ✅ ServicesTests: 100% passing (78/78 tests) - Includes Phase 25 (12 tests) + Phase 26 (15 tests) + Phase 27 (12 tests) export/import tests
 - ✅ ModelTests: 100% passing (24/24 tests) - Fixed by adding @Suite(.serialized) for test isolation
 - ✅ ViewModelsTests: 100% passing (32/32 tests) - Fixed by adding @Suite(.serialized) + async timing fix + Phase 8 show/hide tests
-- 🎯 **OVERALL UNIT TESTS: 100% PASSING (160/160 tests)** - COMPLETE SUCCESS!
+- 🎯 **OVERALL UNIT TESTS: 100% PASSING (172/172 tests)** - COMPLETE SUCCESS!
 - ✅ Test Infrastructure: Complete with TestHelpers for isolation (createTestMainViewModel, createTestItemViewModel, etc.)
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
-- ✅ Phase 25 & 26 Export Tests: Complete test coverage for JSON, CSV, Plain Text, clipboard, and options (27 tests total)
+- ✅ Phase 25, 26 & 27 Export/Import Tests: Complete test coverage for JSON, CSV, Plain Text, clipboard, options, and import validation (39 tests total)
 
 ## Phase 37: Polish and Release
 - ❌ Implement app icon and launch screen
