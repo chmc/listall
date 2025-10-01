@@ -1,7 +1,7 @@
 # ListAll App - Development Tasks
 
 ## Phase Organization
-**Note**: Phases are organized as sequential numbered phases for better task management and clear progression tracking.
+**Note**: Phases are organized as sequential numbered phases for better task management and clear progression tracking. Improvements are future enhancements organized for better task management and clear progression tracking.
 
 ## Phase 1: Project Foundation
 - ✅ Create basic project structure and folder organization
@@ -232,7 +232,11 @@
 - ✅ Add import preview functionality
 - ✅ Create import progress indicators
 
-## Phase 29: Sharing Features
+## Phase 29: Fix sorting
+- ❌ Make sure sorting works everywhere
+- ❌ At least items sorting does not work
+
+## Improvement 1: Sharing Features
 - ❌ Implement SharingService for list sharing
 - ❌ Add system share sheet integration
 - ❌ Create custom share formats
@@ -240,36 +244,36 @@
 - ❌ Add share preview functionality
 - ❌ Create share validation and error handling
 
-## Phase 30: Basic Settings
+## Improvement 2: Basic Settings
 - ❌ Create SettingsView for app preferences
 - ❌ Implement export preferences
 
-## Phase 31: Advanced Settings
+## Improvement 3: Advanced Settings
 - ❌ Add sync settings and status
 - ❌ Create about and help sections
 - ❌ Add privacy and data management options
 
-## Phase 32: Search and Filtering
+## Improvement 4: Search and Filtering
 - ❌ Implement global search functionality
 - ❌ Add search filters and sorting options
 - ❌ Create bulk operations for items
 
-## Phase 33: Templates and Accessibility
+## Improvement 5: Templates and Accessibility
 - ❌ Implement list templates and categories
 - ❌ Add keyboard shortcuts and accessibility
 - ❌ Create onboarding flow for new users
 
-## Phase 34: Performance Basics
+## Improvement 6: Performance Basics
 - ❌ Implement lazy loading for large lists
 - ❌ Add pagination for very large datasets
 - ❌ Optimize image loading and caching
 
-## Phase 35: Advanced Performance
+## Improvement 7: Advanced Performance
 - ❌ Implement memory management strategies
 - ❌ Add performance monitoring and analytics
 - ❌ Create database optimization routines
 
-## Phase 36: CloudKit Capability Setup (Pre-Release Requirement)
+## Improvement 8: CloudKit Capability Setup (Pre-Release Requirement)
 - ❌ **Enable CloudKit capability in project settings** (requires paid Apple Developer account - $99/year)
 - ❌ **Test CloudKit integration with multiple devices** (requires physical devices with iCloud accounts)
 - ❌ **Implement data validation for CloudKit sync** (optional enhancement)
@@ -280,7 +284,7 @@
 - **Required Action**: Upgrade to paid Apple Developer Program ($99/year)
 - **Alternative**: Continue development without CloudKit sync (app works locally only)
 - **Impact**: Without CloudKit capability, sync features will show "offline" status
-- **Timing**: Complete this before Phase 36 (Polish and Release) when preparing for App Store
+- **Timing**: Complete this before Improvement 9 (Polish and Release) when preparing for App Store
 
 ## Testing Strategy (Integrated Throughout All Phases)
 - ✅ Test infrastructure is set up and working
@@ -306,7 +310,7 @@
 - ✅ Major Fix Applied: Removed all deprecated resetSharedSingletons() calls and updated to use new isolated test infrastructure
 - ✅ Phase 25, 26, 27 & 28 Export/Import Tests: Complete test coverage for JSON, CSV, Plain Text, clipboard, options, import validation, preview, progress, and conflict resolution (49 tests total)
 
-## Phase 37: Polish and Release
+## Improvement 9: Polish and Release
 - ❌ Implement app icon and launch screen
 - ❌ Add haptic feedback for interactions
 - ❌ Create smooth animations and transitions
@@ -315,7 +319,7 @@
 - ❌ Create App Store assets and metadata
 - ❌ Prepare for TestFlight and App Store submission
 
-## Phase 38: Documentation
+## Improvement 10: Documentation
 - ❌ Create user documentation and help
 - ❌ Add inline code documentation
 - ❌ Create API documentation for services
@@ -323,7 +327,7 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
-## Phase 39: Future Platform Support
+## Improvement 11: Future Platform Support
 - ❌ Design watchOS app architecture
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
