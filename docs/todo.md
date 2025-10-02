@@ -259,6 +259,9 @@
 - ✅ Changed EditListView TextField to use .autocapitalization(.sentences)
 - ✅ Now only first letter is uppercase, others lowercase. And then again after dot, use capitalize. Like normal text capitalize.
 
+## Phase 33: Item edit Cancel button does not work on real device
+- ❌ Confirmation dialog is not opened and Item edit screen is not closed by Cancel button
+
 ## Phase
 - ❌ 
 
