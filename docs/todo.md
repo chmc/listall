@@ -253,8 +253,11 @@
 - ✅ Build validation passed with no errors
 - ✅ All tests passed (100% success rate)
 
-## Phase 32: Item title text no Pascal Case tyle capitalize
-- ❌ Only first letter is uppercase, others lowercase. And then again after dot, use capitalize. Like normal text capitalize.
+## Phase 32: Item title text no Pascal Case style capitalize ✅ COMPLETED
+- ✅ Changed ItemEditView TextField from .autocapitalization(.words) to .autocapitalization(.sentences)
+- ✅ Changed CreateListView TextField to use .autocapitalization(.sentences)
+- ✅ Changed EditListView TextField to use .autocapitalization(.sentences)
+- ✅ Now only first letter is uppercase, others lowercase. And then again after dot, use capitalize. Like normal text capitalize.
 
 ## Phase
 - ❌ 

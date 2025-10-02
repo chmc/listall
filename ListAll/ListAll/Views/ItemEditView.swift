@@ -31,7 +31,7 @@ struct ItemEditView: View {
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         TextField("Enter item name", text: $viewModel.title)
                             .textFieldStyle(.plain)
-                            .autocapitalization(.words)
+                            .autocapitalization(.sentences)
                             .disableAutocorrection(false)
                             .focused($isTitleFieldFocused)
                             .onChange(of: viewModel.title) { newValue in

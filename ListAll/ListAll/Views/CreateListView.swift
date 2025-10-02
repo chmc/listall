@@ -15,6 +15,7 @@ struct CreateListView: View {
                 Section(header: Text("List Details")) {
                     TextField("List Name", text: $listName)
                         .textFieldStyle(.plain)
+                        .autocapitalization(.sentences)
                         .focused($isListNameFieldFocused)
                         .accessibilityIdentifier("ListNameTextField")
                 }

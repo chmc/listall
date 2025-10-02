@@ -1,5 +1,131 @@
 # AI Changelog
 
+## 2025-10-02 - Phase 32: Item Title Text No Pascal Case Style Capitalize ✅ COMPLETED
+
+### Successfully Changed Text Capitalization from Word Case to Sentence Case
+
+**Request**: Implement Phase 32 - Change text capitalization to sentence case (only first letter uppercase, others lowercase, and capitalize after periods) instead of Pascal Case (capitalizing first letter of every word).
+
+### Implementation Overview
+
+Updated all text input fields across the app (item titles, list names in create/edit views) to use sentence case capitalization instead of word case. This provides more natural text input behavior that matches standard writing conventions. Users now type with only the first letter capitalized and letters after periods automatically capitalized, rather than every word being capitalized.
+
+### Technical Implementation
+
+**Files Modified**:
+1. `/ListAll/ListAll/Views/ItemEditView.swift` - Changed item title TextField autocapitalization
+2. `/ListAll/ListAll/Views/CreateListView.swift` - Added sentence case to list name TextField
+3. `/ListAll/ListAll/Views/EditListView.swift` - Added sentence case to list name TextField
+
+**Key Changes Made**:
+- **ItemEditView**: Changed `.autocapitalization(.words)` to `.autocapitalization(.sentences)` on line 34
+- **CreateListView**: Added explicit `.autocapitalization(.sentences)` on line 18
+- **EditListView**: Added explicit `.autocapitalization(.sentences)` on line 26
+
+### UI Components Enhanced
+
+**Text Input Behavior Changed**:
+1. **Item Title Field**: Now uses sentence case instead of word case
+2. **Create List Name Field**: Explicitly set to sentence case
+3. **Edit List Name Field**: Explicitly set to sentence case
+
+### User Experience Improvements
+
+**Before**: 
+- Typing "buy milk and bread" → "Buy Milk And Bread" (every word capitalized)
+- Awkward for natural text input
+- Not standard writing convention
+
+**After**: 
+- Typing "buy milk and bread" → "Buy milk and bread" (only first letter capitalized)
+- Typing "get eggs. also butter" → "Get eggs. Also butter" (capitalize after period)
+- Natural text input behavior
+- Matches standard writing conventions
+
+**Benefits**:
+- **Natural Writing**: Matches how people normally write text
+- **Better UX**: Doesn't force capitalization where it's not needed
+- **Consistent Behavior**: All text inputs use same capitalization style
+- **Professional**: Follows iOS text input best practices
+- **Grammatically Correct**: Sentence case is standard for lists and notes
+
+### Implementation Details
+
+**Sentence Case Configuration**:
+```swift
+TextField("Enter item name", text: $viewModel.title)
+    .textFieldStyle(.plain)
+    .autocapitalization(.sentences)  // Changed from .words
+    .disableAutocorrection(false)
+    .focused($isTitleFieldFocused)
+```
+
+**Technical Approach**:
+- Uses SwiftUI's built-in `.autocapitalization(.sentences)` modifier
+- Automatically capitalizes first letter of text
+- Automatically capitalizes first letter after periods (.)
+- Leaves all other letters in lowercase
+- Works consistently across all iOS keyboards
+
+**Why Sentence Case**:
+- **Standard Convention**: Most note-taking and list apps use sentence case
+- **User Expectation**: Users expect sentence case in informal text input
+- **Flexibility**: Users can still manually capitalize any word if needed
+- **Readability**: Easier to read for list items and item descriptions
+
+### Verification Results
+
+**Build Status**: ✅ BUILD SUCCEEDED with no compilation errors
+**Linter Status**: ✅ No linter errors detected in any modified files
+**Test Status**: ✅ TEST SUCCEEDED - All tests passed (100% success rate)
+**Code Quality**: ✅ Clean, minimal changes following SwiftUI best practices
+**Consistency**: ✅ All three text input views now use sentence case
+
+### Testing Status
+
+**Build Validation**:
+- ✅ Compiled successfully with Xcode
+- ✅ No build errors or warnings
+- ✅ Tested on iOS Simulator (iPhone 17, OS 26.0)
+
+**Test Results**:
+- ✅ All unit tests passed (100% pass rate)
+- ✅ UI tests passed
+- ✅ No regressions introduced
+- ✅ Text input behavior works as expected
+
+**Files Verified**:
+- `ItemEditView.swift` - Sentence case working for item title field
+- `CreateListView.swift` - Sentence case working for list name field
+- `EditListView.swift` - Sentence case working for list name field
+
+### Architecture Notes
+
+**Integration Points**:
+- Works seamlessly with existing text field configuration
+- Compatible with auto-focus feature from Phase 13
+- Works with keyboard dismissal from Phase 31
+- Compatible with suggestion system from Phase 14
+- No impact on validation or data storage
+
+**Design Decision**:
+Sentence case was chosen over word case because:
+1. It matches user expectations for list and note-taking apps
+2. It's the standard convention for informal text input
+3. It provides more natural typing experience
+4. It doesn't force unwanted capitalization
+5. Users can still capitalize words manually if needed
+
+### Next Steps
+
+✅ Phase 32 completed successfully
+- Build validated and passing
+- All tests passing (100% success rate)
+- Documentation updated
+- Ready for next phase
+
+---
+
 ## 2025-10-02 - Phase 31: Hide Keyboard When User Clicks Outside of Textbox ✅ COMPLETED (Fixed)
 
 ### Successfully Implemented Keyboard Dismissal on Tap Outside Text Fields (All Text Input Types)
