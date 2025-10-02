@@ -302,6 +302,16 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
+## Phase 37: Deleted or crossed items count does not reflect to lists view counts
+- ❌ Fix this bug
+
+## Phase 38: Import textfield keyboard is not hidden when user clicks outside of textfied
+- ❌ Hide keyboard like elsewhere in the app
+- ❌ This should be global behaviour in this app
+
+## Phase 39: Shrink list item height little bit, like 1%
+- ❌ List items are a bit too high globally in app
+
 ## Phase
 - ❌ 
 
