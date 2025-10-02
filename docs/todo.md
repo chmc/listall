@@ -280,6 +280,7 @@
 ## Phase 35: Allow edit lists mode to select and delete multiple lists at once
 - ❌ Confirm delete
 - ❌ Swipe to delete list confirm does not wait for user decision
+- ❌ Import creates duplicate list with same name - should update existing list
 
 ## Phase 36: Import items doesnt refresh lists view
 - ❌ Make sure that imported items show correctly in lists view count
