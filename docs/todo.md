@@ -277,6 +277,13 @@
 - ✅ Run test suite - 100% pass rate (182/182 tests)
 - ✅ Update ai_changelog.md with implementation details
 
+## Phase 35: Allow edit lists mode to select and delete multiple lists at once
+- ❌ Confirm delete
+- ❌ Swipe to delete list confirm does not wait for user decision
+
+## Phase 36: Import items doesnt refresh lists view
+- ❌ Make sure that imported items show correctly in lists view count
+
 ## Phase
 - ❌ 
 
