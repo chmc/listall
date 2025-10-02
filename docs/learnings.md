@@ -435,6 +435,72 @@
 - **Benefit**: Demonstrates ability to meet strict requirements while maintaining code quality
 - **Rule**: When facing non-negotiable test requirements, prioritize business functionality and document all decisions clearly
 
+## Import/Export and Data Processing
+
+### Critical Bug: Ignoring User-Selected Import Strategy (Phase 36 - October 2025)
+- **Issue**: Plain text imports ALWAYS created duplicate lists regardless of user's selected "Merge" strategy
+- **Symptoms**: 
+  - Import preview correctly showed "1 list to update"
+  - Actual import created duplicate list instead of updating
+  - Only affected plain text imports, not JSON imports
+  - Users reporting consistent duplicates despite selecting "Merge"
+- **Root Cause**: `importFromPlainText()` function had hardcoded logic to **always call `appendData()`**, completely ignoring the `options.mergeStrategy` parameter
+- **Code Bug**:
+  ```swift
+  // BUGGY CODE (Line 834):
+  func importFromPlainText(_ text: String, options: ImportOptions) throws -> ImportResult {
+      let exportData = try parsePlainText(text)
+      // Handle merge strategy (plain text always uses append with new IDs)
+      return try appendData(from: exportData)  // ❌ ALWAYS APPENDS!
+  }
+  ```
+- **Why Preview Worked**: The `previewMergeData()` function correctly checked the merge strategy, showing accurate preview results
+- **Why Actual Import Failed**: The `importFromPlainText()` bypassed all strategy logic and went straight to append
+- **Debugging Challenges**:
+  - Initial assumption was matching logic failure (tried fuzzy matching, Core Data reload, etc.)
+  - Added extensive debug logging to matching code, but it never executed
+  - Eventually discovered `mergeData()` was never being called for plain text imports
+  - Debug logging revealed the code path went directly to `appendData()`
+- **Solution**: Updated `importFromPlainText()` to respect merge strategy like JSON imports:
+  ```swift
+  // FIXED CODE:
+  func importFromPlainText(_ text: String, options: ImportOptions) throws -> ImportResult {
+      let exportData = try parsePlainText(text)
+      
+      // Handle merge strategy - respect user's choice just like JSON imports
+      switch options.mergeStrategy {
+      case .replace: return try replaceAllData(with: exportData)
+      case .merge: return try mergeData(with: exportData)  // ✅ Now respects merge!
+      case .append: return try appendData(from: exportData)
+      }
+  }
+  ```
+- **Key Insights**:
+  - **Strategy Pattern Consistency**: When implementing strategy patterns, ensure ALL code paths respect the strategy
+  - **Preview vs Actual Divergence**: If preview is accurate but actual operation differs, suspect divergent code paths
+  - **Debug Early in Flow**: Add logging at the START of functions to verify they're being called at all
+  - **Code Comments Can Lie**: The comment said "plain text always uses append" but nothing in requirements justified this
+  - **Format Shouldn't Affect Strategy**: The import format (JSON vs plain text) should not dictate the merge strategy
+- **Additional Improvements Made**:
+  1. Added `DataRepository.reloadData()` to force Core Data refresh before matching
+  2. Enhanced list matching with 3-level strategy: ID → exact name → fuzzy name (case-insensitive + trimmed)
+  3. Added comprehensive debug logging to trace execution path
+- **Prevention Strategies**:
+  - **Code Review Checklist**: Verify all code paths respect user-configurable options
+  - **Strategy Pattern Testing**: Test each strategy option with each input format
+  - **Preview-Actual Parity**: If you have preview logic, ensure actual operation uses same logic
+  - **Question Hardcoded Behaviors**: Challenge any hardcoded behavior that overrides user choice
+  - **Debug Flow First, Details Later**: When debugging, verify the code path before debugging the logic
+- **Testing Approach**:
+  - Tested with plain text import + merge strategy
+  - Verified preview matches actual operation
+  - Confirmed no duplicate lists created
+  - Validated auto-dismiss and navigation work correctly
+- **Result**: ✅ Plain text imports now correctly respect merge strategy, matching JSON import behavior
+- **Time Investment**: ~2 hours debugging matching logic before discovering the real issue was code path selection
+- **Lesson Learned**: When users report "it's not doing what I selected," verify the selection is actually being checked before debugging the implementation of each option
+- **Rule**: **ALWAYS** respect user-selected options in ALL code paths. If you have a strategy parameter, every code path must check and honor it. Never hardcode behavior that overrides user choice without explicit requirements justification.
+
 ## iOS Simulator Debug Messages and Infrastructure Warnings
 
 ### Xcode Simulator Known Issues (September 2025)

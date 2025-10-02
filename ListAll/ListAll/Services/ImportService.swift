@@ -346,8 +346,13 @@ class ImportService: ObservableObject {
     
     /// Preview merge data strategy
     private func previewMergeData(with exportData: ExportData, errors: [String]) -> ImportPreview {
+        // CRITICAL: Force reload from Core Data to get fresh data (not cached)
+        dataRepository.reloadData()
+        
         let existingLists = dataRepository.getAllLists()
         let existingListsById = Dictionary(uniqueKeysWithValues: existingLists.map { ($0.id, $0) })
+        // Use uniquingKeysWith to handle potential duplicate list names gracefully
+        let existingListsByName = Dictionary(existingLists.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         
         var listsToCreate = 0
         var listsToUpdate = 0
@@ -356,7 +361,23 @@ class ImportService: ObservableObject {
         var conflicts: [ConflictDetail] = []
         
         for listData in exportData.lists {
-            if let existingList = existingListsById[listData.id] {
+            // First try to find by ID
+            var existingList = existingListsById[listData.id]
+            
+            // If not found by ID, try by exact name match
+            if existingList == nil {
+                existingList = existingListsByName[listData.name]
+            }
+            
+            // If still not found, try fuzzy name match (trimmed and case-insensitive)
+            if existingList == nil {
+                let normalizedName = listData.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                existingList = existingLists.first { list in
+                    list.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
+                }
+            }
+            
+            if let existingList = existingList {
                 // List will be updated
                 listsToUpdate += 1
                 
@@ -377,7 +398,28 @@ class ImportService: ObservableObject {
                 let existingItemsById = Dictionary(uniqueKeysWithValues: existingItems.map { ($0.id, $0) })
                 
                 for itemData in listData.items {
-                    if let existingItem = existingItemsById[itemData.id] {
+                    // First try to find by ID
+                    var existingItem = existingItemsById[itemData.id]
+                    
+                    // If not found by ID, try to find by title AND description (for better matching)
+                    if existingItem == nil {
+                        let incomingDesc = itemData.description.isEmpty ? nil : itemData.description
+                        existingItem = existingItems.first { item in
+                            item.title == itemData.title && 
+                            item.itemDescription == incomingDesc
+                        }
+                    }
+                    
+                    // If still not found and description is empty, try title-only match (but only if unique)
+                    if existingItem == nil && itemData.description.isEmpty {
+                        let matchingByTitle = existingItems.filter { $0.title == itemData.title }
+                        // Only use title match if there's exactly one item with that title
+                        if matchingByTitle.count == 1 {
+                            existingItem = matchingByTitle.first
+                        }
+                    }
+                    
+                    if let existingItem = existingItem {
                         // Item will be updated
                         itemsToUpdate += 1
                         
@@ -509,15 +551,36 @@ class ImportService: ObservableObject {
         var processedLists = 0
         var processedItems = 0
         
+        // CRITICAL: Force reload from Core Data to get fresh data (not cached)
+        dataRepository.reloadData()
+        
         // Get existing lists
         let existingLists = dataRepository.getAllLists()
         let existingListsById = Dictionary(uniqueKeysWithValues: existingLists.map { ($0.id, $0) })
+        // Use uniquingKeysWith to handle potential duplicate list names gracefully
+        let existingListsByName = Dictionary(existingLists.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         
         for listData in exportData.lists {
             reportProgress(totalLists: totalLists, processedLists: processedLists, totalItems: totalItems, processedItems: processedItems, operation: "Merging list '\(listData.name)'...")
             
             do {
-                if let existingList = existingListsById[listData.id] {
+                // First try to find by ID
+                var existingList = existingListsById[listData.id]
+                
+                // If not found by ID, try by exact name match
+                if existingList == nil {
+                    existingList = existingListsByName[listData.name]
+                }
+                
+                // If still not found, try fuzzy name match (trimmed and case-insensitive)
+                if existingList == nil {
+                    let normalizedName = listData.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    existingList = existingLists.first { list in
+                        list.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
+                    }
+                }
+                
+                if let existingList = existingList {
                     // Track modifications to list
                     if existingList.name != listData.name {
                         conflicts.append(ConflictDetail(
@@ -541,7 +604,28 @@ class ImportService: ObservableObject {
                     
                     // Merge items
                     for itemData in listData.items {
-                        if let existingItem = existingItemsById[itemData.id] {
+                        // First try to find by ID
+                        var existingItem = existingItemsById[itemData.id]
+                        
+                        // If not found by ID, try to find by title AND description (for better matching)
+                        if existingItem == nil {
+                            let incomingDesc = itemData.description.isEmpty ? nil : itemData.description
+                            existingItem = existingItems.first { item in
+                                item.title == itemData.title && 
+                                item.itemDescription == incomingDesc
+                            }
+                        }
+                        
+                        // If still not found and description is empty, try title-only match (but only if unique)
+                        if existingItem == nil && itemData.description.isEmpty {
+                            let matchingByTitle = existingItems.filter { $0.title == itemData.title }
+                            // Only use title match if there's exactly one item with that title
+                            if matchingByTitle.count == 1 {
+                                existingItem = matchingByTitle.first
+                            }
+                        }
+                        
+                        if let existingItem = existingItem {
                             // Track modifications to item
                             if existingItem.title != itemData.title ||
                                existingItem.itemDescription != (itemData.description.isEmpty ? nil : itemData.description) ||
@@ -731,8 +815,15 @@ class ImportService: ObservableObject {
             try validateExportData(exportData)
         }
         
-        // Handle merge strategy (plain text always uses append with new IDs)
-        return try appendData(from: exportData)
+        // Handle merge strategy - respect user's choice just like JSON imports
+        switch options.mergeStrategy {
+        case .replace:
+            return try replaceAllData(with: exportData)
+        case .merge:
+            return try mergeData(with: exportData)
+        case .append:
+            return try appendData(from: exportData)
+        }
     }
     
     /// Parses plain text into ExportData structure

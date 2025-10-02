@@ -7,6 +7,7 @@ struct MainView: View {
     @State private var selectedTab = 0
     @State private var showingCreateList = false
     @State private var editMode: EditMode = .inactive
+    @State private var showingDeleteConfirmation = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -50,19 +51,36 @@ struct MainView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         HStack {
-                            Button(action: {
-                                Task {
-                                    await cloudKitService.sync()
+                            if !viewModel.isInSelectionMode {
+                                Button(action: {
+                                    Task {
+                                        await cloudKitService.sync()
+                                    }
+                                }) {
+                                    Image(systemName: Constants.UI.syncIcon)
                                 }
-                            }) {
-                                Image(systemName: Constants.UI.syncIcon)
+                                .disabled(cloudKitService.isSyncing)
                             }
-                            .disabled(cloudKitService.isSyncing)
                             
                             if !viewModel.lists.isEmpty {
-                                Button(editMode == .inactive ? "Edit" : "Done") {
-                                    withAnimation {
-                                        editMode = editMode == .inactive ? .active : .inactive
+                                if viewModel.isInSelectionMode {
+                                    // Selection mode: Show Select All/None
+                                    Button(viewModel.selectedLists.count == viewModel.lists.count ? "Deselect All" : "Select All") {
+                                        withAnimation {
+                                            if viewModel.selectedLists.count == viewModel.lists.count {
+                                                viewModel.deselectAll()
+                                            } else {
+                                                viewModel.selectAll()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Normal mode: Show Edit button
+                                    Button("Edit") {
+                                        withAnimation {
+                                            viewModel.enterSelectionMode()
+                                            editMode = .active
+                                        }
                                     }
                                 }
                             }
@@ -70,12 +88,34 @@ struct MainView: View {
                     }
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            showingCreateList = true
-                        }) {
-                            Image(systemName: Constants.UI.addIcon)
+                        HStack {
+                            if viewModel.isInSelectionMode {
+                                // Selection mode: Show Delete and Done buttons
+                                if !viewModel.selectedLists.isEmpty {
+                                    Button(action: {
+                                        showingDeleteConfirmation = true
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                
+                                Button("Done") {
+                                    withAnimation {
+                                        viewModel.exitSelectionMode()
+                                        editMode = .inactive
+                                    }
+                                }
+                            } else {
+                                // Normal mode: Show Add button
+                                Button(action: {
+                                    showingCreateList = true
+                                }) {
+                                    Image(systemName: Constants.UI.addIcon)
+                                }
+                                .accessibilityIdentifier("AddListButton")
+                            }
                         }
-                        .accessibilityIdentifier("AddListButton")
                     }
                 }
             }
@@ -116,8 +156,29 @@ struct MainView: View {
                 await conflictManager.checkForConflicts()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .dataImported)) { _ in
+            // Refresh lists after import
+            viewModel.loadLists()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToListsTab)) { _ in
+            // Switch to Lists tab after import
+            selectedTab = 0
+        }
         .sheet(isPresented: $showingCreateList) {
             CreateListView(mainViewModel: viewModel)
+        }
+        .alert("Delete Lists", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                withAnimation {
+                    viewModel.deleteSelectedLists()
+                    editMode = .inactive
+                    viewModel.exitSelectionMode()
+                }
+            }
+        } message: {
+            let count = viewModel.selectedLists.count
+            Text("Are you sure you want to delete \(count) \(count == 1 ? "list" : "lists")? This action cannot be undone.")
         }
     }
 }

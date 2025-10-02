@@ -19,6 +19,8 @@ class MainViewModel: ObservableObject {
     @Published var lists: [List] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var selectedLists: Set<UUID> = []
+    @Published var isInSelectionMode = false
     
     private let dataManager = DataManager.shared
     
@@ -135,5 +137,41 @@ class MainViewModel: ObservableObject {
             dataManager.updateList(updatedList)
             lists[index] = updatedList
         }
+    }
+    
+    // MARK: - Multi-Selection Methods
+    
+    func toggleSelection(for listId: UUID) {
+        if selectedLists.contains(listId) {
+            selectedLists.remove(listId)
+        } else {
+            selectedLists.insert(listId)
+        }
+    }
+    
+    func selectAll() {
+        selectedLists = Set(lists.map { $0.id })
+    }
+    
+    func deselectAll() {
+        selectedLists.removeAll()
+    }
+    
+    func deleteSelectedLists() {
+        for listId in selectedLists {
+            dataManager.deleteList(withId: listId)
+        }
+        lists.removeAll { selectedLists.contains($0.id) }
+        selectedLists.removeAll()
+    }
+    
+    func enterSelectionMode() {
+        isInSelectionMode = true
+        selectedLists.removeAll()
+    }
+    
+    func exitSelectionMode() {
+        isInSelectionMode = false
+        selectedLists.removeAll()
     }
 }

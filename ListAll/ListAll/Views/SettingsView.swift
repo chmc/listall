@@ -611,6 +611,14 @@ struct ImportView: View {
                     ImportPreviewView(preview: preview, viewModel: viewModel)
                 }
             }
+            .onChange(of: viewModel.shouldDismiss) { shouldDismiss in
+                if shouldDismiss {
+                    dismiss()
+                }
+            }
+            .onDisappear {
+                viewModel.cleanup()
+            }
         }
     }
 }

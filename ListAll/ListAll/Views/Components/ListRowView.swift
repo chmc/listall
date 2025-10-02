@@ -7,63 +7,100 @@ struct ListRowView: View {
     @State private var showingDeleteAlert = false
     @State private var showingDuplicateAlert = false
     
+    private var listContent: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(list.name)
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(.primary)
+                
+                Text("\(list.activeItemCount) (\(list.itemCount)) items")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+    
     var body: some View {
-        NavigationLink(destination: ListView(list: list)) {
-            HStack {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(list.name) // Removed nil coalescing operator since name is non-optional
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("\(list.activeItemCount) (\(list.itemCount)) items")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.secondary)
+        HStack {
+            // Selection indicator
+            if mainViewModel.isInSelectionMode {
+                Button(action: {
+                    mainViewModel.toggleSelection(for: list.id)
+                }) {
+                    Image(systemName: mainViewModel.selectedLists.contains(list.id) ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(mainViewModel.selectedLists.contains(list.id) ? .blue : .gray)
+                        .imageScale(.large)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+            }
+            
+            // List content
+            if mainViewModel.isInSelectionMode {
+                // In selection mode: Make entire row tappable for selection
+                Button(action: {
+                    mainViewModel.toggleSelection(for: list.id)
+                }) {
+                    listContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                // Normal mode: Use NavigationLink
+                NavigationLink(destination: ListView(list: list)) {
+                    listContent
+                }
+            }
+        }
+        .if(!mainViewModel.isInSelectionMode) { view in
+            view.contextMenu {
+                Button(action: {
+                    showingEditSheet = true
+                }) {
+                    Label("Edit", systemImage: "pencil")
                 }
                 
-                Spacer()
-            }
-            .padding(.vertical, 4)
-        }
-        .contextMenu {
-            Button(action: {
-                showingEditSheet = true
-            }) {
-                Label("Edit", systemImage: "pencil")
-            }
-            
-            Button(action: {
-                showingDuplicateAlert = true
-            }) {
-                Label("Duplicate", systemImage: "doc.on.doc")
-            }
-            
-            Button(role: .destructive, action: {
-                showingDeleteAlert = true
-            }) {
-                Label("Delete", systemImage: "trash")
+                Button(action: {
+                    showingDuplicateAlert = true
+                }) {
+                    Label("Duplicate", systemImage: "doc.on.doc")
+                }
+                
+                Button(role: .destructive, action: {
+                    showingDeleteAlert = true
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive, action: {
-                showingDeleteAlert = true
-            }) {
-                Label("Delete", systemImage: "trash")
+        .if(!mainViewModel.isInSelectionMode) { view in
+            view.swipeActions(edge: .trailing) {
+                Button(role: .destructive, action: {
+                    showingDeleteAlert = true
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
-        .swipeActions(edge: .leading) {
-            Button(action: {
-                showingDuplicateAlert = true
-            }) {
-                Label("Duplicate", systemImage: "doc.on.doc")
+        .if(!mainViewModel.isInSelectionMode) { view in
+            view.swipeActions(edge: .leading) {
+                Button(action: {
+                    showingDuplicateAlert = true
+                }) {
+                    Label("Duplicate", systemImage: "doc.on.doc")
+                }
+                .tint(.green)
+                
+                Button(action: {
+                    showingEditSheet = true
+                }) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.blue)
             }
-            .tint(.green)
-            
-            Button(action: {
-                showingEditSheet = true
-            }) {
-                Label("Edit", systemImage: "pencil")
-            }
-            .tint(.blue)
         }
         .sheet(isPresented: $showingEditSheet) {
             EditListView(list: list, mainViewModel: mainViewModel)
@@ -95,5 +132,17 @@ struct ListRowView: View {
 #Preview {
     SwiftUI.List {
         ListRowView(list: List(name: "Sample List"), mainViewModel: MainViewModel())
+    }
+}
+
+// MARK: - View Extension for Conditional Modifiers
+extension View {
+    @ViewBuilder
+    func `if`<Transform: View>(_ condition: Bool, transform: (Self) -> Transform) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
     }
 }

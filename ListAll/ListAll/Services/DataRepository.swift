@@ -28,6 +28,10 @@ class DataRepository: ObservableObject {
         return dataManager.lists
     }
     
+    func reloadData() {
+        dataManager.loadData()
+    }
+    
     func getList(by id: UUID) -> List? {
         return dataManager.lists.first { $0.id == id }
     }

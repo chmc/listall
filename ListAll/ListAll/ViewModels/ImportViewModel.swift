@@ -15,6 +15,7 @@ class ImportViewModel: ObservableObject {
     @Published var isImporting = false
     @Published var successMessage: String?
     @Published var errorMessage: String?
+    @Published var shouldDismiss = false
     
     // Import source selection
     @Published var importSource: ImportSource = .file
@@ -227,9 +228,13 @@ class ImportViewModel: ObservableObject {
                 
                 successMessage = message
                 
-                // Auto-dismiss success message after 5 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-                    self?.successMessage = nil
+                // Post notifications to refresh lists and switch to Lists tab
+                NotificationCenter.default.post(name: .dataImported, object: nil)
+                NotificationCenter.default.post(name: .switchToListsTab, object: nil)
+                
+                // Dismiss after successful import
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.shouldDismiss = true
                 }
             } else {
                 let errorList = result.errors.joined(separator: "\n")
@@ -288,9 +293,13 @@ class ImportViewModel: ObservableObject {
                 // Clear the text field on success
                 importText = ""
                 
-                // Auto-dismiss success message after 5 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-                    self?.successMessage = nil
+                // Post notifications to refresh lists and switch to Lists tab
+                NotificationCenter.default.post(name: .dataImported, object: nil)
+                NotificationCenter.default.post(name: .switchToListsTab, object: nil)
+                
+                // Dismiss after successful import
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.shouldDismiss = true
                 }
             } else {
                 let errorList = result.errors.joined(separator: "\n")

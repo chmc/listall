@@ -65,3 +65,9 @@ struct Constants {
         static let csvFileName = "ListAll_Export.csv"
     }
 }
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let dataImported = Notification.Name("dataImported")
+    static let switchToListsTab = Notification.Name("switchToListsTab")
+}

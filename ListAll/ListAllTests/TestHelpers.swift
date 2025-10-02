@@ -771,6 +771,8 @@ class TestDataRepository: DataRepository {
 /// Test-specific MainViewModel that uses isolated DataManager
 class TestMainViewModel: ObservableObject {
     @Published var lists: [List] = []
+    @Published var selectedLists: Set<UUID> = []
+    @Published var isInSelectionMode = false
     private let dataManager: TestDataManager
     
     init(dataManager: TestDataManager) {
@@ -880,5 +882,41 @@ class TestMainViewModel: ObservableObject {
             dataManager.updateList(updatedList)
             lists[index] = updatedList
         }
+    }
+    
+    // MARK: - Multi-Selection Methods
+    
+    func toggleSelection(for listId: UUID) {
+        if selectedLists.contains(listId) {
+            selectedLists.remove(listId)
+        } else {
+            selectedLists.insert(listId)
+        }
+    }
+    
+    func selectAll() {
+        selectedLists = Set(lists.map { $0.id })
+    }
+    
+    func deselectAll() {
+        selectedLists.removeAll()
+    }
+    
+    func deleteSelectedLists() {
+        for listId in selectedLists {
+            dataManager.deleteList(withId: listId)
+        }
+        lists.removeAll { selectedLists.contains($0.id) }
+        selectedLists.removeAll()
+    }
+    
+    func enterSelectionMode() {
+        isInSelectionMode = true
+        selectedLists.removeAll()
+    }
+    
+    func exitSelectionMode() {
+        isInSelectionMode = false
+        selectedLists.removeAll()
     }
 }
