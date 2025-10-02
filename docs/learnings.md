@@ -1,5 +1,43 @@
 # Technical Learnings
 
+## SwiftUI Focus Management & Keyboard Dismissal
+
+### TextField vs TextEditor Focus Handling (Phase 31 - October 2025)
+- **Issue**: Keyboard dismissal worked for TextField (single-line) but not for TextEditor (multi-line) inputs
+- **Root Cause**: Only TextField had `@FocusState` binding; TextEditor was missing focus management
+- **Symptom**: Tapping outside description field (TextEditor) didn't dismiss keyboard, while tapping outside title field (TextField) worked correctly
+- **Learning**: Both TextField and TextEditor require separate `@FocusState` bindings for keyboard dismissal to work
+- **Solution**: 
+  1. Add `@FocusState` variable for each text input type (single and multi-line)
+  2. Bind both TextField and TextEditor to their respective focus states using `.focused($focusState)`
+  3. Set all focus states to `false` in the tap gesture handler
+- **Implementation**:
+  ```swift
+  @FocusState private var isTitleFieldFocused: Bool
+  @FocusState private var isDescriptionFieldFocused: Bool
+  
+  TextField("Title", text: $title)
+      .focused($isTitleFieldFocused)
+  
+  TextEditor(text: $description)
+      .focused($isDescriptionFieldFocused)
+  
+  .onTapGesture {
+      isTitleFieldFocused = false
+      isDescriptionFieldFocused = false
+  }
+  ```
+- **Key Insights**:
+  - **Each Input Needs Focus State**: Don't assume one `@FocusState` covers all text inputs
+  - **TextEditor = TextField**: Both need the same focus management approach despite different UI
+  - **Dismiss All**: When implementing tap-to-dismiss, set ALL focus states to false
+  - **Test All Inputs**: Verify keyboard dismissal works for every text input type in your view
+- **Prevention**:
+  - When adding keyboard dismissal, audit ALL text input fields (TextField, TextEditor, SecureField)
+  - Create a checklist of all text inputs when implementing focus-related features
+  - Test with both single-line and multi-line inputs during implementation
+- **Result**: ✅ Global keyboard dismissal works for all text input types throughout the app
+
 ## Testing Best Practices
 
 ### Testing Timer-Based Functionality (Phase 24 - September 2025)

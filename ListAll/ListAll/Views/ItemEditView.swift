@@ -11,6 +11,7 @@ struct ItemEditView: View {
     @State private var showingImageSourceSelection = false
     @State private var selectedImage: UIImage?
     @FocusState private var isTitleFieldFocused: Bool
+    @FocusState private var isDescriptionFieldFocused: Bool
     @State private var localQuantity: Int = 1
     
     let list: List
@@ -66,6 +67,7 @@ struct ItemEditView: View {
                 Section("Description (Optional)") {
                     TextEditor(text: $viewModel.description)
                         .frame(minHeight: 80, maxHeight: 200)
+                        .focused($isDescriptionFieldFocused)
                     
                     Text("\(viewModel.description.count)/50,000 characters")
                         .font(Theme.Typography.caption)
@@ -256,6 +258,12 @@ struct ItemEditView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "An unknown error occurred.")
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text fields (both single and multi-line)
+            isTitleFieldFocused = false
+            isDescriptionFieldFocused = false
         }
         .onAppear {
             viewModel.setupForEditing()

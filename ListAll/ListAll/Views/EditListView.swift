@@ -53,6 +53,11 @@ struct EditListView: View {
         } message: {
             Text(alertMessage)
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text field
+            isListNameFieldFocused = false
+        }
         .onAppear {
             // Focus the list name field when the screen appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
