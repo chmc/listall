@@ -245,7 +245,7 @@ struct ItemEditView: View {
                     .disabled(!viewModel.isValid || viewModel.isSaving)
                 }
             }
-            .alert("Discard Changes?", isPresented: $showingDiscardAlert) {
+            .confirmationDialog("Discard Changes?", isPresented: $showingDiscardAlert, titleVisibility: .visible) {
                 Button("Discard", role: .destructive) {
                     dismiss()
                 }

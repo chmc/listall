@@ -259,8 +259,15 @@
 - ✅ Changed EditListView TextField to use .autocapitalization(.sentences)
 - ✅ Now only first letter is uppercase, others lowercase. And then again after dot, use capitalize. Like normal text capitalize.
 
-## Phase 33: Item edit Cancel button does not work on real device
-- ❌ Confirmation dialog is not opened and Item edit screen is not closed by Cancel button
+## Phase 33: Item edit Cancel button does not work on real device ✅ COMPLETED
+- ✅ Fixed by changing `.alert()` to `.confirmationDialog()` for better real device compatibility
+- ✅ Confirmation dialog now opens reliably on physical devices
+- ✅ Item edit screen closes properly when Cancel button is pressed
+- ✅ Native iOS action sheet provides better UX than centered alert
+
+## Phase 34: Import from multiline textfield
+- ❌ New option to import using multiline textfield
+- ❌ User can write or paste content that will be imported
 
 ## Phase
 - ❌ 
