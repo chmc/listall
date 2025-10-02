@@ -7,6 +7,7 @@ struct EditListView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isUpdating = false
+    @FocusState private var isListNameFieldFocused: Bool
     
     let list: List
     
@@ -21,7 +22,8 @@ struct EditListView: View {
             Form {
                 Section(header: Text("List Details")) {
                     TextField("List Name", text: $listName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .textFieldStyle(.plain)
+                        .focused($isListNameFieldFocused)
                         .accessibilityIdentifier("EditListNameTextField")
                 }
             }
@@ -50,6 +52,12 @@ struct EditListView: View {
             Button("OK") { }
         } message: {
             Text(alertMessage)
+        }
+        .onAppear {
+            // Focus the list name field when the screen appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isListNameFieldFocused = true
+            }
         }
     }
     

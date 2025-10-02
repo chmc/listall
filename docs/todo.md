@@ -238,8 +238,11 @@
 - ✅ Added visual indicators showing when manual reordering is available
 - ✅ Wrote 9 comprehensive tests for sorting functionality (all pass)
 
-## Phase 30: Unify UI textboxes to all not have borders
-- ❌ Check whole UI, but at least new list screen has text box border
+## Phase 30: Unify UI textboxes to all not have borders ✅ COMPLETED
+- ✅ Removed RoundedBorderTextFieldStyle from CreateListView TextField
+- ✅ Removed RoundedBorderTextFieldStyle from EditListView TextField  
+- ✅ Verified ItemEditView TextField already uses .plain style (no borders)
+- ✅ All text input fields now use consistent borderless design
 
 ## Improvement 1: Sharing Features
 - ❌ Implement SharingService for list sharing

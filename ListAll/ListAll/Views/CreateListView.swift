@@ -7,13 +7,15 @@ struct CreateListView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isCreating = false
+    @FocusState private var isListNameFieldFocused: Bool
     
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("List Details")) {
                     TextField("List Name", text: $listName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .textFieldStyle(.plain)
+                        .focused($isListNameFieldFocused)
                         .accessibilityIdentifier("ListNameTextField")
                 }
             }
@@ -40,6 +42,12 @@ struct CreateListView: View {
             Button("OK") { }
         } message: {
             Text(alertMessage)
+        }
+        .onAppear {
+            // Focus the list name field when the screen appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isListNameFieldFocused = true
+            }
         }
     }
     
