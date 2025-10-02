@@ -2011,8 +2011,8 @@ final class ServicesTests: XCTestCase {
         let repository = TestDataRepository(dataManager: testDataManager)
         let importService = ImportService(dataRepository: repository)
         
-        // Try to preview invalid JSON
-        let invalidData = "invalid json".data(using: .utf8)!
+        // Try to preview empty data (fails both JSON and plain text parsing)
+        let invalidData = "".data(using: .utf8)!
         
         XCTAssertThrowsError(try importService.previewImport(invalidData)) { error in
             XCTAssertTrue(error is ImportError, "Should throw ImportError")

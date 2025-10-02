@@ -346,16 +346,22 @@ struct ShareSheet: UIViewControllerRepresentable {
 struct ImportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ImportViewModel()
+    @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Import your data from a JSON file")
-                            .font(.body)
-                            .foregroundColor(.secondary)
+                    // Import Source Selection
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Import Source")
+                            .font(.headline)
+                        
+                        Picker("Import Source", selection: $viewModel.importSource) {
+                            Text("From File").tag(ImportSource.file)
+                            Text("From Text").tag(ImportSource.text)
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
                     }
                     
                     // Merge Strategy Selection
@@ -405,21 +411,98 @@ struct ImportView: View {
                         }
                     }
                     
-                    // Import Button
-                    Button(action: {
-                        viewModel.showFilePicker = true
-                    }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.down")
-                            Text("Select File to Import")
+                    // Import Source-Specific UI
+                    if viewModel.importSource == .file {
+                        // File Import Button
+                        Button(action: {
+                            viewModel.showFilePicker = true
+                        }) {
+                            HStack {
+                                Image(systemName: "square.and.arrow.down")
+                                Text("Select File to Import")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .disabled(viewModel.isImporting)
+                    } else {
+                        // Text Import UI
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Paste Data")
+                                .font(.headline)
+                            
+                            Text("Supports JSON or plain text (one item per line)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            ZStack(alignment: .topLeading) {
+                                if viewModel.importText.isEmpty {
+                                    Text("Paste your data here...\n\nExamples:\n• JSON export format\n• Plain text lists\n• One item per line\n• Markdown checkboxes")
+                                        .foregroundColor(.gray.opacity(0.5))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 12)
+                                }
+                                
+                                TextEditor(text: $viewModel.importText)
+                                    .frame(minHeight: 200, maxHeight: 300)
+                                    .focused($isTextFieldFocused)
+                                    .font(.system(.body, design: .monospaced))
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
+                            }
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                            
+                            HStack {
+                                Button(action: {
+                                    viewModel.importText = ""
+                                }) {
+                                    HStack {
+                                        Image(systemName: "trash")
+                                        Text("Clear")
+                                    }
+                                    .foregroundColor(.red)
+                                }
+                                .disabled(viewModel.importText.isEmpty)
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    // Paste from clipboard
+                                    if let clipboardText = UIPasteboard.general.string {
+                                        viewModel.importText = clipboardText
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "doc.on.clipboard")
+                                        Text("Paste")
+                                    }
+                                }
+                            }
+                            .font(.subheadline)
+                            
+                            Button(action: {
+                                isTextFieldFocused = false
+                                viewModel.showPreviewForText()
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.down")
+                                    Text("Import from Text")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            .disabled(viewModel.isImporting || viewModel.importText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
                     }
-                    .disabled(viewModel.isImporting)
                     
                     // Status Messages
                     if let errorMessage = viewModel.errorMessage {

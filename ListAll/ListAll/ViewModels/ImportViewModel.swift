@@ -2,6 +2,12 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Import source type
+enum ImportSource {
+    case file
+    case text
+}
+
 /// ViewModel for handling import operations
 class ImportViewModel: ObservableObject {
     @Published var selectedStrategy: ImportOptions.MergeStrategy = .merge
@@ -10,10 +16,15 @@ class ImportViewModel: ObservableObject {
     @Published var successMessage: String?
     @Published var errorMessage: String?
     
+    // Import source selection
+    @Published var importSource: ImportSource = .file
+    @Published var importText: String = ""
+    
     // Preview functionality
     @Published var showPreview = false
     @Published var importPreview: ImportPreview?
     @Published var previewFileURL: URL?
+    @Published var previewText: String?
     
     // Progress tracking
     @Published var importProgress: ImportProgress?
@@ -116,14 +127,58 @@ class ImportViewModel: ObservableObject {
         }
     }
     
-    func confirmImport() {
-        guard let url = previewFileURL else {
-            errorMessage = "No file selected for import"
+    func showPreviewForText() {
+        clearMessages()
+        
+        // Validate text is not empty
+        guard !importText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Please enter JSON data to import"
             return
         }
         
+        previewText = importText
+        
+        do {
+            // Convert text to data
+            guard let data = importText.data(using: .utf8) else {
+                errorMessage = "Unable to process text data"
+                return
+            }
+            
+            // Create import options based on selected strategy
+            let options = ImportOptions(
+                mergeStrategy: selectedStrategy,
+                validateData: true
+            )
+            
+            // Generate preview
+            let preview = try importService.previewImport(data, options: options)
+            importPreview = preview
+            
+            // Show preview if valid
+            if preview.isValid {
+                showPreview = true
+            } else {
+                let errorList = preview.errors.joined(separator: "\n")
+                errorMessage = "Preview failed:\n\(errorList)"
+            }
+        } catch let error as ImportError {
+            errorMessage = error.localizedDescription
+        } catch {
+            errorMessage = "Failed to preview: \(error.localizedDescription)"
+        }
+    }
+    
+    func confirmImport() {
         showPreview = false
-        importFromFile(url)
+        
+        if let url = previewFileURL {
+            importFromFile(url)
+        } else if let text = previewText {
+            importFromText(text)
+        } else {
+            errorMessage = "No data selected for import"
+        }
     }
     
     func importFromFile(_ url: URL) {
@@ -152,8 +207,8 @@ class ImportViewModel: ObservableObject {
                 validateData: true
             )
             
-            // Perform import
-            let result = try importService.importFromJSON(data, options: options)
+            // Perform import with auto-detect format
+            let result = try importService.importData(data, options: options)
             
             // Handle result
             if result.wasSuccessful {
@@ -191,10 +246,72 @@ class ImportViewModel: ObservableObject {
         previewFileURL = nil
     }
     
+    func importFromText(_ text: String) {
+        clearMessages()
+        isImporting = true
+        importProgress = nil
+        
+        do {
+            // Convert text to data
+            guard let data = text.data(using: .utf8) else {
+                errorMessage = "Unable to process text data"
+                isImporting = false
+                return
+            }
+            
+            // Create import options based on selected strategy
+            let options = ImportOptions(
+                mergeStrategy: selectedStrategy,
+                validateData: true
+            )
+            
+            // Perform import with auto-detect format
+            let result = try importService.importData(data, options: options)
+            
+            // Handle result
+            if result.wasSuccessful {
+                let listsText = result.listsCreated == 1 ? "list" : "lists"
+                let itemsText = result.itemsCreated == 1 ? "item" : "items"
+                
+                var message = "Successfully imported \(result.listsCreated) \(listsText) and \(result.itemsCreated) \(itemsText)"
+                
+                if result.listsUpdated > 0 || result.itemsUpdated > 0 {
+                    message += " (updated \(result.listsUpdated + result.itemsUpdated) existing)"
+                }
+                
+                if result.hasConflicts {
+                    message += "\n\(result.conflicts.count) conflicts resolved"
+                }
+                
+                successMessage = message
+                
+                // Clear the text field on success
+                importText = ""
+                
+                // Auto-dismiss success message after 5 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+                    self?.successMessage = nil
+                }
+            } else {
+                let errorList = result.errors.joined(separator: "\n")
+                errorMessage = "Import completed with errors:\n\(errorList)"
+            }
+        } catch let error as ImportError {
+            errorMessage = error.localizedDescription
+        } catch {
+            errorMessage = "Failed to import: \(error.localizedDescription)"
+        }
+        
+        isImporting = false
+        importProgress = nil
+        previewText = nil
+    }
+    
     func cancelPreview() {
         showPreview = false
         importPreview = nil
         previewFileURL = nil
+        previewText = nil
     }
     
     func clearMessages() {
@@ -206,6 +323,7 @@ class ImportViewModel: ObservableObject {
         clearMessages()
         cancelPreview()
         importProgress = nil
+        importText = ""
     }
 }
 

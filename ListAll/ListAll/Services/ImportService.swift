@@ -167,6 +167,27 @@ class ImportService: ObservableObject {
         self.dataRepository = dataRepository
     }
     
+    // MARK: - Auto-detect Format Import
+    
+    /// Imports data by auto-detecting the format (JSON or plain text)
+    /// - Parameters:
+    ///   - data: The data to import
+    ///   - options: Import options for customization
+    /// - Returns: ImportResult with details of the import operation
+    /// - Throws: ImportError if import fails
+    func importData(_ data: Data, options: ImportOptions = .default) throws -> ImportResult {
+        // Try JSON first
+        do {
+            return try importFromJSON(data, options: options)
+        } catch {
+            // If JSON fails, try plain text
+            guard let text = String(data: data, encoding: .utf8) else {
+                throw ImportError.invalidFormat
+            }
+            return try importFromPlainText(text, options: options)
+        }
+    }
+    
     // MARK: - JSON Import
     
     /// Imports lists and items from JSON data
@@ -206,19 +227,23 @@ class ImportService: ObservableObject {
     
     /// Previews what will happen if the data is imported
     /// - Parameters:
-    ///   - data: The JSON data to preview
+    ///   - data: The data to preview (JSON or plain text)
     ///   - options: Import options for customization
     /// - Returns: ImportPreview with details of what will be imported
     /// - Throws: ImportError if preview fails
     func previewImport(_ data: Data, options: ImportOptions = .default) throws -> ImportPreview {
-        // Decode JSON data
+        // Try to decode as JSON first, then fall back to plain text
         let exportData: ExportData
         do {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             exportData = try decoder.decode(ExportData.self, from: data)
         } catch {
-            throw ImportError.decodingFailed(error.localizedDescription)
+            // If JSON fails, try plain text
+            guard let text = String(data: data, encoding: .utf8) else {
+                throw ImportError.invalidFormat
+            }
+            exportData = try parsePlainText(text)
         }
         
         // Validate data
@@ -227,7 +252,7 @@ class ImportService: ObservableObject {
             do {
                 try validateExportData(exportData)
             } catch let error as ImportError {
-                errors.append(error.localizedDescription ?? "Unknown validation error")
+                errors.append(error.localizedDescription)
             }
         }
         
@@ -687,6 +712,316 @@ class ImportService: ObservableObject {
         updatedItem.isCrossedOut = itemData.isCrossedOut
         updatedItem.modifiedAt = itemData.modifiedAt
         dataRepository.updateItemForImport(updatedItem)
+    }
+    
+    // MARK: - Plain Text Import
+    
+    /// Imports data from plain text format
+    /// - Parameters:
+    ///   - text: The plain text to import
+    ///   - options: Import options for customization
+    /// - Returns: ImportResult with details of the import operation
+    /// - Throws: ImportError if import fails
+    func importFromPlainText(_ text: String, options: ImportOptions = .default) throws -> ImportResult {
+        // Parse plain text into structured data
+        let exportData = try parsePlainText(text)
+        
+        // Validate data if requested
+        if options.validateData {
+            try validateExportData(exportData)
+        }
+        
+        // Handle merge strategy (plain text always uses append with new IDs)
+        return try appendData(from: exportData)
+    }
+    
+    /// Parses plain text into ExportData structure
+    private func parsePlainText(_ text: String) throws -> ExportData {
+        var lists: [ListExportData] = []
+        let lines = text.components(separatedBy: .newlines)
+        
+        // First, check if this looks like a structured format with numbered items
+        var hasNumberedItems = false
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            if trimmedLine.firstMatch(of: /^(\d+)\.\s*(\[[ ✓x]\])\s*(.+)$/) != nil {
+                hasNumberedItems = true
+                break
+            }
+        }
+        
+        // If no numbered items found, skip to simple parser
+        if !hasNumberedItems {
+            return ExportData(lists: try parseSimplePlainText(text))
+        }
+        
+        var currentList: (name: String, items: [ItemExportData])? = nil
+        var currentItem: (title: String, description: String?, quantity: Int, isCrossedOut: Bool)? = nil
+        var orderNumber: Int32 = 0
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            
+            // Skip empty lines and header lines
+            if trimmedLine.isEmpty || 
+               trimmedLine.hasPrefix("===") || 
+               trimmedLine.hasPrefix("ListAll Export") ||
+               trimmedLine.hasPrefix("Exported:") ||
+               trimmedLine == "(No items)" {
+                continue
+            }
+            
+            // Check if this is a list separator line (dashes)
+            if trimmedLine.allSatisfy({ $0 == "-" }) {
+                continue
+            }
+            
+            // Check if this is an item line (starts with number)
+            if let match = trimmedLine.firstMatch(of: /^(\d+)\.\s*(\[[ ✓x]\])\s*(.+)$/) {
+                // Save previous item if exists
+                if let item = currentItem {
+                    currentList?.items.append(ItemExportData(
+                        id: UUID(),
+                        title: item.title,
+                        description: item.description ?? "",
+                        quantity: item.quantity,
+                        orderNumber: Int(orderNumber),
+                        isCrossedOut: item.isCrossedOut,
+                        createdAt: Date(),
+                        modifiedAt: Date()
+                    ))
+                    orderNumber += 1
+                }
+                
+                // Parse new item
+                let checkbox = String(match.2)
+                let isCrossedOut = checkbox.contains("✓") || checkbox.contains("x")
+                var title = String(match.3)
+                var quantity = 1
+                
+                // Check for quantity notation (×N)
+                if let qtyMatch = title.firstMatch(of: /\s*\(×(\d+)\)\s*$/) {
+                    quantity = Int(qtyMatch.1) ?? 1
+                    title = title.replacingOccurrences(of: qtyMatch.0, with: "")
+                }
+                
+                currentItem = (title: title.trimmingCharacters(in: .whitespaces), 
+                             description: nil, 
+                             quantity: quantity, 
+                             isCrossedOut: isCrossedOut)
+            }
+            // Check if this is a description line (starts with spaces)
+            else if line.hasPrefix("   ") && currentItem != nil {
+                let description = trimmedLine
+                if !description.hasPrefix("Created:") {
+                    currentItem?.description = description
+                }
+            }
+            // Otherwise, it's likely a list name
+            else if !trimmedLine.isEmpty {
+                // Save previous list if exists
+                if let list = currentList {
+                    // Save last item of previous list
+                    if let item = currentItem {
+                        currentList?.items.append(ItemExportData(
+                            id: UUID(),
+                            title: item.title,
+                            description: item.description ?? "",
+                            quantity: item.quantity,
+                            orderNumber: Int(orderNumber),
+                            isCrossedOut: item.isCrossedOut,
+                            createdAt: Date(),
+                            modifiedAt: Date()
+                        ))
+                        orderNumber = 0
+                        currentItem = nil
+                    }
+                    
+                    lists.append(ListExportData(
+                        id: UUID(),
+                        name: list.name,
+                        orderNumber: lists.count,
+                        isArchived: false,
+                        items: list.items,
+                        createdAt: Date(),
+                        modifiedAt: Date()
+                    ))
+                }
+                
+                // Start new list
+                currentList = (name: trimmedLine, items: [])
+                orderNumber = 0
+            }
+        }
+        
+        // Save last item and list
+        if let item = currentItem {
+            currentList?.items.append(ItemExportData(
+                id: UUID(),
+                title: item.title,
+                description: item.description ?? "",
+                quantity: item.quantity,
+                orderNumber: Int(orderNumber),
+                isCrossedOut: item.isCrossedOut,
+                createdAt: Date(),
+                modifiedAt: Date()
+            ))
+        }
+        
+        if let list = currentList {
+            lists.append(ListExportData(
+                id: UUID(),
+                name: list.name,
+                orderNumber: lists.count,
+                isArchived: false,
+                items: list.items,
+                createdAt: Date(),
+                modifiedAt: Date()
+            ))
+        }
+        
+        return ExportData(lists: lists)
+    }
+    
+    /// Parses simple plain text (one item per line) into ExportData
+    private func parseSimplePlainText(_ text: String) throws -> [ListExportData] {
+        let lines = text.components(separatedBy: .newlines)
+        
+        guard !lines.isEmpty else {
+            throw ImportError.validationFailed("No valid content found in text")
+        }
+        
+        // Try to extract list name from first line
+        var listName = "Imported List"
+        var startIndex = 0
+        
+        // Check if first line could be a list name (not a bullet point)
+        if !lines.isEmpty {
+            let firstLine = lines[0].trimmingCharacters(in: .whitespaces)
+            if !firstLine.isEmpty && 
+               !firstLine.hasPrefix("•") && 
+               !firstLine.hasPrefix("-") && 
+               !firstLine.hasPrefix("*") &&
+               !firstLine.hasPrefix("✓") &&
+               !firstLine.hasPrefix("[") {
+                listName = firstLine
+                startIndex = 1
+            }
+        }
+        
+        var items: [ItemExportData] = []
+        var currentItem: (title: String, description: [String], quantity: Int, isCrossedOut: Bool)? = nil
+        
+        for i in startIndex..<lines.count {
+            let line = lines[i]
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            
+            // Skip empty lines and type indicators
+            if trimmedLine.isEmpty || trimmedLine.uppercased() == "OTHER" {
+                continue
+            }
+            
+            // Check if this is a bullet point item
+            var isNewItem = false
+            var itemTitle = trimmedLine
+            var isCompleted = false
+            
+            // Check for bullet points: •, -, *, or standalone ✓
+            if trimmedLine.hasPrefix("• ") {
+                itemTitle = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+            } else if trimmedLine.hasPrefix("•") {
+                itemTitle = String(trimmedLine.dropFirst(1)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+            } else if trimmedLine.hasPrefix("- ") {
+                itemTitle = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+            } else if trimmedLine.hasPrefix("* ") {
+                itemTitle = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+            } else if trimmedLine.hasPrefix("✓ ") {
+                itemTitle = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+                isCompleted = true
+            } else if trimmedLine.hasPrefix("✓") {
+                itemTitle = String(trimmedLine.dropFirst(1)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+                isCompleted = true
+            } else if trimmedLine.hasPrefix("[ ]") || trimmedLine.hasPrefix("[]") {
+                itemTitle = String(trimmedLine.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+            } else if trimmedLine.hasPrefix("[x]") || trimmedLine.hasPrefix("[X]") || trimmedLine.hasPrefix("[✓]") {
+                itemTitle = String(trimmedLine.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                isNewItem = true
+                isCompleted = true
+            }
+            
+            if isNewItem {
+                // Save previous item if exists
+                if let item = currentItem {
+                    let description = item.description.joined(separator: "\n")
+                    items.append(ItemExportData(
+                        id: UUID(),
+                        title: item.title,
+                        description: description,
+                        quantity: item.quantity,
+                        orderNumber: items.count,
+                        isCrossedOut: item.isCrossedOut,
+                        createdAt: Date(),
+                        modifiedAt: Date()
+                    ))
+                }
+                
+                // Extract quantity from title (number in parentheses)
+                var quantity = 1
+                if let qtyMatch = itemTitle.firstMatch(of: /\((\d+)\)/) {
+                    quantity = Int(qtyMatch.1) ?? 1
+                    // Remove quantity notation from title
+                    itemTitle = itemTitle.replacingOccurrences(of: " \(qtyMatch.0)", with: "")
+                        .replacingOccurrences(of: "\(qtyMatch.0)", with: "")
+                        .trimmingCharacters(in: .whitespaces)
+                }
+                
+                // Start new item
+                currentItem = (title: itemTitle, description: [], quantity: quantity, isCrossedOut: isCompleted)
+            } else if currentItem != nil {
+                // This is a description line for the current item
+                currentItem?.description.append(trimmedLine)
+            }
+            // If no current item and not a new item, skip the line
+        }
+        
+        // Save last item
+        if let item = currentItem {
+            let description = item.description.joined(separator: "\n")
+            items.append(ItemExportData(
+                id: UUID(),
+                title: item.title,
+                description: description,
+                quantity: item.quantity,
+                orderNumber: items.count,
+                isCrossedOut: item.isCrossedOut,
+                createdAt: Date(),
+                modifiedAt: Date()
+            ))
+        }
+        
+        // If no items found, throw error
+        guard !items.isEmpty else {
+            throw ImportError.validationFailed("No valid items found in text")
+        }
+        
+        let list = ListExportData(
+            id: UUID(),
+            name: listName,
+            orderNumber: 0,
+            isArchived: false,
+            items: items,
+            createdAt: Date(),
+            modifiedAt: Date()
+        )
+        
+        return [list]
     }
 }
 

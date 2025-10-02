@@ -315,6 +315,18 @@ struct ListExportData: Codable {
         self.modifiedAt = list.modifiedAt
         self.items = items.map { ItemExportData(from: $0) }
     }
+    
+    // Manual initializer for import parsing
+    init(id: UUID = UUID(), name: String, orderNumber: Int = 0, isArchived: Bool = false,
+         items: [ItemExportData] = [], createdAt: Date = Date(), modifiedAt: Date = Date()) {
+        self.id = id
+        self.name = name
+        self.orderNumber = orderNumber
+        self.isArchived = isArchived
+        self.createdAt = createdAt
+        self.modifiedAt = modifiedAt
+        self.items = items
+    }
 }
 
 struct ItemExportData: Codable {
@@ -336,5 +348,19 @@ struct ItemExportData: Codable {
         self.isCrossedOut = item.isCrossedOut
         self.createdAt = item.createdAt
         self.modifiedAt = item.modifiedAt
+    }
+    
+    // Manual initializer for import parsing
+    init(id: UUID = UUID(), title: String, description: String = "", quantity: Int = 1, 
+         orderNumber: Int = 0, isCrossedOut: Bool = false, 
+         createdAt: Date = Date(), modifiedAt: Date = Date()) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.quantity = quantity
+        self.orderNumber = orderNumber
+        self.isCrossedOut = isCrossedOut
+        self.createdAt = createdAt
+        self.modifiedAt = modifiedAt
     }
 }

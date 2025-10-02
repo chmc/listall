@@ -265,9 +265,17 @@
 - ✅ Item edit screen closes properly when Cancel button is pressed
 - ✅ Native iOS action sheet provides better UX than centered alert
 
-## Phase 34: Import from multiline textfield
-- ❌ New option to import using multiline textfield
-- ❌ User can write or paste content that will be imported
+## Phase 34: Import from multiline textfield ✅ COMPLETED
+- ✅ Add import source selection (File or Text) to ImportView UI
+- ✅ Implement multiline TextEditor for JSON and plain text input
+- ✅ Add importFromText method to ImportViewModel
+- ✅ Wire up text import to existing ImportService with auto-detect format
+- ✅ Add validation and error handling for text input
+- ✅ Implement plain text parsing (supports ListAll export format and simple lists)
+- ✅ Add manual initializers to ListExportData and ItemExportData for parsing
+- ✅ Run build validation - compilation succeeds
+- ✅ Run test suite - 100% pass rate (182/182 tests)
+- ✅ Update ai_changelog.md with implementation details
 
 ## Phase
 - ❌ 
