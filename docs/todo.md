@@ -253,7 +253,10 @@
 - ✅ Build validation passed with no errors
 - ✅ All tests passed (100% success rate)
 
-## Phase: 
+## Phase 32: Item title text no Pascal Case tyle capitalize
+- ❌ Only first letter is uppercase, others lowercase. And then again after dot, use capitalize. Like normal text capitalize.
+
+## Phase
 - ❌ 
 
 ## Improvement 1: Sharing Features
