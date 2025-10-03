@@ -70,4 +70,5 @@ struct Constants {
 extension Notification.Name {
     static let dataImported = Notification.Name("dataImported")
     static let switchToListsTab = Notification.Name("switchToListsTab")
+    static let itemDataChanged = Notification.Name("ItemDataChanged")
 }

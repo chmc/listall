@@ -164,6 +164,10 @@ struct MainView: View {
             // Switch to Lists tab after import
             selectedTab = 0
         }
+        .onReceive(NotificationCenter.default.publisher(for: .itemDataChanged)) { _ in
+            // Refresh lists when items are added, deleted, or modified
+            viewModel.loadLists()
+        }
         .sheet(isPresented: $showingCreateList) {
             CreateListView(mainViewModel: viewModel)
         }

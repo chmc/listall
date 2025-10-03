@@ -302,8 +302,12 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
-## Phase 37: Deleted or crossed items count does not reflect to lists view counts
-- ❌ Fix this bug
+## Phase 37: Deleted or crossed items count does not reflect to lists view counts ✅ COMPLETED
+- ✅ Added `.itemDataChanged` notification to Constants.swift
+- ✅ MainView now listens for item data changes and refreshes lists
+- ✅ Item counts in ListRowView update immediately when items are deleted/crossed
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (198/198 = 100% success rate)
 
 ## Phase 38: Import textfield keyboard is not hidden when user clicks outside of textfied
 - ❌ Hide keyboard like elsewhere in the app

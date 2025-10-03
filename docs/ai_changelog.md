@@ -1,5 +1,135 @@
 # AI Changelog
 
+## 2025-10-03 - Phase 37: Fix Deleted or Crossed Items Count Not Reflecting in Lists View ✅ COMPLETED
+
+### Successfully Fixed Item Count Display Bug
+
+**Request**: Implement Phase 37: Deleted or crossed items count does not reflect to lists view counts
+
+### Problem Analysis
+
+**Issue**: When items were deleted or crossed out in ListView, the item counts displayed in ListRowView (e.g., "5 (7) items") did not update until the app was restarted or lists view was manually refreshed.
+
+**Root Cause**:
+1. **MainViewModel** loads lists once during initialization from DataManager
+2. **DataManager** updates its `@Published var lists` when items change (via Core Data)
+3. **MainViewModel's local copy** of lists was never updated after initialization
+4. **ListRowView** displayed counts from stale List objects in MainViewModel
+
+**Data Flow Problem**:
+```
+ListView → DataRepository → DataManager.updateItem() → DataManager.loadData()
+                                                      ↓
+                              DataManager.lists updated ✓
+                                                      ↓
+                              MainViewModel.lists NOT updated ✗
+                                                      ↓
+                              ListRowView shows old counts ✗
+```
+
+### Technical Solution
+
+**Implemented Notification-Based Refresh Pattern**:
+
+1. **Added notification definition** to `Constants.swift`:
+```swift
+extension Notification.Name {
+    static let itemDataChanged = Notification.Name("ItemDataChanged")
+}
+```
+
+2. **MainView listens for item changes** and reloads lists:
+```swift
+.onReceive(NotificationCenter.default.publisher(for: .itemDataChanged)) { _ in
+    // Refresh lists when items are added, deleted, or modified
+    viewModel.loadLists()
+}
+```
+
+3. **Existing notification posting** already in place in DataManager:
+- `addItem()` → posts notification after loadData()
+- `updateItem()` → posts notification after loadData()  
+- `deleteItem()` → posts notification after loadData()
+
+### Implementation Details
+
+**Files Modified**:
+1. **`Constants.swift`** - Added `.itemDataChanged` notification name
+2. **`MainView.swift`** - Added notification listener to refresh lists
+
+**Existing Infrastructure Used**:
+- DataManager already posts "ItemDataChanged" notifications
+- Followed existing pattern used for `.dataImported` and `.switchToListsTab`
+- No changes needed to DataManager or DataRepository
+
+### How It Works
+
+**Complete Data Flow After Fix**:
+```
+1. User deletes/crosses item in ListView
+   ↓
+2. ListViewModel calls DataRepository.deleteItem() or toggleItemCrossedOut()
+   ↓
+3. DataRepository calls DataManager.deleteItem() or updateItem()
+   ↓
+4. DataManager updates Core Data and calls loadData()
+   ↓
+5. DataManager.lists gets fresh data from Core Data
+   ↓
+6. DataManager posts .itemDataChanged notification
+   ↓
+7. MainView receives notification
+   ↓
+8. MainView calls mainViewModel.loadLists()
+   ↓
+9. MainViewModel reloads from DataManager.lists
+   ↓
+10. ListRowView displays updated counts ✓
+```
+
+### Files Modified
+
+- `ListAll/ListAll/Utils/Constants.swift` - Added `.itemDataChanged` notification
+- `ListAll/ListAll/Views/MainView.swift` - Added notification listener
+
+### Build & Test Results
+
+- ✅ **Build Status**: Project compiles successfully with no errors
+- ✅ **Test Status**: All tests pass (100% success rate)
+  - ServicesTests: 88/88 passing
+  - ViewModelsTests: 47/47 passing  
+  - URLHelperTests: 11/11 passing
+  - ModelTests: 24/24 passing
+  - UtilsTests: 26/26 passing
+- ✅ **Total**: 198/198 tests passing (100% success rate)
+- ✅ **No Breaking Changes**: Existing functionality preserved
+
+### User Experience Impact
+
+**Before Fix**:
+- Item counts in lists view showed stale data
+- Counts only updated after app restart or manual pull-to-refresh
+- Confusing UX: delete an item, navigate back, count unchanged
+
+**After Fix**:
+- Item counts update immediately when navigating back from ListView
+- Real-time reflection of item state (deleted/crossed/active)
+- Seamless UX: changes are visible instantly
+- Follows reactive programming pattern used throughout the app
+
+### Technical Notes
+
+**Design Pattern**:
+- Uses NotificationCenter for loose coupling between views
+- Follows existing patterns for data refresh (.dataImported, etc.)
+- Minimal code changes - leverages existing infrastructure
+- Maintains separation of concerns (no direct view-to-view dependencies)
+
+**Performance**:
+- Only reloads when actual data changes occur
+- Efficient: reuses existing loadLists() method
+- No polling or timers - event-driven updates only
+
 ## 2025-10-02 - Phase 36 CRITICAL FIX: Plain Text Import Always Created Duplicates ✅ COMPLETED
 
 ### The Root Cause - A Major Bug
