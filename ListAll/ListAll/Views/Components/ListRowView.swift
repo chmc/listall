@@ -50,7 +50,7 @@ struct ListRowView: View {
                 .buttonStyle(PlainButtonStyle())
             } else {
                 // Normal mode: Use NavigationLink
-                NavigationLink(destination: ListView(list: list)) {
+                NavigationLink(destination: ListView(list: list, mainViewModel: mainViewModel)) {
                     listContent
                 }
             }

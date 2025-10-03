@@ -2,13 +2,16 @@ import SwiftUI
 
 struct ListView: View {
     let list: List
+    @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
     @State private var showingCreateItem = false
     @State private var showingEditItem = false
+    @State private var showingEditList = false
     @State private var selectedItem: Item?
     
-    init(list: List) {
+    init(list: List, mainViewModel: MainViewModel) {
         self.list = list
+        self.mainViewModel = mainViewModel
         self._viewModel = StateObject(wrappedValue: ListViewModel(list: list))
     }
     
@@ -20,6 +23,16 @@ struct ListView: View {
                     Text(list.name)
                         .font(Theme.Typography.headline)
                         .foregroundColor(.primary)
+                    
+                    Button(action: {
+                        showingEditList = true
+                    }) {
+                        Image(systemName: "pencil.circle")
+                            .foregroundColor(.secondary)
+                            .imageScale(.medium)
+                    }
+                    .accessibilityLabel("Edit list details")
+                    
                     Spacer()
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -155,6 +168,9 @@ struct ListView: View {
                 ItemEditView(list: list, item: item)
             }
         }
+        .sheet(isPresented: $showingEditList) {
+            EditListView(list: list, mainViewModel: mainViewModel)
+        }
         .sheet(isPresented: $viewModel.showingOrganizationOptions) {
             ItemOrganizationView(viewModel: viewModel)
         }
@@ -170,6 +186,12 @@ struct ListView: View {
             if !showingEditItem {
                 selectedItem = nil
                 viewModel.loadItems() // Refresh after editing
+            }
+        }
+        .onChange(of: showingEditList) { _ in
+            if !showingEditList {
+                // Refresh main view after editing list details
+                mainViewModel.loadLists()
             }
         }
     }
@@ -228,6 +250,6 @@ struct UndoBanner: View {
 
 #Preview {
     NavigationView {
-        ListView(list: List(name: "Sample List"))
+        ListView(list: List(name: "Sample List"), mainViewModel: MainViewModel())
     }
 }

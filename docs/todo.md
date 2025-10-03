@@ -350,10 +350,17 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
-## Phase 42: Items view, edit list details
-- ❌ Add edit list details to items view
-- ❌ Edit list details can be revealed by edit button for example
-- ❌ Be creative and find good way to deal this
+## Phase 42: Items view, edit list details ✅ COMPLETED
+- ✅ Add edit list details to items view
+- ✅ Edit list details can be revealed by edit button for example
+- ✅ Be creative and find good way to deal this
+- ✅ Added pencil icon button next to list name in ListView header
+- ✅ Button opens EditListView sheet for editing list name
+- ✅ Lists refresh automatically after editing
+- ✅ Follows existing pattern from ListRowView
+- ✅ Clean, intuitive UX - icon appears right next to the list name
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (198/198 = 100% success rate)
 
 ## Phase
 - ❌ 

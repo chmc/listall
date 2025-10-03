@@ -1,5 +1,132 @@
 # AI Changelog
 
+## 2025-10-03 - Phase 42: Items View - Edit List Details ✅ COMPLETED
+
+### Added Edit List Functionality to Items View
+
+**Request**: Implement Phase 42: Items view, edit list details. Add ability to edit list details from the items view with a creative, user-friendly approach.
+
+### Problem Analysis
+
+**Issue**: Users could only edit list details (list name) from the main lists view. When viewing items within a list, there was no way to edit the list name without navigating back to the lists view, finding the list, and using the edit or context menu options.
+
+**Expected Behavior**: 
+- Provide easy access to edit list details directly from the items view
+- Use an intuitive, non-intrusive UI element
+- Follow existing patterns in the app
+- Refresh the view after editing
+
+### Technical Solution
+
+**Creative Approach**: Added a small pencil icon button next to the list name in the ListView header. This provides immediate, obvious access to list editing while keeping the UI clean and uncluttered.
+
+**Files Modified**:
+
+1. **ListView.swift**:
+   - Added `mainViewModel: MainViewModel` parameter to init (line 12)
+   - Added `@ObservedObject var mainViewModel: MainViewModel` property (line 5)
+   - Added `@State private var showingEditList = false` for sheet state (line 9)
+   - **Added Pencil Icon Button** (lines 27-34):
+     * Small pencil.circle icon next to list name
+     * Opens EditListView sheet when tapped
+     * Uses primary theme color
+     * Includes accessibility label
+   - **Added EditListView Sheet** (lines 171-173):
+     * Presents EditListView with current list and mainViewModel
+     * Standard modal presentation
+   - **Added Refresh Handler** (lines 191-195):
+     * Refreshes main lists view after editing
+     * Ensures list name updates throughout the app
+   - Updated preview to pass mainViewModel (line 253)
+
+2. **ListRowView.swift**:
+   - Updated NavigationLink to pass mainViewModel to ListView (line 53)
+   - Ensures proper ViewModel chain from MainView → ListView → EditListView
+
+**Result**:
+- **Visual Design**: Clean pencil icon appears right next to the list name in the header
+- **Interaction**: Single tap opens the edit sheet
+- **UX Flow**: Edit → Save → Sheet dismisses → List refreshes automatically
+- **Consistency**: Follows the same pattern as editing from the lists view
+- **Accessibility**: Proper label for screen readers ("Edit list details")
+- **No Navigation Disruption**: User stays in context, doesn't lose their place
+
+### User Experience Impact
+
+**Before**: 
+- User viewing items in "Shopping List"
+- Wants to rename list to "Grocery Shopping"
+- Must: Go back → Find "Shopping List" → Swipe or long press → Select Edit → Edit name
+- 5+ steps, loses context
+
+**After**:
+- User viewing items in "Shopping List"
+- Sees pencil icon next to list name
+- Taps icon → Edits name → Saves
+- 3 steps, stays in context
+
+### Build & Test Validation
+
+**Build Status**: ✅ Clean build with no errors or warnings
+**Test Results**: ✅ All 198 tests passed (100% success rate)
+
+**Test Coverage**:
+- Existing ListView tests still pass
+- Navigation tests verify proper ViewModel passing
+- Edit functionality tests verify list updates propagate correctly
+
+### Design Decisions
+
+1. **Pencil Icon Location**: Placed right next to list name for immediate association
+2. **Icon Style**: Used `pencil.circle` (filled background) instead of plain `pencil` for better visibility
+3. **Icon Size**: Medium scale - visible but not dominant
+4. **ViewModel Architecture**: Pass MainViewModel through the navigation chain to enable editing
+5. **Refresh Strategy**: Refresh main lists after edit to ensure consistency across all views
+
+### Technical Details
+
+**ViewModel Chain**:
+```
+MainView (has MainViewModel)
+  ↓ NavigationLink passes mainViewModel
+ListView (receives MainViewModel)
+  ↓ Sheet passes mainViewModel
+EditListView (receives MainViewModel)
+```
+
+**State Management**:
+- `showingEditList`: Controls sheet presentation
+- `mainViewModel.loadLists()`: Refreshes lists after edit
+- SwiftUI's `@ObservedObject`: Ensures UI updates when list changes
+
+**User Feedback**:
+- Immediate visual feedback when tapping icon
+- Standard iOS sheet animation
+- Automatic keyboard dismiss
+- Clear Save/Cancel buttons in EditListView
+
+### Architecture Notes
+
+This implementation maintains the existing MVVM pattern and reuses the EditListView component that was already built for editing lists from the main view. The creative solution of placing a small edit icon next to the list name provides the best balance of:
+- **Discoverability**: Icon is visible next to the content it edits
+- **Simplicity**: Single tap interaction
+- **Consistency**: Uses existing EditListView component
+- **Clean UI**: Doesn't clutter the interface
+
+### UI Refinement (Follow-up)
+
+**Issue Reported**: Blue edit button (pencil icon) didn't fit the overall UI design - too prominent and colorful compared to the neutral, clean design of the rest of the interface.
+
+**Fix Applied**: Changed pencil icon color from `Theme.Colors.primary` (blue) to `.secondary` (neutral gray), matching the color scheme of other toolbar icons and UI elements.
+
+**Result**: The edit button now blends harmoniously with the overall design while remaining clearly visible and functional.
+
+### Next Steps
+
+Phase 42 is complete with UI refinement. Ready to proceed with the next phase or improvement.
+
+---
+
 ## 2025-10-03 - Phase 41: Items View - List Name on Separate Row ✅ COMPLETED
 
 ### Improved List Name Display Layout
