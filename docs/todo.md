@@ -340,9 +340,15 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (100% success rate)
 
-## Phase 41: Items view, make list name smaller
-- ❌ Its way too big
-- ❌ Also show remaining items, for example 9/20
+## Phase 41: Items view, make list name smaller ✅ COMPLETED
+- ✅ Moved list name from navigation bar to its own dedicated row below toolbar
+- ✅ List name displayed as headline in primary color for clear visibility
+- ✅ Added item count on separate row below list name showing "active/total items" (e.g., "50/56 items")
+- ✅ Item count displayed in secondary color with caption font for visual hierarchy
+- ✅ Navigation bar toolbar now only contains action buttons (back, sort, filter, edit, add)
+- ✅ Clean three-tier layout: Toolbar → List Name → Item Count
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (198/198 = 100% success rate)
 
 ## Phase 42: Items view, edit list details
 - ❌ Add edit list details to items view

@@ -1,5 +1,73 @@
 # AI Changelog
 
+## 2025-10-03 - Phase 41: Items View - List Name on Separate Row ✅ COMPLETED
+
+### Improved List Name Display Layout
+
+**Request**: Implement Phase 41: Items view, make list name smaller. List name should be on its own row, not in the navigation bar toolbar.
+
+### Problem Analysis
+
+**Issue**: The list name was displayed in the navigation bar toolbar (`.inline` mode) alongside the action buttons (back, sort, filter, edit, add), making it cramped and not clearly visible as a header. User wanted a cleaner, more spacious layout with distinct visual hierarchy.
+
+**Expected Behavior**: 
+- Toolbar should contain only action buttons
+- List name should be on its own dedicated row below the toolbar
+- Item count should be on a separate row below the list name
+- Clear three-tier visual hierarchy: Toolbar → List Name → Item Count
+
+### Technical Solution
+
+**File Modified**: `ListAll/ListAll/Views/ListView.swift`
+
+**Changes Made**:
+
+1. **Added List Name Header** (lines 18-28):
+   - Created new HStack with list name text
+   - Used `Theme.Typography.headline` font for prominence
+   - Primary color for main content visibility
+   - Proper padding: top and horizontal spacing
+   - Background color: `systemGroupedBackground` for visual separation
+
+2. **Repositioned Item Count** (lines 30-39):
+   - Kept item count as separate subtitle row
+   - Shows "active/total items" format (e.g., "50/56 items")
+   - Uses caption font and secondary color
+   - Bottom padding for spacing from content below
+
+3. **Removed Navigation Title** (line 118):
+   - Removed `.navigationTitle(list.name)` 
+   - Kept `.navigationBarTitleDisplayMode(.inline)` for consistent toolbar height
+   - Toolbar now displays only action buttons
+
+**Result**:
+- **Row 1 (Toolbar)**: Back button, sort, filter, edit, add buttons only
+- **Row 2 (List Name)**: "Mökillistä" (or any list name) - clear and prominent
+- **Row 3 (Item Count)**: "50/56 items" - subtle and informative
+- Clean visual hierarchy with proper spacing
+- More screen space for list content
+- Professional, uncluttered UI layout
+
+### Files Changed
+- `ListAll/ListAll/Views/ListView.swift` (lines 15-39, 118)
+- `docs/todo.md` (Phase 41 marked complete)
+
+### Validation Results
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (198/198 = 100% success rate)
+- ✅ No linter errors introduced
+- ✅ UI layout improved with better visual hierarchy
+
+### Impact
+- **User Experience**: Much cleaner and easier to read
+- **Visual Hierarchy**: Clear separation between toolbar, header, and content
+- **Screen Space**: More efficient use of vertical space
+- **Consistency**: Matches modern iOS design patterns
+- **No Breaking Changes**: Pure UI enhancement with no functional changes
+- **Maintainability**: Clean code structure with proper component separation
+
+---
+
 ## 2025-10-03 - Phase 40: Item List Organization - Clickable Filter Rows ✅ COMPLETED
 
 ### Made Filtering Options Fully Clickable

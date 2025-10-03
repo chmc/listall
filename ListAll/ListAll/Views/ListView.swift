@@ -14,7 +14,30 @@ struct ListView: View {
     
     var body: some View {
         ZStack {
-            VStack {
+            VStack(spacing: 0) {
+                // List name header
+                HStack {
+                    Text(list.name)
+                        .font(Theme.Typography.headline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.top, Theme.Spacing.sm)
+                .padding(.bottom, 4)
+                .background(Color(UIColor.systemGroupedBackground))
+                
+                // Item count subtitle
+                HStack {
+                    Text("\(list.activeItemCount)/\(list.itemCount) items")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.bottom, Theme.Spacing.sm)
+                .background(Color(UIColor.systemGroupedBackground))
+                
                 if viewModel.isLoading {
                     ProgressView("Loading items...")
                 } else if viewModel.filteredItems.isEmpty {
@@ -92,8 +115,7 @@ struct ListView: View {
                 }
             }
         }
-        .navigationTitle(list.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if !viewModel.items.isEmpty {
