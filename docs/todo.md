@@ -340,7 +340,11 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (100% success rate)
 
-## Phase 41: Items view, edit list details
+## Phase 41: Items view, make list name smaller
+- ❌ Its way too big
+- ❌ Also show remaining items, for example 9/20
+
+## Phase 42: Items view, edit list details
 - ❌ Add edit list details to items view
 - ❌ Edit list details can be revealed by edit button for example
 - ❌ Be creative and find good way to deal this
