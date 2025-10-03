@@ -332,6 +332,14 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
+## Phase 40: Item list organization
+- ❌ Filtering option whole row must be clickable
+
+## Phase 41: Items view, edit list details
+- ❌ Add edit list details to items view
+- ❌ Edit list details can be revealed by edit button for example
+- ❌ Be creative and find good way to deal this
+
 ## Phase
 - ❌ 
 
