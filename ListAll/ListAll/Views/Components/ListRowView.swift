@@ -9,7 +9,7 @@ struct ListRowView: View {
     
     private var listContent: some View {
         HStack {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(list.name)
                     .font(Theme.Typography.headline)
                     .foregroundColor(.primary)
@@ -21,7 +21,7 @@ struct ListRowView: View {
             
             Spacer()
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
     }
     
@@ -55,6 +55,7 @@ struct ListRowView: View {
                 }
             }
         }
+        .padding(.horizontal, Theme.Spacing.md)
         .if(!mainViewModel.isInSelectionMode) { view in
             view.contextMenu {
                 Button(action: {

@@ -19,11 +19,13 @@ struct MainView: View {
                         SyncStatusView(cloudKitService: cloudKitService)
                             .padding(.horizontal)
                             .padding(.top, 8)
+                            .padding(.bottom, 12)
                     }
                     
                     // Main Content
                     if viewModel.isLoading {
                         ProgressView("Loading lists...")
+                            .padding(.top, 16)
                     } else if viewModel.lists.isEmpty {
                         VStack(spacing: Theme.Spacing.lg) {
                             Image(systemName: Constants.UI.listIcon)
@@ -41,10 +43,13 @@ struct MainView: View {
                         SwiftUI.List {
                             ForEach(viewModel.lists) { list in
                                 ListRowView(list: list, mainViewModel: viewModel)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                             }
                             .onMove(perform: viewModel.moveList)
                         }
                         .environment(\.editMode, $editMode)
+                        .listStyle(.plain)
+                        .padding(.top, 8)
                     }
                 }
                 .navigationTitle("Lists")

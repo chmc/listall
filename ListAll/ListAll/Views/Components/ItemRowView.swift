@@ -23,7 +23,7 @@ struct ItemRowView: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
             // Main content area - entire area tappable to complete item
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: 1) {
                 // Title with strikethrough animation
                 Text(item.displayTitle)
                     .font(Theme.Typography.body)
@@ -90,7 +90,8 @@ struct ItemRowView: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding(.vertical, Theme.Spacing.xs)
+        .padding(.vertical, 8)
+        .padding(.horizontal, Theme.Spacing.md)
         .contentShape(Rectangle()) // Makes entire row tappable
         .contextMenu {
             // Context menu actions
