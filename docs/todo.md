@@ -309,9 +309,12 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
-## Phase 38: Import textfield keyboard is not hidden when user clicks outside of textfied
-- ❌ Hide keyboard like elsewhere in the app
-- ❌ This should be global behaviour in this app
+## Phase 38: Import textfield keyboard is not hidden when user clicks outside of textfied ✅ COMPLETED
+- ✅ Added `.contentShape(Rectangle())` and `.onTapGesture` to ImportView
+- ✅ Keyboard dismisses when tapping outside text field in import view
+- ✅ Follows same pattern as CreateListView, EditListView, and ItemEditView (Phase 31)
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (198/198 = 100% success rate)
 
 ## Phase 39: Shrink list item height little bit, like 1%
 - ❌ List items are a bit too high globally in app

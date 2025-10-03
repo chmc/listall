@@ -620,6 +620,11 @@ struct ImportView: View {
                 viewModel.cleanup()
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text field
+            isTextFieldFocused = false
+        }
     }
 }
 

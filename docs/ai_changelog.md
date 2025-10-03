@@ -1,5 +1,90 @@
 # AI Changelog
 
+## 2025-10-03 - Phase 38: Fix Import TextField Keyboard Not Hiding on Outside Tap ✅ COMPLETED
+
+### Successfully Implemented Keyboard Dismissal for Import View
+
+**Request**: Implement Phase 38: Import textfield keyboard is not hidden when user clicks outside of textfield
+
+### Problem Analysis
+
+**Issue**: When using the text import feature in ImportView, tapping outside the TextEditor did not dismiss the keyboard, unlike other text input views in the app (CreateListView, EditListView, ItemEditView).
+
+**Expected Behavior**: Keyboard should automatically dismiss when user taps anywhere outside the text field, providing consistent UX across the entire app.
+
+### Technical Solution
+
+**Implemented Tap Gesture for Keyboard Dismissal**:
+
+1. **Added keyboard dismissal pattern** to `ImportView` in `SettingsView.swift`:
+```swift
+// Line 623-627 in SettingsView.swift
+.contentShape(Rectangle())
+.onTapGesture {
+    // Dismiss keyboard when tapping outside text field
+    isTextFieldFocused = false
+}
+```
+
+2. **Pattern Consistency**: This follows the exact same implementation pattern established in Phase 31 for:
+   - `CreateListView` (lines 47-51)
+   - `EditListView` 
+   - `ItemEditView` (lines 262-267)
+
+3. **How It Works**:
+   - `.contentShape(Rectangle())` makes the entire NavigationView tappable
+   - `.onTapGesture` sets the `@FocusState` variable `isTextFieldFocused` to `false`
+   - SwiftUI's focus system automatically dismisses the keyboard when focus is removed
+
+### Changes Made
+
+**Files Modified**:
+1. `/Users/aleksi/source/ListAllApp/ListAll/ListAll/Views/SettingsView.swift`
+   - Added `.contentShape(Rectangle())` modifier after `.onDisappear` in `ImportView`
+   - Added `.onTapGesture` handler to dismiss keyboard by setting `isTextFieldFocused = false`
+
+### Implementation Details
+
+**ImportView Structure**:
+- Already had `@FocusState private var isTextFieldFocused: Bool` (line 349)
+- TextEditor was already bound to focus state: `.focused($isTextFieldFocused)` (line 451)
+- Only needed to add the tap gesture handler to complete the pattern
+
+**User Experience Improvement**:
+- Users can now tap anywhere in the ImportView to dismiss the keyboard
+- Consistent behavior with all other text input screens in the app
+- Natural and expected UX pattern for iOS/macOS applications
+
+### Testing & Validation
+
+**Build Validation**: ✅ PASSED
+- Project compiled successfully with no errors
+- Used `xcodebuild` with iPhone 17 simulator (iOS 26.0)
+
+**Test Results**: ✅ ALL PASSED (198/198 tests)
+- All existing tests continue to pass
+- No regressions introduced
+- UI behavior enhanced without breaking functionality
+
+### Impact
+
+**Improved Consistency**:
+- Import view now has same keyboard dismissal behavior as all other text input views
+- Completes the global keyboard dismissal pattern initiated in Phase 31
+
+**No Breaking Changes**:
+- Purely additive change (4 lines of code)
+- No modifications to existing functionality
+- All tests passing confirms no regressions
+
+### Notes
+
+- This implementation completes the "global behavior" requirement mentioned in Phase 38
+- All text input views in the app (Create, Edit, Import) now share consistent keyboard dismissal UX
+- Pattern can be easily applied to any future text input views
+
+---
+
 ## 2025-10-03 - Phase 37: Fix Deleted or Crossed Items Count Not Reflecting in Lists View ✅ COMPLETED
 
 ### Successfully Fixed Item Count Display Bug
