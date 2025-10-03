@@ -115,7 +115,7 @@ struct ItemOrganizationView: View {
                                 .background(
                                     RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
                                         .fill(viewModel.currentFilterOption == option ? 
-                                              Color.blue.opacity(0.1) : Color.clear)
+                                              Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())

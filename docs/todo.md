@@ -332,8 +332,13 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
-## Phase 40: Item list organization
-- ❌ Filtering option whole row must be clickable
+## Phase 40: Item list organization ✅ COMPLETED
+- ✅ Made filtering option whole row clearly clickable by adding visible background
+- ✅ Changed non-selected filter options from transparent to gray background (Color.gray.opacity(0.1))
+- ✅ Now matches the visual pattern of sort options for consistency
+- ✅ Entire row area is now clearly interactive and provides better visual feedback
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success rate)
 
 ## Phase 41: Items view, edit list details
 - ❌ Add edit list details to items view
