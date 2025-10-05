@@ -31,6 +31,9 @@ struct ExportOptions {
     /// Whether to include archived lists
     var includeArchivedLists: Bool
     
+    /// Whether to include item images (base64 encoded)
+    var includeImages: Bool
+    
     /// Default export options with all fields included
     static var `default`: ExportOptions {
         ExportOptions(
@@ -38,7 +41,8 @@ struct ExportOptions {
             includeDescriptions: true,
             includeQuantities: true,
             includeDates: true,
-            includeArchivedLists: false
+            includeArchivedLists: false,
+            includeImages: true
         )
     }
     
@@ -49,7 +53,8 @@ struct ExportOptions {
             includeDescriptions: false,
             includeQuantities: false,
             includeDates: false,
-            includeArchivedLists: false
+            includeArchivedLists: false,
+            includeImages: false
         )
     }
 }
@@ -79,7 +84,7 @@ class ExportService: ObservableObject {
             let exportData = ExportData(lists: lists.map { list in
                 var items = dataRepository.getItems(for: list)
                 items = filterItems(items, options: options)
-                return ListExportData(from: list, items: items)
+                return ListExportData(from: list, items: items, includeImages: options.includeImages)
             })
             
             return try encoder.encode(exportData)
@@ -306,14 +311,14 @@ struct ListExportData: Codable {
     let modifiedAt: Date
     let items: [ItemExportData]
     
-    init(from list: List, items: [Item]) {
+    init(from list: List, items: [Item], includeImages: Bool = true) {
         self.id = list.id
         self.name = list.name
         self.orderNumber = list.orderNumber
         self.isArchived = list.isArchived
         self.createdAt = list.createdAt
         self.modifiedAt = list.modifiedAt
-        self.items = items.map { ItemExportData(from: $0) }
+        self.items = items.map { ItemExportData(from: $0, includeImages: includeImages) }
     }
     
     // Manual initializer for import parsing
@@ -338,8 +343,9 @@ struct ItemExportData: Codable {
     let isCrossedOut: Bool
     let createdAt: Date
     let modifiedAt: Date
+    let images: [ItemImageExportData]
     
-    init(from item: Item) {
+    init(from item: Item, includeImages: Bool = true) {
         self.id = item.id
         self.title = item.title
         self.description = item.itemDescription ?? ""
@@ -348,12 +354,13 @@ struct ItemExportData: Codable {
         self.isCrossedOut = item.isCrossedOut
         self.createdAt = item.createdAt
         self.modifiedAt = item.modifiedAt
+        self.images = includeImages ? item.sortedImages.map { ItemImageExportData(from: $0) } : []
     }
     
     // Manual initializer for import parsing
     init(id: UUID = UUID(), title: String, description: String = "", quantity: Int = 1, 
          orderNumber: Int = 0, isCrossedOut: Bool = false, 
-         createdAt: Date = Date(), modifiedAt: Date = Date()) {
+         createdAt: Date = Date(), modifiedAt: Date = Date(), images: [ItemImageExportData] = []) {
         self.id = id
         self.title = title
         self.description = description
@@ -362,5 +369,30 @@ struct ItemExportData: Codable {
         self.isCrossedOut = isCrossedOut
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
+        self.images = images
+    }
+}
+
+// MARK: - ItemImage Export Data
+
+struct ItemImageExportData: Codable {
+    let id: UUID
+    let imageData: String // Base64 encoded
+    let orderNumber: Int
+    let createdAt: Date
+    
+    init(from itemImage: ItemImage) {
+        self.id = itemImage.id
+        self.imageData = itemImage.imageData?.base64EncodedString() ?? ""
+        self.orderNumber = itemImage.orderNumber
+        self.createdAt = itemImage.createdAt
+    }
+    
+    // Manual initializer for import parsing
+    init(id: UUID = UUID(), imageData: String = "", orderNumber: Int = 0, createdAt: Date = Date()) {
+        self.id = id
+        self.imageData = imageData
+        self.orderNumber = orderNumber
+        self.createdAt = createdAt
     }
 }

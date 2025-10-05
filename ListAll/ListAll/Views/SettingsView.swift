@@ -63,13 +63,39 @@ struct ExportView: View {
         NavigationView {
             VStack(spacing: 20) {
                 if viewModel.isExporting {
-                    VStack(spacing: 12) {
-                        ProgressView("Exporting...")
+                    VStack(spacing: 20) {
+                        ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
-                        Text("Preparing your data...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .scaleEffect(1.5)
+                        
+                        VStack(spacing: 8) {
+                            Text("Exporting...")
+                                .font(.headline)
+                            
+                            if !viewModel.exportProgress.isEmpty {
+                                Text(viewModel.exportProgress)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Button(action: {
+                            viewModel.cancelExport()
+                        }) {
+                            HStack {
+                                Image(systemName: "xmark.circle.fill")
+                                Text("Cancel Export")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.red)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        .padding(.top, 8)
                     }
+                    .padding()
                 } else {
                     VStack(spacing: 16) {
                         // Export format description
@@ -291,6 +317,7 @@ struct ExportOptionsView: View {
                     Toggle("Crossed Out Items", isOn: $options.includeCrossedOutItems)
                     Toggle("Item Descriptions", isOn: $options.includeDescriptions)
                     Toggle("Item Quantities", isOn: $options.includeQuantities)
+                    Toggle("Item Images", isOn: $options.includeImages)
                     Toggle("Dates", isOn: $options.includeDates)
                     Toggle("Archived Lists", isOn: $options.includeArchivedLists)
                 }

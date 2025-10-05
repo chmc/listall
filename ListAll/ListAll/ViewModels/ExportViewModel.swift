@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// ViewModel responsible for managing export operations and UI state
 class ExportViewModel: ObservableObject {
     @Published var isExporting = false
+    @Published var exportProgress: String = ""
     @Published var showShareSheet = false
     @Published var exportedFileURL: URL?
     @Published var errorMessage: String?
@@ -15,9 +16,19 @@ class ExportViewModel: ObservableObject {
     @Published var showOptionsSheet = false
     
     private let exportService: ExportService
+    private var exportTask: Task<Void, Never>?
     
     init(exportService: ExportService = ExportService()) {
         self.exportService = exportService
+    }
+    
+    /// Cancels the current export operation
+    func cancelExport() {
+        exportTask?.cancel()
+        exportTask = nil
+        isExporting = false
+        exportProgress = ""
+        errorMessage = "Export cancelled"
     }
     
     // MARK: - Export Methods
@@ -27,30 +38,58 @@ class ExportViewModel: ObservableObject {
         isExporting = true
         errorMessage = nil
         successMessage = nil
+        exportProgress = "Preparing export..."
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            guard let jsonData = self.exportService.exportToJSON(options: self.exportOptions) else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to export data to JSON"
-                    self.isExporting = false
+        exportTask = Task { @MainActor in
+            do {
+                // Check for cancellation
+                try Task.checkCancellation()
+                
+                exportProgress = "Collecting data..."
+                
+                // Perform export on background thread
+                let jsonData = try await Task.detached(priority: .userInitiated) { [weak self] in
+                    guard let self = self else { throw ExportError.cancelled }
+                    
+                    // Check for cancellation periodically
+                    try Task.checkCancellation()
+                    
+                    guard let data = self.exportService.exportToJSON(options: self.exportOptions) else {
+                        throw ExportError.exportFailed("Failed to export data to JSON")
+                    }
+                    return data
+                }.value
+                
+                try Task.checkCancellation()
+                exportProgress = "Creating file..."
+                
+                // Create temporary file
+                let fileName = "ListAll-Export-\(formatDateForFilename(Date())).json"
+                guard let fileURL = createTemporaryFile(data: jsonData, fileName: fileName) else {
+                    throw ExportError.exportFailed("Failed to create export file")
                 }
-                return
-            }
-            
-            // Create temporary file
-            let fileName = "ListAll-Export-\(self.formatDateForFilename(Date())).json"
-            let fileURL = self.createTemporaryFile(data: jsonData, fileName: fileName)
-            
-            DispatchQueue.main.async {
-                if let fileURL = fileURL {
-                    self.exportedFileURL = fileURL
-                    self.showShareSheet = true
-                    self.successMessage = "JSON export ready"
-                } else {
-                    self.errorMessage = "Failed to create export file"
-                }
-                self.isExporting = false
+                
+                try Task.checkCancellation()
+                exportProgress = "Export complete!"
+                
+                exportedFileURL = fileURL
+                showShareSheet = true
+                successMessage = "JSON export ready"
+                isExporting = false
+                exportProgress = ""
+                
+            } catch is CancellationError {
+                // Task was cancelled
+                isExporting = false
+                exportProgress = ""
+            } catch let error as ExportError {
+                errorMessage = error.message
+                isExporting = false
+                exportProgress = ""
+            } catch {
+                errorMessage = "Export failed: \(error.localizedDescription)"
+                isExporting = false
+                exportProgress = ""
             }
         }
     }
@@ -60,39 +99,55 @@ class ExportViewModel: ObservableObject {
         isExporting = true
         errorMessage = nil
         successMessage = nil
+        exportProgress = "Preparing export..."
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            guard let csvString = self.exportService.exportToCSV(options: self.exportOptions) else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to export data to CSV"
-                    self.isExporting = false
+        exportTask = Task { @MainActor in
+            do {
+                try Task.checkCancellation()
+                exportProgress = "Collecting data..."
+                
+                let csvData = try await Task.detached(priority: .userInitiated) { [weak self] in
+                    guard let self = self else { throw ExportError.cancelled }
+                    try Task.checkCancellation()
+                    
+                    guard let csvString = self.exportService.exportToCSV(options: self.exportOptions) else {
+                        throw ExportError.exportFailed("Failed to export data to CSV")
+                    }
+                    
+                    guard let data = csvString.data(using: .utf8) else {
+                        throw ExportError.exportFailed("Failed to encode CSV data")
+                    }
+                    return data
+                }.value
+                
+                try Task.checkCancellation()
+                exportProgress = "Creating file..."
+                
+                let fileName = "ListAll-Export-\(formatDateForFilename(Date())).csv"
+                guard let fileURL = createTemporaryFile(data: csvData, fileName: fileName) else {
+                    throw ExportError.exportFailed("Failed to create export file")
                 }
-                return
-            }
-            
-            // Convert string to data
-            guard let csvData = csvString.data(using: .utf8) else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to encode CSV data"
-                    self.isExporting = false
-                }
-                return
-            }
-            
-            // Create temporary file
-            let fileName = "ListAll-Export-\(self.formatDateForFilename(Date())).csv"
-            let fileURL = self.createTemporaryFile(data: csvData, fileName: fileName)
-            
-            DispatchQueue.main.async {
-                if let fileURL = fileURL {
-                    self.exportedFileURL = fileURL
-                    self.showShareSheet = true
-                    self.successMessage = "CSV export ready"
-                } else {
-                    self.errorMessage = "Failed to create export file"
-                }
-                self.isExporting = false
+                
+                try Task.checkCancellation()
+                exportProgress = "Export complete!"
+                
+                exportedFileURL = fileURL
+                showShareSheet = true
+                successMessage = "CSV export ready"
+                isExporting = false
+                exportProgress = ""
+                
+            } catch is CancellationError {
+                isExporting = false
+                exportProgress = ""
+            } catch let error as ExportError {
+                errorMessage = error.message
+                isExporting = false
+                exportProgress = ""
+            } catch {
+                errorMessage = "Export failed: \(error.localizedDescription)"
+                isExporting = false
+                exportProgress = ""
             }
         }
     }
@@ -102,39 +157,55 @@ class ExportViewModel: ObservableObject {
         isExporting = true
         errorMessage = nil
         successMessage = nil
+        exportProgress = "Preparing export..."
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            guard let plainText = self.exportService.exportToPlainText(options: self.exportOptions) else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to export data to plain text"
-                    self.isExporting = false
+        exportTask = Task { @MainActor in
+            do {
+                try Task.checkCancellation()
+                exportProgress = "Collecting data..."
+                
+                let textData = try await Task.detached(priority: .userInitiated) { [weak self] in
+                    guard let self = self else { throw ExportError.cancelled }
+                    try Task.checkCancellation()
+                    
+                    guard let plainText = self.exportService.exportToPlainText(options: self.exportOptions) else {
+                        throw ExportError.exportFailed("Failed to export data to plain text")
+                    }
+                    
+                    guard let data = plainText.data(using: .utf8) else {
+                        throw ExportError.exportFailed("Failed to encode text data")
+                    }
+                    return data
+                }.value
+                
+                try Task.checkCancellation()
+                exportProgress = "Creating file..."
+                
+                let fileName = "ListAll-Export-\(formatDateForFilename(Date())).txt"
+                guard let fileURL = createTemporaryFile(data: textData, fileName: fileName) else {
+                    throw ExportError.exportFailed("Failed to create export file")
                 }
-                return
-            }
-            
-            // Convert string to data
-            guard let textData = plainText.data(using: .utf8) else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to encode text data"
-                    self.isExporting = false
-                }
-                return
-            }
-            
-            // Create temporary file
-            let fileName = "ListAll-Export-\(self.formatDateForFilename(Date())).txt"
-            let fileURL = self.createTemporaryFile(data: textData, fileName: fileName)
-            
-            DispatchQueue.main.async {
-                if let fileURL = fileURL {
-                    self.exportedFileURL = fileURL
-                    self.showShareSheet = true
-                    self.successMessage = "Plain text export ready"
-                } else {
-                    self.errorMessage = "Failed to create export file"
-                }
-                self.isExporting = false
+                
+                try Task.checkCancellation()
+                exportProgress = "Export complete!"
+                
+                exportedFileURL = fileURL
+                showShareSheet = true
+                successMessage = "Plain text export ready"
+                isExporting = false
+                exportProgress = ""
+                
+            } catch is CancellationError {
+                isExporting = false
+                exportProgress = ""
+            } catch let error as ExportError {
+                errorMessage = error.message
+                isExporting = false
+                exportProgress = ""
+            } catch {
+                errorMessage = "Export failed: \(error.localizedDescription)"
+                isExporting = false
+                exportProgress = ""
             }
         }
     }
@@ -199,9 +270,27 @@ class ExportViewModel: ObservableObject {
     
     /// Cleans up temporary export file
     func cleanup() {
+        exportTask?.cancel()
+        exportTask = nil
         if let fileURL = exportedFileURL {
             try? FileManager.default.removeItem(at: fileURL)
             exportedFileURL = nil
+        }
+    }
+}
+
+// MARK: - Export Error
+
+enum ExportError: Error {
+    case cancelled
+    case exportFailed(String)
+    
+    var message: String {
+        switch self {
+        case .cancelled:
+            return "Export cancelled"
+        case .exportFailed(let msg):
+            return msg
         }
     }
 }

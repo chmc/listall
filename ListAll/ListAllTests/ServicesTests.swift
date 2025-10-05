@@ -1038,6 +1038,182 @@ final class ServicesTests: XCTestCase {
         XCTAssertTrue(success || !success, "Clipboard operation should complete without crashing")
     }
     
+    // MARK: - Export with Images Tests
+    
+    func testExportToJSONWithImages() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        
+        // Create test data with an item that has images
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        let item = repository.createItem(in: list, title: "Item with Image", description: "Test Description", quantity: 1)
+        
+        // Create a simple 1x1 red pixel image
+        let imageSize = CGSize(width: 1, height: 1)
+        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        let testImage = renderer.image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(origin: .zero, size: imageSize))
+        }
+        
+        // Add image to item
+        guard let imageData = testImage.jpegData(compressionQuality: 0.8) else {
+            XCTFail("Failed to create test image data")
+            return
+        }
+        let _ = repository.addImage(to: item, imageData: imageData)
+        
+        // Export with images included (default option)
+        let jsonData = exportService.exportToJSON(options: .default)
+        XCTAssertNotNil(jsonData, "Should export data with images to JSON")
+        
+        // Verify JSON can be decoded
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let exportData = try decoder.decode(ExportData.self, from: jsonData!)
+        
+        XCTAssertEqual(exportData.lists.count, 1, "Should have one list")
+        XCTAssertEqual(exportData.lists.first?.items.count, 1, "Should have one item")
+        
+        let exportedItem = exportData.lists.first?.items.first
+        XCTAssertNotNil(exportedItem, "Should have exported item")
+        XCTAssertEqual(exportedItem?.images.count, 1, "Should have one image")
+        XCTAssertFalse(exportedItem?.images.first?.imageData.isEmpty ?? true, "Image data should not be empty")
+        
+        // Verify the image data is valid base64
+        let base64String = exportedItem?.images.first?.imageData ?? ""
+        XCTAssertNotNil(Data(base64Encoded: base64String), "Image data should be valid base64")
+    }
+    
+    func testExportToJSONWithoutImages() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        
+        // Create test data with an item that has images
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        let item = repository.createItem(in: list, title: "Item with Image", description: "Test Description", quantity: 1)
+        
+        // Create a simple test image
+        let imageSize = CGSize(width: 1, height: 1)
+        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        let testImage = renderer.image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(origin: .zero, size: imageSize))
+        }
+        
+        // Add image to item
+        guard let imageData = testImage.jpegData(compressionQuality: 0.8) else {
+            XCTFail("Failed to create test image data")
+            return
+        }
+        let _ = repository.addImage(to: item, imageData: imageData)
+        
+        // Export with images excluded (minimal option)
+        let jsonData = exportService.exportToJSON(options: .minimal)
+        XCTAssertNotNil(jsonData, "Should export data without images to JSON")
+        
+        // Verify JSON can be decoded
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let exportData = try decoder.decode(ExportData.self, from: jsonData!)
+        
+        XCTAssertEqual(exportData.lists.count, 1, "Should have one list")
+        XCTAssertEqual(exportData.lists.first?.items.count, 1, "Should have one item")
+        
+        let exportedItem = exportData.lists.first?.items.first
+        XCTAssertNotNil(exportedItem, "Should have exported item")
+        XCTAssertEqual(exportedItem?.images.count, 0, "Should have no images when includeImages is false")
+    }
+    
+    func testExportToJSONWithMultipleImages() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        
+        // Create test data with an item that has multiple images
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        let item = repository.createItem(in: list, title: "Item with Multiple Images", description: "", quantity: 1)
+        
+        // Add multiple images
+        for i in 0..<3 {
+            let imageSize = CGSize(width: 1, height: 1)
+            let renderer = UIGraphicsImageRenderer(size: imageSize)
+            let testImage = renderer.image { context in
+                // Use different colors for each image
+                let colors: [UIColor] = [.red, .green, .blue]
+                colors[i].setFill()
+                context.fill(CGRect(origin: .zero, size: imageSize))
+            }
+            
+            if let imageData = testImage.jpegData(compressionQuality: 0.8) {
+                let _ = repository.addImage(to: item, imageData: imageData)
+            }
+        }
+        
+        // Export with images included
+        let jsonData = exportService.exportToJSON(options: .default)
+        XCTAssertNotNil(jsonData, "Should export data with multiple images to JSON")
+        
+        // Verify JSON can be decoded
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let exportData = try decoder.decode(ExportData.self, from: jsonData!)
+        
+        let exportedItem = exportData.lists.first?.items.first
+        XCTAssertNotNil(exportedItem, "Should have exported item")
+        XCTAssertEqual(exportedItem?.images.count, 3, "Should have three images")
+        
+        // Verify all images have valid base64 data
+        for image in exportedItem?.images ?? [] {
+            XCTAssertFalse(image.imageData.isEmpty, "Image data should not be empty")
+            XCTAssertNotNil(Data(base64Encoded: image.imageData), "Image data should be valid base64")
+        }
+    }
+    
+    func testExportOptionsIncludeImages() throws {
+        // Test default options includes images
+        let defaultOptions = ExportOptions.default
+        XCTAssertTrue(defaultOptions.includeImages, "Default should include images")
+        
+        // Test minimal options excludes images
+        let minimalOptions = ExportOptions.minimal
+        XCTAssertFalse(minimalOptions.includeImages, "Minimal should not include images")
+        
+        // Test custom options
+        var customOptions = ExportOptions.default
+        customOptions.includeImages = false
+        XCTAssertFalse(customOptions.includeImages, "Custom option should respect includeImages setting")
+    }
+    
+    func testExportToJSONItemWithNoImages() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        
+        // Create test data with an item that has no images
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+        let _ = repository.createItem(in: list, title: "Item without Image", description: "Test", quantity: 1)
+        
+        // Export with images included
+        let jsonData = exportService.exportToJSON(options: .default)
+        XCTAssertNotNil(jsonData, "Should export data to JSON")
+        
+        // Verify JSON can be decoded
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let exportData = try decoder.decode(ExportData.self, from: jsonData!)
+        
+        let exportedItem = exportData.lists.first?.items.first
+        XCTAssertNotNil(exportedItem, "Should have exported item")
+        XCTAssertEqual(exportedItem?.images.count, 0, "Should have zero images for item without images")
+    }
+    
     func testExportPlainTextWithoutDescriptions() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let repository = TestDataRepository(dataManager: testDataManager)

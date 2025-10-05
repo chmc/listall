@@ -1,5 +1,72 @@
 # AI Changelog
 
+## 2025-10-05 - Phase 43: Image Export Support & Export UX Improvements ✅ COMPLETED
+
+### Summary
+Implemented comprehensive image export functionality for JSON exports with base64 encoding, added missing UI toggle for image inclusion, and significantly enhanced export UX with progress indicators and cancellation support to address app freezing issues.
+
+### Features Implemented
+
+**1. Image Export to JSON**
+- Extended `ExportOptions` with `includeImages` boolean flag (default: true, minimal: false)
+- Created `ItemImageExportData` struct with base64-encoded image data
+- Updated `ItemExportData` to include `images: [ItemImageExportData]` array
+- Modified export methods to conditionally include images based on options
+- Added "Item Images" toggle to Export Options UI in settings
+
+**2. Export Progress & Cancellation**
+- Converted all export operations from `DispatchQueue` to async/await with `Task` support
+- Added cancellable task management with proper cleanup
+- Implemented real-time progress tracking with messages:
+  - "Preparing export..."
+  - "Collecting data..."
+  - "Creating file..."
+  - "Export complete!"
+- Created enhanced progress UI with:
+  - Larger progress spinner (1.5x scale)
+  - Dynamic progress message display
+  - Prominent red "Cancel Export" button
+- Added `cancelExport()` method with proper state cleanup
+- Implemented custom `ExportError` enum for better error handling
+
+### Technical Changes
+
+**Files Modified**:
+1. `ExportService.swift`: Added `includeImages` to options, `ItemImageExportData` struct
+2. `ExportViewModel.swift`: Task-based exports with progress tracking and cancellation
+3. `SettingsView.swift`: Added images toggle and enhanced progress UI
+4. `ServicesTests.swift`: Added 6 new tests for image export scenarios
+
+### Test Coverage
+- ✅ Export with images (base64 validation)
+- ✅ Export without images (minimal options)
+- ✅ Export with multiple images (3+ per item)
+- ✅ Export items without images (empty array handling)
+- ✅ Options presets (default/minimal)
+- ✅ All existing tests pass (backward compatibility)
+
+### User Experience Improvements
+
+**Before**:
+- App froze during exports with no feedback
+- No way to cancel operations
+- No visibility into export progress
+- Images toggle missing from UI
+
+**After**:
+- App remains responsive during exports
+- Real-time progress updates
+- Cancel button available at all times
+- Complete control over image inclusion via UI toggle
+
+### Build Status
+- ✅ Build: SUCCESS (100%)
+- ✅ No linter errors
+- ✅ All tests passing
+- ✅ UI properly displays progress and cancellation
+
+---
+
 ## 2025-10-05 - Fix: Share Sheet Empty on First Try ✅ FULLY FIXED
 
 ### Root Cause: SwiftUI State Synchronization Timing Issue

@@ -362,8 +362,16 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
-## Phase 43: Option to include images to json export
-- ❌ Add item images part of json export
+## Phase 43: Option to include images to json export ✅ COMPLETED
+- ✅ Add `includeImages` option to ExportOptions struct
+- ✅ Update ItemExportData to include images array (base64 encoded)
+- ✅ Update ExportService to encode images when option is enabled
+- ✅ Add "Item Images" toggle to Export Options UI
+- ✅ Add comprehensive tests for image export functionality
+- ✅ Add progress indicators with cancel button for all export operations
+- ✅ Convert export operations to async/await with Task cancellation support
+- ✅ Build validation passed (100% success)
+- ✅ Export options UI now includes toggle for "Item Images"
 
 ## Phase 44: Option to include images to json share
 - ❌ Add item images part of json share
