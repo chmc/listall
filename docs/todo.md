@@ -362,7 +362,14 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (198/198 = 100% success rate)
 
+## Phase 43: Option to include images to json export
+- ❌ Add item images part of json export
+
+## Phase 44: Option to include images to json share
+- ❌ Add item images part of json share
+
 ## Phase
+- ❌ 
 
 ## Improvement 1: Sharing Features ✅ COMPLETED
 - ✅ Implement SharingService for list sharing (multiple formats)
