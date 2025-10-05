@@ -373,10 +373,13 @@
 - ✅ Build validation passed (100% success)
 - ✅ Export options UI now includes toggle for "Item Images"
 
-## Phase 44: Option to include images to json share
+## Phase 44: Add optional item image support to import functionality
+- ❌ Optional item image support to import functionality
+
+## Phase 45: Option to include images to json share
 - ❌ Add item images part of json share
 
-## Phase 45: Move item to another list
+## Phase 46: Move item to another list
 - ❌ Ability to move item to another list
 
 ## Phase
