@@ -368,6 +368,9 @@
 ## Phase 44: Option to include images to json share
 - ❌ Add item images part of json share
 
+## Phase 45: Move item to another list
+- ❌ Ability to move item to another list
+
 ## Phase
 - ❌ 
 
