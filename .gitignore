@@ -131,6 +131,10 @@ DerivedData/
 *.log
 logs/
 
+# Build and test output logs
+build_output.txt
+test_output.txt
+
 # Coverage reports
 *.coverage
 *.gcov
