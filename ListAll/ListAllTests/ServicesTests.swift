@@ -2148,22 +2148,12 @@ final class ServicesTests: XCTestCase {
         let testList = List(name: "My List")
         testDataManager.addList(testList)
         
-        // Share list as URL
+        // Share list as URL - should now return error (URL sharing removed)
         let result = sharingService.shareList(testList, format: .url)
         
-        XCTAssertNotNil(result, "Should create share result")
-        XCTAssertEqual(result?.format, .url, "Should be URL format")
-        
-        guard let url = result?.content as? URL else {
-            XCTFail("Content should be a URL")
-            return
-        }
-        
-        // Verify URL format
-        XCTAssertEqual(url.scheme, "listall", "Should use listall scheme")
-        XCTAssertEqual(url.host, "list", "Should have list host")
-        XCTAssertTrue(url.absoluteString.contains(testList.id.uuidString), "Should contain list ID")
-        XCTAssertTrue(url.absoluteString.contains("name=My%20List"), "Should contain encoded list name")
+        XCTAssertNil(result, "Should not create share result for URL format")
+        XCTAssertNotNil(sharingService.shareError, "Should have error message")
+        XCTAssertEqual(sharingService.shareError, "URL sharing is not supported (app is not publicly distributed)", "Should have correct error message")
     }
     
     func testShareListInvalidList() throws {

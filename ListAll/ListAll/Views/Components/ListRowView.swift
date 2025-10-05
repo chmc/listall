@@ -3,9 +3,16 @@ import SwiftUI
 struct ListRowView: View {
     let list: List
     @ObservedObject var mainViewModel: MainViewModel
+    @StateObject private var sharingService = SharingService()
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
     @State private var showingDuplicateAlert = false
+    @State private var showingShareFormatPicker = false
+    @State private var showingShareSheet = false
+    @State private var selectedShareFormat: ShareFormat = .plainText
+    @State private var shareOptions: ShareOptions = .default
+    @State private var shareFileURL: URL?
+    @State private var shareItems: [Any] = []
     
     private var listContent: some View {
         HStack {
@@ -59,6 +66,12 @@ struct ListRowView: View {
         .if(!mainViewModel.isInSelectionMode) { view in
             view.contextMenu {
                 Button(action: {
+                    showingShareFormatPicker = true
+                }) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+                
+                Button(action: {
                     showingEditSheet = true
                 }) {
                     Label("Edit", systemImage: "pencil")
@@ -89,6 +102,13 @@ struct ListRowView: View {
         .if(!mainViewModel.isInSelectionMode) { view in
             view.swipeActions(edge: .leading) {
                 Button(action: {
+                    showingShareFormatPicker = true
+                }) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+                .tint(.orange)
+                
+                Button(action: {
                     showingDuplicateAlert = true
                 }) {
                     Label("Duplicate", systemImage: "doc.on.doc")
@@ -105,6 +125,32 @@ struct ListRowView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             EditListView(list: list, mainViewModel: mainViewModel)
+        }
+        .sheet(isPresented: $showingShareFormatPicker) {
+            ShareFormatPickerView(
+                selectedFormat: $selectedShareFormat,
+                shareOptions: $shareOptions,
+                onShare: { format, options in
+                    handleShare(format: format, options: options)
+                }
+            )
+        }
+        .background(
+            Group {
+                if showingShareSheet && !shareItems.isEmpty {
+                    ActivityViewController(activityItems: shareItems) {
+                        showingShareSheet = false
+                        shareItems = []
+                    }
+                }
+            }
+        )
+        .alert("Share Error", isPresented: .constant(sharingService.shareError != nil)) {
+            Button("OK") {
+                sharingService.clearError()
+            }
+        } message: {
+            Text(sharingService.shareError ?? "")
         }
         .alert("Delete List", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -126,6 +172,35 @@ struct ListRowView: View {
             }
         } message: {
             Text("This will create a copy of \"\(list.name)\" with all its items.")
+        }
+    }
+    
+    private func handleShare(format: ShareFormat, options: ShareOptions) {
+        // Create share content asynchronously
+        DispatchQueue.global(qos: .userInitiated).async { [weak sharingService] in
+            guard let shareResult = sharingService?.shareList(list, format: format, options: options) else {
+                return
+            }
+            
+            // Update UI on main thread
+            DispatchQueue.main.async {
+                // Use UIActivityItemSource for proper iOS sharing
+                if let fileURL = shareResult.content as? URL {
+                    // File-based sharing (JSON)
+                    let filename = shareResult.fileName ?? "export.json"
+                    let itemSource = FileActivityItemSource(fileURL: fileURL, filename: filename)
+                    self.shareFileURL = nil
+                    self.shareItems = [itemSource]
+                } else if let text = shareResult.content as? String {
+                    // Text-based sharing (Plain Text)
+                    let itemSource = TextActivityItemSource(text: text, subject: list.name)
+                    self.shareFileURL = nil
+                    self.shareItems = [itemSource]
+                }
+                
+                // Present immediately - no delay needed with direct presentation
+                self.showingShareSheet = true
+            }
         }
     }
 }

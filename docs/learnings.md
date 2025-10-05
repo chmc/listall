@@ -1,5 +1,104 @@
 # Technical Learnings
 
+## SwiftUI + UIKit Integration: State Synchronization Timing
+
+### UIActivityViewController Empty Share Sheet Issue (October 2025)
+
+- **Issue**: Share sheet (`UIActivityViewController`) appeared empty on first attempt, required retry to work. All sharing options (Messages, Mail, AirDrop) were missing initially.
+
+- **Symptoms**:
+  - First tap on share button: Empty share sheet with no sharing options
+  - Second tap: Share sheet appeared correctly with all options
+  - Error logs: `Send action timed out`, `XPC connection interrupted`
+  - No obvious code errors - proper data was prepared
+
+- **Initial Debugging Attempts** (all unsuccessful):
+  1. ✗ Type casting to `NSString` instead of Swift `String`
+  2. ✗ Creating temporary files instead of raw strings
+  3. ✗ Changing file location from `temporaryDirectory` to `Documents`
+  4. ✗ Adding file indexing delays with `Thread.sleep()`
+  5. ✓ Implementing `UIActivityItemSource` protocol (correct but insufficient)
+
+- **Root Cause**: SwiftUI state propagation timing issue
+  - When `@State` variable (`shareItems`) is updated, SwiftUI needs time to propagate changes through view hierarchy
+  - Immediately setting `showingShareSheet = true` presents sheet before state is fully synchronized
+  - `UIActivityViewController` receives stale/empty `shareItems` array
+  - Issue is SwiftUI-specific, not related to `UIActivityViewController` or iOS sharing APIs
+
+- **Solution**: Combined two patterns
+  1. **Use `UIActivityItemSource` protocol** (Apple's recommended pattern):
+     ```swift
+     class TextActivityItemSource: NSObject, UIActivityItemSource {
+         private let text: String
+         private let subject: String
+         
+         func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+             return text  // Placeholder for initial sizing
+         }
+         
+         func activityViewController(_ activityViewController: UIActivityViewController, 
+                                   itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+             return text  // Actual content when needed
+         }
+         
+         func activityViewController(_ activityViewController: UIActivityViewController,
+                                   subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+             return subject  // Metadata for email/messages
+         }
+     }
+     ```
+
+  2. **Add state synchronization delay**:
+     ```swift
+     DispatchQueue.main.async {
+         // Update state
+         self.shareItems = [itemSource]
+         
+         // CRITICAL: Delay before presenting sheet
+         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+             self.showingShareSheet = true
+         }
+     }
+     ```
+
+- **Why This Works**:
+  - `UIActivityItemSource`: Provides proper async data loading and metadata
+  - 50ms delay: Gives SwiftUI time to propagate `shareItems` state update before sheet presentation
+  - Result: `UIActivityViewController` always receives correct, populated data
+
+- **Key Insights**:
+  - **SwiftUI State ≠ Instant**: State updates need propagation time through view hierarchy
+  - **UIKit Timing**: UIKit components presented from SwiftUI may access state before SwiftUI finishes updating
+  - **Delays Aren't Always Bad**: Small delays for state sync are sometimes necessary and correct
+  - **Don't Guess**: Implemented proper iOS patterns (`UIActivityItemSource`) first, then addressed SwiftUI-specific timing
+  - **Error Logs Are Clues**: `Send action timed out` pointed to timing issue, not data issue
+
+- **When to Use This Pattern**:
+  - Presenting any UIKit component from SwiftUI that depends on `@State` data
+  - Sheet presentation after state updates (especially with arrays/collections)
+  - Any UIKit wrapper (`UIViewControllerRepresentable`) accessing SwiftUI state
+  - Cases where UIKit needs SwiftUI data to be fully synchronized
+
+- **Prevention Checklist**:
+  - [ ] Is UIKit component accessing SwiftUI `@State` data?
+  - [ ] Is sheet/presentation triggered immediately after state update?
+  - [ ] Does the component work on second try but not first? (Classic timing issue)
+  - [ ] Add small async delay between state update and presentation
+  - [ ] Use proper iOS protocols (`UIActivityItemSource`, etc.) for their intended purpose
+
+- **Testing**:
+  - Manual testing revealed the issue (simulator and real device)
+  - Unit tests passed (they don't catch UI timing issues)
+  - User confirmation essential for UI interaction bugs
+
+- **Result**: ✅ Share sheet works perfectly on first try, every time
+
+- **Time Spent**: ~6 iteration cycles debugging (file handling, timing, protocols, state sync)
+
+- **Lesson**: When integrating UIKit with SwiftUI, respect both frameworks' timing requirements. SwiftUI's declarative state needs propagation time; UIKit's imperative presentation happens instantly. Bridge them with small async delays when state must be fully synchronized.
+
+---
+
 ## SwiftUI Focus Management & Keyboard Dismissal
 
 ### TextField vs TextEditor Focus Handling (Phase 31 - October 2025)

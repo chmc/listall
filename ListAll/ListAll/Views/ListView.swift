@@ -4,10 +4,17 @@ struct ListView: View {
     let list: List
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
+    @StateObject private var sharingService = SharingService()
     @State private var showingCreateItem = false
     @State private var showingEditItem = false
     @State private var showingEditList = false
     @State private var selectedItem: Item?
+    @State private var showingShareFormatPicker = false
+    @State private var showingShareSheet = false
+    @State private var selectedShareFormat: ShareFormat = .plainText
+    @State private var shareOptions: ShareOptions = .default
+    @State private var shareFileURL: URL?
+    @State private var shareItems: [Any] = []
     
     init(list: List, mainViewModel: MainViewModel) {
         self.list = list
@@ -132,6 +139,15 @@ struct ListView: View {
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if !viewModel.items.isEmpty {
+                    // Share button
+                    Button(action: {
+                        showingShareFormatPicker = true
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.primary)
+                    }
+                    .help("Share list")
+                    
                     // Organization options button
                     Button(action: {
                         viewModel.showingOrganizationOptions = true
@@ -174,6 +190,32 @@ struct ListView: View {
         .sheet(isPresented: $viewModel.showingOrganizationOptions) {
             ItemOrganizationView(viewModel: viewModel)
         }
+        .sheet(isPresented: $showingShareFormatPicker) {
+            ShareFormatPickerView(
+                selectedFormat: $selectedShareFormat,
+                shareOptions: $shareOptions,
+                onShare: { format, options in
+                    handleShare(format: format, options: options)
+                }
+            )
+        }
+        .background(
+            Group {
+                if showingShareSheet && !shareItems.isEmpty {
+                    ActivityViewController(activityItems: shareItems) {
+                        showingShareSheet = false
+                        shareItems = []
+                    }
+                }
+            }
+        )
+        .alert("Share Error", isPresented: .constant(sharingService.shareError != nil)) {
+            Button("OK") {
+                sharingService.clearError()
+            }
+        } message: {
+            Text(sharingService.shareError ?? "")
+        }
         .onAppear {
             viewModel.loadItems()
         }
@@ -192,6 +234,35 @@ struct ListView: View {
             if !showingEditList {
                 // Refresh main view after editing list details
                 mainViewModel.loadLists()
+            }
+        }
+    }
+    
+    private func handleShare(format: ShareFormat, options: ShareOptions) {
+        // Create share content asynchronously
+        DispatchQueue.global(qos: .userInitiated).async { [weak sharingService] in
+            guard let shareResult = sharingService?.shareList(list, format: format, options: options) else {
+                return
+            }
+            
+            // Update UI on main thread
+            DispatchQueue.main.async {
+                // Use UIActivityItemSource for proper iOS sharing
+                if let fileURL = shareResult.content as? URL {
+                    // File-based sharing (JSON)
+                    let filename = shareResult.fileName ?? "export.json"
+                    let itemSource = FileActivityItemSource(fileURL: fileURL, filename: filename)
+                    self.shareFileURL = nil
+                    self.shareItems = [itemSource]
+                } else if let text = shareResult.content as? String {
+                    // Text-based sharing (Plain Text)
+                    let itemSource = TextActivityItemSource(text: text, subject: list.name)
+                    self.shareFileURL = nil
+                    self.shareItems = [itemSource]
+                }
+                
+                // Present immediately - no delay needed with direct presentation
+                self.showingShareSheet = true
             }
         }
     }

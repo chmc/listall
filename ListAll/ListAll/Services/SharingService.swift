@@ -96,7 +96,8 @@ class SharingService: ObservableObject {
         case .json:
             return shareListAsJSON(list, options: options)
         case .url:
-            return shareListAsURL(list)
+            shareError = "URL sharing is not supported (app is not publicly distributed)"
+            return nil
         }
     }
     
@@ -156,7 +157,9 @@ class SharingService: ObservableObject {
         textContent += "\n---\n"
         textContent += "Shared from ListAll\n"
         
-        return ShareResult(format: .plainText, content: textContent)
+        // Return raw text directly - UIActivityViewController handles it better than files
+        // No LaunchServices indexing issues with raw strings
+        return ShareResult(format: .plainText, content: textContent as NSString, fileName: nil)
     }
     
     /// Creates shareable JSON content for a list
@@ -197,18 +200,6 @@ class SharingService: ObservableObject {
         }
     }
     
-    /// Creates shareable URL for a list (deep link)
-    private func shareListAsURL(_ list: List) -> ShareResult? {
-        // Create a deep link URL using custom URL scheme
-        let urlString = "listall://list/\(list.id.uuidString)?name=\(list.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
-        
-        guard let url = URL(string: urlString) else {
-            shareError = "Failed to create URL"
-            return nil
-        }
-        
-        return ShareResult(format: .url, content: url)
-    }
     
     // MARK: - Share All Data
     
@@ -224,7 +215,10 @@ class SharingService: ObservableObject {
                 shareError = "Failed to export to plain text"
                 return nil
             }
-            return ShareResult(format: .plainText, content: plainText)
+            
+            // Return raw text directly - UIActivityViewController handles it better than files
+            // No LaunchServices indexing issues with raw strings
+            return ShareResult(format: .plainText, content: plainText as NSString, fileName: nil)
             
         case .json:
             guard let jsonData = exportService.exportToJSON(options: exportOptions) else {
@@ -291,13 +285,33 @@ class SharingService: ObservableObject {
     
     // MARK: - Helper Methods
     
-    /// Creates a temporary file with the given data
+    /// Creates a temporary file with the given data in Documents directory
+    /// Using Documents instead of temp fixes LaunchServices indexing issues
     private func createTemporaryFile(data: Data, fileName: String) -> URL? {
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent(fileName)
+        guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        
+        // Create a temp subfolder
+        let tempDir = documentsDir.appendingPathComponent("Temp", isDirectory: true)
         
         do {
-            try data.write(to: fileURL)
+            // Create temp directory if it doesn't exist
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
+            
+            let fileURL = tempDir.appendingPathComponent(fileName)
+            
+            // Remove existing file if present
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                try FileManager.default.removeItem(at: fileURL)
+            }
+            
+            // Write file with proper attributes
+            try data.write(to: fileURL, options: [.atomic])
+            
+            // Set file attributes to make it more accessible
+            try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileURL.path)
+            
             return fileURL
         } catch {
             print("Failed to write temporary file: \(error)")

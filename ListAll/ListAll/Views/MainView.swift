@@ -4,10 +4,16 @@ struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
     @StateObject private var cloudKitService = CloudKitService()
     @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
+    @StateObject private var sharingService = SharingService()
     @State private var selectedTab = 0
     @State private var showingCreateList = false
     @State private var editMode: EditMode = .inactive
     @State private var showingDeleteConfirmation = false
+    @State private var showingShareFormatPicker = false
+    @State private var showingShareSheet = false
+    @State private var selectedShareFormat: ShareFormat = .plainText
+    @State private var shareFileURL: URL?
+    @State private var shareItems: [Any] = []
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -57,6 +63,16 @@ struct MainView: View {
                     ToolbarItem(placement: .navigationBarLeading) {
                         HStack {
                             if !viewModel.isInSelectionMode {
+                                // Share all data button
+                                if !viewModel.lists.isEmpty {
+                                    Button(action: {
+                                        showingShareFormatPicker = true
+                                    }) {
+                                        Image(systemName: "square.and.arrow.up")
+                                    }
+                                    .help("Share all data")
+                                }
+                                
                                 Button(action: {
                                     Task {
                                         await cloudKitService.sync()
@@ -176,6 +192,32 @@ struct MainView: View {
         .sheet(isPresented: $showingCreateList) {
             CreateListView(mainViewModel: viewModel)
         }
+        .sheet(isPresented: $showingShareFormatPicker) {
+            ShareFormatPickerView(
+                selectedFormat: $selectedShareFormat,
+                shareOptions: .constant(.default),
+                onShare: { format, _ in
+                    handleShareAllData(format: format)
+                }
+            )
+        }
+        .background(
+            Group {
+                if showingShareSheet && !shareItems.isEmpty {
+                    ActivityViewController(activityItems: shareItems) {
+                        showingShareSheet = false
+                        shareItems = []
+                    }
+                }
+            }
+        )
+        .alert("Share Error", isPresented: .constant(sharingService.shareError != nil)) {
+            Button("OK") {
+                sharingService.clearError()
+            }
+        } message: {
+            Text(sharingService.shareError ?? "")
+        }
         .alert("Delete Lists", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -188,6 +230,35 @@ struct MainView: View {
         } message: {
             let count = viewModel.selectedLists.count
             Text("Are you sure you want to delete \(count) \(count == 1 ? "list" : "lists")? This action cannot be undone.")
+        }
+    }
+    
+    private func handleShareAllData(format: ShareFormat) {
+        // Create share content asynchronously
+        DispatchQueue.global(qos: .userInitiated).async { [weak sharingService] in
+            guard let shareResult = sharingService?.shareAllData(format: format) else {
+                return
+            }
+            
+            // Update UI on main thread
+            DispatchQueue.main.async {
+                // Use UIActivityItemSource for proper iOS sharing
+                if let fileURL = shareResult.content as? URL {
+                    // File-based sharing (JSON)
+                    let filename = shareResult.fileName ?? "ListAll-Export.json"
+                    let itemSource = FileActivityItemSource(fileURL: fileURL, filename: filename)
+                    self.shareFileURL = nil
+                    self.shareItems = [itemSource]
+                } else if let text = shareResult.content as? String {
+                    // Text-based sharing (Plain Text)
+                    let itemSource = TextActivityItemSource(text: text, subject: "ListAll Export")
+                    self.shareFileURL = nil
+                    self.shareItems = [itemSource]
+                }
+                
+                // Present immediately - no delay needed with direct presentation
+                self.showingShareSheet = true
+            }
         }
     }
 }
