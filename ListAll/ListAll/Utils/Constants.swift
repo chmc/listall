@@ -25,6 +25,15 @@ struct Constants {
         static let showCrossedOutItems = "showCrossedOutItems"
         static let enableCloudSync = "enableCloudSync"
         static let lastSyncDate = "lastSyncDate"
+        static let addButtonPosition = "addButtonPosition"
+    }
+    
+    // MARK: - Add Button Position
+    enum AddButtonPosition: String, CaseIterable, Identifiable {
+        case right = "Right"
+        case left = "Left"
+        
+        var id: String { rawValue }
     }
     
     // MARK: - UI Constants

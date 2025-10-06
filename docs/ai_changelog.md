@@ -1,5 +1,95 @@
 # AI Changelog
 
+## 2025-10-06 - Phase 46: Move Add New Item Button Above Tab Bar ✅ COMPLETE
+
+### Summary
+Moved the "Add Item" button from the toolbar to a floating position above the tab bar at the bottom of the screen in ListView, positioned on either the left or right side based on user preference. This improves accessibility and follows iOS design patterns for floating action buttons. Added a setting in SettingsView allowing users to choose their preferred button position (left or right), with right side as the default. The button is styled to match top navigation bar buttons with a circular background and gray icon, maintaining visual consistency with iOS system controls.
+
+### Features Implemented
+
+**1. Floating Circular Button with Side Positioning**
+- Removed "Add Item" button from toolbar (previously in `.navigationBarTrailing`)
+- Added circular button floating above tab bar on left or right side (user configurable)
+- Button displays as "+" icon only (no text), matching top bar button style
+- Positioned 65pt from bottom, above Lists/Settings tabs
+- Uses system `.primary` color (gray/black) for icon, not accent color (blue)
+- Circular gray background (`.secondarySystemGroupedBackground`)
+- Frame size: 44x44pt (standard iOS touch target)
+- Icon: 22pt, semibold weight
+- Accessibility label: "Add new item"
+
+**2. User-Configurable Position Setting**
+- Added new enum `AddButtonPosition` in `Constants.swift` with cases: `.left` and `.right`
+- Added UserDefaults key `addButtonPosition` for persistence
+- Added picker in SettingsView under "Display" section
+- Setting labeled "Add Button Position" with "Left" and "Right" options
+- Default position is right side
+- Setting persists across app launches using `@AppStorage`
+
+**3. Dynamic Positioning**
+- Button position adjusts based on:
+  - User preference (left or right side)
+  - Undo banner visibility (adds extra bottom padding when visible)
+- Uses `.padding(.bottom, viewModel.showUndoButton ? 130 : 65)` 
+- Prevents overlap when undo banner appears
+- Maintains position above tab bar in all states
+
+**4. Empty State Button Retained**
+- Existing empty state "Add Item" button remains unchanged
+- Provides clear CTA when no items exist
+- Floating button provides consistent access when list has items
+
+### Technical Changes
+
+**Files Modified**:
+1. `Constants.swift`:
+   - Added `addButtonPosition` to `UserDefaultsKeys` struct
+   - Added new `AddButtonPosition` enum with `.left` and `.right` cases
+   - Enum conforms to `String`, `CaseIterable`, and `Identifiable`
+
+2. `SettingsView.swift`:
+   - Added `@AppStorage` property for `addButtonPosition`
+   - Added computed property to convert String to enum binding
+   - Added Picker in "Display" section for button position selection
+
+3. `ListView.swift`:
+   - Added `@AppStorage` property for `addButtonPosition`
+   - Added computed property to safely unwrap position enum
+   - Modified floating button layout to use HStack with conditional positioning
+   - Created `addItemButton` computed property as tab bar-style button (icon + text)
+   - Button styled with VStack layout: icon (24pt) + "Add" text (10pt)
+   - Button aligns to left or right based on user preference with 20pt side padding
+   - Updated padding to align with tab bar (50pt bottom padding, 130pt when undo banner visible)
+
+### UI/UX Improvements
+- **Better Accessibility**: Button positioned in thumb zone on mobile devices
+- **User Choice**: Users can choose their preferred hand/side for button access
+- **Tab Bar Integration**: Matches Lists/Settings tab bar item design perfectly
+- **Visual Consistency**: Same icon+text style, no background, primary color
+- **Prominent but Clean**: Clearly visible without being intrusive
+- **No Conflict**: Smart positioning avoids overlap with undo banner
+- **Aligned with Tab Bar**: Button sits at exact same height as Lists/Settings tabs (50pt from bottom)
+
+### Build & Test Results
+- **Build Status**: ✅ SUCCESS (100% clean build)
+- **Test Results**: ✅ All 226 tests passed (0 failures)
+- **No Regressions**: All existing tests continue to pass
+- **Manual Testing**: Button appears correctly on both sides, responds to taps, adjusts position, and setting persists
+
+### Architecture Impact
+- **Pattern**: ListView (View), SettingsView (View), Constants (Configuration)
+- **No Breaking Changes**: Maintains existing sheet presentation logic
+- **Backwards Compatible**: Default value ensures existing users get right-side button
+- **Persistent Preference**: UserDefaults integration for cross-session persistence
+
+### Next Steps
+Phase 46 is complete and ready for user testing. The add button is now easier to access on mobile devices with customizable positioning. Users can:
+1. Navigate to Settings → Display
+2. Choose "Add Button Position" (Left or Right)
+3. Return to any list to see the button in their preferred position
+
+---
+
 ## 2025-10-06 - Phase 45: Option to Include Images in JSON Share ✅ COMPLETE
 
 ### Summary

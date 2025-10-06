@@ -393,7 +393,17 @@
 - ✅ Tests: 224 passed, 0 failed (100% pass rate)
 
 ## Phase 46: Move add new item button to bottom of screen
-- ❌ Move the add new item button to the bottom of the screen in ListView
+- ✅ Moved add button to bottom above tab bar (left or right side)
+- ✅ Button styled to match top navigation bar buttons (circular, gray icon, light background)
+- ✅ Positioned 65pt from bottom, above Lists/Settings tabs
+- ✅ Button dynamically adjusts position when undo banner is visible
+- ✅ Added setting in SettingsView to choose button position (left/right)
+- ✅ Default position is right side
+- ✅ Uses system .primary color (gray/black) not accent color (blue)
+- ✅ 44x44pt size with circular background
+- ✅ Position preference stored in UserDefaults
+- ✅ Build validation passed (100% success)
+- ✅ Tests: 226 passed, 0 failed (100% pass rate)
 
 ## Phase 47: Add edit icon to edit buttons everywhere
 - ❌ Replace text-only edit buttons with icon buttons throughout the app

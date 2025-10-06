@@ -15,6 +15,11 @@ struct ListView: View {
     @State private var shareOptions: ShareOptions = .default
     @State private var shareFileURL: URL?
     @State private var shareItems: [Any] = []
+    @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
+    
+    private var addButtonPosition: Constants.AddButtonPosition {
+        Constants.AddButtonPosition(rawValue: addButtonPositionRaw) ?? .right
+    }
     
     init(list: List, mainViewModel: MainViewModel) {
         self.list = list
@@ -134,6 +139,23 @@ struct ListView: View {
                     .animation(Theme.Animation.spring, value: viewModel.showUndoButton)
                 }
             }
+            
+            // Add Item Button (floating above tab bar)
+            VStack {
+                Spacer()
+                HStack(spacing: 0) {
+                    if addButtonPosition == .left {
+                        addItemButton
+                            .padding(.leading, Theme.Spacing.lg)
+                        Spacer()
+                    } else {
+                        Spacer()
+                        addItemButton
+                            .padding(.trailing, Theme.Spacing.lg)
+                    }
+                }
+                .padding(.bottom, viewModel.showUndoButton ? 130 : 65)
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -167,12 +189,6 @@ struct ListView: View {
                     .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
                     
                     EditButton()
-                }
-                
-                Button(action: {
-                    showingCreateItem = true
-                }) {
-                    Image(systemName: Constants.UI.addIcon)
                 }
             }
         }
@@ -272,6 +288,32 @@ struct ListView: View {
             let item = viewModel.filteredItems[index]
             viewModel.deleteItem(item)
         }
+    }
+    
+    private var addItemButton: some View {
+        Button(action: {
+            showingCreateItem = true
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: Constants.UI.addIcon)
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Item")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                Capsule()
+                    .fill(Color(UIColor.tertiarySystemGroupedBackground))
+                    .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5)
+            )
+        }
+        .accessibilityLabel("Add new item")
     }
 }
 
