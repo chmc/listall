@@ -107,8 +107,10 @@ struct ItemDetailView: View {
                         .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
                 }
                 
-                Button("Edit") {
+                Button(action: {
                     showingEditView = true
+                }) {
+                    Image(systemName: "pencil")
                 }
             }
         }

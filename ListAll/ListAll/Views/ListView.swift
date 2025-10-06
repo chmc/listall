@@ -5,6 +5,7 @@ struct ListView: View {
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
     @StateObject private var sharingService = SharingService()
+    @Environment(\.editMode) private var editMode
     @State private var showingCreateItem = false
     @State private var showingEditItem = false
     @State private var showingEditList = false
@@ -188,7 +189,12 @@ struct ListView: View {
                     }
                     .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
                     
-                    EditButton()
+                    Button(action: {
+                        editMode?.wrappedValue = editMode?.wrappedValue == .active ? .inactive : .active
+                    }) {
+                        Image(systemName: "pencil")
+                    }
+                    .help("Edit items")
                 }
             }
         }

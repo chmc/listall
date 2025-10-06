@@ -97,11 +97,13 @@ struct MainView: View {
                                     }
                                 } else {
                                     // Normal mode: Show Edit button
-                                    Button("Edit") {
+                                    Button(action: {
                                         withAnimation {
                                             viewModel.enterSelectionMode()
                                             editMode = .active
                                         }
+                                    }) {
+                                        Image(systemName: "pencil")
                                     }
                                 }
                             }
