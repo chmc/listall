@@ -32,27 +32,8 @@ struct ListView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                // List name header
-                HStack {
-                    Text(list.name)
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(.primary)
-                    
-                    Button(action: {
-                        showingEditList = true
-                    }) {
-                        Image(systemName: "pencil.circle")
-                            .foregroundColor(.secondary)
-                            .imageScale(.medium)
-                    }
-                    .accessibilityLabel("Edit list details")
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.sm)
-                .padding(.bottom, 4)
-                .background(Color(UIColor.systemGroupedBackground))
+                // List name header - entire row is tappable for better UX
+                editableListNameHeader
                 
                 // Item count subtitle
                 HStack {
@@ -62,8 +43,8 @@ struct ListView: View {
                     Spacer()
                 }
                 .padding(.horizontal, Theme.Spacing.md)
+                .padding(.top, 4)
                 .padding(.bottom, Theme.Spacing.sm)
-                .background(Color(UIColor.systemGroupedBackground))
                 
                 if viewModel.isLoading {
                     ProgressView("Loading items...")
@@ -343,6 +324,34 @@ struct ListView: View {
         }
     }
     
+    private var editableListNameHeader: some View {
+        Button(action: {
+            showingEditList = true
+        }) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(list.name)
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, 12)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+        .buttonStyle(EditableHeaderButtonStyle())
+        .accessibilityLabel("Edit list name: \(list.name)")
+        .accessibilityHint("Double tap to edit")
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.top, Theme.Spacing.sm)
+        .padding(.bottom, 4)
+    }
+    
     private var addItemButton: some View {
         Button(action: {
             showingCreateItem = true
@@ -367,6 +376,17 @@ struct ListView: View {
             )
         }
         .accessibilityLabel("Add new item")
+    }
+}
+
+// MARK: - Custom Button Style for Editable Header
+
+struct EditableHeaderButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(Theme.Animation.quick, value: configuration.isPressed)
     }
 }
 
