@@ -17,6 +17,8 @@ enum ValidationError: LocalizedError {
 
 class MainViewModel: ObservableObject {
     @Published var lists: [List] = []
+    @Published var archivedLists: [List] = []
+    @Published var showingArchivedLists = false
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedLists: Set<UUID> = []
@@ -29,14 +31,52 @@ class MainViewModel: ObservableObject {
         loadLists()
     }
     
+    var displayedLists: [List] {
+        showingArchivedLists ? archivedLists : lists
+    }
+    
     func loadLists() {
         isLoading = true
         errorMessage = nil
         
-        // Get lists from DataManager
-        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        if showingArchivedLists {
+            // Load archived lists
+            archivedLists = dataManager.loadArchivedLists()
+        } else {
+            // Get active lists from DataManager
+            lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        }
         
         isLoading = false
+    }
+    
+    func loadArchivedLists() {
+        isLoading = true
+        errorMessage = nil
+        
+        archivedLists = dataManager.loadArchivedLists()
+        
+        isLoading = false
+    }
+    
+    func toggleArchivedView() {
+        showingArchivedLists.toggle()
+        if showingArchivedLists {
+            loadArchivedLists()
+        } else {
+            loadLists()
+        }
+        // Clear selection when switching views
+        selectedLists.removeAll()
+        isInSelectionMode = false
+    }
+    
+    func restoreList(_ list: List) {
+        dataManager.restoreList(withId: list.id)
+        // Remove from archived lists
+        archivedLists.removeAll { $0.id == list.id }
+        // Reload active lists to include restored list
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
     }
     
     func addList(name: String) throws -> List {

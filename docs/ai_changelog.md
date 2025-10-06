@@ -1,5 +1,465 @@
 # AI Changelog
 
+## 2025-10-06 - Phase 58B: Enhanced Archived Lists View with Readonly Preview ✅ COMPLETE
+
+### Summary
+Enhanced the archived lists feature with a readonly preview view and prominent restore button. Users can now tap on archived lists to see their full content (including all items) in a readonly view before deciding to restore. Added a visible "Restore" button on each archived list row for better discoverability, while keeping swipe actions as an alternative method.
+
+### Problem
+The initial Phase 58 implementation didn't allow users to view the contents of archived lists before restoring them. Users could only see the list name and item count, making it difficult to decide whether to restore a list without seeing what items it contained. The restore action was only available via swipe gesture, which some users might not discover.
+
+### Solution
+Enhanced the user experience with:
+1. **Readonly Preview View**: Created `ArchivedListView` to display list contents without allowing edits
+2. **Navigation to Preview**: Tapping an archived list opens the readonly preview
+3. **Visible Restore Button**: Added prominent blue "Restore" button on each list row
+4. **Multiple Restore Options**: Users can restore via button click, swipe action, context menu, or from within the preview
+5. **Archive Indicator**: Added archivebox icon to archived list rows for visual distinction
+
+### Technical Implementation
+
+**Files Created:**
+1. `ListAll/ListAll/Views/ArchivedListView.swift` - New readonly view for archived lists
+
+**Files Modified:**
+1. `ListAll/ListAll/Views/Components/ListRowView.swift` - Added restore button and enabled navigation
+
+**Change 1: Created ArchivedListView**
+```swift
+struct ArchivedListView: View {
+    let list: List
+    @ObservedObject var mainViewModel: MainViewModel
+    @State private var showingRestoreConfirmation = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // List header with archive indicator
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(list.name)
+                        .font(Theme.Typography.largeTitle)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "archivebox")
+                        Text("Archived")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.secondary)
+                }
+                Spacer()
+            }
+            
+            // Readonly items list
+            ScrollView {
+                ForEach(list.sortedItems) { item in
+                    ArchivedItemRowView(item: item)
+                }
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Restore") {
+                    showingRestoreConfirmation = true
+                }
+            }
+        }
+    }
+}
+```
+
+**Change 2: Added Restore Button to List Rows**
+```swift
+private var listContent: some View {
+    HStack {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(list.name)
+                .font(Theme.Typography.headline)
+            
+            HStack(spacing: 4) {
+                Text("\(list.activeItemCount) (\(list.itemCount)) items")
+                
+                if mainViewModel.showingArchivedLists {
+                    Image(systemName: "archivebox")
+                        .font(Theme.Typography.caption)
+                }
+            }
+        }
+        
+        Spacer()
+        
+        // Visible restore button for archived lists
+        if mainViewModel.showingArchivedLists {
+            Button(action: {
+                mainViewModel.restoreList(list)
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.uturn.backward")
+                    Text("Restore")
+                }
+                .font(Theme.Typography.caption)
+                .foregroundColor(.blue)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+            }
+            .buttonStyle(BorderlessButtonStyle())
+        }
+    }
+}
+```
+
+**Change 3: Enabled Navigation to ArchivedListView**
+```swift
+// List content navigation
+if mainViewModel.isInSelectionMode {
+    // Selection mode
+    Button(action: { mainViewModel.toggleSelection(for: list.id) }) {
+        listContent
+    }
+} else if mainViewModel.showingArchivedLists {
+    // Archived lists: Navigate to readonly view
+    NavigationLink(destination: ArchivedListView(list: list, mainViewModel: mainViewModel)) {
+        listContent
+    }
+} else {
+    // Normal mode: Navigate to editable view
+    NavigationLink(destination: ListView(list: list, mainViewModel: mainViewModel)) {
+        listContent
+    }
+}
+```
+
+**Change 4: Created ArchivedItemRowView**
+```swift
+struct ArchivedItemRowView: View {
+    let item: Item
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            // Static checkbox (non-interactive)
+            Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(item.isCrossedOut ? .green : .gray)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.displayTitle)
+                    .strikethrough(item.isCrossedOut)
+                
+                if item.hasDescription {
+                    Text(item.displayDescription)
+                        .font(Theme.Typography.caption)
+                }
+                
+                if item.quantity > 1 {
+                    Text("Qty: \(item.quantity)")
+                }
+                
+                if item.hasImages {
+                    Text("\(item.images.count) image(s)")
+                }
+            }
+            Spacer()
+        }
+        .padding()
+    }
+}
+```
+
+### UI/UX Improvements
+1. **Preview Before Restore**: Users can now see full list contents before deciding to restore
+2. **Prominent Restore Button**: Blue button with icon and text makes restore action discoverable
+3. **Multiple Restore Methods**: 
+   - Click visible "Restore" button on list row
+   - Swipe left for restore action
+   - Use context menu
+   - Restore from within preview view
+4. **Archive Visual Indicator**: Archivebox icon on archived list rows
+5. **Readonly Item Display**: Shows all item details (title, description, quantity, images) without edit capability
+6. **Confirmation Dialog**: Restore action from preview shows confirmation before proceeding
+7. **Empty State Handling**: Appropriate message for archived lists with no items
+
+### User Flow
+1. User navigates to Archived Lists view
+2. User sees list with visible "Restore" button
+3. User taps on list name to preview contents
+4. ArchivedListView opens showing all items (readonly)
+5. User can:
+   - Review all items and their details
+   - Tap "Restore" button in toolbar
+   - Confirm restoration
+   - Get navigated back to active lists
+
+### Testing
+- **Build Status**: ✅ BUILD SUCCEEDED (100% success)
+- **Test Results**: ✅ All unit tests passed (100% pass rate)
+- **File Compilation**: ✅ ArchivedListView.swift successfully compiled and integrated
+- **Navigation**: ✅ Navigation to readonly view working correctly
+- **Restore Actions**: ✅ All restore methods (button, swipe, context menu, toolbar) functional
+
+### Code Quality
+- Created separate readonly view component (clean separation of concerns)
+- Reused existing List model and MainViewModel
+- No duplication of business logic
+- Proper state management with @State and @ObservedObject
+- Consistent UI theme and styling
+- Added proper navigation dismissal after restore
+
+### Related Changes
+- Builds on Phase 58's foundation
+- Enhances discoverability and usability
+- Maintains all existing functionality (swipe actions, context menus)
+- Prepares for Phase 59 (permanent deletion)
+
+### Status
+**COMPLETE** - All enhancements implemented, tested, and validated
+- ✅ Created ArchivedListView with readonly item display
+- ✅ Added prominent restore button to list rows
+- ✅ Enabled navigation to preview view
+- ✅ Multiple restore methods available
+- ✅ Archive indicator on list rows
+- ✅ Confirmation dialog for restore action
+- ✅ Build successful
+- ✅ All tests passing (100%)
+
+---
+
+## 2025-10-06 - Phase 58: Add Ability to View Archived Lists ✅ COMPLETE
+
+### Summary
+Implemented comprehensive archived lists viewing functionality. Users can now toggle between active and archived lists, view all archived lists, and restore lists from the archive. The UI adapts to show appropriate actions for each view mode, with archived lists displaying a restore button instead of edit/delete options.
+
+### Problem
+After implementing list archiving in Phase 57, users had no way to view or restore archived lists. Once a list was archived, it was effectively lost to the user, defeating the purpose of archiving rather than permanently deleting.
+
+### Solution
+Created a complete archived lists viewing and restoration system:
+1. **Toggle Between Views**: Added an archive toggle button in the toolbar to switch between active and archived lists
+2. **Archived Lists View**: Implemented separate view for archived lists with appropriate UI and empty states
+3. **Restore Functionality**: Added restore capability through swipe actions and context menus
+4. **Adaptive UI**: UI automatically adapts based on the current view mode, hiding irrelevant actions
+
+### Technical Implementation
+
+**Files Modified:**
+1. `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Added archived list loading and restoration methods
+2. `ListAll/ListAll/ViewModels/MainViewModel.swift` - Added archived list state and methods
+3. `ListAll/ListAll/Views/MainView.swift` - Added toggle UI and archived view support
+4. `ListAll/ListAll/Views/Components/ListRowView.swift` - Added conditional actions based on view mode
+
+**Change 1: DataManager - Load Archived Lists**
+```swift
+func loadArchivedLists() -> [List] {
+    // Load archived lists from Core Data
+    let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+    request.predicate = NSPredicate(format: "isArchived == YES")
+    request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.modifiedAt, ascending: false)]
+    
+    do {
+        let listEntities = try coreDataManager.viewContext.fetch(request)
+        return listEntities.map { $0.toList() }
+    } catch {
+        print("Failed to fetch archived lists: \(error)")
+        return []
+    }
+}
+```
+
+**Change 2: DataManager - Restore Archived List**
+```swift
+func restoreList(withId id: UUID) {
+    // Restore an archived list
+    let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+    request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+    
+    do {
+        let results = try coreDataManager.viewContext.fetch(request)
+        if let listEntity = results.first {
+            listEntity.isArchived = false
+            listEntity.modifiedAt = Date()
+            saveData()
+            // Reload data to include the restored list
+            loadData()
+        }
+    } catch {
+        print("Failed to restore list: \(error)")
+    }
+}
+```
+
+**Change 3: MainViewModel - Archived Lists State**
+```swift
+class MainViewModel: ObservableObject {
+    @Published var lists: [List] = []
+    @Published var archivedLists: [List] = []
+    @Published var showingArchivedLists = false
+    // ... other properties ...
+    
+    var displayedLists: [List] {
+        showingArchivedLists ? archivedLists : lists
+    }
+}
+```
+
+**Change 4: MainViewModel - Toggle and Restore Methods**
+```swift
+func toggleArchivedView() {
+    showingArchivedLists.toggle()
+    if showingArchivedLists {
+        loadArchivedLists()
+    } else {
+        loadLists()
+    }
+    // Clear selection when switching views
+    selectedLists.removeAll()
+    isInSelectionMode = false
+}
+
+func restoreList(_ list: List) {
+    dataManager.restoreList(withId: list.id)
+    // Remove from archived lists
+    archivedLists.removeAll { $0.id == list.id }
+    // Reload active lists to include restored list
+    lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+}
+```
+
+**Change 5: MainView - Archive Toggle Button**
+```swift
+// Archive toggle button in toolbar
+Button(action: {
+    withAnimation {
+        viewModel.toggleArchivedView()
+    }
+}) {
+    Image(systemName: viewModel.showingArchivedLists ? "tray" : "archivebox")
+}
+.help(viewModel.showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+```
+
+**Change 6: MainView - Dynamic Navigation Title and Empty States**
+```swift
+.navigationTitle(viewModel.showingArchivedLists ? "Archived Lists" : "Lists")
+
+// Empty state adapts to current view
+VStack(spacing: Theme.Spacing.lg) {
+    Image(systemName: viewModel.showingArchivedLists ? "archivebox" : Constants.UI.listIcon)
+        .font(.system(size: 60))
+        .foregroundColor(Theme.Colors.secondary)
+    
+    Text(viewModel.showingArchivedLists ? "No Archived Lists" : "No Lists Yet")
+        .font(Theme.Typography.title)
+    
+    Text(viewModel.showingArchivedLists ? "Archived lists will appear here" : "Create your first list to get started")
+        .font(Theme.Typography.body)
+        .emptyStateStyle()
+}
+```
+
+**Change 7: ListRowView - Conditional Actions**
+```swift
+// Context menu adapts to view mode
+if mainViewModel.showingArchivedLists {
+    // Archived list actions - only show restore
+    Button(action: {
+        mainViewModel.restoreList(list)
+    }) {
+        Label("Restore", systemImage: "arrow.uturn.backward")
+    }
+} else {
+    // Active list actions - show full menu
+    Button(action: { showingShareFormatPicker = true }) {
+        Label("Share", systemImage: "square.and.arrow.up")
+    }
+    // ... other actions ...
+}
+
+// Swipe actions adapt to view mode
+if mainViewModel.showingArchivedLists {
+    // Archived list: Show restore
+    Button(action: {
+        mainViewModel.restoreList(list)
+    }) {
+        Label("Restore", systemImage: "arrow.uturn.backward")
+    }
+    .tint(.green)
+} else {
+    // Active list: Show delete
+    Button(role: .destructive, action: {
+        activeAlert = .delete
+    }) {
+        Label("Delete", systemImage: "trash")
+    }
+}
+```
+
+**Change 8: ListRowView - Disable Navigation for Archived Lists**
+```swift
+// Archived lists are not navigable, only restorable
+if mainViewModel.isInSelectionMode {
+    // Selection mode
+    Button(action: { mainViewModel.toggleSelection(for: list.id) }) {
+        listContent
+    }
+} else if mainViewModel.showingArchivedLists {
+    // Archived lists: No navigation, just show content
+    listContent
+} else {
+    // Normal mode: Use NavigationLink
+    NavigationLink(destination: ListView(list: list, mainViewModel: mainViewModel)) {
+        listContent
+    }
+}
+```
+
+### UI/UX Improvements
+1. **Archive Toggle Button**: Prominent toggle button in toolbar with descriptive icons (archivebox/tray)
+2. **Dynamic Title**: Navigation title changes to "Archived Lists" when viewing archives
+3. **Adaptive Empty States**: Different icons and messages for active vs archived empty states
+4. **Restore Actions**: Green-tinted restore button in swipe actions for easy restoration
+5. **Simplified Archive UI**: Archived lists show only restore action, hiding irrelevant edit/duplicate/share options
+6. **No Navigation**: Archived lists are not clickable, preventing confusion about viewing archived content
+7. **Contextual Buttons**: Add, Edit, Share, and Sync buttons hide when viewing archived lists
+
+### Testing
+- **Build Status**: ✅ BUILD SUCCEEDED (100% success)
+- **Test Results**: ✅ All unit tests passed (100% pass rate)
+- **Test Coverage**: Archive loading, restoration, and UI state management all working correctly
+
+### User Experience
+1. User taps archive icon in toolbar to view archived lists
+2. Navigation title changes to "Archived Lists"
+3. UI shows all archived lists sorted by modification date (most recent first)
+4. User can swipe left on any archived list to restore it
+5. User can tap archive icon again to return to active lists view
+6. Restored lists appear back in active lists view with original content intact
+
+### Data Safety
+- Archived lists remain fully intact in the database
+- All items, images, and metadata preserved during archive and restoration
+- Restoration updates modified date for proper sync handling
+- No data loss during archive/restore cycle
+
+### Future Enhancements (Phase 59)
+- Add permanent deletion for archived lists
+- Require confirmation before permanent deletion
+- Only allow permanent deletion from archived view
+
+### Related Changes
+- Builds on Phase 57's archive foundation
+- Completes the archive lifecycle (archive → view → restore)
+- Sets up foundation for Phase 59 (permanent deletion)
+
+### Status
+**COMPLETE** - All features implemented, tested, and validated
+- ✅ Archive toggle in toolbar
+- ✅ Archived lists view with proper filtering
+- ✅ Restore functionality via swipe/context menu
+- ✅ Adaptive UI for both view modes
+- ✅ Build successful
+- ✅ All tests passing (100%)
+
+---
+
 ## 2025-10-06 - Phase 57: Archive Lists Instead of Deleting ✅ COMPLETE
 
 ### Summary

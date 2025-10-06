@@ -32,26 +32,26 @@ struct MainView: View {
                     if viewModel.isLoading {
                         ProgressView("Loading lists...")
                             .padding(.top, 16)
-                    } else if viewModel.lists.isEmpty {
+                    } else if viewModel.displayedLists.isEmpty {
                         VStack(spacing: Theme.Spacing.lg) {
-                            Image(systemName: Constants.UI.listIcon)
+                            Image(systemName: viewModel.showingArchivedLists ? "archivebox" : Constants.UI.listIcon)
                                 .font(.system(size: 60))
                                 .foregroundColor(Theme.Colors.secondary)
                             
-                            Text("No Lists Yet")
+                            Text(viewModel.showingArchivedLists ? "No Archived Lists" : "No Lists Yet")
                                 .font(Theme.Typography.title)
                             
-                            Text("Create your first list to get started")
+                            Text(viewModel.showingArchivedLists ? "Archived lists will appear here" : "Create your first list to get started")
                                 .font(Theme.Typography.body)
                                 .emptyStateStyle()
                         }
                     } else {
                         SwiftUI.List {
-                            ForEach(viewModel.lists) { list in
+                            ForEach(viewModel.displayedLists) { list in
                                 ListRowView(list: list, mainViewModel: viewModel)
                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                             }
-                            .onMove(perform: viewModel.moveList)
+                            .onMove(perform: viewModel.showingArchivedLists ? nil : viewModel.moveList)
                         }
                         .environment(\.editMode, $editMode)
                         .listStyle(.plain)
@@ -72,13 +72,23 @@ struct MainView: View {
                     }
                     .hidden()
                 }
-                .navigationTitle("Lists")
+                .navigationTitle(viewModel.showingArchivedLists ? "Archived Lists" : "Lists")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         HStack(spacing: Theme.Spacing.md) {
                             if !viewModel.isInSelectionMode {
-                                // Share all data button
-                                if !viewModel.lists.isEmpty {
+                                // Archive toggle button
+                                Button(action: {
+                                    withAnimation {
+                                        viewModel.toggleArchivedView()
+                                    }
+                                }) {
+                                    Image(systemName: viewModel.showingArchivedLists ? "tray" : "archivebox")
+                                }
+                                .help(viewModel.showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+                                
+                                // Share all data button (only for active lists)
+                                if !viewModel.showingArchivedLists && !viewModel.lists.isEmpty {
                                     Button(action: {
                                         showingShareFormatPicker = true
                                     }) {
@@ -87,22 +97,25 @@ struct MainView: View {
                                     .help("Share all data")
                                 }
                                 
-                                Button(action: {
-                                    Task {
-                                        await cloudKitService.sync()
+                                // Sync button (only for active lists)
+                                if !viewModel.showingArchivedLists {
+                                    Button(action: {
+                                        Task {
+                                            await cloudKitService.sync()
+                                        }
+                                    }) {
+                                        Image(systemName: Constants.UI.syncIcon)
                                     }
-                                }) {
-                                    Image(systemName: Constants.UI.syncIcon)
+                                    .disabled(cloudKitService.isSyncing)
                                 }
-                                .disabled(cloudKitService.isSyncing)
                             }
                             
-                            if !viewModel.lists.isEmpty {
+                            if !viewModel.displayedLists.isEmpty {
                                 if viewModel.isInSelectionMode {
                                     // Selection mode: Show Select All/None
-                                    Button(viewModel.selectedLists.count == viewModel.lists.count ? "Deselect All" : "Select All") {
+                                    Button(viewModel.selectedLists.count == viewModel.displayedLists.count ? "Deselect All" : "Select All") {
                                         withAnimation {
-                                            if viewModel.selectedLists.count == viewModel.lists.count {
+                                            if viewModel.selectedLists.count == viewModel.displayedLists.count {
                                                 viewModel.deselectAll()
                                             } else {
                                                 viewModel.selectAll()
@@ -110,14 +123,16 @@ struct MainView: View {
                                         }
                                     }
                                 } else {
-                                    // Normal mode: Show Edit button
-                                    Button(action: {
-                                        withAnimation {
-                                            viewModel.enterSelectionMode()
-                                            editMode = .active
+                                    // Normal mode: Show Edit button (only for active lists)
+                                    if !viewModel.showingArchivedLists {
+                                        Button(action: {
+                                            withAnimation {
+                                                viewModel.enterSelectionMode()
+                                                editMode = .active
+                                            }
+                                        }) {
+                                            Image(systemName: "pencil")
                                         }
-                                    }) {
-                                        Image(systemName: "pencil")
                                     }
                                 }
                             }
@@ -144,8 +159,8 @@ struct MainView: View {
                                         editMode = .inactive
                                     }
                                 }
-                            } else {
-                                // Normal mode: Show Add button
+                            } else if !viewModel.showingArchivedLists {
+                                // Normal mode: Show Add button (only for active lists)
                                 Button(action: {
                                     showingCreateList = true
                                 }) {

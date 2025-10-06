@@ -280,6 +280,40 @@ class DataManager: ObservableObject {
         }
     }
     
+    func loadArchivedLists() -> [List] {
+        // Load archived lists from Core Data
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == YES")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.modifiedAt, ascending: false)]
+        
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            return listEntities.map { $0.toList() }
+        } catch {
+            print("Failed to fetch archived lists: \(error)")
+            return []
+        }
+    }
+    
+    func restoreList(withId id: UUID) {
+        // Restore an archived list
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            if let listEntity = results.first {
+                listEntity.isArchived = false
+                listEntity.modifiedAt = Date()
+                saveData()
+                // Reload data to include the restored list
+                loadData()
+            }
+        } catch {
+            print("Failed to restore list: \(error)")
+        }
+    }
+    
     // MARK: - Item Operations
     
     func addItem(_ item: Item, to listId: UUID) {

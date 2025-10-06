@@ -522,10 +522,36 @@
 - ✅ Build validation passed (100% success)
 - ✅ All tests passed (100% success rate)
 
-## Phase 58: Add ability to view archived lists
-- ❌ Create UI to view archived lists
-- ❌ Add filter/toggle in MainView to show archived lists
-- ❌ Add ability to restore archived lists
+## Phase 58: Add ability to view archived lists ✅ COMPLETED
+- ✅ Create UI to view archived lists
+- ✅ Add filter/toggle in MainView to show archived lists
+- ✅ Add ability to restore archived lists
+- ✅ Added loadArchivedLists() method to DataManager
+- ✅ Added restoreList() method to DataManager
+- ✅ Updated MainViewModel with archived list state and methods
+- ✅ Updated MainView with archive toggle button
+- ✅ Updated ListRowView with conditional actions for archived lists
+- ✅ Disabled navigation for archived lists (only restorable)
+- ✅ Dynamic navigation title changes to "Archived Lists"
+- ✅ Adaptive empty states for both active and archived views
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success rate)
+
+## Phase 58B: Enhanced Archived Lists with Readonly Preview ✅ COMPLETED
+- ✅ Created ArchivedListView for readonly display of archived list content
+- ✅ Added ArchivedItemRowView component for readonly item display
+- ✅ Enabled navigation from archived list rows to preview view
+- ✅ Added visible "Restore" button on each archived list row
+- ✅ Added archivebox icon to archived list rows for visual distinction
+- ✅ Implemented restore confirmation dialog in preview view
+- ✅ Kept swipe action for restore as alternative method
+- ✅ Kept context menu restore option
+- ✅ Added restore button in preview toolbar
+- ✅ Shows all item details (title, description, quantity, images) readonly
+- ✅ Handles empty archived lists with appropriate message
+- ✅ Auto-dismisses preview after restore
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success rate)
 
 ## Phase 59: Add ability to permanently delete archived lists
 - ❌ Add permanent delete functionality for archived lists

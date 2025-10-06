@@ -35,12 +35,39 @@ struct ListRowView: View {
                     .font(Theme.Typography.headline)
                     .foregroundColor(.primary)
                 
-                Text("\(list.activeItemCount) (\(list.itemCount)) items")
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.secondary)
+                HStack(spacing: 4) {
+                    Text("\(list.activeItemCount) (\(list.itemCount)) items")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.secondary)
+                    
+                    if mainViewModel.showingArchivedLists {
+                        Image(systemName: "archivebox")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.secondary)
+                    }
+                }
             }
             
             Spacer()
+            
+            // Add restore button for archived lists
+            if mainViewModel.showingArchivedLists {
+                Button(action: {
+                    mainViewModel.restoreList(list)
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.uturn.backward")
+                        Text("Restore")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+            }
         }
         .padding(.vertical, 8)
         .contentShape(Rectangle())
@@ -69,8 +96,13 @@ struct ListRowView: View {
                     listContent
                 }
                 .buttonStyle(PlainButtonStyle())
+            } else if mainViewModel.showingArchivedLists {
+                // Archived lists: Navigate to readonly view
+                NavigationLink(destination: ArchivedListView(list: list, mainViewModel: mainViewModel)) {
+                    listContent
+                }
             } else {
-                // Normal mode: Use NavigationLink
+                // Normal mode: Use NavigationLink to editable view
                 NavigationLink(destination: ListView(list: list, mainViewModel: mainViewModel)) {
                     listContent
                 }
@@ -79,41 +111,62 @@ struct ListRowView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .if(!mainViewModel.isInSelectionMode) { view in
             view.contextMenu {
-                Button(action: {
-                    showingShareFormatPicker = true
-                }) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-                
-                Button(action: {
-                    showingEditSheet = true
-                }) {
-                    Label("Edit", systemImage: "pencil")
-                }
-                
-                Button(action: {
-                    activeAlert = .duplicate
-                }) {
-                    Label("Duplicate", systemImage: "doc.on.doc")
-                }
-                
-                Button(role: .destructive, action: {
-                    activeAlert = .delete
-                }) {
-                    Label("Delete", systemImage: "trash")
+                if mainViewModel.showingArchivedLists {
+                    // Archived list actions
+                    Button(action: {
+                        mainViewModel.restoreList(list)
+                    }) {
+                        Label("Restore", systemImage: "arrow.uturn.backward")
+                    }
+                } else {
+                    // Active list actions
+                    Button(action: {
+                        showingShareFormatPicker = true
+                    }) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    
+                    Button(action: {
+                        showingEditSheet = true
+                    }) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    
+                    Button(action: {
+                        activeAlert = .duplicate
+                    }) {
+                        Label("Duplicate", systemImage: "doc.on.doc")
+                    }
+                    
+                    Button(role: .destructive, action: {
+                        activeAlert = .delete
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
         }
         .if(!mainViewModel.isInSelectionMode) { view in
             view.swipeActions(edge: .trailing) {
-                Button(role: .destructive, action: {
-                    activeAlert = .delete
-                }) {
-                    Label("Delete", systemImage: "trash")
+                if mainViewModel.showingArchivedLists {
+                    // Archived list: Show restore
+                    Button(action: {
+                        mainViewModel.restoreList(list)
+                    }) {
+                        Label("Restore", systemImage: "arrow.uturn.backward")
+                    }
+                    .tint(.green)
+                } else {
+                    // Active list: Show delete
+                    Button(role: .destructive, action: {
+                        activeAlert = .delete
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
         }
-        .if(!mainViewModel.isInSelectionMode) { view in
+        .if(!mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists) { view in
             view.swipeActions(edge: .leading) {
                 Button(action: {
                     showingShareFormatPicker = true
