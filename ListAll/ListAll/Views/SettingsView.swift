@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var showCrossedOutItems = true
-    @State private var enableCloudSync = true
+    @State private var enableCloudSync = false
     @State private var showingExportSheet = false
     @State private var showingImportSheet = false
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
@@ -18,9 +17,7 @@ struct SettingsView: View {
         NavigationView {
             SwiftUI.List {
                 Section("Display") {
-                    Toggle("Show Crossed Out Items", isOn: $showCrossedOutItems)
-                    
-                    Picker("Add Button Position", selection: addButtonPosition) {
+                    Picker("Add item button position", selection: addButtonPosition) {
                         ForEach(Constants.AddButtonPosition.allCases) { position in
                             Text(position.rawValue).tag(position)
                         }
@@ -29,6 +26,8 @@ struct SettingsView: View {
                 
                 Section("Sync") {
                     Toggle("iCloud Sync", isOn: $enableCloudSync)
+                        .disabled(true)
+                        .opacity(0.5)
                 }
                 
                 Section("Data") {
