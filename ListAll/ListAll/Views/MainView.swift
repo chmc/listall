@@ -57,6 +57,20 @@ struct MainView: View {
                         .listStyle(.plain)
                         .padding(.top, 8)
                     }
+                    
+                    // Programmatic navigation for auto-opening newly created list
+                    NavigationLink(
+                        destination: viewModel.selectedListForNavigation.map { list in
+                            ListView(list: list, mainViewModel: viewModel)
+                        },
+                        isActive: Binding(
+                            get: { viewModel.selectedListForNavigation != nil },
+                            set: { if !$0 { viewModel.selectedListForNavigation = nil } }
+                        )
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
                 }
                 .navigationTitle("Lists")
                 .toolbar {

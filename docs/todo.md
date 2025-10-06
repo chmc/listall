@@ -470,8 +470,14 @@
   - Now properly respects authentication state for all timeout modes
 
 ## Phase 53: Auto-open list after creation
-- ❌ After creating a new list, automatically navigate to that list
-- ❌ Update CreateListView to navigate to newly created list
+- ✅ After creating a new list, automatically navigate to that list
+- ✅ Update CreateListView to navigate to newly created list
+- ✅ Modified MainViewModel.addList() to return the newly created list
+- ✅ Added selectedListForNavigation property to MainViewModel
+- ✅ Updated CreateListView to trigger navigation after list creation
+- ✅ Added programmatic NavigationLink in MainView
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success)
 
 ## Phase 54: Fix list swipe-to-delete dialog issue
 - ❌ List swipe and delete opens and closes dialog immediately

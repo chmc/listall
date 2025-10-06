@@ -21,6 +21,7 @@ class MainViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedLists: Set<UUID> = []
     @Published var isInSelectionMode = false
+    @Published var selectedListForNavigation: List?
     
     private let dataManager = DataManager.shared
     
@@ -38,7 +39,7 @@ class MainViewModel: ObservableObject {
         isLoading = false
     }
     
-    func addList(name: String) throws {
+    func addList(name: String) throws -> List {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedName.isEmpty else {
@@ -53,6 +54,7 @@ class MainViewModel: ObservableObject {
         dataManager.addList(newList)
         lists.append(newList)
         lists.sort { $0.orderNumber < $1.orderNumber }
+        return newList
     }
     
     func deleteList(_ list: List) {

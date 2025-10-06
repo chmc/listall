@@ -75,7 +75,9 @@ struct CreateListView: View {
         isCreating = true
         
         do {
-            try mainViewModel.addList(name: trimmedName)
+            let newList = try mainViewModel.addList(name: trimmedName)
+            // Trigger navigation to the newly created list
+            mainViewModel.selectedListForNavigation = newList
             dismiss()
         } catch {
             alertMessage = "Failed to create list: \(error.localizedDescription)"
