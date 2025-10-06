@@ -8,6 +8,7 @@ extension ListEntity {
         list.orderNumber = Int(self.orderNumber)
         list.createdAt = self.createdAt ?? Date()
         list.modifiedAt = self.modifiedAt ?? Date()
+        list.isArchived = self.isArchived
         list.items = (self.items?.allObjects as? [ItemEntity])?.map { $0.toItem() }.sorted { $0.orderNumber < $1.orderNumber } ?? []
         return list
     }
@@ -19,7 +20,7 @@ extension ListEntity {
         listEntity.orderNumber = Int32(list.orderNumber)
         listEntity.createdAt = list.createdAt
         listEntity.modifiedAt = list.modifiedAt
-        listEntity.isArchived = false
+        listEntity.isArchived = list.isArchived
         return listEntity
     }
 }

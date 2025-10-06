@@ -1,5 +1,132 @@
 # AI Changelog
 
+## 2025-10-06 - Phase 57: Archive Lists Instead of Deleting ✅ COMPLETE
+
+### Summary
+Implemented list archiving functionality where lists are now archived instead of permanently deleted. Archived lists are hidden from the main view but remain in the database, allowing for potential future restoration. Export functionality properly respects the archived status, excluding archived lists by default.
+
+### Problem
+Lists were being permanently deleted when the user chose to delete them, making it impossible to recover accidentally deleted lists. This is a common user pain point in productivity apps.
+
+### Solution
+Changed the list deletion behavior to use soft deletion (archiving):
+1. **Archive Instead of Delete**: When a list is "deleted", it's now marked as archived (`isArchived = true`) instead of being permanently removed from the database
+2. **Filter Archived Lists**: The main view automatically filters out archived lists from display
+3. **Export Respects Archived Status**: Export functionality already had support for archived lists with the `includeArchivedLists` option (defaults to `false`)
+4. **Data Preservation**: All list data including items and images are preserved when archived
+
+### Technical Implementation
+
+**Files Modified:**
+1. `ListAll/ListAll/Models/CoreData/ListEntity+Extensions.swift`
+2. `ListAll/ListAll/Models/CoreData/CoreDataManager.swift`
+
+**Change 1: ListEntity+Extensions - Read/Write isArchived**
+```swift
+// Updated toList() to read isArchived from entity
+func toList() -> List {
+    var list = List(name: self.name ?? "Untitled List")
+    // ... other fields ...
+    list.isArchived = self.isArchived  // NEW: Read archived status
+    // ... rest of conversion ...
+}
+
+// Updated fromList() to write isArchived to entity
+static func fromList(_ list: List, context: NSManagedObjectContext) -> ListEntity {
+    let listEntity = ListEntity(context: context)
+    // ... other fields ...
+    listEntity.isArchived = list.isArchived  // NEW: Write archived status
+    return listEntity
+}
+```
+
+**Change 2: CoreDataManager - Archive Instead of Delete**
+```swift
+// Updated deleteList to archive instead of permanently delete
+func deleteList(withId id: UUID) {
+    // Archive the list instead of permanently deleting it
+    let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+    request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+    
+    do {
+        let results = try coreDataManager.viewContext.fetch(request)
+        if let listEntity = results.first {
+            listEntity.isArchived = true  // NEW: Archive instead of delete
+            listEntity.modifiedAt = Date()
+            saveData()
+            // Remove from local array (archived lists are filtered out)
+            lists.removeAll { $0.id == id }
+        }
+    } catch {
+        print("Failed to archive list: \(error)")
+    }
+}
+```
+
+**Change 3: CoreDataManager - Filter Out Archived Lists**
+```swift
+// Updated loadData to exclude archived lists
+func loadData() {
+    // Load from Core Data, excluding archived lists
+    let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+    request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")  // NEW
+    request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
+    
+    do {
+        let listEntities = try coreDataManager.viewContext.fetch(request)
+        lists = listEntities.map { $0.toList() }
+    } catch {
+        print("Failed to fetch lists: \(error)")
+        if lists.isEmpty {
+            createSampleData()
+        }
+    }
+}
+```
+
+**Change 4: CoreDataManager - Update List to Handle isArchived**
+```swift
+// Updated updateList to handle isArchived field
+func updateList(_ list: List) {
+    // ... fetch logic ...
+    if let listEntity = results.first {
+        listEntity.name = list.name
+        listEntity.orderNumber = Int32(list.orderNumber)
+        listEntity.modifiedAt = list.modifiedAt
+        listEntity.isArchived = list.isArchived  // NEW: Update archived status
+        saveData()
+        // ... rest of update ...
+    }
+}
+```
+
+### Architecture Notes
+- **Core Data Schema**: The `isArchived` field already existed in the Core Data model (`ListEntity`)
+- **List Model**: The `isArchived` property already existed in the Swift model
+- **Export Service**: Already had full support for filtering archived lists via `ExportOptions.includeArchivedLists`
+- **Tests**: Existing tests continue to pass because `TestDataManager` maintains permanent deletion for test isolation
+
+### Future Enhancements (Phases 58-59)
+- Phase 58: Add UI to view and restore archived lists
+- Phase 59: Add permanent deletion option for archived lists only
+
+### Testing Results
+- **Build Status**: ✅ Successful compilation
+- **Unit Tests**: ✅ All tests passed (100% success rate)
+- **Export Tests**: ✅ Archive filtering verified by existing test `testExportFilterArchivedLists`
+
+### Files Changed
+- `ListAll/ListAll/Models/CoreData/ListEntity+Extensions.swift` - Updated to handle isArchived field
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Changed deletion to archiving, added filtering
+
+### Next Steps
+This lays the groundwork for future phases:
+- Phase 58: UI for viewing/restoring archived lists
+- Phase 59: Permanent deletion for archived lists
+- Phase 60: Move items between lists
+
+---
+
 ## 2025-10-06 - Phase 56: Global Toolbar Button Spacing Improvement ✅ COMPLETE
 
 ### Summary

@@ -200,8 +200,9 @@ class DataManager: ObservableObject {
     // MARK: - Data Operations
     
     func loadData() {
-        // Load from Core Data
+        // Load from Core Data, excluding archived lists
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
         
         do {
@@ -248,6 +249,7 @@ class DataManager: ObservableObject {
                 listEntity.name = list.name
                 listEntity.orderNumber = Int32(list.orderNumber)
                 listEntity.modifiedAt = list.modifiedAt
+                listEntity.isArchived = list.isArchived
                 saveData()
                 // Update local array instead of reloading
                 if let index = lists.firstIndex(where: { $0.id == list.id }) {
@@ -260,19 +262,21 @@ class DataManager: ObservableObject {
     }
     
     func deleteList(withId id: UUID) {
+        // Archive the list instead of permanently deleting it
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
         
         do {
             let results = try coreDataManager.viewContext.fetch(request)
-            for listEntity in results {
-                coreDataManager.viewContext.delete(listEntity)
+            if let listEntity = results.first {
+                listEntity.isArchived = true
+                listEntity.modifiedAt = Date()
+                saveData()
+                // Remove from local array (archived lists are filtered out)
+                lists.removeAll { $0.id == id }
             }
-            saveData()
-            // Remove from local array instead of reloading
-            lists.removeAll { $0.id == id }
         } catch {
-            print("Failed to delete list: \(error)")
+            print("Failed to archive list: \(error)")
         }
     }
     
