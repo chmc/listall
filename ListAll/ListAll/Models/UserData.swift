@@ -14,6 +14,9 @@ struct UserData: Identifiable, Codable, Equatable {
     var defaultSortDirection: SortDirection
     var defaultFilterOption: ItemFilterOption
     
+    // Security Preferences
+    var requiresBiometricAuth: Bool
+    
     init(userID: String) {
         self.id = UUID()
         self.userID = userID
@@ -26,6 +29,9 @@ struct UserData: Identifiable, Codable, Equatable {
         self.defaultSortOption = .orderNumber
         self.defaultSortDirection = .ascending
         self.defaultFilterOption = .active
+        
+        // Set default security preferences
+        self.requiresBiometricAuth = false
     }
 }
 

@@ -5,12 +5,26 @@ struct SettingsView: View {
     @State private var showingExportSheet = false
     @State private var showingImportSheet = false
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
+    @AppStorage(Constants.UserDefaultsKeys.requiresBiometricAuth) private var requiresBiometricAuth = false
+    @AppStorage(Constants.UserDefaultsKeys.authTimeoutDuration) private var authTimeoutDurationRaw: Int = Constants.AuthTimeoutDuration.immediate.rawValue
+    @StateObject private var biometricService = BiometricAuthService.shared
     
     private var addButtonPosition: Binding<Constants.AddButtonPosition> {
         Binding(
             get: { Constants.AddButtonPosition(rawValue: addButtonPositionRaw) ?? .right },
             set: { addButtonPositionRaw = $0.rawValue }
         )
+    }
+    
+    private var authTimeoutDuration: Binding<Constants.AuthTimeoutDuration> {
+        Binding(
+            get: { Constants.AuthTimeoutDuration(rawValue: authTimeoutDurationRaw) ?? .immediate },
+            set: { authTimeoutDurationRaw = $0.rawValue }
+        )
+    }
+    
+    private var biometricType: BiometricType {
+        biometricService.biometricType()
     }
     
     var body: some View {
@@ -20,6 +34,53 @@ struct SettingsView: View {
                     Picker("Add item button position", selection: addButtonPosition) {
                         ForEach(Constants.AddButtonPosition.allCases) { position in
                             Text(position.rawValue).tag(position)
+                        }
+                    }
+                }
+                
+                Section(header: Text("Security"), footer: securityFooterText) {
+                    if biometricType != .none {
+                        Toggle(isOn: $requiresBiometricAuth) {
+                            HStack {
+                                Image(systemName: biometricType.iconName)
+                                    .foregroundColor(.blue)
+                                Text("Require \(biometricType.displayName)")
+                            }
+                        }
+                        
+                        // Show timeout setting only when biometric auth is enabled
+                        if requiresBiometricAuth {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Require Authentication")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                Picker("Timeout Duration", selection: authTimeoutDuration) {
+                                    ForEach(Constants.AuthTimeoutDuration.allCases) { duration in
+                                        VStack(alignment: .leading) {
+                                            Text(duration.displayName)
+                                                .font(.body)
+                                            Text(duration.description)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .tag(duration)
+                                    }
+                                }
+                                .pickerStyle(.navigationLink)
+                            }
+                        }
+                    } else {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Biometric authentication not available")
+                                    .font(.subheadline)
+                                Text("Enable Face ID or Touch ID in Settings")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                 }
@@ -64,6 +125,17 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingImportSheet) {
             ImportView()
+        }
+    }
+    
+    private var securityFooterText: Text {
+        if biometricType != .none && requiresBiometricAuth {
+            let timeoutDesc = authTimeoutDuration.wrappedValue.displayName.lowercased()
+            return Text("Authentication will be required \(timeoutDesc) when returning to the app. You can use \(biometricType.displayName) or your device passcode.")
+        } else if biometricType != .none {
+            return Text("When enabled, you'll need to authenticate with \(biometricType.displayName) or passcode to unlock the app.")
+        } else {
+            return Text("Biometric authentication is not set up on this device.")
         }
     }
 }

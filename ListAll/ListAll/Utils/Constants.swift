@@ -26,6 +26,9 @@ struct Constants {
         static let enableCloudSync = "enableCloudSync"
         static let lastSyncDate = "lastSyncDate"
         static let addButtonPosition = "addButtonPosition"
+        static let requiresBiometricAuth = "requiresBiometricAuth"
+        static let authTimeoutDuration = "authTimeoutDuration"
+        static let lastBackgroundTime = "lastBackgroundTime"
     }
     
     // MARK: - Add Button Position
@@ -34,6 +37,52 @@ struct Constants {
         case left = "Left"
         
         var id: String { rawValue }
+    }
+    
+    // MARK: - Authentication Timeout Duration
+    enum AuthTimeoutDuration: Int, CaseIterable, Identifiable {
+        case immediate = 0
+        case oneMinute = 60
+        case fiveMinutes = 300
+        case fifteenMinutes = 900
+        case thirtyMinutes = 1800
+        case oneHour = 3600
+        
+        var id: Int { rawValue }
+        
+        var displayName: String {
+            switch self {
+            case .immediate:
+                return "Immediately"
+            case .oneMinute:
+                return "1 minute"
+            case .fiveMinutes:
+                return "5 minutes"
+            case .fifteenMinutes:
+                return "15 minutes"
+            case .thirtyMinutes:
+                return "30 minutes"
+            case .oneHour:
+                return "1 hour"
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .immediate:
+                return "Require authentication every time"
+            case .oneMinute:
+                return "After 1 minute in background"
+            case .fiveMinutes:
+                return "After 5 minutes in background"
+            case .fifteenMinutes:
+                return "After 15 minutes in background"
+            case .thirtyMinutes:
+                return "After 30 minutes in background"
+            case .oneHour:
+                return "After 1 hour in background"
+            }
+        }
     }
     
     // MARK: - UI Constants
