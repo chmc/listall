@@ -1,5 +1,101 @@
 # AI Changelog
 
+## 2025-10-06 - Phase 50: Item suggestions should not suggest current item ✅ COMPLETE
+
+### Summary
+Improved the suggestion system to prevent suggesting the item that is currently being edited. When editing an existing item, the current item will no longer appear in the auto-suggestion list, providing a better user experience and avoiding confusion.
+
+### Changes Made
+
+**1. Enhanced SuggestionService**
+- Added `excludeItemId: UUID?` parameter to `getSuggestions` method
+- Updated cache key generation to include excluded item ID for proper caching
+- Modified `generateAdvancedSuggestions` to filter out the excluded item
+- Added Phase 50 comment documenting the exclusion logic
+
+**2. Updated ItemEditView**
+- Modified `handleTitleChange` to pass `editingItem?.id` to suggestions
+- Ensures current item is excluded from suggestions when editing
+- Added Phase 50 comment documenting the change
+
+### Technical Details
+
+**Files Modified (2 files):**
+
+1. **ListAll/ListAll/Services/SuggestionService.swift**
+   - Line 136: Added `excludeItemId: UUID? = nil` parameter to `getSuggestions`
+   - Line 145: Updated cache key to include exclude key: `let excludeKey = excludeItemId != nil ? "_exclude\(excludeItemId!.uuidString)" : ""`
+   - Line 146: Updated cache key construction
+   - Line 157: Passed `excludeItemId` to `generateAdvancedSuggestions` for current list items
+   - Line 162: Passed `excludeItemId` to `generateAdvancedSuggestions` for global items
+   - Line 292: Added `excludeItemId: UUID? = nil` parameter to `generateAdvancedSuggestions`
+   - Lines 303-305: Added filter logic to exclude current item:
+     ```swift
+     // Phase 50: Exclude the current item being edited
+     if let excludeId = excludeItemId, item.id == excludeId {
+         continue
+     }
+     ```
+
+2. **ListAll/ListAll/Views/ItemEditView.swift**
+   - Line 301: Updated to pass editing item ID: `suggestionService.getSuggestions(for: trimmedValue, in: list, excludeItemId: editingItem?.id)`
+   - Added Phase 50 comment documenting the exclusion
+
+**Logic Flow:**
+```
+User edits existing item
+  ↓
+User types in title field (2+ characters)
+  ↓
+handleTitleChange() calls getSuggestions()
+  ↓
+Pass editingItem?.id as excludeItemId
+  ↓
+generateAdvancedSuggestions() filters out item with matching ID
+  ↓
+Suggestion list displays without current item
+```
+
+**Edge Cases Handled:**
+- New item creation: `editingItem` is `nil`, so no exclusion occurs (correct behavior)
+- Editing existing item: `editingItem.id` is passed, excluding that specific item
+- Cache key includes excluded item ID to prevent cache conflicts
+
+### Testing Results
+
+**Build Status:** ✅ PASS
+- Clean build succeeded without warnings or errors
+- All Swift files compiled successfully
+
+**Test Results:** ✅ 100% PASS (174 tests)
+- All unit tests passed
+- All ViewModel tests passed
+- All Service tests passed (including suggestion tests)
+- All Model tests passed
+- All Utils tests passed
+- Test Duration: ~37 seconds
+
+**Test Breakdown:**
+- ModelTests: 21/21 passed
+- ServicesTests: 101/101 passed
+- ViewModelsTests: 54/54 passed
+- URLHelperTests: 10/10 passed
+- UtilsTests: 27/27 passed
+
+### Benefits
+
+1. **Better UX:** Users won't see their current item in suggestions while editing
+2. **Reduced Confusion:** Prevents accidental selection of the same item
+3. **Clean Suggestions:** Suggestion list only shows truly relevant alternatives
+4. **Proper Caching:** Cache key includes exclusion parameter for correct behavior
+5. **Backward Compatible:** Optional parameter means existing callers still work
+
+### Next Steps
+
+Ready to proceed with Phase 51: Hide suggestion list when clicking outside item title.
+
+---
+
 ## 2025-10-06 - Phase 49: Remove "Display crossed items" from Settings + Settings UI Improvements ✅ COMPLETE
 
 ### Summary

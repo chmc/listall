@@ -297,7 +297,8 @@ struct ItemEditView: View {
         let trimmedValue = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if trimmedValue.count >= 2 {
-            suggestionService.getSuggestions(for: trimmedValue, in: list)
+            // Phase 50: Exclude current item from suggestions when editing
+            suggestionService.getSuggestions(for: trimmedValue, in: list, excludeItemId: editingItem?.id)
             withAnimation(.easeInOut(duration: 0.2)) {
                 showingSuggestions = true
             }

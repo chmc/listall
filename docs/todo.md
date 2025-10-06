@@ -432,8 +432,14 @@
 - ✅ UI tests: 19 passed, 4 failed (simulator launch issues, not code-related), 2 skipped
 
 ## Phase 50: Item suggestions should not suggest current item
-- ❌ Update SuggestionService to exclude the currently edited item from suggestions
-- ❌ Prevents suggesting the same item the user is currently editing
+- ✅ Update SuggestionService to exclude the currently edited item from suggestions
+- ✅ Prevents suggesting the same item the user is currently editing
+- ✅ Added `excludeItemId` parameter to `getSuggestions` method
+- ✅ Updated cache key generation to include excluded item ID
+- ✅ Filtered out current item in `generateAdvancedSuggestions`
+- ✅ Updated ItemEditView to pass editing item ID to suggestions
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success)
 
 ## Phase 51: Hide suggestion list when clicking outside item title
 - ❌ Add tap gesture to dismiss suggestion list when user clicks outside item title field

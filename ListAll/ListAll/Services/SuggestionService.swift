@@ -133,7 +133,7 @@ class SuggestionService: ObservableObject {
     
     // MARK: - Public Methods
     
-    func getSuggestions(for searchText: String, in list: List? = nil, limit: Int? = nil) {
+    func getSuggestions(for searchText: String, in list: List? = nil, limit: Int? = nil, excludeItemId: UUID? = nil) {
         guard !searchText.isEmpty else {
             suggestions = []
             return
@@ -142,7 +142,8 @@ class SuggestionService: ObservableObject {
         // Create cache key
         let listId = list?.id.uuidString ?? "global"
         let limitKey = limit != nil ? "_limit\(limit!)" : "_unlimited"
-        let cacheKey = "\(searchText.lowercased())_\(listId)\(limitKey)"
+        let excludeKey = excludeItemId != nil ? "_exclude\(excludeItemId!.uuidString)" : ""
+        let cacheKey = "\(searchText.lowercased())_\(listId)\(limitKey)\(excludeKey)"
         
         // Check cache first (temporarily disabled to ensure fresh data after deletions)
         // TODO: Re-enable cache after fixing deletion synchronization
@@ -153,12 +154,12 @@ class SuggestionService: ObservableObject {
         
         // Phase 14 Enhancement: Search current list first, then expand to all lists if needed
         let allItems = getAllItems(from: list)
-        var matchingSuggestions = generateAdvancedSuggestions(from: allItems, searchText: searchText)
+        var matchingSuggestions = generateAdvancedSuggestions(from: allItems, searchText: searchText, excludeItemId: excludeItemId)
         
         // If we have less than 3 suggestions from current list, expand search to all lists
         if matchingSuggestions.count < 3 && list != nil {
             let globalItems = getAllItems(from: nil) // Search all lists
-            let globalSuggestions = generateAdvancedSuggestions(from: globalItems, searchText: searchText)
+            let globalSuggestions = generateAdvancedSuggestions(from: globalItems, searchText: searchText, excludeItemId: excludeItemId)
             
             // Merge suggestions, prioritizing current list items
             var combinedSuggestions: [ItemSuggestion] = []
@@ -288,7 +289,7 @@ class SuggestionService: ObservableObject {
         }
     }
     
-    private func generateAdvancedSuggestions(from items: [Item], searchText: String) -> [ItemSuggestion] {
+    private func generateAdvancedSuggestions(from items: [Item], searchText: String, excludeItemId: UUID? = nil) -> [ItemSuggestion] {
         let searchLower = searchText.lowercased()
         let now = Date()
         
@@ -297,6 +298,11 @@ class SuggestionService: ObservableObject {
         // Phase 14 Fix: Show individual items as separate suggestions, not grouped by title
         for item in items {
             guard !item.title.isEmpty else { continue }
+            
+            // Phase 50: Exclude the current item being edited
+            if let excludeId = excludeItemId, item.id == excludeId {
+                continue
+            }
             
             let matchScore = calculateMatchScore(searchText: searchLower, itemTitle: item.title.lowercased())
             
