@@ -413,6 +413,10 @@ class TestListViewModel: ObservableObject {
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
     
+    // Multi-Selection Properties
+    @Published var isInSelectionMode = false
+    @Published var selectedItems: Set<UUID> = []
+    
     private let dataManager: TestDataManager
     private let dataRepository: TestDataRepository
     private let list: List
@@ -653,6 +657,44 @@ class TestListViewModel: ObservableObject {
         } else if filterOption == .all {
             showCrossedOutItems = true
         }
+    }
+    
+    // MARK: - Multi-Selection Methods
+    
+    func toggleSelection(for itemId: UUID) {
+        if selectedItems.contains(itemId) {
+            selectedItems.remove(itemId)
+        } else {
+            selectedItems.insert(itemId)
+        }
+    }
+    
+    func selectAll() {
+        selectedItems = Set(filteredItems.map { $0.id })
+    }
+    
+    func deselectAll() {
+        selectedItems.removeAll()
+    }
+    
+    func deleteSelectedItems() {
+        for itemId in selectedItems {
+            if let item = items.first(where: { $0.id == itemId }) {
+                dataRepository.deleteItem(item)
+            }
+        }
+        selectedItems.removeAll()
+        loadItems()
+    }
+    
+    func enterSelectionMode() {
+        isInSelectionMode = true
+        selectedItems.removeAll()
+    }
+    
+    func exitSelectionMode() {
+        isInSelectionMode = false
+        selectedItems.removeAll()
     }
 }
 

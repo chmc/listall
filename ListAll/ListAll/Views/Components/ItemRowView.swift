@@ -3,27 +3,36 @@ import UIKit
 
 struct ItemRowView: View {
     let item: Item
+    var viewModel: ListViewModel? = nil
     let onToggle: (() -> Void)?
     let onEdit: (() -> Void)?
     let onDuplicate: (() -> Void)?
     let onDelete: (() -> Void)?
     
-    init(item: Item, 
+    init(item: Item,
+         viewModel: ListViewModel? = nil,
          onToggle: (() -> Void)? = nil,
          onEdit: (() -> Void)? = nil,
          onDuplicate: (() -> Void)? = nil,
          onDelete: (() -> Void)? = nil) {
         self.item = item
+        self.viewModel = viewModel
         self.onToggle = onToggle
         self.onEdit = onEdit
         self.onDuplicate = onDuplicate
         self.onDelete = onDelete
     }
     
-    var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            // Main content area - entire area tappable to complete item
-            VStack(alignment: .leading, spacing: 1) {
+    private var isInSelectionMode: Bool {
+        viewModel?.isInSelectionMode ?? false
+    }
+    
+    private var isSelected: Bool {
+        viewModel?.selectedItems.contains(item.id) ?? false
+    }
+    
+    private var itemContent: some View {
+        VStack(alignment: .leading, spacing: 1) {
                 // Title with strikethrough animation
                 Text(item.displayTitle)
                     .font(Theme.Typography.body)
@@ -73,70 +82,103 @@ struct ItemRowView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle()) // Make entire content area tappable
-            .onTapGesture {
-                onToggle?()
+            .contentShape(Rectangle())
+    }
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            // Selection indicator
+            if isInSelectionMode {
+                Button(action: {
+                    viewModel?.toggleSelection(for: item.id)
+                }) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isSelected ? .blue : .gray)
+                        .imageScale(.large)
+                }
+                .buttonStyle(BorderlessButtonStyle())
             }
             
-            // Right-side edit button with larger clickable area
-            Button(action: {
-                onEdit?()
-            }) {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(Theme.Colors.secondary)
-                    .frame(width: 44, height: 44) // Larger tap target (44x44 is Apple's recommended minimum)
-                    .contentShape(Rectangle()) // Ensure entire frame is tappable
+            // Item content
+            if isInSelectionMode {
+                // In selection mode: Make entire row tappable for selection
+                Button(action: {
+                    viewModel?.toggleSelection(for: item.id)
+                }) {
+                    itemContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                // Normal mode: Main content area tappable to complete item
+                itemContent
+                    .onTapGesture {
+                        onToggle?()
+                    }
+                
+                // Right-side edit button with larger clickable area
+                Button(action: {
+                    onEdit?()
+                }) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(Theme.Colors.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
             }
-            .buttonStyle(PlainButtonStyle())
         }
         .padding(.vertical, 8)
         .padding(.horizontal, Theme.Spacing.md)
-        .contentShape(Rectangle()) // Makes entire row tappable
-        .contextMenu {
-            // Context menu actions
-            Button(action: {
-                onEdit?()
-            }) {
-                Label("Edit", systemImage: "pencil")
+        .contentShape(Rectangle())
+        .if(!isInSelectionMode) { view in
+            view.contextMenu {
+                // Context menu actions
+                Button(action: {
+                    onEdit?()
+                }) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                
+                Button(action: {
+                    onDuplicate?()
+                }) {
+                    Label("Duplicate", systemImage: "doc.on.doc")
+                }
+                
+                Divider()
+                
+                Button(action: {
+                    onDelete?()
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .foregroundColor(.red)
             }
-            
-            Button(action: {
-                onDuplicate?()
-            }) {
-                Label("Duplicate", systemImage: "doc.on.doc")
-            }
-            
-            Divider()
-            
-            Button(action: {
-                onDelete?()
-            }) {
-                Label("Delete", systemImage: "trash")
-            }
-            .foregroundColor(.red)
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(action: {
-                onDelete?()
-            }) {
-                Label("Delete", systemImage: "trash")
+        .if(!isInSelectionMode) { view in
+            view.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(action: {
+                    onDelete?()
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .tint(.red)
+                
+                Button(action: {
+                    onDuplicate?()
+                }) {
+                    Label("Duplicate", systemImage: "doc.on.doc")
+                }
+                .tint(.blue)
+                
+                Button(action: {
+                    onEdit?()
+                }) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.orange)
             }
-            .tint(.red)
-            
-            Button(action: {
-                onDuplicate?()
-            }) {
-                Label("Duplicate", systemImage: "doc.on.doc")
-            }
-            .tint(.blue)
-            
-            Button(action: {
-                onEdit?()
-            }) {
-                Label("Edit", systemImage: "pencil")
-            }
-            .tint(.orange)
         }
     }
 }

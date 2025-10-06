@@ -5,7 +5,7 @@ struct ListView: View {
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
     @StateObject private var sharingService = SharingService()
-    @Environment(\.editMode) private var editMode
+    @State private var editMode: EditMode = .inactive
     @State private var showingCreateItem = false
     @State private var showingEditItem = false
     @State private var showingEditList = false
@@ -16,6 +16,7 @@ struct ListView: View {
     @State private var shareOptions: ShareOptions = .default
     @State private var shareFileURL: URL?
     @State private var shareItems: [Any] = []
+    @State private var showingDeleteConfirmation = false
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
     
     private var addButtonPosition: Constants.AddButtonPosition {
@@ -98,6 +99,7 @@ struct ListView: View {
                     ForEach(viewModel.filteredItems) { item in
                         ItemRowView(
                             item: item,
+                            viewModel: viewModel,
                             onToggle: {
                                 viewModel.toggleItemCrossedOut(item)
                             },
@@ -114,10 +116,11 @@ struct ListView: View {
                         )
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     }
-                    .onDelete(perform: deleteItems)
-                    // Only allow manual reordering when sorted by order number
-                    .onMove(perform: viewModel.currentSortOption == .orderNumber ? viewModel.moveItems : nil)
+                    .onDelete(perform: viewModel.isInSelectionMode ? nil : deleteItems)
+                    // Only allow manual reordering when sorted by order number (and not in selection mode)
+                    .onMove(perform: (viewModel.currentSortOption == .orderNumber && !viewModel.isInSelectionMode) ? viewModel.moveItems : nil)
                 }
+                .environment(\.editMode, viewModel.isInSelectionMode ? .constant(.inactive) : $editMode)
                 .refreshable {
                     viewModel.loadItems()
                 }
@@ -160,41 +163,74 @@ struct ListView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if !viewModel.items.isEmpty && viewModel.isInSelectionMode {
+                    // Selection mode: Show Select All/None
+                    Button(viewModel.selectedItems.count == viewModel.filteredItems.count ? "Deselect All" : "Select All") {
+                        withAnimation {
+                            if viewModel.selectedItems.count == viewModel.filteredItems.count {
+                                viewModel.deselectAll()
+                            } else {
+                                viewModel.selectAll()
+                            }
+                        }
+                    }
+                }
+            }
+            
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if !viewModel.items.isEmpty {
-                    // Share button
-                    Button(action: {
-                        showingShareFormatPicker = true
-                    }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.primary)
+                    if viewModel.isInSelectionMode {
+                        // Selection mode: Show Delete and Done buttons
+                        if !viewModel.selectedItems.isEmpty {
+                            Button(action: {
+                                showingDeleteConfirmation = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        
+                        Button("Done") {
+                            withAnimation {
+                                viewModel.exitSelectionMode()
+                            }
+                        }
+                    } else {
+                        // Normal mode: Show Share, Sort/Filter, Eye, and Edit buttons
+                        Button(action: {
+                            showingShareFormatPicker = true
+                        }) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundColor(.primary)
+                        }
+                        .help("Share list")
+                        
+                        Button(action: {
+                            viewModel.showingOrganizationOptions = true
+                        }) {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .foregroundColor(.primary)
+                        }
+                        .help("Sort and filter options")
+                        
+                        Button(action: {
+                            viewModel.toggleShowCrossedOutItems()
+                        }) {
+                            Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
+                                .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
+                        }
+                        .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
+                        
+                        Button(action: {
+                            withAnimation {
+                                viewModel.enterSelectionMode()
+                            }
+                        }) {
+                            Image(systemName: "pencil")
+                        }
+                        .help("Edit items")
                     }
-                    .help("Share list")
-                    
-                    // Organization options button
-                    Button(action: {
-                        viewModel.showingOrganizationOptions = true
-                    }) {
-                        Image(systemName: "arrow.up.arrow.down")
-                            .foregroundColor(.primary)
-                    }
-                    .help("Sort and filter options")
-                    
-                    // Show/Hide crossed out items toggle (legacy support)
-                    Button(action: {
-                        viewModel.toggleShowCrossedOutItems()
-                    }) {
-                        Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
-                            .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
-                    }
-                    .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
-                    
-                    Button(action: {
-                        editMode?.wrappedValue = editMode?.wrappedValue == .active ? .inactive : .active
-                    }) {
-                        Image(systemName: "pencil")
-                    }
-                    .help("Edit items")
                 }
             }
         }
@@ -237,6 +273,17 @@ struct ListView: View {
             }
         } message: {
             Text(sharingService.shareError ?? "")
+        }
+        .alert("Delete Items", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                withAnimation {
+                    viewModel.deleteSelectedItems()
+                    viewModel.exitSelectionMode()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete \(viewModel.selectedItems.count) item(s)? This action cannot be undone.")
         }
         .onAppear {
             viewModel.loadItems()

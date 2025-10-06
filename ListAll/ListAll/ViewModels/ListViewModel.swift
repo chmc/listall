@@ -19,6 +19,10 @@ class ListViewModel: ObservableObject {
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
     
+    // Multi-Selection Properties
+    @Published var isInSelectionMode = false
+    @Published var selectedItems: Set<UUID> = []
+    
     private let dataManager = DataManager.shared // Changed from coreDataManager
     private let dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
@@ -300,5 +304,43 @@ class ListViewModel: ObservableObject {
         userData.defaultSortDirection = currentSortDirection
         userData.defaultFilterOption = currentFilterOption
         dataRepository.saveUserData(userData)
+    }
+    
+    // MARK: - Multi-Selection Methods
+    
+    func toggleSelection(for itemId: UUID) {
+        if selectedItems.contains(itemId) {
+            selectedItems.remove(itemId)
+        } else {
+            selectedItems.insert(itemId)
+        }
+    }
+    
+    func selectAll() {
+        selectedItems = Set(filteredItems.map { $0.id })
+    }
+    
+    func deselectAll() {
+        selectedItems.removeAll()
+    }
+    
+    func deleteSelectedItems() {
+        for itemId in selectedItems {
+            if let item = items.first(where: { $0.id == itemId }) {
+                dataRepository.deleteItem(item)
+            }
+        }
+        selectedItems.removeAll()
+        loadItems() // Refresh the list
+    }
+    
+    func enterSelectionMode() {
+        isInSelectionMode = true
+        selectedItems.removeAll()
+    }
+    
+    func exitSelectionMode() {
+        isInSelectionMode = false
+        selectedItems.removeAll()
     }
 }
