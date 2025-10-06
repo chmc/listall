@@ -385,8 +385,12 @@
 - ✅ Build validation passed (100% success)
 - ✅ Tests: 224 passed, 0 failed (100% pass rate)
 
-## Phase 45: Option to include images to json share
-- ❌ Add item images part of json share
+## Phase 45: Option to include images to json share ✅ COMPLETED
+- ✅ Added includeImages field to ShareOptions struct
+- ✅ Updated SharingService to pass includeImages option to JSON export
+- ✅ Added conditional "Include Images" toggle in ShareFormatPickerView (JSON only)
+- ✅ Build validation passed (100% success)
+- ✅ Tests: 224 passed, 0 failed (100% pass rate)
 
 ## Phase 46: Move item to another list
 - ❌ Ability to move item to another list

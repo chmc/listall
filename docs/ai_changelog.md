@@ -1,5 +1,70 @@
 # AI Changelog
 
+## 2025-10-06 - Phase 45: Option to Include Images in JSON Share ✅ COMPLETE
+
+### Summary
+Implemented the ability to control whether images are included in JSON exports and shares. Added an `includeImages` field to `ShareOptions` struct, updated the sharing service to pass this option when creating JSON exports, and added a conditional toggle in the share UI that only appears when JSON format is selected. The feature works seamlessly with both single list sharing and full data exports, allowing users to reduce file size by excluding base64-encoded images when desired.
+
+### Features Implemented
+
+**1. ShareOptions Enhancement**
+- Added `includeImages: Bool` field to `ShareOptions` struct in `SharingService.swift`
+- Updated `.default` static property to include images by default (`includeImages: true`)
+- Updated `.minimal` static property to exclude images (`includeImages: false`)
+- Added documentation: "Whether to include item images (base64 encoded in JSON)"
+
+**2. Sharing Service Integration**
+- Modified `shareListAsJSON()` method in `SharingService.swift` (line 185)
+- Now passes `includeImages: options.includeImages` to `ListExportData` initializer
+- Ensures the option is respected when creating shareable JSON for single lists
+- Note: `shareAllData()` already used `ExportOptions` which had image support
+
+**3. UI Toggle Addition**
+- Added conditional "Include Images" toggle in `ShareFormatPickerView.swift` (lines 48-51)
+- Toggle only appears when JSON format is selected (intelligent UI)
+- Includes help text: "Images will be embedded as base64 in JSON"
+- Seamlessly integrates with existing share options UI
+
+### Technical Changes
+
+**Files Modified**:
+1. `SharingService.swift` (4 changes):
+   - Line 31: Added `includeImages: Bool` field to `ShareOptions` struct
+   - Line 40: Updated `.default` to include `includeImages: true`
+   - Line 52: Updated `.minimal` to include `includeImages: false`
+   - Line 185: Pass `includeImages` option to `ListExportData` initializer
+
+2. `ShareFormatPickerView.swift` (1 change):
+   - Lines 48-51: Added conditional toggle for "Include Images" option
+   - Only visible when `selectedFormat == .json`
+
+### Build & Test Results
+- **Build Status**: ✅ SUCCESS (100% clean build)
+- **Test Results**: ✅ All 224 tests passed (0 failures)
+- **Test Suite Breakdown**:
+  - ModelTests: 25/25 passed
+  - ServicesTests: 136/136 passed (including existing image export tests)
+  - UtilsTests: 27/27 passed
+  - ViewModelsTests: 50/50 passed
+  - URLHelperTests: 11/11 passed
+  - ListAllUITests: 17/17 passed (2 skipped)
+  - ListAllUITestsLaunchTests: 4/4 passed
+
+### User Experience
+- Users can now choose whether to include images when sharing lists as JSON
+- Default behavior includes images (no breaking change)
+- Minimal option excludes images for smaller file sizes
+- Toggle appears only for JSON format (cleaner UI)
+- Works for both single list sharing and full data exports
+
+### Notes
+- Backend infrastructure for image inclusion/exclusion already existed in `ExportService`
+- This phase primarily added UI controls and extended the option to `ShareOptions`
+- Images are base64-encoded in JSON, so excluding them can significantly reduce file size
+- Perfect for sharing lists with many or large images when image data isn't needed
+
+---
+
 ## 2025-10-05 - Phase 44: Optional Item Image Import Support ✅ COMPLETE
 
 ### Summary

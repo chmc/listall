@@ -27,13 +27,17 @@ struct ShareOptions {
     /// Whether to include dates (created/modified)
     var includeDates: Bool
     
+    /// Whether to include item images (base64 encoded in JSON)
+    var includeImages: Bool
+    
     /// Default share options with essential fields
     static var `default`: ShareOptions {
         ShareOptions(
             includeCrossedOutItems: true,
             includeDescriptions: true,
             includeQuantities: true,
-            includeDates: false
+            includeDates: false,
+            includeImages: true
         )
     }
     
@@ -43,7 +47,8 @@ struct ShareOptions {
             includeCrossedOutItems: false,
             includeDescriptions: false,
             includeQuantities: false,
-            includeDates: false
+            includeDates: false,
+            includeImages: false
         )
     }
 }
@@ -177,7 +182,7 @@ class SharingService: ObservableObject {
             items = items.filter { !$0.isCrossedOut }
         }
         
-        let listExportData = ListExportData(from: list, items: items)
+        let listExportData = ListExportData(from: list, items: items, includeImages: options.includeImages)
         
         do {
             let encoder = JSONEncoder()

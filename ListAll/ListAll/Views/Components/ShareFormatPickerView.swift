@@ -44,6 +44,11 @@ struct ShareFormatPickerView: View {
                     Toggle("Include Descriptions", isOn: $shareOptions.includeDescriptions)
                     Toggle("Include Quantities", isOn: $shareOptions.includeQuantities)
                     Toggle("Include Dates", isOn: $shareOptions.includeDates)
+                    
+                    if selectedFormat == .json {
+                        Toggle("Include Images", isOn: $shareOptions.includeImages)
+                            .help("Images will be embedded as base64 in JSON")
+                    }
                 }
                 
                 Section {
