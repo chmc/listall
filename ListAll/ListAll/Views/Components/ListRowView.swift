@@ -1,12 +1,26 @@
 import SwiftUI
 
+// MARK: - Alert Type Enum
+enum ListRowAlert: Identifiable {
+    case delete
+    case duplicate
+    case shareError(String)
+    
+    var id: String {
+        switch self {
+        case .delete: return "delete"
+        case .duplicate: return "duplicate"
+        case .shareError: return "shareError"
+        }
+    }
+}
+
 struct ListRowView: View {
     let list: List
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var sharingService = SharingService()
     @State private var showingEditSheet = false
-    @State private var showingDeleteAlert = false
-    @State private var showingDuplicateAlert = false
+    @State private var activeAlert: ListRowAlert?
     @State private var showingShareFormatPicker = false
     @State private var showingShareSheet = false
     @State private var selectedShareFormat: ShareFormat = .plainText
@@ -78,13 +92,13 @@ struct ListRowView: View {
                 }
                 
                 Button(action: {
-                    showingDuplicateAlert = true
+                    activeAlert = .duplicate
                 }) {
                     Label("Duplicate", systemImage: "doc.on.doc")
                 }
                 
                 Button(role: .destructive, action: {
-                    showingDeleteAlert = true
+                    activeAlert = .delete
                 }) {
                     Label("Delete", systemImage: "trash")
                 }
@@ -93,7 +107,7 @@ struct ListRowView: View {
         .if(!mainViewModel.isInSelectionMode) { view in
             view.swipeActions(edge: .trailing) {
                 Button(role: .destructive, action: {
-                    showingDeleteAlert = true
+                    activeAlert = .delete
                 }) {
                     Label("Delete", systemImage: "trash")
                 }
@@ -109,7 +123,7 @@ struct ListRowView: View {
                 .tint(.orange)
                 
                 Button(action: {
-                    showingDuplicateAlert = true
+                    activeAlert = .duplicate
                 }) {
                     Label("Duplicate", systemImage: "doc.on.doc")
                 }
@@ -145,33 +159,45 @@ struct ListRowView: View {
                 }
             }
         )
-        .alert("Share Error", isPresented: .constant(sharingService.shareError != nil)) {
-            Button("OK") {
-                sharingService.clearError()
+        .alert(item: $activeAlert) { alertType in
+            switch alertType {
+            case .delete:
+                return Alert(
+                    title: Text("Delete List"),
+                    message: Text("Are you sure you want to delete \"\(list.name)\"? This action cannot be undone."),
+                    primaryButton: .destructive(Text("Delete")) {
+                        mainViewModel.deleteList(list)
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .duplicate:
+                return Alert(
+                    title: Text("Duplicate List"),
+                    message: Text("This will create a copy of \"\(list.name)\" with all its items."),
+                    primaryButton: .default(Text("Duplicate")) {
+                        do {
+                            try mainViewModel.duplicateList(list)
+                        } catch {
+                            // Handle error (could add error alert here if needed)
+                            print("Error duplicating list: \(error)")
+                        }
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .shareError(let errorMessage):
+                return Alert(
+                    title: Text("Share Error"),
+                    message: Text(errorMessage),
+                    dismissButton: .default(Text("OK")) {
+                        sharingService.clearError()
+                    }
+                )
             }
-        } message: {
-            Text(sharingService.shareError ?? "")
         }
-        .alert("Delete List", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                mainViewModel.deleteList(list)
+        .onChange(of: sharingService.shareError) { error in
+            if let error = error {
+                activeAlert = .shareError(error)
             }
-        } message: {
-            Text("Are you sure you want to delete \"\(list.name)\"? This action cannot be undone.")
-        }
-        .alert("Duplicate List", isPresented: $showingDuplicateAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Duplicate") {
-                do {
-                    try mainViewModel.duplicateList(list)
-                } catch {
-                    // Handle error (could add error alert here if needed)
-                    print("Error duplicating list: \(error)")
-                }
-            }
-        } message: {
-            Text("This will create a copy of \"\(list.name)\" with all its items.")
         }
     }
     
