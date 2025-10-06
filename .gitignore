@@ -132,8 +132,8 @@ DerivedData/
 logs/
 
 # Build and test output logs
-build_output.txt
-test_output.txt
+*_output.txt
+*output.txt
 
 # Coverage reports
 *.coverage
