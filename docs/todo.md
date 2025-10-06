@@ -392,7 +392,67 @@
 - ✅ Build validation passed (100% success)
 - ✅ Tests: 224 passed, 0 failed (100% pass rate)
 
-## Phase 46: Move item to another list
+## Phase 46: Move add new item button to bottom of screen
+- ❌ Move the add new item button to the bottom of the screen in ListView
+
+## Phase 47: Add edit icon to edit buttons everywhere
+- ❌ Replace text-only edit buttons with icon buttons throughout the app
+- ❌ Use SF Symbols pencil icon for consistency
+
+## Phase 48: Fix list items multi-select functionality
+- ❌ List items multi-select no longer works
+- ❌ Debug and restore multi-select functionality in ListView
+
+## Phase 49: Remove "Display crossed items" from Settings
+- ❌ Remove "Display crossed items" setting and related functionality from SettingsView
+- ❌ Feature is already available in filters, so this is redundant
+
+## Phase 50: Item suggestions should not suggest current item
+- ❌ Update SuggestionService to exclude the currently edited item from suggestions
+- ❌ Prevents suggesting the same item the user is currently editing
+
+## Phase 51: Hide suggestion list when clicking outside item title
+- ❌ Add tap gesture to dismiss suggestion list when user clicks outside item title field
+- ❌ Improve UX by auto-hiding suggestions on focus loss
+
+## Phase 52: Add secure app open option in Settings
+- ❌ Implement passcode or biometric authentication option in SettingsView
+- ❌ Add Face ID / Touch ID support for app unlock
+- ❌ Store security preference in UserData
+
+## Phase 53: Auto-open list after creation
+- ❌ After creating a new list, automatically navigate to that list
+- ❌ Update CreateListView to navigate to newly created list
+
+## Phase 54: Fix list swipe-to-delete dialog issue
+- ❌ List swipe and delete opens and closes dialog immediately
+- ❌ Delete action cannot be completed due to dialog flickering
+- ❌ Debug and fix confirmation dialog state management
+
+## Phase 55: Improve list name edit button
+- ❌ Current list name edit button UX is not optimal
+- ❌ Redesign edit button for better usability and visual clarity
+
+## Phase 56: Add spacing to left of list share button
+- ❌ Add equal spacing on left side of list share button to match right side button
+- ❌ Apply as a general fix for button spacing consistency throughout app
+
+## Phase 57: Archive lists instead of deleting
+- ❌ Change list deletion to archive the list instead of permanent deletion
+- ❌ Update CoreDataManager and DataRepository to support archiving
+- ❌ Archive functionality should set isArchived flag instead of deleting
+
+## Phase 58: Add ability to view archived lists
+- ❌ Create UI to view archived lists
+- ❌ Add filter/toggle in MainView to show archived lists
+- ❌ Add ability to restore archived lists
+
+## Phase 59: Add ability to permanently delete archived lists
+- ❌ Add permanent delete functionality for archived lists
+- ❌ Show confirmation dialog warning about permanent deletion
+- ❌ Only allow permanent deletion from archived lists view
+
+## Phase 60: Move item to another list
 - ❌ Ability to move item to another list
 
 ## Phase
