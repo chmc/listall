@@ -134,6 +134,9 @@ logs/
 # Build and test output logs
 *_output.txt
 *output.txt
+*_test_*.txt
+unit_test*.txt
+test_output*.txt
 
 # Coverage reports
 *.coverage
