@@ -99,19 +99,22 @@ struct ItemDetailView: View {
         .navigationTitle("Item Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button(action: {
-                    viewModel.toggleCrossedOut()
-                }) {
-                    Image(systemName: viewModel.item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
-                        .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Button(action: {
+                        viewModel.toggleCrossedOut()
+                    }) {
+                        Image(systemName: viewModel.item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
+                            .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
+                    }
+                    
+                    Button(action: {
+                        showingEditView = true
+                    }) {
+                        Image(systemName: "pencil")
+                    }
                 }
-                
-                Button(action: {
-                    showingEditView = true
-                }) {
-                    Image(systemName: "pencil")
-                }
+                .padding(.horizontal, Theme.Spacing.sm)
             }
         }
         .sheet(isPresented: $showingEditView) {

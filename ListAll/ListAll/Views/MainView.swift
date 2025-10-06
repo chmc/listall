@@ -75,7 +75,7 @@ struct MainView: View {
                 .navigationTitle("Lists")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        HStack {
+                        HStack(spacing: Theme.Spacing.md) {
                             if !viewModel.isInSelectionMode {
                                 // Share all data button
                                 if !viewModel.lists.isEmpty {
@@ -122,10 +122,11 @@ struct MainView: View {
                                 }
                             }
                         }
+                        .padding(.horizontal, Theme.Spacing.sm)
                     }
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        HStack {
+                        HStack(spacing: Theme.Spacing.md) {
                             if viewModel.isInSelectionMode {
                                 // Selection mode: Show Delete and Done buttons
                                 if !viewModel.selectedLists.isEmpty {
@@ -150,9 +151,11 @@ struct MainView: View {
                                 }) {
                                     Image(systemName: Constants.UI.addIcon)
                                 }
+                                .buttonStyle(.plain)
                                 .accessibilityIdentifier("AddListButton")
                             }
                         }
+                        .padding(.horizontal, Theme.Spacing.sm)
                     }
                 }
             }

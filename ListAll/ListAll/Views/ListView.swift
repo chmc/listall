@@ -159,60 +159,63 @@ struct ListView: View {
                 }
             }
             
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                if !viewModel.items.isEmpty {
-                    if viewModel.isInSelectionMode {
-                        // Selection mode: Show Delete and Done buttons
-                        if !viewModel.selectedItems.isEmpty {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: Theme.Spacing.md) {
+                    if !viewModel.items.isEmpty {
+                        if viewModel.isInSelectionMode {
+                            // Selection mode: Show Delete and Done buttons
+                            if !viewModel.selectedItems.isEmpty {
+                                Button(action: {
+                                    showingDeleteConfirmation = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                            }
+                            
+                            Button("Done") {
+                                withAnimation {
+                                    viewModel.exitSelectionMode()
+                                }
+                            }
+                        } else {
+                            // Normal mode: Show Share, Sort/Filter, Eye, and Edit buttons
                             Button(action: {
-                                showingDeleteConfirmation = true
+                                showingShareFormatPicker = true
                             }) {
-                                Image(systemName: "trash")
-                                    .foregroundColor(.red)
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundColor(.primary)
                             }
-                        }
-                        
-                        Button("Done") {
-                            withAnimation {
-                                viewModel.exitSelectionMode()
+                            .help("Share list")
+                            
+                            Button(action: {
+                                viewModel.showingOrganizationOptions = true
+                            }) {
+                                Image(systemName: "arrow.up.arrow.down")
+                                    .foregroundColor(.primary)
                             }
-                        }
-                    } else {
-                        // Normal mode: Show Share, Sort/Filter, Eye, and Edit buttons
-                        Button(action: {
-                            showingShareFormatPicker = true
-                        }) {
-                            Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(.primary)
-                        }
-                        .help("Share list")
-                        
-                        Button(action: {
-                            viewModel.showingOrganizationOptions = true
-                        }) {
-                            Image(systemName: "arrow.up.arrow.down")
-                                .foregroundColor(.primary)
-                        }
-                        .help("Sort and filter options")
-                        
-                        Button(action: {
-                            viewModel.toggleShowCrossedOutItems()
-                        }) {
-                            Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
-                                .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
-                        }
-                        .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
-                        
-                        Button(action: {
-                            withAnimation {
-                                viewModel.enterSelectionMode()
+                            .help("Sort and filter options")
+                            
+                            Button(action: {
+                                viewModel.toggleShowCrossedOutItems()
+                            }) {
+                                Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
+                                    .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
                             }
-                        }) {
-                            Image(systemName: "pencil")
+                            .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
+                            
+                            Button(action: {
+                                withAnimation {
+                                    viewModel.enterSelectionMode()
+                                }
+                            }) {
+                                Image(systemName: "pencil")
+                            }
+                            .help("Edit items")
                         }
-                        .help("Edit items")
                     }
                 }
+                .padding(.horizontal, Theme.Spacing.sm)
             }
         }
         .sheet(isPresented: $showingCreateItem) {
