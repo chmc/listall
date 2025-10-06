@@ -1,5 +1,80 @@
 # AI Changelog
 
+## 2025-10-06 - Phase 51: Hide suggestion list when clicking outside item title ✅ COMPLETE
+
+### Summary
+Implemented user-friendly behavior to automatically hide the suggestion list when the user clicks outside the item title field or when the title field loses focus. This improves the overall user experience by providing intuitive dismissal of suggestions and cleaner UI interactions.
+
+### Changes Made
+
+**1. Enhanced ItemEditView Gesture Handling**
+- Updated `.onTapGesture` handler to dismiss suggestions when clicking outside
+- Added `.onChange(of: isTitleFieldFocused)` observer to hide suggestions on focus loss
+- Implemented smooth animations for suggestion dismissal (0.2 second ease-in-out)
+- Reset both `showingSuggestions` and `showAllSuggestions` states for clean dismissal
+
+### Technical Details
+
+**Files Modified (1 file):**
+
+1. **ListAll/ListAll/Views/ItemEditView.swift**
+   - Lines 268-272: Enhanced tap gesture handler to hide suggestions with animation
+     ```swift
+     // Hide suggestions when clicking outside item title field (Phase 51)
+     withAnimation(.easeInOut(duration: 0.2)) {
+         showingSuggestions = false
+         showAllSuggestions = false
+     }
+     ```
+   - Lines 274-282: Added focus change observer for title field
+     ```swift
+     .onChange(of: isTitleFieldFocused) { isFocused in
+         // Hide suggestions when title field loses focus (Phase 51)
+         if !isFocused {
+             withAnimation(.easeInOut(duration: 0.2)) {
+                 showingSuggestions = false
+                 showAllSuggestions = false
+             }
+         }
+     }
+     ```
+
+**Logic Flow:**
+```
+User interacts with ItemEditView
+  ↓
+Either: Taps outside fields OR Title field loses focus
+  ↓
+onChange handler detects focus change
+  ↓
+Animate hide suggestions (0.2s)
+  ↓
+showingSuggestions = false
+showAllSuggestions = false (reset to collapsed state)
+  ↓
+Suggestions smoothly fade out
+```
+
+**User Experience Improvements:**
+1. **Tap Outside**: Tapping anywhere outside text fields now dismisses suggestions
+2. **Focus Loss**: Switching to description field or other UI elements dismisses suggestions
+3. **Smooth Animation**: 0.2 second ease-in-out animation provides polished feel
+4. **State Reset**: Both expanded/collapsed suggestion states are properly reset
+
+### Build & Test Results
+- ✅ **Build Status**: BUILD SUCCEEDED (100% success)
+- ✅ **Test Status**: TEST SUCCEEDED (100% pass rate)
+- ✅ All existing tests continue to pass
+- ✅ No new warnings or errors introduced
+
+### Impact
+This enhancement provides a more intuitive and polished user experience when working with item suggestions. Users no longer need to manually dismiss suggestions - they automatically hide when focus moves away from the title field or when clicking elsewhere in the UI.
+
+### Next Steps
+Ready for Phase 52: Add secure app open option in Settings
+
+---
+
 ## 2025-10-06 - Phase 50: Item suggestions should not suggest current item ✅ COMPLETE
 
 ### Summary

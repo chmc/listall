@@ -264,6 +264,21 @@ struct ItemEditView: View {
             // Dismiss keyboard when tapping outside text fields (both single and multi-line)
             isTitleFieldFocused = false
             isDescriptionFieldFocused = false
+            
+            // Hide suggestions when clicking outside item title field (Phase 51)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = false
+                showAllSuggestions = false
+            }
+        }
+        .onChange(of: isTitleFieldFocused) { isFocused in
+            // Hide suggestions when title field loses focus (Phase 51)
+            if !isFocused {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showingSuggestions = false
+                    showAllSuggestions = false
+                }
+            }
         }
         .onAppear {
             viewModel.setupForEditing()
