@@ -46,7 +46,8 @@ struct ContentView: View {
                 if shouldRequireAuthentication() {
                     // Timeout has elapsed or immediate mode - reset and require auth
                     biometricService.resetAuthentication()
-                    if !biometricService.isAuthenticated {
+                    // Only authenticate if not already authenticated and not currently authenticating
+                    if !biometricService.isAuthenticated && !isAuthenticating {
                         authenticate()
                     }
                 }
@@ -66,10 +67,16 @@ struct ContentView: View {
     }
     
     private func authenticate() {
+        // Prevent multiple simultaneous authentication attempts
+        guard !isAuthenticating else { return }
+        
         isAuthenticating = true
         biometricService.authenticate { success, errorMessage in
             isAuthenticating = false
-            if !success {
+            if success {
+                // Clear background time after successful authentication to prevent re-triggering
+                self.backgroundTime = nil
+            } else {
                 authErrorMessage = errorMessage ?? "Authentication failed"
                 showAuthError = true
             }
@@ -78,18 +85,19 @@ struct ContentView: View {
     
     /// Determines if authentication is required based on timeout setting
     private func shouldRequireAuthentication() -> Bool {
-        // If immediate timeout, always require authentication
+        // Check if we have a background timestamp
+        guard let bgTime = backgroundTime else {
+            // No background time recorded - already authenticated since last background
+            // This prevents infinite loops in immediate mode after successful auth
+            return false
+        }
+        
+        // If immediate timeout, require authentication (we know backgroundTime exists)
         if authTimeoutDuration == .immediate {
             return true
         }
         
-        // Check if enough time has passed since background
-        guard let bgTime = backgroundTime else {
-            // No background time recorded yet (first launch or never backgrounded)
-            // Don't require re-authentication - user just authenticated on launch
-            return false
-        }
-        
+        // Check if enough time has passed since background for timed modes
         let elapsedTime = Date().timeIntervalSince(bgTime)
         return elapsedTime >= TimeInterval(authTimeoutDuration.rawValue)
     }
