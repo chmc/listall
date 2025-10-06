@@ -781,6 +781,9 @@ class ImportService: ObservableObject {
         item.createdAt = itemData.createdAt
         item.modifiedAt = itemData.modifiedAt
         
+        // Import images if present
+        item.images = importImages(from: itemData.images, itemId: item.id, useOriginalID: useOriginalID)
+        
         // Add item using repository to ensure test isolation
         dataRepository.addItemForImport(item, to: list.id)
         return item
@@ -795,7 +798,96 @@ class ImportService: ObservableObject {
         updatedItem.orderNumber = itemData.orderNumber
         updatedItem.isCrossedOut = itemData.isCrossedOut
         updatedItem.modifiedAt = itemData.modifiedAt
+        
+        // Update images - merge with existing images (update by ID, add new ones)
+        updatedItem.images = mergeImages(existing: item.images, imported: itemData.images, itemId: item.id)
+        
         dataRepository.updateItemForImport(updatedItem)
+    }
+    
+    // MARK: - Image Import Helper Methods
+    
+    /// Imports images from ItemImageExportData
+    private func importImages(from imageDataArray: [ItemImageExportData], itemId: UUID, useOriginalID: Bool) -> [ItemImage] {
+        var importedImages: [ItemImage] = []
+        
+        for imageExportData in imageDataArray {
+            // Decode base64 image data
+            guard let imageData = Data(base64Encoded: imageExportData.imageData),
+                  !imageData.isEmpty else {
+                continue
+            }
+            
+            // Create ItemImage
+            var itemImage = ItemImage(imageData: imageData, itemId: itemId)
+            
+            // Set properties from imported data
+            if useOriginalID {
+                itemImage.id = imageExportData.id
+            }
+            itemImage.orderNumber = imageExportData.orderNumber
+            itemImage.createdAt = imageExportData.createdAt
+            
+            importedImages.append(itemImage)
+        }
+        
+        return importedImages
+    }
+    
+    /// Merges existing images with imported images
+    /// - Updates existing images by ID if found
+    /// - Adds new images from import data
+    /// - Preserves existing images not present in import data
+    private func mergeImages(existing: [ItemImage], imported: [ItemImageExportData], itemId: UUID) -> [ItemImage] {
+        var mergedImages: [ItemImage] = []
+        var processedIds = Set<UUID>()
+        
+        // Create a dictionary of imported images by ID for quick lookup
+        let importedDict = Dictionary(uniqueKeysWithValues: imported.map { ($0.id, $0) })
+        
+        // Update existing images if they appear in imported data
+        for existingImage in existing {
+            if let importedData = importedDict[existingImage.id] {
+                // Update existing image with imported data
+                guard let imageData = Data(base64Encoded: importedData.imageData),
+                      !imageData.isEmpty else {
+                    continue
+                }
+                
+                var updatedImage = existingImage
+                updatedImage.imageData = imageData
+                updatedImage.orderNumber = importedData.orderNumber
+                // Keep original createdAt from existing image
+                
+                mergedImages.append(updatedImage)
+                processedIds.insert(existingImage.id)
+            } else {
+                // Keep existing image that's not in import data
+                mergedImages.append(existingImage)
+                processedIds.insert(existingImage.id)
+            }
+        }
+        
+        // Add new images from import data that don't exist yet
+        for importedData in imported {
+            if !processedIds.contains(importedData.id) {
+                guard let imageData = Data(base64Encoded: importedData.imageData),
+                      !imageData.isEmpty else {
+                    continue
+                }
+                
+                var itemImage = ItemImage(imageData: imageData, itemId: itemId)
+                itemImage.id = importedData.id
+                itemImage.orderNumber = importedData.orderNumber
+                itemImage.createdAt = importedData.createdAt
+                
+                mergedImages.append(itemImage)
+                processedIds.insert(importedData.id)
+            }
+        }
+        
+        // Sort by order number to maintain proper ordering
+        return mergedImages.sorted { $0.orderNumber < $1.orderNumber }
     }
     
     // MARK: - Plain Text Import

@@ -373,8 +373,17 @@
 - ✅ Build validation passed (100% success)
 - ✅ Export options UI now includes toggle for "Item Images"
 
-## Phase 44: Add optional item image support to import functionality
-- ❌ Optional item image support to import functionality
+## Phase 44: Add optional item image support to import functionality ✅ COMPLETE
+- ✅ Added importImages() helper method to decode base64 image data
+- ✅ Added mergeImages() logic for intelligent image merging during updates
+- ✅ Extended importItem() to create items with images
+- ✅ Extended updateItem() to merge images properly
+- ✅ Fixed CoreDataManager.addItem() to persist ItemImageEntity records
+- ✅ Fixed TestDataManager.addItem() and updateItem() to persist ItemImageEntity records
+- ✅ Fixed TestDataRepository.addImage() to use current item from database
+- ✅ Added 8 comprehensive tests for image import scenarios (all passing)
+- ✅ Build validation passed (100% success)
+- ✅ Tests: 224 passed, 0 failed (100% pass rate)
 
 ## Phase 45: Option to include images to json share
 - ❌ Add item images part of json share

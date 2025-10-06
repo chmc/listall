@@ -253,6 +253,12 @@ class TestDataManager: ObservableObject {
             print("Failed to find list for item: \(error)")
         }
         
+        // Create image entities from the item's images
+        for itemImage in item.images {
+            let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
+            imageEntity.item = itemEntity
+        }
+        
         saveData()
         loadData()
     }
@@ -271,6 +277,19 @@ class TestDataManager: ObservableObject {
                 itemEntity.isCrossedOut = item.isCrossedOut
                 itemEntity.orderNumber = Int32(item.orderNumber)
                 itemEntity.modifiedAt = item.modifiedAt
+                
+                // Update images: First delete existing image entities
+                if let existingImages = itemEntity.images?.allObjects as? [ItemImageEntity] {
+                    for imageEntity in existingImages {
+                        context.delete(imageEntity)
+                    }
+                }
+                
+                // Create new image entities from the item's images
+                for itemImage in item.images {
+                    let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
+                    imageEntity.item = itemEntity
+                }
                 
                 saveData()
                 loadData()
@@ -747,6 +766,41 @@ class TestDataRepository: DataRepository {
         }
         
         return .success
+    }
+    
+    // MARK: - Image Operations Override
+    
+    override func addImage(to item: Item, imageData: Data) -> ItemImage {
+        var itemImage = ItemImage(imageData: imageData, itemId: item.id)
+        itemImage.compressImage()
+        
+        // Get current item from database to ensure we have latest image count
+        let currentItem = getItem(by: item.id) ?? item
+        
+        // Set order number based on current image count
+        itemImage.orderNumber = currentItem.images.count
+        
+        // Update the item with the new image
+        var updatedItem = currentItem
+        updatedItem.images.append(itemImage)
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+        
+        return itemImage
+    }
+    
+    override func removeImage(_ image: ItemImage, from item: Item) {
+        var updatedItem = item
+        updatedItem.images.removeAll { $0.id == image.id }
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
+    }
+    
+    override func updateImageOrder(for item: Item, images: [ItemImage]) {
+        var updatedItem = item
+        updatedItem.images = images
+        updatedItem.updateModifiedDate()
+        dataManager.updateItem(updatedItem)
     }
     
     // MARK: - Import Operations Override

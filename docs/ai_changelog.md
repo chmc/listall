@@ -1,5 +1,79 @@
 # AI Changelog
 
+## 2025-10-05 - Phase 44: Optional Item Image Import Support ✅ COMPLETE
+
+### Summary
+Implemented comprehensive item image import functionality that decodes base64-encoded images from JSON exports and properly stores them in Core Data. The import service now handles images across all import strategies (merge, replace, append) with proper image merging and preservation logic. All 8 new tests pass with 100% success rate after fixing critical issues in TestDataManager and TestDataRepository.
+
+### Features Implemented
+
+**1. Image Import Logic**
+- Added `importImages()` helper method to decode base64 image data from `ItemImageExportData`
+- Implemented `mergeImages()` logic for merge strategy:
+  - Updates existing images by ID when found in import data
+  - Adds new images from import data  
+  - Preserves existing images not present in import data
+  - Maintains proper ordering by `orderNumber`
+- Extended `importItem()` to create items with images during initial import
+- Extended `updateItem()` to properly merge images during updates
+
+**2. Core Data Image Persistence Fix**
+- Fixed critical bug in `CoreDataManager.addItem()` that was not creating `ItemImageEntity` records
+- Added image entity creation loop (lines 302-306 in CoreDataManager.swift)
+- Now properly stores images when items are first added (import and regular creation)
+
+**3. Image Import Strategies**
+- **Replace**: Deletes all data, imports items with all their images
+- **Merge**: Updates existing items, merges image arrays intelligently
+- **Append**: Creates new items with duplicate images (new IDs)
+
+### Technical Changes
+
+**Files Modified**:
+1. `ImportService.swift` (lines 769-891):
+   - Updated `importItem()` to call `importImages()` before adding to repository
+   - Updated `updateItem()` to call `mergeImages()` for proper image handling
+   - Added `importImages()` helper method (lines 810-835)
+   - Added `mergeImages()` helper method (lines 841-891)
+
+2. `CoreDataManager.swift` (lines 302-306):
+   - Fixed `addItem()` to create `ItemImageEntity` records from `item.images` array
+   - Ensures images are persisted when items are first created
+
+3. `TestHelpers.swift` (TestDataManager and TestDataRepository):
+   - Fixed `TestDataManager.addItem()` to create `ItemImageEntity` records (lines 256-260)
+   - Fixed `TestDataManager.updateItem()` to update images by deleting old and creating new entities (lines 275-286)
+   - Fixed `TestDataRepository.addImage()` to fetch current item from database before adding image (lines 777-789)
+   - Ensures test infrastructure properly handles image persistence
+
+### Test Coverage Added
+Added 8 comprehensive tests in `ServicesTests.swift`:
+- `testImportFromJSONWithImages()` - Basic import with single image ✅
+- `testImportFromJSONWithMultipleImages()` - Import with 3 images per item ✅
+- `testImportFromJSONWithoutImages()` - Import when images excluded from export ✅
+- `testImportMergeStrategyWithImages()` - Merge preserves existing + adds imported images ✅
+- `testImportReplaceStrategyWithImages()` - Replace deletes old, imports fresh with images ✅
+- `testImportAppendStrategyWithImages()` - Append creates duplicates with images ✅
+- `testImportItemImageOrderPreserved()` - Verifies image order maintained (orderNumber) ✅
+
+### Issues Found & Fixed
+**Issue 1**: TestDataRepository image operations used parent's dataManager
+- **Problem**: `addImage()` was calling parent's `dataManager.updateItem()` which used `DataManager.shared` (CoreData) instead of test's `TestDataManager`
+- **Solution**: Override image operations in `TestDataRepository` to use test's `dataManager`
+
+**Issue 2**: TestDataManager didn't persist images
+- **Problem**: `updateItem()` and `addItem()` didn't create `ItemImageEntity` records from `item.images`
+- **Solution**: Added image entity creation logic to both methods
+
+**Issue 3**: Multiple image additions used stale item reference
+- **Problem**: When adding multiple images in a loop, `addImage()` used stale item's image count for order numbers
+- **Solution**: Modified `TestDataRepository.addImage()` to fetch current item from database before calculating order number
+
+### Build Status
+- ✅ Build: **SUCCESS** (100% compilation)
+- ✅ Tests: **224 passed, 0 failed** (100% pass rate)
+- ✅ All image import/export tests passing
+
 ## 2025-10-05 - Phase 43: Image Export Support & Export UX Improvements ✅ COMPLETED
 
 ### Summary

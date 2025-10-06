@@ -299,6 +299,12 @@ class DataManager: ObservableObject {
                 itemEntity.modifiedAt = item.modifiedAt
                 itemEntity.list = listEntity
                 
+                // Create image entities from the item's images
+                for itemImage in item.images {
+                    let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
+                    imageEntity.item = itemEntity
+                }
+                
                 saveData()
                 loadData()
                 
