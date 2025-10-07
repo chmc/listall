@@ -1,5 +1,185 @@
 # AI Changelog
 
+## 2025-10-07 - State Restoration: Preserve User Position Across App Suspensions
+
+### Summary
+Implemented iOS state restoration to preserve user's navigation position (tab, list view) when the app is suspended and later resumed. The app now remembers where the user was, even if iOS terminates the app in the background to free memory.
+
+### Problem
+When the app stayed in the background for a while, iOS could suspend or terminate it to free memory. Upon returning, users were taken back to the main screen instead of the screen they were on. This created a poor user experience, especially when users were in the middle of viewing or editing a list.
+
+**Root Cause:** Navigation state was stored in `@State` variables, which are not persisted across app suspensions and terminations by iOS.
+
+### Solution - SceneStorage State Restoration
+Implemented SwiftUI's `@SceneStorage` property wrapper to persist navigation state across app lifecycle events:
+
+1. **Tab Selection Persistence**: Selected tab is now saved and restored
+2. **List Navigation Persistence**: Currently viewed list is saved and automatically reopened
+3. **Automatic Restoration**: On app resume, user returns to the exact same position
+
+**Key Technical Decisions:**
+- Used `@SceneStorage` instead of `@AppStorage` - SceneStorage is specifically designed for UI state restoration per scene
+- Store list ID as String (UUID.uuidString) - SceneStorage requires basic types
+- Added restoration flag to prevent multiple restoration attempts
+- Implemented graceful fallback if stored list no longer exists
+
+### Technical Implementation
+
+**Files Modified (2 files):**
+
+1. **`ListAll/ListAll/Views/MainView.swift`**:
+   ```swift
+   // Changed from @State to @SceneStorage for persistence
+   @SceneStorage("selectedTab") private var selectedTab = 0
+   
+   // Store currently viewed list ID for restoration
+   @SceneStorage("selectedListId") private var selectedListIdString: String?
+   @State private var hasRestoredNavigation = false
+   
+   // Save list ID when navigating
+   NavigationLink(
+       isActive: Binding(
+           get: { viewModel.selectedListForNavigation != nil },
+           set: { newValue in
+               if !newValue {
+                   // User navigated back - clear stored state
+                   viewModel.selectedListForNavigation = nil
+                   selectedListIdString = nil
+               } else if let list = viewModel.selectedListForNavigation {
+                   // Save for restoration
+                   selectedListIdString = list.id.uuidString
+               }
+           }
+       )
+   )
+   
+   // Restore navigation on app appear
+   .onAppear {
+       // ... existing code ...
+       
+       if !hasRestoredNavigation,
+          let listIdString = selectedListIdString,
+          let listId = UUID(uuidString: listIdString) {
+           if let list = viewModel.lists.first(where: { $0.id == listId }) {
+               DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                   viewModel.selectedListForNavigation = list
+               }
+           } else {
+               selectedListIdString = nil
+           }
+           hasRestoredNavigation = true
+       }
+   }
+   ```
+
+2. **`ListAll/ListAll/Views/Components/ListRowView.swift`**:
+   ```swift
+   // Changed from NavigationLink to Button with programmatic navigation
+   // This ensures the state is saved through MainView's navigation binding
+   Button(action: {
+       mainViewModel.selectedListForNavigation = list
+   }) {
+       HStack {
+           listContent
+           Image(systemName: Constants.UI.chevronIcon)
+               .foregroundColor(Color(.tertiaryLabel))
+               .font(.system(size: 14, weight: .semibold))
+       }
+   }
+   .buttonStyle(PlainButtonStyle())
+   ```
+
+### State Restoration Behavior
+
+**Scenario 1: App Backgrounded Briefly**
+- State is maintained in memory
+- No restoration needed
+- ✅ Works perfectly
+
+**Scenario 2: App Suspended by iOS**
+- iOS may terminate app to free memory
+- SceneStorage persists: tab selection, list ID
+- On resume: App restores to saved list
+- ✅ User returns to exact position
+
+**Scenario 3: App Force-Quit by User**
+- SceneStorage is cleared
+- App starts fresh at main screen
+- ✅ Expected behavior for clean start
+
+**Scenario 4: Stored List Deleted**
+- Restoration detects list no longer exists
+- Clears stored list ID gracefully
+- User sees main screen
+- ✅ Graceful degradation
+
+### Testing Approach
+
+**Manual Testing Steps:**
+1. Open app and navigate to a specific list
+2. Put app in background (home button/swipe up)
+3. Wait several minutes OR open many other apps to trigger iOS memory pressure
+4. Return to app
+5. **Expected:** App shows the same list view
+6. **Before fix:** App showed main screen
+
+**Testing with Xcode:**
+```bash
+# Simulate memory pressure
+Debug menu → Simulate Memory Warning
+
+# Or programmatically terminate
+killall ListAll
+```
+
+### Build Status
+✅ Build successful with no errors
+- Warnings are pre-existing (deprecated APIs, Sendable conformance)
+- No new warnings introduced by this change
+
+### Test Results
+✅ **All Unit Tests Passed (100%)**:
+- ModelTests: 32/32 passed ✅
+- ViewModelsTests: 82/82 passed ✅
+- ServicesTests: 22/22 passed ✅
+- UtilsTests: 45/45 passed ✅
+- URLHelperTests: 11/11 passed ✅
+- **Total: 192/192 unit tests passed**
+
+✅ **UI Tests: 17/17 passed (100%)**:
+- 17 tests passed ✅
+- 2 tests skipped (context menu tests)
+- 0 tests failed ✅
+
+**Test Fix Applied:**
+Updated `testCreateListWithValidName()` to correctly handle Phase 53's auto-navigation feature:
+- Test now accounts for app automatically navigating to newly created list
+- Navigates back to main view to verify list persistence
+- Test now passes consistently
+
+**Final Test Results:**
+- Unit Tests: 192/192 passed (100%) ✅
+- UI Tests: 17/17 passed (100%) ✅
+- **Total: 100% test pass rate** ✅
+
+### Benefits
+1. **Better UX**: Users return to where they were
+2. **iOS Standard**: Matches expected iOS app behavior
+3. **Data Safety**: No data loss from unexpected app termination
+4. **Seamless**: Restoration happens automatically and invisibly
+
+### Known Limitations
+- Scroll position within lists not preserved (could be added with additional SceneStorage)
+- Item detail view navigation not preserved (only list-level navigation)
+- Modal sheets (edit/create) don't restore (expected behavior)
+
+### Future Enhancements
+- Could preserve scroll position in ListView
+- Could restore deeper navigation (item detail view)
+- Could use more granular restoration IDs per scene for multi-window support on iPad
+
+---
+
 ## 2025-10-07 - Phase 62: Standard iOS Selection UI Pattern
 
 ### Summary

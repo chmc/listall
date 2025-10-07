@@ -121,10 +121,18 @@ struct ListRowView: View {
                     listContent
                 }
             } else {
-                // Normal mode: Use NavigationLink to editable view
-                NavigationLink(destination: ListView(list: list, mainViewModel: mainViewModel)) {
-                    listContent
+                // Normal mode: Use programmatic navigation for state restoration support
+                Button(action: {
+                    mainViewModel.selectedListForNavigation = list
+                }) {
+                    HStack {
+                        listContent
+                        Image(systemName: Constants.UI.chevronIcon)
+                            .foregroundColor(Color(.tertiaryLabel))
+                            .font(.system(size: 14, weight: .semibold))
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(.horizontal, Theme.Spacing.md)

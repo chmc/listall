@@ -251,12 +251,22 @@ final class ListAllUITests: XCTestCase {
                 XCTAssertTrue(createButton.exists)
                 createButton.tap()
                 
-                // Verify we're back to main view and list was created
-                XCTAssertFalse(createListTitle.exists)
+                // After creation, app auto-navigates to the new list (Phase 53 feature)
+                // Give time for navigation animation and verify list was created
+                sleep(2)
                 
-                // Look for the newly created list
+                // List should be created - either we're viewing it or we can navigate back and see it
+                // Try to find back button (meaning we navigated to the list)
+                let backButton = app.navigationBars.buttons.firstMatch
+                if backButton.exists && backButton.label.contains("Lists") {
+                    // We're in the list view, navigate back
+                    backButton.tap()
+                    sleep(1)
+                }
+                
+                // Now verify the list exists in the main view
                 let newListCell = app.staticTexts["UI Test List"].firstMatch
-                XCTAssertTrue(newListCell.waitForExistence(timeout: 2))
+                XCTAssertTrue(newListCell.waitForExistence(timeout: 3), "Created list should appear in the lists view")
             }
         }
     }

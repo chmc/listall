@@ -578,6 +578,19 @@
 - ✅ All tests passed (8 new tests, 100% pass rate)
 - ✅ Eliminated UIContextMenuInteraction warnings
 
+## Phase 61: State Restoration - Preserve User Position Across App Suspensions ✅ COMPLETED
+- ✅ Implement SceneStorage for tab selection persistence
+- ✅ Implement SceneStorage for list navigation state persistence
+- ✅ Save currently viewed list ID for restoration
+- ✅ Implement automatic navigation restoration on app resume
+- ✅ Handle edge cases (list deleted, app force-quit)
+- ✅ Update ListRowView to use programmatic navigation for state tracking
+- ✅ Fix failing UI test (testCreateListWithValidName) to match Phase 53 auto-navigation behavior
+- ✅ Build successfully with no errors
+- ✅ All unit tests passing (192/192 - 100%)
+- ✅ All UI tests passing (17/17 - 100%)
+- ✅ Document implementation in ai_changelog.md
+
 ## Phase
 - ❌ 
 

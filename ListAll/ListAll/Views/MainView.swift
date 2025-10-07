@@ -5,7 +5,14 @@ struct MainView: View {
     @StateObject private var cloudKitService = CloudKitService()
     @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
     @StateObject private var sharingService = SharingService()
-    @State private var selectedTab = 0
+    
+    // State restoration: Persist tab selection across app suspensions
+    @SceneStorage("selectedTab") private var selectedTab = 0
+    
+    // State restoration: Persist which list user was viewing
+    @SceneStorage("selectedListId") private var selectedListIdString: String?
+    @State private var hasRestoredNavigation = false
+    
     @State private var showingCreateList = false
     @State private var editMode: EditMode = .inactive
     @State private var showingDeleteConfirmation = false
@@ -66,7 +73,16 @@ struct MainView: View {
                         },
                         isActive: Binding(
                             get: { viewModel.selectedListForNavigation != nil },
-                            set: { if !$0 { viewModel.selectedListForNavigation = nil } }
+                            set: { newValue in
+                                if !newValue {
+                                    // User navigated back - clear the stored list ID
+                                    viewModel.selectedListForNavigation = nil
+                                    selectedListIdString = nil
+                                } else if let list = viewModel.selectedListForNavigation {
+                                    // Save list ID for state restoration
+                                    selectedListIdString = list.id.uuidString
+                                }
+                            }
                         )
                     ) {
                         EmptyView()
@@ -222,6 +238,23 @@ struct MainView: View {
             viewModel.loadLists()
             Task {
                 await conflictManager.checkForConflicts()
+            }
+            
+            // State restoration: Navigate back to the list user was viewing
+            if !hasRestoredNavigation, 
+               let listIdString = selectedListIdString,
+               let listId = UUID(uuidString: listIdString) {
+                // Find the list in loaded lists
+                if let list = viewModel.lists.first(where: { $0.id == listId }) {
+                    // Delay navigation slightly to ensure view hierarchy is ready
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        viewModel.selectedListForNavigation = list
+                    }
+                } else {
+                    // List no longer exists, clear the stored ID
+                    selectedListIdString = nil
+                }
+                hasRestoredNavigation = true
             }
         }
         .sheet(isPresented: $conflictManager.showingConflictResolution) {
