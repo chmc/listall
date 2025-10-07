@@ -604,9 +604,19 @@
 
 ## Phase 63: Search item in list
 - ❌ Plan best possible UX to search item in list
+- ❌ Follow iOS recommendations on this
 - ❌ Implement planned search item in list
 
+## Phase 64: Investigate whole app UX
+- ❌ You are expert in UI and UX design
+- ❌ Check whole app UI and UX design
+- ❌ Make UX tasks of your findings
+- ❌ Create small tasks that fit into your model context memory
+
 ## Phase
+- ❌ 
+
+## UX 
 - ❌ 
 
 ## Improvement 1: Sharing Features ✅ COMPLETED
