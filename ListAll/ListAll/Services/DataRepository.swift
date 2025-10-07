@@ -123,6 +123,44 @@ class DataRepository: ObservableObject {
         }
     }
     
+    func reorderMultipleItems(in list: List, itemsToMove: [Item], to insertionIndex: Int) {
+        // Get current items for this list
+        var currentItems = dataManager.getItems(forListId: list.id)
+        
+        // Ensure we have items to move
+        guard !itemsToMove.isEmpty else { return }
+        
+        // Get IDs of items being moved for quick lookup
+        let movingItemIds = Set(itemsToMove.map { $0.id })
+        
+        // Remove all items that are being moved from the current list
+        var itemsBeingMoved: [Item] = []
+        currentItems.removeAll { item in
+            if movingItemIds.contains(item.id) {
+                itemsBeingMoved.append(item)
+                return true
+            }
+            return false
+        }
+        
+        // Sort items being moved by their original order to maintain relative positioning
+        itemsBeingMoved.sort { $0.orderNumber < $1.orderNumber }
+        
+        // Calculate the actual insertion point after removing the moved items
+        // If we're inserting after where items were removed from, adjust the index
+        let adjustedInsertionIndex = min(insertionIndex, currentItems.count)
+        
+        // Insert all moved items at the adjusted insertion point
+        currentItems.insert(contentsOf: itemsBeingMoved, at: adjustedInsertionIndex)
+        
+        // Update order numbers for all items and save
+        for (index, var item) in currentItems.enumerated() {
+            item.orderNumber = index
+            item.updateModifiedDate()
+            dataManager.updateItem(item)
+        }
+    }
+    
     func updateItemOrderNumbers(for list: List, items: [Item]) {
         for (index, var item) in items.enumerated() {
             item.orderNumber = index

@@ -29,6 +29,15 @@ struct ListView: View {
         Constants.AddButtonPosition(rawValue: addButtonPositionRaw) ?? .right
     }
     
+    // Computed property for edit mode binding to simplify type-checking
+    private var editModeBinding: Binding<EditMode> {
+        if viewModel.currentSortOption == .orderNumber && viewModel.isInSelectionMode {
+            return .constant(.active)
+        } else {
+            return $editMode
+        }
+    }
+    
     init(list: List, mainViewModel: MainViewModel) {
         self.list = list
         self.mainViewModel = mainViewModel
@@ -104,10 +113,11 @@ struct ListView: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     }
                     .onDelete(perform: viewModel.isInSelectionMode ? nil : deleteItems)
-                    // Only allow manual reordering when sorted by order number (and not in selection mode)
-                    .onMove(perform: (viewModel.currentSortOption == .orderNumber && !viewModel.isInSelectionMode) ? viewModel.moveItems : nil)
+                    // Only allow manual reordering when sorted by order number (works in both normal and selection mode)
+                    .onMove(perform: viewModel.currentSortOption == .orderNumber ? viewModel.moveItems : nil)
                 }
-                .environment(\.editMode, viewModel.isInSelectionMode ? .constant(.inactive) : $editMode)
+                // Enable edit mode for drag-to-reorder in selection mode when sorted by order
+                .environment(\.editMode, editModeBinding)
                 .refreshable {
                     viewModel.loadItems()
                 }

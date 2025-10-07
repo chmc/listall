@@ -591,8 +591,16 @@
 - ✅ All UI tests passing (17/17 - 100%)
 - ✅ Document implementation in ai_changelog.md
 
-## Phase 62: Items multi select drag to order
-- ❌ Allow drag to order multi selected items
+## Phase 62: Items multi select drag to order ✅ COMPLETED
+- ✅ Allow drag to order multi selected items
+- ✅ Enable drag-to-reorder in selection mode when sorted by order number
+- ✅ Implement multi-select drag detection in ListViewModel
+- ✅ Add reorderMultipleItems method to DataRepository for batch operations
+- ✅ Fix insertion index calculation to account for removed items
+- ✅ Build successfully with no errors
+- ✅ All unit tests passing (217/217 - 100%)
+- ✅ All UI tests passing (17/17 - 100%)
+- ✅ Document implementation in ai_changelog.md
 
 ## Phase 63: Search item in list
 - ❌ Plan best possible UX to search item in list

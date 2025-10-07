@@ -147,7 +147,21 @@ class ListViewModel: ObservableObject {
         
         guard let filteredSourceIndex = source.first else { return }
         
-        // Get the actual items from filteredItems
+        // Get the actual item being dragged from filteredItems
+        let draggedItem = filteredItems[filteredSourceIndex]
+        
+        // Check if we're in selection mode and the dragged item is selected
+        if isInSelectionMode && selectedItems.contains(draggedItem.id) {
+            // Multi-select drag: Move all selected items together
+            moveSelectedItemsToPosition(destination: destination)
+        } else {
+            // Single item drag: Original behavior
+            moveSingleItem(from: filteredSourceIndex, to: destination)
+        }
+    }
+    
+    private func moveSingleItem(from filteredSourceIndex: Int, to destination: Int) {
+        // Get the actual item from filteredItems
         let movedItem = filteredItems[filteredSourceIndex]
         
         // Calculate destination in filtered array
@@ -168,6 +182,56 @@ class ListViewModel: ObservableObject {
         }
         
         reorderItems(from: actualSourceIndex, to: actualDestIndex)
+    }
+    
+    private func moveSelectedItemsToPosition(destination: Int) {
+        // Get all selected items in their current order
+        let selectedItemsList = items.filter { selectedItems.contains($0.id) }
+        guard !selectedItemsList.isEmpty else { return }
+        
+        // Get IDs of selected items for quick lookup
+        let selectedIds = Set(selectedItemsList.map { $0.id })
+        
+        // Find the destination item in filteredItems
+        let destinationItem: Item?
+        if destination < filteredItems.count {
+            destinationItem = filteredItems[destination]
+        } else {
+            destinationItem = filteredItems.last
+        }
+        
+        // Find where to insert in the full items array
+        // We need to calculate the index AFTER removing selected items
+        let insertionIndex: Int
+        if let destItem = destinationItem {
+            // Count how many selected items are before the destination in the full items array
+            var countSelectedBeforeDestination = 0
+            for item in items {
+                if item.id == destItem.id {
+                    break
+                }
+                if selectedIds.contains(item.id) {
+                    countSelectedBeforeDestination += 1
+                }
+            }
+            
+            // Find the destination item's current index
+            if let destIndex = items.firstIndex(where: { $0.id == destItem.id }) {
+                // Adjust insertion index by subtracting selected items that will be removed before it
+                insertionIndex = destIndex - countSelectedBeforeDestination
+            } else {
+                insertionIndex = items.count - selectedItemsList.count
+            }
+        } else {
+            // Insert at the end (after removing selected items)
+            insertionIndex = items.count - selectedItemsList.count
+        }
+        
+        // Use DataRepository to reorder multiple items as a batch
+        dataRepository.reorderMultipleItems(in: list, itemsToMove: selectedItemsList, to: insertionIndex)
+        
+        // Reload items to reflect the changes
+        loadItems()
     }
     
     // MARK: - Utility Methods
