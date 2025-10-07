@@ -564,8 +564,13 @@
 - ✅ Write comprehensive tests for all new functionality (5 new tests)
 - ✅ All tests passing (100% pass rate)
 
-## Phase 60: Move item to another list
-- ❌ Ability to move item to another list
+## Phase 60: Edit list multi select items actions
+- ❌ Select all / deselect all (use standard terms)
+- ❌ Delete selected items
+- ❌ Move selected items to existing list or create new list
+- ❌ Copy selected items to existing list or create new list
+- ❌ Use standard icons for all these actions
+- ❌ Delete, move and copy actions must have dialog to user to ask additional information or confirm what he is doing
 
 ## Phase
 - ❌ 
