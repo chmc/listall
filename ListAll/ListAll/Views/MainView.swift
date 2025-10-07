@@ -73,7 +73,7 @@ struct MainView: View {
                     }
                     .hidden()
                     }
-                    .navigationTitle(viewModel.showingArchivedLists ? "Archived Lists" : "Lists")
+                    .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
                     .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         HStack(spacing: Theme.Spacing.md) {
@@ -113,14 +113,11 @@ struct MainView: View {
                             
                             if !viewModel.displayedLists.isEmpty {
                                 if viewModel.isInSelectionMode {
-                                    // Selection mode: Show Select All/None
-                                    Button(viewModel.selectedLists.count == viewModel.displayedLists.count ? "Deselect All" : "Select All") {
+                                    // Selection mode: Show Cancel button
+                                    Button("Cancel") {
                                         withAnimation {
-                                            if viewModel.selectedLists.count == viewModel.displayedLists.count {
-                                                viewModel.deselectAll()
-                                            } else {
-                                                viewModel.selectAll()
-                                            }
+                                            viewModel.exitSelectionMode()
+                                            editMode = .inactive
                                         }
                                     }
                                 } else {
@@ -144,21 +141,32 @@ struct MainView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack(spacing: Theme.Spacing.md) {
                             if viewModel.isInSelectionMode {
-                                // Selection mode: Show Delete and Done buttons
-                                if !viewModel.selectedLists.isEmpty {
+                                // Selection mode: Show actions menu (always visible)
+                                Menu {
                                     Button(action: {
+                                        viewModel.selectAll()
+                                    }) {
+                                        Label("Select All", systemImage: "checkmark.circle")
+                                    }
+                                    
+                                    Button(action: {
+                                        viewModel.deselectAll()
+                                    }) {
+                                        Label("Deselect All", systemImage: "circle")
+                                    }
+                                    .disabled(viewModel.selectedLists.isEmpty)
+                                    
+                                    Divider()
+                                    
+                                    Button(role: .destructive, action: {
                                         showingDeleteConfirmation = true
                                     }) {
-                                        Image(systemName: "trash")
-                                            .foregroundColor(.red)
+                                        Label("Delete Lists", systemImage: "trash")
                                     }
-                                }
-                                
-                                Button("Done") {
-                                    withAnimation {
-                                        viewModel.exitSelectionMode()
-                                        editMode = .inactive
-                                    }
+                                    .disabled(viewModel.selectedLists.isEmpty)
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .foregroundColor(.primary)
                                 }
                             } else if !viewModel.showingArchivedLists {
                                 // Normal mode: Show Add button (only for active lists)

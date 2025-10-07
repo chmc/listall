@@ -1,5 +1,113 @@
 # AI Changelog
 
+## 2025-10-07 - Phase 62: Standard iOS Selection UI Pattern
+
+### Summary
+Completely redesigned the multi-select UI to follow standard iOS conventions with selection count display in navigation title, Cancel button, and menu-based selection actions. This matches the pattern used in native iOS apps like Mail, Photos, Files, and Reminders.
+
+### Problem
+Previous implementation used text toggle buttons ("Select All"/"Deselect All") in the navigation bar leading position, which doesn't match iOS conventions. Users expected:
+- Clear visual feedback showing how many items are selected
+- Standard "Cancel" button to exit selection mode
+- Actions organized in a menu
+
+### Solution - Standard iOS Pattern
+Implemented the industry-standard pattern:
+```
+┌─────────────────────────────┐
+│ [Cancel] 3 Selected    [•••]│  ← Navigation bar
+│                             │
+│  ☑ Item 1                   │
+│  ☑ Item 2                   │
+│  ☑ Item 3                   │
+└─────────────────────────────┘
+```
+
+**Key Changes:**
+1. **Navigation Title**: Shows "X Selected" count dynamically
+2. **Cancel Button**: Left side replaces the toggle button
+3. **Actions Menu (•••)**: Always visible, contains:
+   - Select All
+   - Deselect All (disabled when empty)
+   - Divider
+   - Move Items (disabled when empty)
+   - Copy Items (disabled when empty)
+   - Divider
+   - Delete Items (destructive, disabled when empty)
+
+### Technical Implementation
+
+**Files Modified (2 files):**
+
+1. **`ListAll/ListAll/Views/ListView.swift`**:
+   ```swift
+   // Added selection count to navigation title
+   .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedItems.count) Selected" : "")
+   
+   // Changed leading button from toggle to Cancel
+   Button("Cancel") {
+       withAnimation {
+           viewModel.exitSelectionMode()
+       }
+   }
+   
+   // Moved actions into always-visible menu
+   Menu {
+       Button("Select All") { ... }
+       Button("Deselect All") { ... }.disabled(viewModel.selectedItems.isEmpty)
+       Divider()
+       Button("Move Items") { ... }.disabled(viewModel.selectedItems.isEmpty)
+       Button("Copy Items") { ... }.disabled(viewModel.selectedItems.isEmpty)
+       Divider()
+       Button("Delete Items", role: .destructive) { ... }.disabled(...)
+   } label: {
+       Image(systemName: "ellipsis.circle")
+   }
+   ```
+
+2. **`ListAll/ListAll/Views/MainView.swift`**:
+   - Applied same pattern for list selection mode
+   - Navigation title shows "\(viewModel.selectedLists.count) Selected"
+   - Cancel button replaces toggle button
+   - Menu contains: Select All, Deselect All, Delete Lists
+
+### UX Improvements
+
+**Before:**
+- Toggle button: "Select All" → "Deselect All" (only when all selected)
+- No visual count of selected items
+- Actions visible only when items selected
+
+**After:**
+- Clear selection count: "3 Selected" in title
+- Standard "Cancel" to exit selection mode
+- All actions always accessible in menu
+- Disabled states provide clear feedback
+- Matches iOS system apps (Mail, Photos, Files)
+
+### Benefits
+1. **Familiarity**: Users recognize the pattern from iOS system apps
+2. **Clarity**: Selection count is prominently displayed
+3. **Accessibility**: All actions available from one menu
+4. **Feedback**: Disabled states show when actions can't be performed
+5. **Consistency**: Same pattern for both items and lists
+
+### Testing
+- ✅ Build validation: 100% successful
+- ✅ All tests passing: 236 tests passed, 0 failed
+- ✅ No linter errors
+- ✅ Manual testing: Confirmed selection count updates dynamically
+
+### Build Status
+- **Build Result**: SUCCESS (100%)
+- **Test Result**: 236 passed, 0 failed (100% pass rate)
+- **Platform**: iOS Simulator (iPhone 17 Pro)
+
+### Notes
+This implementation supersedes Phase 61 (dynamic toggle button) by adopting the industry-standard iOS pattern instead.
+
+---
+
 ## 2025-10-07 - Phase 60 IMPROVEMENTS: Replaced Delays with Proper SwiftUI Patterns
 
 ### Summary

@@ -149,17 +149,14 @@ struct ListView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedItems.count) Selected" : "")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if !viewModel.items.isEmpty && viewModel.isInSelectionMode {
-                    // Selection mode: Show Select All/None
-                    Button(viewModel.selectedItems.count == viewModel.filteredItems.count ? "Deselect All" : "Select All") {
+                    // Selection mode: Show Cancel button
+                    Button("Cancel") {
                         withAnimation {
-                            if viewModel.selectedItems.count == viewModel.filteredItems.count {
-                                viewModel.deselectAll()
-                            } else {
-                                viewModel.selectAll()
-                            }
+                            viewModel.exitSelectionMode()
                         }
                     }
                 }
@@ -169,38 +166,48 @@ struct ListView: View {
                 HStack(spacing: Theme.Spacing.md) {
                     if !viewModel.items.isEmpty {
                         if viewModel.isInSelectionMode {
-                            // Selection mode: Show actions menu and Done button
-                            if !viewModel.selectedItems.isEmpty {
-                                Menu {
-                                    Button(action: {
-                                        showingMoveDestinationPicker = true
-                                    }) {
-                                        Label("Move Items", systemImage: "arrow.right.square")
-                                    }
-                                    
-                                    Button(action: {
-                                        showingCopyDestinationPicker = true
-                                    }) {
-                                        Label("Copy Items", systemImage: "doc.on.doc")
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    Button(role: .destructive, action: {
-                                        showingDeleteConfirmation = true
-                                    }) {
-                                        Label("Delete Items", systemImage: "trash")
-                                    }
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .foregroundColor(.primary)
+                            // Selection mode: Show actions menu (always visible)
+                            Menu {
+                                Button(action: {
+                                    viewModel.selectAll()
+                                }) {
+                                    Label("Select All", systemImage: "checkmark.circle")
                                 }
-                            }
-                            
-                            Button("Done") {
-                                withAnimation {
-                                    viewModel.exitSelectionMode()
+                                
+                                Button(action: {
+                                    viewModel.deselectAll()
+                                }) {
+                                    Label("Deselect All", systemImage: "circle")
                                 }
+                                .disabled(viewModel.selectedItems.isEmpty)
+                                
+                                Divider()
+                                
+                                Button(action: {
+                                    showingMoveDestinationPicker = true
+                                }) {
+                                    Label("Move Items", systemImage: "arrow.right.square")
+                                }
+                                .disabled(viewModel.selectedItems.isEmpty)
+                                
+                                Button(action: {
+                                    showingCopyDestinationPicker = true
+                                }) {
+                                    Label("Copy Items", systemImage: "doc.on.doc")
+                                }
+                                .disabled(viewModel.selectedItems.isEmpty)
+                                
+                                Divider()
+                                
+                                Button(role: .destructive, action: {
+                                    showingDeleteConfirmation = true
+                                }) {
+                                    Label("Delete Items", systemImage: "trash")
+                                }
+                                .disabled(viewModel.selectedItems.isEmpty)
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .foregroundColor(.primary)
                             }
                         } else {
                             // Normal mode: Show Share, Sort/Filter, Eye, and Edit buttons
