@@ -687,6 +687,32 @@ class TestListViewModel: ObservableObject {
         loadItems()
     }
     
+    func moveSelectedItems(to destinationList: List) {
+        // Get selected items
+        let itemsToMove = items.filter { selectedItems.contains($0.id) }
+        
+        // Move each item to destination list
+        for item in itemsToMove {
+            dataRepository.moveItem(item, to: destinationList)
+        }
+        
+        selectedItems.removeAll()
+        loadItems()
+    }
+    
+    func copySelectedItems(to destinationList: List) {
+        // Get selected items
+        let itemsToCopy = items.filter { selectedItems.contains($0.id) }
+        
+        // Copy each item to destination list
+        for item in itemsToCopy {
+            dataRepository.copyItem(item, to: destinationList)
+        }
+        
+        selectedItems.removeAll()
+        loadItems()
+    }
+    
     func enterSelectionMode() {
         isInSelectionMode = true
         selectedItems.removeAll()
@@ -788,6 +814,50 @@ class TestDataRepository: DataRepository {
             item.updateModifiedDate()
             dataManager.updateItem(item)
         }
+    }
+    
+    override func moveItem(_ item: Item, to destinationList: List) {
+        // Delete from current list
+        if let currentListId = item.listId {
+            dataManager.deleteItem(withId: item.id, from: currentListId)
+        }
+        
+        // Add to destination list
+        var movedItem = item
+        movedItem.listId = destinationList.id
+        movedItem.updateModifiedDate()
+        
+        // Get the highest order number in destination list and add 1
+        let destinationItems = dataManager.getItems(forListId: destinationList.id)
+        let maxOrderNumber = destinationItems.map { $0.orderNumber }.max() ?? -1
+        movedItem.orderNumber = maxOrderNumber + 1
+        
+        dataManager.addItem(movedItem, to: destinationList.id)
+    }
+    
+    override func copyItem(_ item: Item, to destinationList: List) {
+        // Create a copy with new ID
+        var copiedItem = item
+        copiedItem.id = UUID()
+        copiedItem.listId = destinationList.id
+        copiedItem.createdAt = Date()
+        copiedItem.modifiedAt = Date()
+        
+        // Get the highest order number in destination list and add 1
+        let destinationItems = dataManager.getItems(forListId: destinationList.id)
+        let maxOrderNumber = destinationItems.map { $0.orderNumber }.max() ?? -1
+        copiedItem.orderNumber = maxOrderNumber + 1
+        
+        // Copy images with new IDs
+        copiedItem.images = item.images.map { image in
+            var newImage = image
+            newImage.id = UUID()
+            newImage.itemId = copiedItem.id
+            newImage.createdAt = Date()
+            return newImage
+        }
+        
+        dataManager.addItem(copiedItem, to: destinationList.id)
     }
     
     override func validateItem(_ item: Item) -> ValidationResult {

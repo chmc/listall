@@ -334,6 +334,32 @@ class ListViewModel: ObservableObject {
         loadItems() // Refresh the list
     }
     
+    func moveSelectedItems(to destinationList: List) {
+        // Get selected items
+        let itemsToMove = items.filter { selectedItems.contains($0.id) }
+        
+        // Move each item to destination list
+        for item in itemsToMove {
+            dataRepository.moveItem(item, to: destinationList)
+        }
+        
+        selectedItems.removeAll()
+        loadItems() // Refresh the list
+    }
+    
+    func copySelectedItems(to destinationList: List) {
+        // Get selected items
+        let itemsToCopy = items.filter { selectedItems.contains($0.id) }
+        
+        // Copy each item to destination list
+        for item in itemsToCopy {
+            dataRepository.copyItem(item, to: destinationList)
+        }
+        
+        selectedItems.removeAll()
+        loadItems() // Refresh the list
+    }
+    
     func enterSelectionMode() {
         isInSelectionMode = true
         selectedItems.removeAll()

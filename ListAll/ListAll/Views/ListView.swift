@@ -5,6 +5,7 @@ struct ListView: View {
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
     @StateObject private var sharingService = SharingService()
+    @Environment(\.presentationMode) var presentationMode
     @State private var editMode: EditMode = .inactive
     @State private var showingCreateItem = false
     @State private var showingEditItem = false
@@ -17,6 +18,11 @@ struct ListView: View {
     @State private var shareFileURL: URL?
     @State private var shareItems: [Any] = []
     @State private var showingDeleteConfirmation = false
+    @State private var showingMoveDestinationPicker = false
+    @State private var showingCopyDestinationPicker = false
+    @State private var showingMoveConfirmation = false
+    @State private var showingCopyConfirmation = false
+    @State private var selectedDestinationList: List?
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
     
     private var addButtonPosition: Constants.AddButtonPosition {
@@ -163,13 +169,31 @@ struct ListView: View {
                 HStack(spacing: Theme.Spacing.md) {
                     if !viewModel.items.isEmpty {
                         if viewModel.isInSelectionMode {
-                            // Selection mode: Show Delete and Done buttons
+                            // Selection mode: Show actions menu and Done button
                             if !viewModel.selectedItems.isEmpty {
-                                Button(action: {
-                                    showingDeleteConfirmation = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .foregroundColor(.red)
+                                Menu {
+                                    Button(action: {
+                                        showingMoveDestinationPicker = true
+                                    }) {
+                                        Label("Move Items", systemImage: "arrow.right.square")
+                                    }
+                                    
+                                    Button(action: {
+                                        showingCopyDestinationPicker = true
+                                    }) {
+                                        Label("Copy Items", systemImage: "doc.on.doc")
+                                    }
+                                    
+                                    Divider()
+                                    
+                                    Button(role: .destructive, action: {
+                                        showingDeleteConfirmation = true
+                                    }) {
+                                        Label("Delete Items", systemImage: "trash")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .foregroundColor(.primary)
                                 }
                             }
                             
@@ -268,6 +292,110 @@ struct ListView: View {
             }
         } message: {
             Text("Are you sure you want to delete \(viewModel.selectedItems.count) item(s)? This action cannot be undone.")
+        }
+        .alert("Move Items", isPresented: $showingMoveConfirmation) {
+            Button("Cancel", role: .cancel) {
+                selectedDestinationList = nil
+            }
+            Button("Move", role: .destructive) {
+                if let destination = selectedDestinationList {
+                    // Perform the move operation
+                    viewModel.moveSelectedItems(to: destination)
+                    viewModel.exitSelectionMode()
+                    
+                    // Refresh main view to pick up changes
+                    mainViewModel.loadLists()
+                    
+                    // Dismiss current view first
+                    presentationMode.wrappedValue.dismiss()
+                    
+                    // Trigger navigation after a brief moment for dismiss animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        if let refreshedDestination = mainViewModel.lists.first(where: { $0.id == destination.id }) {
+                            mainViewModel.selectedListForNavigation = refreshedDestination
+                        }
+                    }
+                }
+                selectedDestinationList = nil
+            }
+        } message: {
+            if let destination = selectedDestinationList {
+                Text("Move \(viewModel.selectedItems.count) item(s) to \"\(destination.name)\"? Items will be removed from this list.")
+            }
+        }
+        .alert("Copy Items", isPresented: $showingCopyConfirmation) {
+            Button("Cancel", role: .cancel) {
+                selectedDestinationList = nil
+            }
+            Button("Copy") {
+                if let destination = selectedDestinationList {
+                    // Perform the copy operation
+                    viewModel.copySelectedItems(to: destination)
+                    viewModel.exitSelectionMode()
+                    
+                    // Refresh main view to pick up changes
+                    mainViewModel.loadLists()
+                    
+                    // Dismiss current view first
+                    presentationMode.wrappedValue.dismiss()
+                    
+                    // Trigger navigation after a brief moment for dismiss animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        if let refreshedDestination = mainViewModel.lists.first(where: { $0.id == destination.id }) {
+                            mainViewModel.selectedListForNavigation = refreshedDestination
+                        }
+                    }
+                }
+                selectedDestinationList = nil
+            }
+        } message: {
+            if let destination = selectedDestinationList {
+                Text("Copy \(viewModel.selectedItems.count) item(s) to \"\(destination.name)\"? Items will remain in this list.")
+            }
+        }
+        .sheet(isPresented: $showingMoveDestinationPicker, onDismiss: {
+            // When sheet is dismissed, show alert if a destination was selected
+            if selectedDestinationList != nil {
+                showingMoveConfirmation = true
+            }
+        }) {
+            DestinationListPickerView(
+                action: .move,
+                itemCount: viewModel.selectedItems.count,
+                currentListId: list.id,
+                onSelect: { destinationList in
+                    selectedDestinationList = destinationList
+                    showingMoveDestinationPicker = false
+                    // Alert will be shown in onDismiss callback
+                },
+                onCancel: {
+                    selectedDestinationList = nil
+                    showingMoveDestinationPicker = false
+                },
+                mainViewModel: mainViewModel
+            )
+        }
+        .sheet(isPresented: $showingCopyDestinationPicker, onDismiss: {
+            // When sheet is dismissed, show alert if a destination was selected
+            if selectedDestinationList != nil {
+                showingCopyConfirmation = true
+            }
+        }) {
+            DestinationListPickerView(
+                action: .copy,
+                itemCount: viewModel.selectedItems.count,
+                currentListId: list.id,
+                onSelect: { destinationList in
+                    selectedDestinationList = destinationList
+                    showingCopyDestinationPicker = false
+                    // Alert will be shown in onDismiss callback
+                },
+                onCancel: {
+                    selectedDestinationList = nil
+                    showingCopyDestinationPicker = false
+                },
+                mainViewModel: mainViewModel
+            )
         }
         .onAppear {
             viewModel.loadItems()

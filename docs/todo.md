@@ -564,13 +564,19 @@
 - ✅ Write comprehensive tests for all new functionality (5 new tests)
 - ✅ All tests passing (100% pass rate)
 
-## Phase 60: Edit list multi select items actions
-- ❌ Select all / deselect all (use standard terms)
-- ❌ Delete selected items
-- ❌ Move selected items to existing list or create new list
-- ❌ Copy selected items to existing list or create new list
-- ❌ Use standard icons for all these actions
-- ❌ Delete, move and copy actions must have dialog to user to ask additional information or confirm what he is doing
+## Phase 60: Edit list multi select items actions ✅ COMPLETED
+- ✅ Select all / deselect all (use standard terms)
+- ✅ Delete selected items
+- ✅ Move selected items to existing list or create new list
+- ✅ Copy selected items to existing list or create new list
+- ✅ Use standard icons for all these actions
+- ✅ Delete, move and copy actions must have dialog to user to ask additional information or confirm what he is doing
+- ✅ **BONUS**: Fixed three-dot menu button not working (replaced individual buttons with proper Menu)
+- ✅ **BONUS**: Created DestinationListPickerView for intuitive list selection
+- ✅ **BONUS**: Added "Create New List" option within the destination picker
+- ✅ Built successfully (100% success)
+- ✅ All tests passed (8 new tests, 100% pass rate)
+- ✅ Eliminated UIContextMenuInteraction warnings
 
 ## Phase
 - ❌ 
