@@ -591,6 +591,13 @@
 - ✅ All UI tests passing (17/17 - 100%)
 - ✅ Document implementation in ai_changelog.md
 
+## Phase 62: Items multi select drag to order
+- ❌ Allow drag to order multi selected items
+
+## Phase 63: Search item in list
+- ❌ Plan best possible UX to search item in list
+- ❌ Implement planned search item in list
+
 ## Phase
 - ❌ 
 
