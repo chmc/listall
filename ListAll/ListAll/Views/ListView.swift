@@ -160,6 +160,7 @@ struct ListView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedItems.count) Selected" : "")
+        .searchable(text: $viewModel.searchText, prompt: "Search items")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if !viewModel.items.isEmpty && viewModel.isInSelectionMode {

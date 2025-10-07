@@ -409,6 +409,9 @@ class TestListViewModel: ObservableObject {
     @Published var currentSortDirection: SortDirection = .ascending
     @Published var currentFilterOption: ItemFilterOption = .active
     
+    // Search Properties
+    @Published var searchText: String = ""
+    
     // Undo Complete Properties
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
@@ -574,16 +577,34 @@ class TestListViewModel: ObservableObject {
         return items.filter { $0.isCrossedOut }
     }
     
-    /// Returns filtered and sorted items based on current organization settings
+    /// Returns filtered and sorted items based on current organization settings and search text
     var filteredItems: [Item] {
         // First apply filtering
         let filtered = applyFilter(to: items)
         
-        // Then apply sorting
-        return applySorting(to: filtered)
+        // Then apply search filtering
+        let searchFiltered = applySearch(to: filtered)
+        
+        // Finally apply sorting
+        return applySorting(to: searchFiltered)
     }
     
     // MARK: - Item Organization Methods
+    
+    private func applySearch(to items: [Item]) -> [Item] {
+        // If search text is empty, return all items
+        guard !searchText.isEmpty else {
+            return items
+        }
+        
+        // Filter items based on search text
+        // Search in title and description
+        return items.filter { item in
+            let titleMatch = item.title.localizedCaseInsensitiveContains(searchText)
+            let descriptionMatch = (item.itemDescription ?? "").localizedCaseInsensitiveContains(searchText)
+            return titleMatch || descriptionMatch
+        }
+    }
     
     private func applyFilter(to items: [Item]) -> [Item] {
         switch currentFilterOption {
