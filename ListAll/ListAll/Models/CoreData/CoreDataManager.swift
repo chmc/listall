@@ -314,6 +314,36 @@ class DataManager: ObservableObject {
         }
     }
     
+    func permanentlyDeleteList(withId id: UUID) {
+        // Permanently delete a list and all its associated items
+        let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        listRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        
+        do {
+            let results = try coreDataManager.viewContext.fetch(listRequest)
+            if let listEntity = results.first {
+                // Delete all items in the list first
+                if let items = listEntity.items as? Set<ItemEntity> {
+                    for itemEntity in items {
+                        // Delete all images in the item
+                        if let images = itemEntity.images as? Set<ItemImageEntity> {
+                            for imageEntity in images {
+                                coreDataManager.viewContext.delete(imageEntity)
+                            }
+                        }
+                        // Delete the item
+                        coreDataManager.viewContext.delete(itemEntity)
+                    }
+                }
+                // Delete the list itself
+                coreDataManager.viewContext.delete(listEntity)
+                saveData()
+            }
+        } catch {
+            print("Failed to permanently delete list: \(error)")
+        }
+    }
+    
     // MARK: - Item Operations
     
     func addItem(_ item: Item, to listId: UUID) {

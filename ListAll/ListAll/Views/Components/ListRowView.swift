@@ -2,13 +2,15 @@ import SwiftUI
 
 // MARK: - Alert Type Enum
 enum ListRowAlert: Identifiable {
-    case delete
+    case archive
+    case permanentDelete
     case duplicate
     case shareError(String)
     
     var id: String {
         switch self {
-        case .delete: return "delete"
+        case .archive: return "archive"
+        case .permanentDelete: return "permanentDelete"
         case .duplicate: return "duplicate"
         case .shareError: return "shareError"
         }
@@ -50,23 +52,40 @@ struct ListRowView: View {
             
             Spacer()
             
-            // Add restore button for archived lists
+            // Add restore and delete buttons for archived lists
             if mainViewModel.showingArchivedLists {
-                Button(action: {
-                    mainViewModel.restoreList(list)
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.uturn.backward")
-                        Text("Restore")
+                HStack(spacing: 8) {
+                    // Restore button
+                    Button(action: {
+                        mainViewModel.restoreList(list)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.uturn.backward")
+                            Text("Restore")
+                        }
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
                     }
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(.blue)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
+                    .buttonStyle(BorderlessButtonStyle())
+                    
+                    // Delete button
+                    Button(action: {
+                        activeAlert = .permanentDelete
+                    }) {
+                        Image(systemName: "trash")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
                 }
-                .buttonStyle(BorderlessButtonStyle())
             }
         }
         .padding(.vertical, 8)
@@ -118,6 +137,12 @@ struct ListRowView: View {
                     }) {
                         Label("Restore", systemImage: "arrow.uturn.backward")
                     }
+                    
+                    Button(role: .destructive, action: {
+                        activeAlert = .permanentDelete
+                    }) {
+                        Label("Delete Permanently", systemImage: "trash.fill")
+                    }
                 } else {
                     // Active list actions
                     Button(action: {
@@ -138,32 +163,23 @@ struct ListRowView: View {
                         Label("Duplicate", systemImage: "doc.on.doc")
                     }
                     
-                    Button(role: .destructive, action: {
-                        activeAlert = .delete
+                    Button(action: {
+                        activeAlert = .archive
                     }) {
-                        Label("Delete", systemImage: "trash")
+                        Label("Archive", systemImage: "archivebox")
                     }
                 }
             }
         }
-        .if(!mainViewModel.isInSelectionMode) { view in
+        .if(!mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists) { view in
             view.swipeActions(edge: .trailing) {
-                if mainViewModel.showingArchivedLists {
-                    // Archived list: Show restore
-                    Button(action: {
-                        mainViewModel.restoreList(list)
-                    }) {
-                        Label("Restore", systemImage: "arrow.uturn.backward")
-                    }
-                    .tint(.green)
-                } else {
-                    // Active list: Show delete
-                    Button(role: .destructive, action: {
-                        activeAlert = .delete
-                    }) {
-                        Label("Delete", systemImage: "trash")
-                    }
+                // Active list: Show archive
+                Button(action: {
+                    activeAlert = .archive
+                }) {
+                    Label("Archive", systemImage: "archivebox")
                 }
+                .tint(.orange)
             }
         }
         .if(!mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists) { view in
@@ -214,12 +230,21 @@ struct ListRowView: View {
         )
         .alert(item: $activeAlert) { alertType in
             switch alertType {
-            case .delete:
+            case .archive:
                 return Alert(
-                    title: Text("Delete List"),
-                    message: Text("Are you sure you want to delete \"\(list.name)\"? This action cannot be undone."),
-                    primaryButton: .destructive(Text("Delete")) {
-                        mainViewModel.deleteList(list)
+                    title: Text("Archive List"),
+                    message: Text("Archive \"\(list.name)\"? You can restore it later from the archived lists."),
+                    primaryButton: .default(Text("Archive")) {
+                        mainViewModel.archiveList(list)
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .permanentDelete:
+                return Alert(
+                    title: Text("Delete Permanently"),
+                    message: Text("Are you sure you want to permanently delete \"\(list.name)\"? This action cannot be undone. All items and images will be permanently deleted."),
+                    primaryButton: .destructive(Text("Delete Permanently")) {
+                        mainViewModel.permanentlyDeleteList(list)
                     },
                     secondaryButton: .cancel()
                 )

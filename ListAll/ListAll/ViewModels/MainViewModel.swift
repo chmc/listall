@@ -25,7 +25,13 @@ class MainViewModel: ObservableObject {
     @Published var isInSelectionMode = false
     @Published var selectedListForNavigation: List?
     
+    // Archive notification properties
+    @Published var recentlyArchivedList: List?
+    @Published var showArchivedNotification = false
+    
     private let dataManager = DataManager.shared
+    private var archiveNotificationTimer: Timer?
+    private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
     
     init() {
         loadLists()
@@ -77,6 +83,61 @@ class MainViewModel: ObservableObject {
         archivedLists.removeAll { $0.id == list.id }
         // Reload active lists to include restored list
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+    }
+    
+    func archiveList(_ list: List) {
+        dataManager.deleteList(withId: list.id) // This archives the list
+        // Remove from active lists
+        lists.removeAll { $0.id == list.id }
+        
+        // Show archive notification
+        showArchiveNotification(for: list)
+    }
+    
+    func permanentlyDeleteList(_ list: List) {
+        dataManager.permanentlyDeleteList(withId: list.id)
+        // Remove from archived lists
+        archivedLists.removeAll { $0.id == list.id }
+    }
+    
+    // MARK: - Archive Notification Methods
+    
+    private func showArchiveNotification(for list: List) {
+        // Cancel any existing timer
+        archiveNotificationTimer?.invalidate()
+        
+        // Store the archived list
+        recentlyArchivedList = list
+        showArchivedNotification = true
+        
+        // Set up timer to hide notification after timeout
+        archiveNotificationTimer = Timer.scheduledTimer(withTimeInterval: archiveNotificationTimeout, repeats: false) { [weak self] _ in
+            self?.hideArchiveNotification()
+        }
+    }
+    
+    func undoArchive() {
+        guard let list = recentlyArchivedList else { return }
+        
+        // Restore the list
+        dataManager.restoreList(withId: list.id)
+        
+        // Hide notification immediately BEFORE reloading lists
+        hideArchiveNotification()
+        
+        // Reload active lists to include restored list
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+    }
+    
+    private func hideArchiveNotification() {
+        archiveNotificationTimer?.invalidate()
+        archiveNotificationTimer = nil
+        showArchivedNotification = false
+        recentlyArchivedList = nil
+    }
+    
+    deinit {
+        archiveNotificationTimer?.invalidate()
     }
     
     func addList(name: String) throws -> List {

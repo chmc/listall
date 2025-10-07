@@ -5,6 +5,7 @@ struct ArchivedListView: View {
     @ObservedObject var mainViewModel: MainViewModel
     @Environment(\.presentationMode) var presentationMode
     @State private var showingRestoreConfirmation = false
+    @State private var showingDeleteConfirmation = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -78,14 +79,25 @@ struct ArchivedListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showingRestoreConfirmation = true
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.uturn.backward")
-                        Text("Restore")
+                HStack(spacing: Theme.Spacing.md) {
+                    // Restore button
+                    Button(action: {
+                        showingRestoreConfirmation = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.uturn.backward")
+                            Text("Restore")
+                        }
+                        .foregroundColor(.blue)
                     }
-                    .foregroundColor(.blue)
+                    
+                    // Permanent delete button
+                    Button(action: {
+                        showingDeleteConfirmation = true
+                    }) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
                 }
             }
         }
@@ -98,6 +110,15 @@ struct ArchivedListView: View {
         } message: {
             Text("Do you want to restore \"\(list.name)\" to your active lists?")
         }
+        .alert("Permanently Delete List", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Permanently", role: .destructive) {
+                mainViewModel.permanentlyDeleteList(list)
+                presentationMode.wrappedValue.dismiss()
+            }
+        } message: {
+            Text("Are you sure you want to permanently delete \"\(list.name)\"? This action cannot be undone. All items and images in this list will be permanently deleted.")
+        }
     }
 }
 
@@ -107,12 +128,6 @@ struct ArchivedItemRowView: View {
     
     var body: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.md) {
-            // Crossed out indicator (static)
-            Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(item.isCrossedOut ? .green : .gray)
-                .font(.system(size: 22))
-                .padding(.top, 2)
-            
             // Item content
             VStack(alignment: .leading, spacing: 4) {
                 // Title

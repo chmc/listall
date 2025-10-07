@@ -19,20 +19,21 @@ struct MainView: View {
         TabView(selection: $selectedTab) {
             // Lists Tab
             NavigationView {
-                VStack(spacing: 0) {
-                    // Sync Status Bar
-                    if cloudKitService.syncStatus != .available || cloudKitService.isSyncing {
-                        SyncStatusView(cloudKitService: cloudKitService)
-                            .padding(.horizontal)
-                            .padding(.top, 8)
-                            .padding(.bottom, 12)
-                    }
-                    
-                    // Main Content
-                    if viewModel.isLoading {
-                        ProgressView("Loading lists...")
-                            .padding(.top, 16)
-                    } else if viewModel.displayedLists.isEmpty {
+                ZStack {
+                    VStack(spacing: 0) {
+                        // Sync Status Bar
+                        if cloudKitService.syncStatus != .available || cloudKitService.isSyncing {
+                            SyncStatusView(cloudKitService: cloudKitService)
+                                .padding(.horizontal)
+                                .padding(.top, 8)
+                                .padding(.bottom, 12)
+                        }
+                        
+                        // Main Content
+                        if viewModel.isLoading {
+                            ProgressView("Loading lists...")
+                                .padding(.top, 16)
+                        } else if viewModel.displayedLists.isEmpty {
                         VStack(spacing: Theme.Spacing.lg) {
                             Image(systemName: viewModel.showingArchivedLists ? "archivebox" : Constants.UI.listIcon)
                                 .font(.system(size: 60))
@@ -71,9 +72,9 @@ struct MainView: View {
                         EmptyView()
                     }
                     .hidden()
-                }
-                .navigationTitle(viewModel.showingArchivedLists ? "Archived Lists" : "Lists")
-                .toolbar {
+                    }
+                    .navigationTitle(viewModel.showingArchivedLists ? "Archived Lists" : "Lists")
+                    .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         HStack(spacing: Theme.Spacing.md) {
                             if !viewModel.isInSelectionMode {
@@ -172,6 +173,24 @@ struct MainView: View {
                         }
                         .padding(.horizontal, Theme.Spacing.sm)
                     }
+                    }
+                    
+                    // Archive Notification Banner
+                    if viewModel.showArchivedNotification, let list = viewModel.recentlyArchivedList {
+                        VStack {
+                            Spacer()
+                            ArchiveBanner(
+                                listName: list.name,
+                                onUndo: {
+                                    viewModel.undoArchive()
+                                }
+                            )
+                            .padding(.horizontal, Theme.Spacing.md)
+                            .padding(.bottom, Theme.Spacing.md)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .animation(Theme.Animation.spring, value: viewModel.showArchivedNotification)
+                        }
+                    }
                 }
             }
             .tabItem {
@@ -252,18 +271,23 @@ struct MainView: View {
         } message: {
             Text(sharingService.shareError ?? "")
         }
-        .alert("Delete Lists", isPresented: $showingDeleteConfirmation) {
+        .alert("Archive Lists", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
+            Button("Archive", role: .destructive) {
                 withAnimation {
-                    viewModel.deleteSelectedLists()
+                    for listId in viewModel.selectedLists {
+                        if let list = viewModel.lists.first(where: { $0.id == listId }) {
+                            viewModel.archiveList(list)
+                        }
+                    }
+                    viewModel.selectedLists.removeAll()
                     editMode = .inactive
                     viewModel.exitSelectionMode()
                 }
             }
         } message: {
             let count = viewModel.selectedLists.count
-            Text("Are you sure you want to delete \(count) \(count == 1 ? "list" : "lists")? This action cannot be undone.")
+            Text("Archive \(count) \(count == 1 ? "list" : "lists")? You can restore them later from archived lists.")
         }
     }
     
@@ -294,6 +318,49 @@ struct MainView: View {
                 self.showingShareSheet = true
             }
         }
+    }
+}
+
+// MARK: - Archive Banner Component
+struct ArchiveBanner: View {
+    let listName: String
+    let onUndo: () -> Void
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "archivebox.fill")
+                .foregroundColor(.orange)
+                .font(.title3)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Archived")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(listName)
+                    .font(Theme.Typography.body)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.primary)
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                .fill(Theme.Colors.background)
+                .shadow(color: Theme.Shadow.largeColor, radius: Theme.Shadow.largeRadius, x: Theme.Shadow.largeX, y: Theme.Shadow.largeY)
+        )
     }
 }
 

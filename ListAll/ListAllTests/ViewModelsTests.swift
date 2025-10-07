@@ -137,6 +137,130 @@ class ViewModelsTests: XCTestCase {
         XCTAssertFalse(viewModel.lists.contains { $0.id == list.id })
     }
     
+    func testArchiveList() throws {
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        let initialCount = viewModel.lists.count
+        
+        guard let list = viewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        viewModel.archiveList(list)
+        
+        // List should be removed from active lists
+        XCTAssertEqual(viewModel.lists.count, initialCount - 1)
+        XCTAssertFalse(viewModel.lists.contains { $0.id == list.id })
+    }
+    
+    func testArchiveListShowsNotification() throws {
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        
+        guard let list = viewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        viewModel.archiveList(list)
+        
+        // Notification should be shown
+        XCTAssertTrue(viewModel.showArchivedNotification)
+        XCTAssertEqual(viewModel.recentlyArchivedList?.id, list.id)
+    }
+    
+    func testUndoArchive() throws {
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        
+        guard let list = viewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        let listId = list.id
+        viewModel.archiveList(list)
+        
+        // List should be archived
+        XCTAssertFalse(viewModel.lists.contains { $0.id == listId })
+        XCTAssertTrue(viewModel.showArchivedNotification)
+        
+        // Undo archive
+        viewModel.undoArchive()
+        
+        // List should be restored
+        XCTAssertTrue(viewModel.lists.contains { $0.id == listId })
+        XCTAssertFalse(viewModel.showArchivedNotification)
+        XCTAssertNil(viewModel.recentlyArchivedList)
+    }
+    
+    func testRestoreArchivedList() throws {
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        
+        guard let list = viewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        let listId = list.id
+        
+        // Archive the list
+        viewModel.archiveList(list)
+        XCTAssertFalse(viewModel.lists.contains { $0.id == listId })
+        
+        // Load archived lists
+        viewModel.loadArchivedLists()
+        
+        guard let archivedList = viewModel.archivedLists.first(where: { $0.id == listId }) else {
+            XCTFail("Archived list should exist")
+            return
+        }
+        
+        // Restore the list
+        viewModel.restoreList(archivedList)
+        
+        // List should be back in active lists
+        XCTAssertTrue(viewModel.lists.contains { $0.id == listId })
+        XCTAssertFalse(viewModel.archivedLists.contains { $0.id == listId })
+    }
+    
+    func testPermanentlyDeleteArchivedList() throws {
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        
+        guard let list = viewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        let listId = list.id
+        
+        // Archive the list first
+        viewModel.archiveList(list)
+        
+        // Load archived lists
+        viewModel.loadArchivedLists()
+        
+        guard let archivedList = viewModel.archivedLists.first(where: { $0.id == listId }) else {
+            XCTFail("Archived list should exist")
+            return
+        }
+        
+        let archivedCount = viewModel.archivedLists.count
+        
+        // Permanently delete the archived list
+        viewModel.permanentlyDeleteList(archivedList)
+        
+        // List should be removed from archived lists
+        XCTAssertEqual(viewModel.archivedLists.count, archivedCount - 1)
+        XCTAssertFalse(viewModel.archivedLists.contains { $0.id == listId })
+        
+        // List should not be in active lists either
+        XCTAssertFalse(viewModel.lists.contains { $0.id == listId })
+    }
+    
     func testValidationErrorEmptyNameDescription() throws {
         let error = ValidationError.emptyName
         XCTAssertEqual(error.errorDescription, "Please enter a list name")
