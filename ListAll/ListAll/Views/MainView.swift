@@ -166,6 +166,9 @@ struct MainView: View {
                                     showingCreateList = true
                                 }) {
                                     Image(systemName: Constants.UI.addIcon)
+                                        .imageScale(.large)
+                                        .aspectRatio(1.0, contentMode: .fit)
+                                        .padding(.horizontal, -2)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityIdentifier("AddListButton")
