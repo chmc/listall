@@ -611,6 +611,16 @@
 - ✅ All unit tests passing (226/226 - 100%)
 - ✅ Document implementation in ai_changelog.md
 
+## Fix: State Restoration Across App Suspensions ✅ COMPLETED
+- ✅ Identified issue: Phase 61 state restoration only worked on initial launch, not on app resume from background
+- ✅ Root cause: Restoration logic was in .onAppear() which doesn't fire when app resumes
+- ✅ Added @Environment(\.scenePhase) to monitor app lifecycle
+- ✅ Moved restoration logic to .onChange(of: scenePhase) to trigger on .active state
+- ✅ Used iOS 16-compatible single-parameter .onChange syntax
+- ✅ Build successfully with no errors
+- ✅ All unit tests passing (226/226 - 100%)
+- ✅ Document fix in ai_changelog.md
+
 ## Phase 64: Investigate whole app UX
 - ❌ You are expert in UI and UX design
 - ❌ Check whole app UI and UX design

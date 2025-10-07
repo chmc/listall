@@ -5,6 +5,7 @@ struct MainView: View {
     @StateObject private var cloudKitService = CloudKitService()
     @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
     @StateObject private var sharingService = SharingService()
+    @Environment(\.scenePhase) private var scenePhase
     
     // State restoration: Persist tab selection across app suspensions
     @SceneStorage("selectedTab") private var selectedTab = 0
@@ -239,22 +240,30 @@ struct MainView: View {
             Task {
                 await conflictManager.checkForConflicts()
             }
-            
-            // State restoration: Navigate back to the list user was viewing
-            if !hasRestoredNavigation, 
-               let listIdString = selectedListIdString,
-               let listId = UUID(uuidString: listIdString) {
-                // Find the list in loaded lists
-                if let list = viewModel.lists.first(where: { $0.id == listId }) {
-                    // Delay navigation slightly to ensure view hierarchy is ready
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        viewModel.selectedListForNavigation = list
+        }
+        .onChange(of: scenePhase) { newPhase in
+            // Restore navigation when app becomes active
+            if newPhase == .active {
+                // Restore navigation to the list user was viewing
+                if let listIdString = selectedListIdString,
+                   let listId = UUID(uuidString: listIdString) {
+                    // Reload lists to ensure we have the latest data
+                    viewModel.loadLists()
+                    
+                    // Find the list in loaded lists
+                    if let list = viewModel.lists.first(where: { $0.id == listId }) {
+                        // Only restore if we're not already viewing that list
+                        if viewModel.selectedListForNavigation?.id != listId {
+                            // Delay navigation slightly to ensure view hierarchy is ready
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                viewModel.selectedListForNavigation = list
+                            }
+                        }
+                    } else {
+                        // List no longer exists, clear the stored ID
+                        selectedListIdString = nil
                     }
-                } else {
-                    // List no longer exists, clear the stored ID
-                    selectedListIdString = nil
                 }
-                hasRestoredNavigation = true
             }
         }
         .sheet(isPresented: $conflictManager.showingConflictResolution) {
