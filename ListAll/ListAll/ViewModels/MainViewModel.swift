@@ -32,6 +32,7 @@ class MainViewModel: ObservableObject {
     private let dataManager = DataManager.shared
     private var archiveNotificationTimer: Timer?
     private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
+    private let hapticManager = HapticManager.shared
     
     init() {
         loadLists()
@@ -92,12 +93,18 @@ class MainViewModel: ObservableObject {
         
         // Show archive notification
         showArchiveNotification(for: list)
+        
+        // Trigger haptic feedback
+        hapticManager.listArchived()
     }
     
     func permanentlyDeleteList(_ list: List) {
         dataManager.permanentlyDeleteList(withId: list.id)
         // Remove from archived lists
         archivedLists.removeAll { $0.id == list.id }
+        
+        // Trigger haptic feedback
+        hapticManager.listDeleted()
     }
     
     // MARK: - Archive Notification Methods
@@ -155,12 +162,19 @@ class MainViewModel: ObservableObject {
         dataManager.addList(newList)
         lists.append(newList)
         lists.sort { $0.orderNumber < $1.orderNumber }
+        
+        // Trigger haptic feedback
+        hapticManager.listCreated()
+        
         return newList
     }
     
     func deleteList(_ list: List) {
         dataManager.deleteList(withId: list.id)
         lists.removeAll { $0.id == list.id }
+        
+        // Trigger haptic feedback
+        hapticManager.listDeleted()
     }
     
     func updateList(_ list: List, name: String) throws {

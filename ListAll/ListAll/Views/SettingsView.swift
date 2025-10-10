@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage(Constants.UserDefaultsKeys.requiresBiometricAuth) private var requiresBiometricAuth = false
     @AppStorage(Constants.UserDefaultsKeys.authTimeoutDuration) private var authTimeoutDurationRaw: Int = Constants.AuthTimeoutDuration.immediate.rawValue
     @StateObject private var biometricService = BiometricAuthService.shared
+    @StateObject private var hapticManager = HapticManager.shared
     
     private var addButtonPosition: Binding<Constants.AddButtonPosition> {
         Binding(
@@ -30,10 +31,18 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             SwiftUI.List {
-                Section("Display") {
+                Section(header: Text("Display"), footer: Text("Haptic feedback provides tactile responses for app interactions")) {
                     Picker("Add item button position", selection: addButtonPosition) {
                         ForEach(Constants.AddButtonPosition.allCases) { position in
                             Text(position.rawValue).tag(position)
+                        }
+                    }
+                    
+                    Toggle(isOn: $hapticManager.isEnabled) {
+                        HStack {
+                            Image(systemName: "waveform")
+                                .foregroundColor(.purple)
+                            Text("Haptic Feedback")
                         }
                     }
                 }

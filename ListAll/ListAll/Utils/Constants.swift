@@ -29,6 +29,7 @@ struct Constants {
         static let requiresBiometricAuth = "requiresBiometricAuth"
         static let authTimeoutDuration = "authTimeoutDuration"
         static let lastBackgroundTime = "lastBackgroundTime"
+        static let hapticsEnabled = "hapticsEnabled"
     }
     
     // MARK: - Add Button Position

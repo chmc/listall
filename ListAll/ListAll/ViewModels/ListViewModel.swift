@@ -32,6 +32,7 @@ class ListViewModel: ObservableObject {
     private let list: List
     private var undoTimer: Timer?
     private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
+    private let hapticManager = HapticManager.shared
     
     init(list: List) {
         self.list = list
@@ -63,11 +64,13 @@ class ListViewModel: ObservableObject {
     func createItem(title: String, description: String = "", quantity: Int = 1) {
         let _ = dataRepository.createItem(in: list, title: title, description: description, quantity: quantity)
         loadItems() // Refresh the list
+        hapticManager.itemCreated()
     }
     
     func deleteItem(_ item: Item) {
         dataRepository.deleteItem(item)
         loadItems() // Refresh the list
+        hapticManager.itemDeleted()
     }
     
     func duplicateItem(_ item: Item) {
@@ -78,6 +81,7 @@ class ListViewModel: ObservableObject {
             quantity: item.quantity
         )
         loadItems() // Refresh the list
+        hapticManager.itemCreated()
     }
     
     func toggleItemCrossedOut(_ item: Item) {
@@ -87,6 +91,13 @@ class ListViewModel: ObservableObject {
         
         dataRepository.toggleItemCrossedOut(item)
         loadItems() // Refresh the list
+        
+        // Trigger haptic feedback
+        if wasCompleted {
+            hapticManager.itemUncrossed()
+        } else {
+            hapticManager.itemCrossed()
+        }
         
         // Show undo button only when completing an item (not when uncompleting)
         if !wasCompleted, let refreshedItem = items.first(where: { $0.id == itemId }) {
@@ -141,6 +152,7 @@ class ListViewModel: ObservableObject {
     func reorderItems(from sourceIndex: Int, to destinationIndex: Int) {
         dataRepository.reorderItems(in: list, from: sourceIndex, to: destinationIndex)
         loadItems() // Refresh the list
+        hapticManager.dragDropped()
     }
     
     func moveItems(from source: IndexSet, to destination: Int) {
@@ -398,6 +410,7 @@ class ListViewModel: ObservableObject {
             selectedItems.remove(itemId)
         } else {
             selectedItems.insert(itemId)
+            hapticManager.itemSelected()
         }
     }
     
@@ -417,6 +430,7 @@ class ListViewModel: ObservableObject {
         }
         selectedItems.removeAll()
         loadItems() // Refresh the list
+        hapticManager.itemDeleted()
     }
     
     func moveSelectedItems(to destinationList: List) {
@@ -448,6 +462,7 @@ class ListViewModel: ObservableObject {
     func enterSelectionMode() {
         isInSelectionMode = true
         selectedItems.removeAll()
+        hapticManager.selectionModeToggled()
     }
     
     func exitSelectionMode() {
