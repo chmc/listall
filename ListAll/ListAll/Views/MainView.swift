@@ -42,19 +42,35 @@ struct MainView: View {
                             ProgressView("Loading lists...")
                                 .padding(.top, 16)
                         } else if viewModel.displayedLists.isEmpty {
-                        VStack(spacing: Theme.Spacing.lg) {
-                            Image(systemName: viewModel.showingArchivedLists ? "archivebox" : Constants.UI.listIcon)
-                                .font(.system(size: 60))
-                                .foregroundColor(Theme.Colors.secondary)
-                            
-                            Text(viewModel.showingArchivedLists ? "No Archived Lists" : "No Lists Yet")
-                                .font(Theme.Typography.title)
-                            
-                            Text(viewModel.showingArchivedLists ? "Archived lists will appear here" : "Create your first list to get started")
-                                .font(Theme.Typography.body)
-                                .emptyStateStyle()
-                        }
-                    } else {
+                            if viewModel.showingArchivedLists {
+                                // Simple empty state for archived lists
+                                VStack(spacing: Theme.Spacing.lg) {
+                                    Image(systemName: "archivebox")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(Theme.Colors.secondary)
+                                    
+                                    Text("No Archived Lists")
+                                        .font(Theme.Typography.title)
+                                    
+                                    Text("Archived lists will appear here")
+                                        .font(Theme.Typography.body)
+                                        .emptyStateStyle()
+                                }
+                                .padding(.top, 40)
+                            } else {
+                                // Engaging empty state for active lists with sample templates
+                                ListsEmptyStateView(
+                                    onCreateSampleList: { template in
+                                        let createdList = viewModel.createSampleList(from: template)
+                                        // Auto-navigate to the newly created list
+                                        viewModel.selectedListForNavigation = createdList
+                                    },
+                                    onCreateCustomList: {
+                                        showingCreateList = true
+                                    }
+                                )
+                            }
+                        } else {
                         SwiftUI.List {
                             ForEach(viewModel.displayedLists) { list in
                                 ListRowView(list: list, mainViewModel: viewModel)

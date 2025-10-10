@@ -277,4 +277,18 @@ class MainViewModel: ObservableObject {
         isInSelectionMode = false
         selectedLists.removeAll()
     }
+    
+    // MARK: - Sample List Creation
+    
+    /// Create a list from a sample template
+    /// - Parameter template: The template to use
+    /// - Returns: The created list
+    func createSampleList(from template: SampleDataService.SampleListTemplate) -> List {
+        let createdList = SampleDataService.saveTemplateList(template, using: dataManager)
+        
+        // Reload lists to get the updated data
+        loadLists()
+        
+        return createdList
+    }
 }

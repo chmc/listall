@@ -64,33 +64,15 @@ struct ListView: View {
                 if viewModel.isLoading {
                     ProgressView("Loading items...")
                 } else if viewModel.filteredItems.isEmpty {
-                VStack(spacing: Theme.Spacing.lg) {
-                    Image(systemName: "list.bullet.rectangle")
-                        .font(.system(size: 60))
-                        .foregroundColor(Theme.Colors.secondary)
-                    
-                    Text(viewModel.items.isEmpty ? "No Items Yet" : "No Active Items")
-                        .font(Theme.Typography.title)
-                    
-                    Text(viewModel.items.isEmpty ? "Add your first item to get started" : "All items are crossed out. Toggle the eye icon to show them.")
-                        .font(Theme.Typography.body)
-                        .emptyStateStyle()
-                    
-                    Button(action: {
-                        showingCreateItem = true
-                    }) {
-                        HStack {
-                            Image(systemName: Constants.UI.addIcon)
-                            Text("Add Item")
+                    // Use new engaging empty state with tips and celebration
+                    ItemsEmptyStateView(
+                        hasItems: !viewModel.items.isEmpty,
+                        onAddItem: {
+                            showingCreateItem = true
                         }
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Theme.Colors.primary)
-                        .cornerRadius(Theme.CornerRadius.md)
-                    }
-                }
-            } else {
+                    )
+                    .padding(.top, 40)
+                } else {
                 SwiftUI.List {
                     ForEach(viewModel.filteredItems) { item in
                         ItemRowView(
