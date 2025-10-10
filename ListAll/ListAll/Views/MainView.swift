@@ -87,14 +87,21 @@ struct MainView: View {
                     NavigationLink(
                         destination: viewModel.selectedListForNavigation.map { list in
                             ListView(list: list, mainViewModel: viewModel)
+                                .onDisappear {
+                                    // Only clear stored list ID when user explicitly navigates back
+                                    // Don't clear on system-initiated view hierarchy changes
+                                    if viewModel.selectedListForNavigation == nil {
+                                        selectedListIdString = nil
+                                    }
+                                }
                         },
                         isActive: Binding(
                             get: { viewModel.selectedListForNavigation != nil },
                             set: { newValue in
                                 if !newValue {
-                                    // User navigated back - clear the stored list ID
+                                    // User navigated back - clear the view model state
                                     viewModel.selectedListForNavigation = nil
-                                    selectedListIdString = nil
+                                    // Don't clear selectedListIdString here - let onDisappear handle it
                                 } else if let list = viewModel.selectedListForNavigation {
                                     // Save list ID for state restoration
                                     selectedListIdString = list.id.uuidString

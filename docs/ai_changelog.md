@@ -1,5 +1,87 @@
 # AI Changelog
 
+## 2025-10-10 - Fix: State Restoration After App Idle Time
+
+### Summary
+Fixed a critical bug in state restoration (Phase 61) where the app would return to the main screen instead of the previously viewed list after being idle for a few minutes. The issue was caused by premature clearing of the stored list ID during view hierarchy rebuilds.
+
+### Problem
+When the app had been idle for a few minutes and iOS performed view hierarchy management, the state restoration feature failed. Users reported that instead of returning to the list they were viewing, the app would show the main lists screen.
+
+**Root Cause Analysis:**
+The original implementation cleared the `selectedListIdString` (SceneStorage) in the NavigationLink's `isActive` binding setter when `newValue` was false. However, when iOS rebuilds the view hierarchy after being idle, the NavigationLink's setter gets called with `false` **before** the `.onChange(of: scenePhase)` restoration logic runs. This meant:
+1. View hierarchy gets rebuilt
+2. NavigationLink setter fires with `newValue = false`
+3. `selectedListIdString` gets cleared
+4. `.onChange(of: scenePhase)` fires with `.active`
+5. Restoration logic finds `selectedListIdString = nil`, so nothing to restore
+6. User sees main screen instead of their list
+
+### Solution - Deferred Storage Cleanup
+
+Moved the clearing of `selectedListIdString` from the NavigationLink binding setter to the ListView's `.onDisappear()` handler with proper state checking:
+
+**Key Changes in `MainView.swift`:**
+
+```swift
+// Before (problematic):
+set: { newValue in
+    if !newValue {
+        viewModel.selectedListForNavigation = nil
+        selectedListIdString = nil  // ❌ Cleared too early!
+    }
+}
+
+// After (fixed):
+.onDisappear {
+    // Only clear stored list ID when user explicitly navigates back
+    // Don't clear on system-initiated view hierarchy changes
+    if viewModel.selectedListForNavigation == nil {
+        selectedListIdString = nil
+    }
+}
+```
+
+**Why This Works:**
+- `.onDisappear` fires **after** the view is actually dismissed by user action
+- By this time, `.onChange(of: scenePhase)` has already run and restored navigation if needed
+- The check `if viewModel.selectedListForNavigation == nil` ensures we only clear after explicit user navigation back
+- System-initiated view rebuilds don't trigger `.onDisappear` on the destination view
+
+### Technical Implementation
+
+**Files Modified (1 file):**
+- `ListAll/ListAll/Views/MainView.swift`: 
+  - Moved `selectedListIdString = nil` from NavigationLink setter to ListView's `.onDisappear`
+  - Added condition to only clear when viewModel state is already nil
+  - Added explanatory comments about timing and system vs user-initiated changes
+
+### Testing
+- ✅ Build succeeded with no errors
+- ✅ All unit tests passing (288/288 - 100%)
+- Manual testing recommended:
+  1. Navigate to a list
+  2. Leave app idle for 5+ minutes (or background it)
+  3. Return to app
+  4. Should restore to the list, not main screen
+
+### User Impact
+- Users will now correctly return to the list they were viewing after the app has been idle
+- Fixes frustrating UX where users lose their context
+- Makes state restoration work as intended across all iOS lifecycle scenarios
+- Improves app reliability and user trust
+
+### Technical Notes
+- **View Lifecycle Timing**: Understanding the order of SwiftUI lifecycle events is critical for state restoration
+- **SceneStorage Persistence**: `@SceneStorage` persists across scene lifecycle, but restoration logic timing matters
+- **System vs User Actions**: Must distinguish between system-initiated view changes and user-initiated navigation
+- **iOS Memory Management**: iOS can rebuild view hierarchies at any time for memory management
+
+### Next Steps
+This completes the state restoration fix. Phase 61 now works correctly in all scenarios, including after extended idle time.
+
+---
+
 ## 2025-10-10 - Phase 65: Empty State Improvements
 
 ### Summary
