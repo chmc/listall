@@ -705,7 +705,19 @@
 - ✅ Validate build and tests pass
 - ✅ Document changes in ai_changelog.md
 
-## Phase 68: Toolbar Refinement
+## Phase 68: Quick Add Flow
+- ❌ Design inline quick-add input field
+- ❌ Add quick-add field at top of items list
+- ❌ Implement instant item creation on return key
+- ❌ Add "More Details" button to expand to full form
+- ❌ Support basic fields in quick-add (title only)
+- ❌ Add animation for quick-add to full form transition
+- ❌ Maintain quick-add for 80% simple use case
+- ❌ Keep full ItemEditView for complex items
+- ❌ Validate build and tests pass
+- ❌ Document changes in ai_changelog.md
+
+## Phase 69: Toolbar Refinement
 - ❌ Analyze toolbar icon usage and frequency
 - ❌ Group less-common actions into overflow menu
 - ❌ Keep only essential actions visible (Archive, Edit, Add)
@@ -717,7 +729,7 @@
 - ❌ Validate build and tests pass
 - ❌ Document changes in ai_changelog.md
 
-## Phase 69: Search Experience Enhancement
+## Phase 70: Search Experience Enhancement
 - ❌ Add search history storage
 - ❌ Display recent searches in search field
 - ❌ Add search suggestions based on item titles
@@ -729,7 +741,7 @@
 - ❌ Validate build and tests pass
 - ❌ Document changes in ai_changelog.md
 
-## Phase 70: Image Gallery Enhancement
+## Phase 71: Image Gallery Enhancement
 - ❌ Create full-screen image viewer
 - ❌ Add swipe gesture navigation between images
 - ❌ Add pinch-to-zoom functionality
@@ -753,18 +765,6 @@
 - ❌ Store onboarding completion in UserDefaults
 - ❌ Add "Replay Tutorial" option in Settings
 - ❌ Create onboarding assets and illustrations
-- ❌ Validate build and tests pass
-- ❌ Document changes in ai_changelog.md
-
-## Improvement 11: Quick Add Flow
-- ❌ Design inline quick-add input field
-- ❌ Add quick-add field at top of items list
-- ❌ Implement instant item creation on return key
-- ❌ Add "More Details" button to expand to full form
-- ❌ Support basic fields in quick-add (title only)
-- ❌ Add animation for quick-add to full form transition
-- ❌ Maintain quick-add for 80% simple use case
-- ❌ Keep full ItemEditView for complex items
 - ❌ Validate build and tests pass
 - ❌ Document changes in ai_changelog.md
 
