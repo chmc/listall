@@ -16,17 +16,21 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
+            // Main app content - ALWAYS present to preserve state and @SceneStorage
+            MainView()
+                .opacity((requiresBiometricAuth && !biometricService.isAuthenticated) ? 0 : 1)
+                .disabled(requiresBiometricAuth && !biometricService.isAuthenticated)
+            
+            // Authentication screen overlay - shown on top when needed
             if requiresBiometricAuth && !biometricService.isAuthenticated {
-                // Authentication screen
                 AuthenticationView(
                     isAuthenticating: $isAuthenticating,
                     showAuthError: $showAuthError,
                     authErrorMessage: $authErrorMessage,
                     onAuthenticate: authenticate
                 )
-            } else {
-                // Main app content
-                MainView()
+                .transition(.opacity)
+                .zIndex(1) // Ensure auth screen is always on top
             }
         }
         .onAppear {

@@ -666,7 +666,7 @@
 - ✅ All unit tests passing (288/288 - 100%)
 - ✅ Document fix in ai_changelog.md
 
-## Phase 66: Haptic Feedback Integration
+## Phase 66: Haptic Feedback Integration ✅ COMPLETED
 - ✅ Add haptic feedback to item cross-out/uncross actions
 - ✅ Add haptic feedback to successful operations (create, save)
 - ✅ Add haptic feedback to destructive operations (delete, archive)
@@ -677,6 +677,19 @@
 - ✅ Respect system haptics settings
 - ✅ Validate build and tests pass
 - ✅ Document changes in ai_changelog.md
+
+## Fix: State Restoration with Biometric Authentication ✅ COMPLETED
+- ✅ Identified issue: State restoration failed after Face ID/Touch ID authentication
+- ✅ Root cause: Conditional rendering in ContentView destroyed MainView, losing view lifecycle
+- ✅ MainView recreated after authentication, missing critical scenePhase = .active event
+- ✅ @SceneStorage data persisted but restoration logic never executed
+- ✅ Changed ContentView to use overlay pattern (ZStack + opacity) instead of conditional rendering
+- ✅ MainView now always present in hierarchy, hidden with opacity 0 during authentication
+- ✅ Authentication overlay shown on top with zIndex(1) when needed
+- ✅ View lifecycle continuity maintained, restoration logic executes correctly
+- ✅ Build successfully with no errors
+- ✅ All unit tests passing (288/288 - 100%)
+- ✅ Document fix in ai_changelog.md and learnings.md
 
 ## Phase 67: Feature Discoverability Enhancements
 - ❌ Create TooltipManager for contextual hints

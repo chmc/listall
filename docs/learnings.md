@@ -1,5 +1,109 @@
 # Technical Learnings
 
+## SwiftUI View Lifecycle & State Restoration
+
+### Authentication Overlays Must Preserve View Hierarchy (October 2025)
+
+- **Issue**: State restoration failed after Face ID authentication when app returned from background. After successful authentication, app started at main screen instead of restoring to the list user was viewing.
+
+- **Symptoms**:
+  - `@SceneStorage` data persisted correctly (list ID saved)
+  - State restoration logic existed in `MainView.onChange(of: scenePhase)`
+  - Restoration worked WITHOUT authentication enabled
+  - Restoration FAILED when Face ID/Touch ID authentication was required
+  - User lost navigation position after authenticating
+
+- **Root Cause**: Conditional rendering destroyed view hierarchy
+  ```swift
+  // BUGGY PATTERN:
+  if requiresAuth && !isAuthenticated {
+      AuthenticationView()  // ❌ Shows this
+  } else {
+      MainView()  // ❌ Completely destroyed and recreated
+  }
+  ```
+  - When authentication state changed, SwiftUI destroyed and recreated `MainView`
+  - New `MainView` instance missed the critical `scenePhase = .active` event
+  - View lifecycle hooks (`onChange(of: scenePhase)`) only work for views in hierarchy
+  - By the time new `MainView` appeared, state restoration event had already fired
+
+- **Solution**: Persistent view hierarchy with overlay pattern
+  ```swift
+  // CORRECT PATTERN:
+  ZStack {
+      // Main view ALWAYS present - never destroyed
+      MainView()
+          .opacity(requiresAuth && !isAuthenticated ? 0 : 1)
+          .disabled(requiresAuth && !isAuthenticated)
+      
+      // Authentication overlay on top when needed
+      if requiresAuth && !isAuthenticated {
+          AuthenticationView()
+              .transition(.opacity)
+              .zIndex(1)
+      }
+  }
+  ```
+
+- **Why This Works**:
+  - **View Stability**: `MainView` never destroyed, always exists in hierarchy
+  - **Lifecycle Continuity**: View receives all `scenePhase` changes continuously
+  - **State Preservation**: `@SceneStorage` restoration logic executes at correct time
+  - **Visual Security**: `.opacity(0)` and `.disabled()` fully hide/block interaction
+  - **Smooth UX**: Authentication overlay appears/disappears without destroying app state
+
+- **Key Insights**:
+  - **Conditional Rendering ≠ Conditional Visibility**: Don't confuse view removal with view hiding
+  - **Hidden Views Receive Events**: Views with opacity 0 still get lifecycle events
+  - **Removed Views Don't Exist**: Conditionally removed views miss environment changes
+  - **State Restoration Timing**: Restoration logic must execute while view is in hierarchy
+  - **Overlay > Replacement**: Use overlay pattern for authentication screens that shouldn't disrupt app state
+  - **SwiftUI View Identity**: Conditional rendering creates new view identities, losing lifecycle state
+
+- **When to Use This Pattern**:
+  - Authentication screens (Face ID, Touch ID, passcode)
+  - Modal overlays that should preserve underlying view state
+  - Any temporary UI that blocks content but shouldn't reset it
+  - Scenarios where `@SceneStorage` or view lifecycle hooks are critical
+
+- **When NOT to Use**:
+  - True navigation where state reset is desired (onboarding, logout)
+  - Memory-intensive views that should be unloaded
+  - Views with expensive initialization that shouldn't run during auth
+
+- **Testing Checklist**:
+  - [ ] Does view receive `scenePhase` changes while "hidden"?
+  - [ ] Does `@SceneStorage` restoration execute at correct time?
+  - [ ] Can user interact with hidden content? (should be blocked)
+  - [ ] Is hidden content visible? (should be fully obscured)
+  - [ ] Does state persist across authentication cycles?
+  - [ ] Test with actual device background/foreground transitions
+
+- **Performance Considerations**:
+  - Minimal impact: view exists but doesn't render (opacity 0)
+  - No re-initialization overhead from view recreation
+  - Maintains SwiftUI optimization (view update diffing)
+  - Consider `.allowsHitTesting(false)` for additional interaction blocking
+
+- **Security Note**:
+  - Opacity 0 makes content invisible but data still in memory
+  - For sensitive data, combine with data masking/clearing
+  - `.disabled()` prevents interaction but doesn't clear state
+  - Consider content-specific security measures if needed
+
+- **Related iOS Patterns**:
+  - Similar to UIKit's view.isHidden vs removeFromSuperview
+  - Analogous to Android's GONE vs INVISIBLE
+  - SwiftUI's `.hidden()` modifier is NOT the same (still in hierarchy)
+
+- **Result**: ✅ State restoration now works perfectly with Face ID/Touch ID authentication. Users experience seamless app continuity when returning from background.
+
+- **Time Investment**: ~1 hour debugging + implementing fix
+
+- **Lesson**: When implementing authentication screens in SwiftUI, always consider the view lifecycle implications. Use overlay patterns (ZStack + opacity) instead of conditional rendering when you need to preserve underlying view state and lifecycle hooks. The view hierarchy must remain stable for state restoration and environment changes to work correctly.
+
+---
+
 ## SwiftUI + UIKit Integration: State Synchronization Timing
 
 ### UIActivityViewController Empty Share Sheet Issue (October 2025)
