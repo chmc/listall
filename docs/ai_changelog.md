@@ -1,5 +1,184 @@
 # AI Changelog
 
+## 2025-10-12 - Phase 67: Feature Discoverability Enhancements
+
+### Summary
+Implemented comprehensive contextual tooltip system to help users discover app features. Added intelligent tooltips that appear at strategic moments to guide users through key functionality including list creation, item suggestions, search, sorting/filtering, swipe actions, and archiving. Includes a centralized TooltipManager for tracking shown tooltips, full-screen tooltip overlay for visibility, and a "View All Feature Tips" browser in Settings.
+
+### Updates (after initial implementation)
+**Fix: Tooltip Visibility Issue**
+- Fixed tooltips being clipped by navigation bar containers
+- Created `TooltipOverlay.swift` - full-screen overlay that displays tooltips above all content
+- Added semi-transparent background with tap-to-dismiss
+- Improved positioning based on feature context (toolbar vs list features)
+- Added "Got it!" button for clearer dismissal
+
+**Enhancement: View All Tips Feature**
+- Added "View All Feature Tips" option in Settings
+- Shows complete list of all 6 available tips with icons
+- Displays viewed status (✓ = viewed, ○ = not viewed)
+- Shows progress counter (X/6 viewed)
+- Allows users to browse all tips without triggering them in context
+- Provides reference guide for all app features
+
+### Implementation Details
+
+Created a robust tooltip system following UX investigation recommendations (Section 11.2):
+
+**Core Components**:
+
+1. **TooltipManager** (`Utils/TooltipManager.swift`)
+   - Singleton manager for tooltip state and display coordination
+   - Tracks shown tooltips in UserDefaults to prevent repetition
+   - Intelligent display logic: one tooltip at a time, auto-dismiss after delay
+   - Reset functionality for "Show All Tips" feature
+   - 6 contextual tooltips defined with appropriate messages
+
+2. **TooltipView** (`Views/Components/TooltipView.swift`)
+   - Reusable SwiftUI component with animated appearance
+   - Configurable arrow position (top, bottom, leading, trailing)
+   - Dismissible via tap or automatic timeout
+   - Spring animation for smooth entrance
+   - Custom Triangle shape for pointer arrow
+   - View modifier extension for easy integration
+
+**Tooltip Locations & Triggers**:
+
+1. **Add List Button** (MainView)
+   - Shows when user has no lists
+   - Message: "Tap + to create your first list"
+   - Triggered after 0.5s delay on MainView appear
+
+2. **Archive Functionality** (MainView)
+   - Shows when user has 3+ lists
+   - Message: "Archive completed lists to keep your workspace clean"
+   - Triggered after 1.0s delay on MainView appear
+
+3. **Item Suggestions** (ItemEditView)
+   - Shows when suggestions first appear while typing
+   - Message: "💡 Suggestions appear based on your previous items"
+   - Triggered after 0.3s delay when suggestions visible
+
+4. **Search Functionality** (ListView)
+   - Shows when user has 5+ items
+   - Message: "Search across all items in this list"
+   - Triggered after 0.5s delay on ListView appear
+
+5. **Sort/Filter Options** (ListView)
+   - Shows when user has 7+ items
+   - Message: "Sort and filter items to organize your view"
+   - Triggered after 1.0s delay on ListView appear
+   - Attached to sort/filter button in toolbar
+
+6. **Swipe Actions** (ListView)
+   - Shows when user has 3+ items
+   - Message: "Swipe left on items for quick actions like delete and duplicate"
+   - Triggered after 1.5s delay on ListView appear
+
+**Settings Integration**:
+
+Added "Help & Tips" section in SettingsView:
+- Shows progress: "X of 6 tips viewed"
+- "Show All Tips Again" button to reset all tooltips
+- Confirmation alert before reset
+- Visual indicators with lightbulb icon
+
+### Technical Features
+
+**Smart Display Logic**:
+- Only one tooltip shown at a time (prevents overwhelming users)
+- Tooltips auto-dismiss after 8-10 seconds (configurable per type)
+- Manual dismiss via close button (X icon)
+- Tooltips appear based on user state (item count, list count)
+- Sequential display with delays to avoid UI clutter
+
+**State Management**:
+- UserDefaults persistence for shown tooltips
+- ObservableObject pattern for reactive updates
+- @StateObject integration in relevant views
+- Proper cleanup and state tracking
+
+**Animations**:
+- Spring animation for tooltip appearance (0.4s response, 0.7 damping)
+- Scale and opacity transitions
+- Smooth auto-dismiss animations
+- Professional polish matching iOS standards
+
+### Files Created
+- `ListAll/ListAll/Utils/TooltipManager.swift` (175 lines) - Enhanced with title and icon properties
+- `ListAll/ListAll/Views/Components/TooltipView.swift` (192 lines) - Original tooltip component
+- `ListAll/ListAll/Views/Components/TooltipOverlay.swift` (127 lines) - Full-screen tooltip overlay
+
+### Files Modified
+- `ListAll/ListAll/Views/MainView.swift`
+  - Added TooltipManager StateObject
+  - Integrated tooltips for add list and archive buttons
+  - Added trigger logic in onAppear
+
+- `ListAll/ListAll/Views/ListView.swift`
+  - Added TooltipManager StateObject
+  - Integrated tooltip for sort/filter button
+  - Added contextual trigger logic based on item count
+
+- `ListAll/ListAll/Views/ItemEditView.swift`
+  - Added TooltipManager StateObject
+  - Integrated tooltip for suggestions panel
+  - Added trigger when suggestions appear
+
+- `ListAll/ListAll/Views/SettingsView.swift`
+  - Added "Help & Tips" section
+  - Shows tooltip progress indicator
+  - Added "View All Feature Tips" button to browse all tips
+  - Added "Show All Tips Again" button with confirmation alert
+  - Created `AllFeatureTipsView` - displays all 6 tips with viewed status and icons
+
+### Design Alignment
+
+Implementation follows UX investigation recommendations:
+- **Priority**: P0 (Critical) - "Enhance Feature Discoverability"
+- **Impact**: High (feature adoption)
+- **Approach**: Contextual tooltips (Section 11.2)
+- **Progressive disclosure**: Tips appear based on usage patterns
+- **User control**: Reset option in Settings
+
+### Benefits
+
+**For New Users**:
+- Guided discovery of key features
+- Context-aware help at the right moment
+- Reduces learning curve
+- Non-intrusive (one at a time, auto-dismiss)
+
+**For Power Users**:
+- Tips only shown once
+- Easy reset option if needed
+- Doesn't interfere with workflow
+- Progress tracking in Settings
+
+### Testing Results
+- ✅ Build: Successful (no errors)
+- ✅ Unit Tests: All passing (288/288)
+- ✅ No new linter errors introduced
+- ✅ Tooltips display correctly in all contexts
+- ✅ State persistence works across app restarts
+- ✅ Reset functionality verified
+
+### Next Steps
+Following the UX investigation roadmap:
+- Phase 68: Toolbar Refinement (reduce clutter)
+- Phase 69: Search Experience Enhancement
+- Phase 70: Image Gallery Enhancement
+- Improvement 10: Comprehensive Onboarding Flow
+
+### Technical Notes
+- TooltipManager uses singleton pattern for app-wide coordination
+- UserDefaults key: "shownTooltips" (array of tooltip IDs)
+- Tooltips respect iOS accessibility settings
+- Memory-efficient with weak self references in closures
+- Thread-safe with MainActor operations
+
+---
+
 ## 2025-10-10 - Fix: State Restoration with Biometric Authentication
 
 ### Summary

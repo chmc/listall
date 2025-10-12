@@ -5,6 +5,7 @@ struct MainView: View {
     @StateObject private var cloudKitService = CloudKitService()
     @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
     @StateObject private var sharingService = SharingService()
+    @StateObject private var tooltipManager = TooltipManager.shared
     @Environment(\.scenePhase) private var scenePhase
     
     // State restoration: Persist tab selection across app suspensions
@@ -24,10 +25,11 @@ struct MainView: View {
     @State private var shareItems: [Any] = []
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            // Lists Tab
-            NavigationView {
-                ZStack {
+        ZStack {
+            TabView(selection: $selectedTab) {
+                // Lists Tab
+                NavigationView {
+                    ZStack {
                     VStack(spacing: 0) {
                         // Sync Status Bar
                         if cloudKitService.syncStatus != .available || cloudKitService.isSyncing {
@@ -263,6 +265,20 @@ struct MainView: View {
             Task {
                 await conflictManager.checkForConflicts()
             }
+            
+            // Show add list tooltip if user has no lists and hasn't seen it
+            if viewModel.lists.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    tooltipManager.showIfNeeded(.addListButton)
+                }
+            }
+            
+            // Show archive tooltip if user has 3+ lists and hasn't seen it
+            if viewModel.lists.count >= 3 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    tooltipManager.showIfNeeded(.archiveFunctionality)
+                }
+            }
         }
         .onChange(of: scenePhase) { newPhase in
             // Restore navigation when app becomes active
@@ -364,6 +380,10 @@ struct MainView: View {
         } message: {
             let count = viewModel.selectedLists.count
             Text("Archive \(count) \(count == 1 ? "list" : "lists")? You can restore them later from archived lists.")
+        }
+            
+            // Tooltip overlay - shows above all content
+            TooltipOverlay()
         }
     }
     

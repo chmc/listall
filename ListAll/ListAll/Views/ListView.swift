@@ -5,6 +5,7 @@ struct ListView: View {
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
     @StateObject private var sharingService = SharingService()
+    @StateObject private var tooltipManager = TooltipManager.shared
     @Environment(\.presentationMode) var presentationMode
     @State private var editMode: EditMode = .inactive
     @State private var showingCreateItem = false
@@ -399,6 +400,30 @@ struct ListView: View {
         }
         .onAppear {
             viewModel.loadItems()
+            
+            // Show tooltips based on list state
+            let itemCount = viewModel.items.count
+            
+            // Show search tooltip when user has 5+ items
+            if itemCount >= 5 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    tooltipManager.showIfNeeded(.searchFunctionality)
+                }
+            }
+            
+            // Show sort/filter tooltip when user has 7+ items
+            if itemCount >= 7 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    tooltipManager.showIfNeeded(.sortFilterOptions)
+                }
+            }
+            
+            // Show swipe actions tooltip when user has 3+ items
+            if itemCount >= 3 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    tooltipManager.showIfNeeded(.swipeActions)
+                }
+            }
         }
         .onChange(of: showingCreateItem) { _ in
             if !showingCreateItem {

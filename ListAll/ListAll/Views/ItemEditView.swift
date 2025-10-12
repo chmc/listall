@@ -5,6 +5,7 @@ struct ItemEditView: View {
     @StateObject private var viewModel: ItemEditViewModel
     @StateObject private var suggestionService = SuggestionService()
     @StateObject private var imageService = ImageService.shared
+    @StateObject private var tooltipManager = TooltipManager.shared
     @State private var showingDiscardAlert = false
     @State private var showingSuggestions = false
     @State private var showAllSuggestions = false
@@ -53,6 +54,12 @@ struct ItemEditView: View {
                                 }
                             )
                             .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+                            .onAppear {
+                                // Show tooltip when suggestions first appear
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    tooltipManager.showIfNeeded(.itemSuggestions)
+                                }
+                            }
                         }
                         
                         if viewModel.showTitleError {

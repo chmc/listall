@@ -4,11 +4,14 @@ struct SettingsView: View {
     @State private var enableCloudSync = false
     @State private var showingExportSheet = false
     @State private var showingImportSheet = false
+    @State private var showingResetTooltipsAlert = false
+    @State private var showingAllTips = false
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
     @AppStorage(Constants.UserDefaultsKeys.requiresBiometricAuth) private var requiresBiometricAuth = false
     @AppStorage(Constants.UserDefaultsKeys.authTimeoutDuration) private var authTimeoutDurationRaw: Int = Constants.AuthTimeoutDuration.immediate.rawValue
     @StateObject private var biometricService = BiometricAuthService.shared
     @StateObject private var hapticManager = HapticManager.shared
+    @StateObject private var tooltipManager = TooltipManager.shared
     
     private var addButtonPosition: Binding<Constants.AddButtonPosition> {
         Binding(
@@ -43,6 +46,47 @@ struct SettingsView: View {
                             Image(systemName: "waveform")
                                 .foregroundColor(.purple)
                             Text("Haptic Feedback")
+                        }
+                    }
+                }
+                
+                Section(header: Text("Help & Tips"), footer: helpFooterText) {
+                    HStack {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundColor(.yellow)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Feature Tips")
+                                .font(.body)
+                            Text("\(tooltipManager.shownTooltipCount()) of \(tooltipManager.totalTooltipCount()) tips viewed")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    
+                    Button(action: {
+                        showingAllTips = true
+                    }) {
+                        HStack {
+                            Image(systemName: "list.bullet")
+                                .foregroundColor(.blue)
+                            Text("View All Feature Tips")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Button(action: {
+                        showingResetTooltipsAlert = true
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.counterclockwise")
+                                .foregroundColor(.blue)
+                            Text("Show All Tips Again")
+                                .foregroundColor(.primary)
                         }
                     }
                 }
@@ -135,6 +179,21 @@ struct SettingsView: View {
         .sheet(isPresented: $showingImportSheet) {
             ImportView()
         }
+        .sheet(isPresented: $showingAllTips) {
+            AllFeatureTipsView()
+        }
+        .alert("Reset All Tips", isPresented: $showingResetTooltipsAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                tooltipManager.resetAllTooltips()
+            }
+        } message: {
+            Text("This will show all feature tips again as if you're using the app for the first time. Tips will appear when you use different features.")
+        }
+    }
+    
+    private var helpFooterText: Text {
+        return Text("Feature tips help you discover app functionality. Reset to see all tips again.")
     }
     
     private var securityFooterText: Text {
@@ -885,6 +944,78 @@ struct ImportPreviewView: View {
             }
             .navigationTitle("Import Preview")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+// MARK: - All Feature Tips View
+
+struct AllFeatureTipsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var tooltipManager = TooltipManager.shared
+    
+    var body: some View {
+        NavigationView {
+            SwiftUI.List {
+                Section {
+                    ForEach(TooltipType.allCases, id: \.rawValue) { tipType in
+                        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                            // Icon
+                            Image(systemName: tipType.icon)
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                                .frame(width: 40)
+                            
+                            // Content
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(tipType.title)
+                                        .font(Theme.Typography.headline)
+                                    
+                                    Spacer()
+                                    
+                                    // Viewed indicator
+                                    if tooltipManager.hasShown(tipType) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.body)
+                                            .foregroundColor(.green)
+                                    } else {
+                                        Image(systemName: "circle")
+                                            .font(.body)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Text(tipType.message)
+                                    .font(Theme.Typography.body)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.vertical, Theme.Spacing.xs)
+                    }
+                } header: {
+                    HStack {
+                        Text("All Feature Tips")
+                        Spacer()
+                        Text("\(tooltipManager.shownTooltipCount())/\(tooltipManager.totalTooltipCount()) viewed")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .textCase(.none)
+                    }
+                } footer: {
+                    Text("Tips marked with ✓ have been viewed. Tips will appear automatically when you use features, or you can reset them to see all tips again from Settings.")
+                }
+            }
+            .navigationTitle("Feature Tips")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
