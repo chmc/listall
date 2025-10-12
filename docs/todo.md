@@ -705,6 +705,24 @@
 - ✅ Validate build and tests pass
 - ✅ Document changes in ai_changelog.md
 
+## Fix: Delete item and delete list should have undo like cross item
+
+## Fix: Dismiss undo dialog
+- ❌ Functionality to dismiss undo dialog
+
+## Fix: Crossed items does not update count in list
+
+## Fix: Archived lists screen has empty button on right corner
+- ❌ Remove empty button
+
+## Fix: Duplicate list action shows new copied list twice in main screen
+
+## Fix: Updated list name is not seen on items list view
+- ❌ Old name is visible, should be new name
+
+## 
+- ❌ 
+
 ## Phase 68: Quick Add Flow
 - ❌ Design inline quick-add input field
 - ❌ Add quick-add field at top of items list
