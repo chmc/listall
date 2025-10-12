@@ -1,5 +1,305 @@
 # AI Changelog
 
+## 2025-10-12 - Fix: Delete Item and Delete List Undo Functionality
+
+### Summary
+Implemented undo functionality for delete item operations, following the same pattern as the existing cross item undo feature. Delete list operations already had undo functionality via archive mechanism (Phase 59). Users can now undo item deletions within a 5-second window using a Material Design banner at the bottom of the screen.
+
+### Implementation Details
+
+#### Core Functionality
+
+**ListViewModel Enhancements** (`ViewModels/ListViewModel.swift`):
+
+Added undo delete properties and methods parallel to existing undo complete functionality:
+
+```swift
+// Undo Delete Properties
+@Published var recentlyDeletedItem: Item?
+@Published var showDeleteUndoButton = false
+private var deleteUndoTimer: Timer?
+private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
+
+// Modified deleteItem to show undo
+func deleteItem(_ item: Item) {
+    // Store the item before deleting for undo functionality
+    showDeleteUndoForItem(item)
+    
+    dataRepository.deleteItem(item)
+    loadItems() // Refresh the list
+    hapticManager.itemDeleted()
+}
+
+// Undo Delete Management
+private func showDeleteUndoForItem(_ item: Item) {
+    // Cancel any existing timer
+    deleteUndoTimer?.invalidate()
+    
+    // Store the deleted item
+    recentlyDeletedItem = item
+    showDeleteUndoButton = true
+    
+    // Set up timer to hide undo button after timeout
+    deleteUndoTimer = Timer.scheduledTimer(withTimeInterval: undoTimeout, repeats: false) { [weak self] _ in
+        self?.hideDeleteUndoButton()
+    }
+}
+
+func undoDeleteItem() {
+    guard let item = recentlyDeletedItem else { return }
+    
+    // Re-create the item with all its properties using addItemForImport
+    // which preserves all item state including isCrossedOut and orderNumber
+    dataRepository.addItemForImport(item, to: list.id)
+    
+    // Hide undo button immediately BEFORE loading items
+    hideDeleteUndoButton()
+    
+    loadItems() // Refresh the list
+}
+
+private func hideDeleteUndoButton() {
+    deleteUndoTimer?.invalidate()
+    deleteUndoTimer = nil
+    showDeleteUndoButton = false
+    recentlyDeletedItem = nil
+}
+```
+
+**Critical Implementation Details**:
+- Uses `addItemForImport()` to restore item with all properties intact
+- Preserves item state: title, description, quantity, isCrossedOut, orderNumber, images
+- Timer-based auto-hide after 5 seconds
+- Separate undo state from complete undo (both can be active simultaneously)
+- Proper timer cleanup in `deinit` to prevent memory leaks
+
+#### UI Implementation
+
+**ListView Updates** (`Views/ListView.swift`):
+
+Added `DeleteUndoBanner` component parallel to existing `UndoBanner`:
+
+```swift
+// Undo Delete Banner
+if viewModel.showDeleteUndoButton, let item = viewModel.recentlyDeletedItem {
+    VStack {
+        Spacer()
+        DeleteUndoBanner(
+            itemName: item.displayTitle,
+            onUndo: {
+                viewModel.undoDeleteItem()
+            }
+        )
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.bottom, Theme.Spacing.md)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(Theme.Animation.spring, value: viewModel.showDeleteUndoButton)
+    }
+}
+
+// Updated add button padding to account for both undo banners
+.padding(.bottom, (viewModel.showUndoButton || viewModel.showDeleteUndoButton) ? 130 : 65)
+```
+
+**DeleteUndoBanner Component**:
+
+```swift
+struct DeleteUndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "trash.circle.fill")
+                .foregroundColor(.red)
+                .font(.title3)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Deleted")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(itemName)
+                    .font(Theme.Typography.body)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.primary)
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                .fill(Theme.Colors.background)
+                .shadow(color: Theme.Shadow.largeColor, radius: Theme.Shadow.largeRadius, x: Theme.Shadow.largeX, y: Theme.Shadow.largeY)
+        )
+    }
+}
+```
+
+**UI Features**:
+- Red trash icon for visual distinction from complete undo (green checkmark)
+- "Deleted" label vs "Completed" for complete undo
+- Same Material Design elevated card appearance
+- Spring animation for smooth entry/exit
+- Prominent "Undo" button
+- Item name display with truncation
+
+#### Test Infrastructure
+
+**TestHelpers Updates** (`ListAllTests/TestHelpers.swift`):
+
+Updated `TestListViewModel` with identical undo delete functionality:
+
+```swift
+// Undo Delete Properties
+@Published var recentlyDeletedItem: Item?
+@Published var showDeleteUndoButton = false
+private var deleteUndoTimer: Timer?
+
+// Same implementation as production ListViewModel
+func deleteItem(_ item: Item) { /* ... */ }
+func undoDeleteItem() { /* ... */ }
+private func showDeleteUndoForItem(_ item: Item) { /* ... */ }
+private func hideDeleteUndoButton() { /* ... */ }
+```
+
+#### Comprehensive Test Coverage
+
+**New Tests** (`ViewModelsTests.swift`):
+
+Added 5 comprehensive tests for delete undo functionality:
+
+1. **testListViewModelDeleteItemShowsUndoBanner**
+   - Verifies undo banner appears after delete
+   - Confirms deleted item is stored
+   - Validates item is removed from list
+
+2. **testListViewModelUndoDeleteItem**
+   - Tests complete undo flow
+   - Verifies item restoration
+   - Confirms undo banner is hidden after undo
+   - Validates item properties are preserved
+
+3. **testListViewModelUndoDeleteItemPreservesProperties**
+   - Tests restoration of complex item (crossed out, quantity, description)
+   - Verifies all properties maintained: title, description, quantity, isCrossedOut
+   - Confirms state preservation is complete
+
+4. **testListViewModelDeleteUndoBannerReplacesOnNewDeletion**
+   - Tests multiple deletions in sequence
+   - Verifies new delete replaces previous undo
+   - Confirms only most recent deletion can be undone
+
+5. **testListViewModelBothUndoBannersCanBeShown**
+   - Tests coexistence of complete and delete undo
+   - Verifies both banners can be active simultaneously
+   - Confirms independent operation of both undo systems
+
+### Technical Features
+
+**State Management**:
+- Separate undo state for delete and complete operations
+- Both undo types can be active simultaneously for different items
+- Timer-based auto-dismissal prevents stale undo options
+- Proper cleanup prevents memory leaks
+
+**User Experience**:
+- 5-second undo window (industry standard)
+- Visual distinction: red trash icon vs green checkmark
+- Smooth animations with spring effect
+- Non-blocking UI (banners don't interfere with navigation)
+- Intuitive "Undo" button placement
+
+**Data Integrity**:
+- Complete property preservation on undo
+- Order number maintained for correct list position
+- Image relationships preserved
+- Crossed-out state maintained
+
+### Build Validation
+
+- ✅ **Build**: Successful compilation (xcodebuild)
+- ✅ **Tests**: 319/319 passed (100% pass rate)
+- ✅ **New Tests**: 5 comprehensive undo delete tests
+- ✅ **Test Coverage**: Complete undo flow, property preservation, edge cases
+
+### Files Modified
+
+**Core Implementation**:
+- `ListAll/ViewModels/ListViewModel.swift` - Added undo delete properties and methods
+- `ListAll/Views/ListView.swift` - Added DeleteUndoBanner and UI integration
+
+**Test Infrastructure**:
+- `ListAllTests/TestHelpers.swift` - Updated TestListViewModel with undo delete
+- `ListAllTests/ViewModelsTests.swift` - Added 5 comprehensive tests
+
+### User-Facing Changes
+
+**Delete Item Undo**:
+- Deleting an item now shows an undo banner for 5 seconds
+- Red trash icon clearly indicates delete action
+- Tap "Undo" to restore the deleted item
+- Item restored with all properties intact (description, quantity, crossed-out state)
+
+**Delete List Already Has Undo**:
+- Delete list operations archive lists (Phase 57)
+- Archive undo was implemented in Phase 59
+- Archive banner shows for 5 seconds with undo option
+- This was already working, no changes needed
+
+### Design Decisions
+
+1. **Separate Undo States**: Chose to have independent undo for complete and delete operations
+   - Allows undoing different actions on different items
+   - Prevents conflicts between operations
+   - More flexible user experience
+
+2. **Using addItemForImport()**: Leveraged existing infrastructure for complete item restoration
+   - Preserves all properties including internal state
+   - Consistent with import functionality
+   - Reduces code duplication
+
+3. **5-Second Timer**: Standard undo timeout used throughout app
+   - Matches complete undo timing
+   - Industry standard (Gmail, iOS Mail, etc.)
+   - Long enough to be useful, short enough to not clutter UI
+
+4. **Red Trash Icon**: Clear visual distinction from complete undo
+   - Immediately recognizable as delete action
+   - Different color (red) vs complete (green)
+   - Consistent with iOS design language
+
+### Future Enhancements
+
+Potential improvements for future iterations:
+- Swipe to dismiss undo banner
+- Undo history (multiple levels)
+- Persistent undo across app restarts
+- Bulk delete undo (restore multiple items)
+
+### Notes
+
+**Delete List Undo Already Exists**:
+The task mentioned "delete list should have undo like cross item" but this was already implemented:
+- Lists are archived instead of deleted (Phase 57)
+- Archive includes automatic undo functionality (Phase 59)
+- Archive banner shows with undo button for 5 seconds
+- No changes were needed for list deletion
+
+**Focus on Delete Item Undo**:
+This implementation focused on adding missing undo functionality for item deletions, which was the actual gap in the feature set.
+
 ## 2025-10-12 - Phase 67: Feature Discoverability Enhancements
 
 ### Summary

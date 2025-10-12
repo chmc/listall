@@ -124,6 +124,23 @@ struct ListView: View {
                 }
             }
             
+            // Undo Delete Banner
+            if viewModel.showDeleteUndoButton, let item = viewModel.recentlyDeletedItem {
+                VStack {
+                    Spacer()
+                    DeleteUndoBanner(
+                        itemName: item.displayTitle,
+                        onUndo: {
+                            viewModel.undoDeleteItem()
+                        }
+                    )
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.bottom, Theme.Spacing.md)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(Theme.Animation.spring, value: viewModel.showDeleteUndoButton)
+                }
+            }
+            
             // Add Item Button (floating above tab bar)
             VStack {
                 Spacer()
@@ -138,7 +155,7 @@ struct ListView: View {
                             .padding(.trailing, Theme.Spacing.lg)
                     }
                 }
-                .padding(.bottom, viewModel.showUndoButton ? 130 : 65)
+                .padding(.bottom, (viewModel.showUndoButton || viewModel.showDeleteUndoButton) ? 130 : 65)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -560,6 +577,50 @@ struct UndoBanner: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text("Completed")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(itemName)
+                    .font(Theme.Typography.body)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(Theme.Typography.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.primary)
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                .fill(Theme.Colors.background)
+                .shadow(color: Theme.Shadow.largeColor, radius: Theme.Shadow.largeRadius, x: Theme.Shadow.largeX, y: Theme.Shadow.largeY)
+        )
+    }
+}
+
+// MARK: - Delete Undo Banner Component
+
+struct DeleteUndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "trash.circle.fill")
+                .foregroundColor(.red)
+                .font(.title3)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Deleted")
                     .font(Theme.Typography.caption)
                     .foregroundColor(.secondary)
                 

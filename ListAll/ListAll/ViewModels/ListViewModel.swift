@@ -22,6 +22,10 @@ class ListViewModel: ObservableObject {
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
     
+    // Undo Delete Properties
+    @Published var recentlyDeletedItem: Item?
+    @Published var showDeleteUndoButton = false
+    
     // Multi-Selection Properties
     @Published var isInSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
@@ -31,6 +35,7 @@ class ListViewModel: ObservableObject {
     // private let viewContext: NSManagedObjectContext // Removed viewContext
     private let list: List
     private var undoTimer: Timer?
+    private var deleteUndoTimer: Timer?
     private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
     private let hapticManager = HapticManager.shared
     
@@ -68,6 +73,9 @@ class ListViewModel: ObservableObject {
     }
     
     func deleteItem(_ item: Item) {
+        // Store the item before deleting for undo functionality
+        showDeleteUndoForItem(item)
+        
         dataRepository.deleteItem(item)
         loadItems() // Refresh the list
         hapticManager.itemDeleted()
@@ -142,6 +150,43 @@ class ListViewModel: ObservableObject {
     
     deinit {
         undoTimer?.invalidate()
+        deleteUndoTimer?.invalidate()
+    }
+    
+    // MARK: - Undo Delete Functionality
+    
+    private func showDeleteUndoForItem(_ item: Item) {
+        // Cancel any existing timer
+        deleteUndoTimer?.invalidate()
+        
+        // Store the deleted item
+        recentlyDeletedItem = item
+        showDeleteUndoButton = true
+        
+        // Set up timer to hide undo button after timeout
+        deleteUndoTimer = Timer.scheduledTimer(withTimeInterval: undoTimeout, repeats: false) { [weak self] _ in
+            self?.hideDeleteUndoButton()
+        }
+    }
+    
+    func undoDeleteItem() {
+        guard let item = recentlyDeletedItem else { return }
+        
+        // Re-create the item with all its properties using addItemForImport
+        // which preserves all item state including isCrossedOut and orderNumber
+        dataRepository.addItemForImport(item, to: list.id)
+        
+        // Hide undo button immediately BEFORE loading items
+        hideDeleteUndoButton()
+        
+        loadItems() // Refresh the list
+    }
+    
+    private func hideDeleteUndoButton() {
+        deleteUndoTimer?.invalidate()
+        deleteUndoTimer = nil
+        showDeleteUndoButton = false
+        recentlyDeletedItem = nil
     }
     
     func updateItem(_ item: Item, title: String, description: String, quantity: Int) {

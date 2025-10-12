@@ -416,6 +416,10 @@ class TestListViewModel: ObservableObject {
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
     
+    // Undo Delete Properties
+    @Published var recentlyDeletedItem: Item?
+    @Published var showDeleteUndoButton = false
+    
     // Multi-Selection Properties
     @Published var isInSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
@@ -424,6 +428,7 @@ class TestListViewModel: ObservableObject {
     private let dataRepository: TestDataRepository
     private let list: List
     private var undoTimer: Timer?
+    private var deleteUndoTimer: Timer?
     private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
     
     init(list: List, dataManager: TestDataManager) {
@@ -435,6 +440,7 @@ class TestListViewModel: ObservableObject {
     
     deinit {
         undoTimer?.invalidate()
+        deleteUndoTimer?.invalidate()
     }
     
     func loadItems() {
@@ -458,6 +464,9 @@ class TestListViewModel: ObservableObject {
     }
     
     func deleteItem(_ item: Item) {
+        // Store the item before deleting for undo functionality
+        showDeleteUndoForItem(item)
+        
         dataRepository.deleteItem(item)
         loadItems()
     }
@@ -519,6 +528,42 @@ class TestListViewModel: ObservableObject {
         undoTimer = nil
         showUndoButton = false
         recentlyCompletedItem = nil
+    }
+    
+    // MARK: - Undo Delete Functionality
+    
+    private func showDeleteUndoForItem(_ item: Item) {
+        // Cancel any existing timer
+        deleteUndoTimer?.invalidate()
+        
+        // Store the deleted item
+        recentlyDeletedItem = item
+        showDeleteUndoButton = true
+        
+        // Set up timer to hide undo button after timeout
+        deleteUndoTimer = Timer.scheduledTimer(withTimeInterval: undoTimeout, repeats: false) { [weak self] _ in
+            self?.hideDeleteUndoButton()
+        }
+    }
+    
+    func undoDeleteItem() {
+        guard let item = recentlyDeletedItem else { return }
+        
+        // Re-create the item with all its properties using addItemForImport
+        // which preserves all item state including isCrossedOut and orderNumber
+        dataRepository.addItemForImport(item, to: list.id)
+        
+        // Hide undo button immediately BEFORE loading items
+        hideDeleteUndoButton()
+        
+        loadItems() // Refresh the list
+    }
+    
+    private func hideDeleteUndoButton() {
+        deleteUndoTimer?.invalidate()
+        deleteUndoTimer = nil
+        showDeleteUndoButton = false
+        recentlyDeletedItem = nil
     }
     
     func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
