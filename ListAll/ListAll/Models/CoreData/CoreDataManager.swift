@@ -261,6 +261,39 @@ class DataManager: ObservableObject {
         }
     }
     
+    func updateListsOrder(_ newOrder: [List]) {
+        // Batch update all list order numbers in a single operation
+        // This is more efficient than calling updateList() for each list separately
+        let context = coreDataManager.viewContext
+        
+        for list in newOrder {
+            let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", list.id as CVarArg)
+            
+            do {
+                let results = try context.fetch(request)
+                if let listEntity = results.first {
+                    listEntity.orderNumber = Int32(list.orderNumber)
+                    listEntity.modifiedAt = list.modifiedAt
+                }
+            } catch {
+                print("Failed to update list order for \(list.name): \(error)")
+            }
+        }
+        
+        // Save once after all updates
+        saveData()
+        
+        // Update local array to match
+        lists = newOrder
+    }
+    
+    func synchronizeLists(_ newOrder: [List]) {
+        // Synchronize internal lists array with the provided order
+        // This ensures that subsequent reloads maintain the correct order
+        lists = newOrder
+    }
+    
     func deleteList(withId id: UUID) {
         // Archive the list instead of permanently deleting it
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()

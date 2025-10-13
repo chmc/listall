@@ -245,15 +245,21 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
+        // Standard SwiftUI pattern: use move directly
         lists.move(fromOffsets: source, toOffset: destination)
         
-        // Update order numbers for all lists
+        // Update order numbers based on new positions
         for (index, list) in lists.enumerated() {
             var updatedList = list
             updatedList.orderNumber = Int(index)
-            dataManager.updateList(updatedList)
             lists[index] = updatedList
         }
+        
+        // Batch update all lists at once - saves to Core Data and syncs DataManager
+        dataManager.updateListsOrder(lists)
+        
+        // Trigger haptic feedback
+        hapticManager.dragDropped()
     }
     
     // MARK: - Multi-Selection Methods

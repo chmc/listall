@@ -722,8 +722,8 @@
 - ✅ Do not show + Item <- button on bottom right corner because there is + Add your first item button
 - ✅ Do not show Search items for empty list
 
-## Fix: Lists view order does not work
-- ❌ Drag and drop list to new order messes up whole list
+## Fix: Lists view order does not work ✅ COMPLETED
+- ✅ Fixed drag and drop list reordering - synchronize DataManager's internal array after reordering
 
 ## Fix: Dismiss undo dialog
 - ❌ Functionality to dismiss undo dialog
