@@ -141,26 +141,31 @@ struct ListView: View {
                 }
             }
             
-            // Add Item Button (floating above tab bar)
-            VStack {
-                Spacer()
-                HStack(spacing: 0) {
-                    if addButtonPosition == .left {
-                        addItemButton
-                            .padding(.leading, Theme.Spacing.lg)
-                        Spacer()
-                    } else {
-                        Spacer()
-                        addItemButton
-                            .padding(.trailing, Theme.Spacing.lg)
+            // Add Item Button (floating above tab bar) - only show when list has items
+            if !viewModel.items.isEmpty {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 0) {
+                        if addButtonPosition == .left {
+                            addItemButton
+                                .padding(.leading, Theme.Spacing.lg)
+                            Spacer()
+                        } else {
+                            Spacer()
+                            addItemButton
+                                .padding(.trailing, Theme.Spacing.lg)
+                        }
                     }
+                    .padding(.bottom, (viewModel.showUndoButton || viewModel.showDeleteUndoButton) ? 130 : 65)
                 }
-                .padding(.bottom, (viewModel.showUndoButton || viewModel.showDeleteUndoButton) ? 130 : 65)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedItems.count) Selected" : "")
-        .searchable(text: $viewModel.searchText, prompt: "Search items")
+        // Only show search when list has items
+        .if(!viewModel.items.isEmpty) { view in
+            view.searchable(text: $viewModel.searchText, prompt: "Search items")
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if !viewModel.items.isEmpty && viewModel.isInSelectionMode {
@@ -174,8 +179,8 @@ struct ListView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: Theme.Spacing.md) {
-                    if !viewModel.items.isEmpty {
+                if !viewModel.items.isEmpty {
+                    HStack(spacing: Theme.Spacing.md) {
                         if viewModel.isInSelectionMode {
                             // Selection mode: Show actions menu (always visible)
                             Menu {
@@ -256,8 +261,8 @@ struct ListView: View {
                             .help("Edit items")
                         }
                     }
+                    .padding(.horizontal, Theme.Spacing.sm)
                 }
-                .padding(.horizontal, Theme.Spacing.sm)
             }
         }
         .sheet(isPresented: $showingCreateItem) {
