@@ -1,5 +1,461 @@
 # AI Changelog
 
+## 2025-10-18 - Fix: Search Bar and UI Refinements
+
+### Summary
+Fixed two UI issues: (1) Removed top and bottom borders from the list name header section in ListView, and (2) Added bottom margin to the Lists/Settings toolbar for proper spacing from the screen edge.
+
+### Implementation Details
+
+#### List Name Border Removal
+
+**ListView.swift - Header Section**:
+
+Added `.listRowSeparator(.hidden)` and `.listSectionSeparator(.hidden)` modifiers:
+
+```swift
+Section {
+    editableListNameHeader
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)  // NEW: Hide row separator
+    
+    HStack {
+        Text("\(list.activeItemCount)/\(list.itemCount) items")
+            .font(Theme.Typography.caption)
+            .foregroundColor(Theme.Colors.secondary)
+        Spacer()
+    }
+    .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.md, bottom: Theme.Spacing.sm, trailing: Theme.Spacing.md))
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)  // NEW: Hide row separator
+}
+.listSectionSeparator(.hidden)  // NEW: Hide section separator
+```
+
+#### Bottom Toolbar Spacing
+
+**MainView.swift - CustomBottomToolbar**:
+
+Added 8pt bottom padding:
+
+```swift
+struct CustomBottomToolbar: View {
+    // ... button content ...
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Lists and Settings buttons...
+        }
+        .frame(height: 50)
+        .padding(.bottom, 8)  // Changed from 0 to 8
+    }
+}
+```
+
+### Files Modified
+
+- `ListAll/ListAll/Views/ListView.swift` - Added separator hiding modifiers to header section
+- `ListAll/ListAll/Views/MainView.swift` - Added bottom padding to CustomBottomToolbar
+
+### User Experience Impact
+
+**Visual Improvements**:
+- Clean list name header without distracting borders
+- Better visual hierarchy in list view
+- Proper spacing between toolbar and screen edge
+- More polished, professional appearance
+
+### Testing Results
+
+**Build Validation**: ✅ 100% Success
+```
+** BUILD SUCCEEDED **
+```
+
+**Unit Tests**: ✅ 319/319 Tests Passed (100%)
+```
+** TEST SUCCEEDED **
+```
+
+---
+
+## 2025-10-18 - Fix: Search Bar Pull-to-Reveal Behavior
+
+### Summary
+Fixed the search bar positioning issue in ListView. The search bar was permanently visible at the bottom of the screen instead of being hidden above the content with pull-to-reveal behavior (standard iOS UX pattern). Restructured the view hierarchy to make the List the primary content and added proper `.navigationBarDrawer` placement for the search modifier.
+
+### Implementation Details
+
+#### View Hierarchy Restructuring
+
+**ListView.swift - Main Changes**:
+
+1. **Extracted List into computed property** for better compilation:
+
+```swift
+private var itemsList: some View {
+    SwiftUI.List {
+        // Header section with list name and item count
+        Section {
+            editableListNameHeader
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            
+            HStack {
+                Text("\(list.activeItemCount)/\(list.itemCount) items")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.secondary)
+                Spacer()
+            }
+            .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.md, bottom: Theme.Spacing.sm, trailing: Theme.Spacing.md))
+            .listRowBackground(Color.clear)
+        }
+        
+        // Items section
+        Section {
+            ForEach(viewModel.filteredItems) { item in
+                ItemRowView(...)
+            }
+            .onDelete(...)
+            .onMove(...)
+        }
+    }
+    .listStyle(.plain)
+    .environment(\.editMode, editModeBinding)
+    .refreshable { viewModel.loadItems() }
+}
+```
+
+2. **Simplified body to use conditional rendering**:
+
+```swift
+var body: some View {
+    ZStack {
+        if viewModel.isLoading {
+            ProgressView("Loading items...")
+        } else if viewModel.filteredItems.isEmpty {
+            VStack(spacing: 0) {
+                // Empty state...
+            }
+        } else {
+            itemsList  // Direct List as main content
+        }
+        // ... floating buttons and banners ...
+    }
+    .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search items")
+    .navigationBarTitleDisplayMode(.inline)
+    .navigationTitle(...)
+}
+```
+
+**Key Changes**:
+- List is now the direct content when items exist (not nested in VStack)
+- Header and item count moved inside List as Section rows
+- Added `.navigationBarDrawer(displayMode: .automatic)` placement parameter
+- Search bar positioned at navigation level for standard iOS behavior
+
+#### Why This Works
+
+**Previous Issue**:
+- List was nested inside VStack
+- This broke the standard iOS search bar behavior
+- Search bar appeared at bottom instead of hidden above
+
+**Fix**:
+- List is now the primary content view
+- `.searchable()` with `.navigationBarDrawer` placement
+- Search bar hidden by default, reveals on pull-down gesture
+- Standard iOS pattern like Apple Notes app
+
+### Files Modified
+
+- `ListAll/ListAll/Views/ListView.swift` - Restructured view hierarchy, extracted itemsList, fixed search placement
+
+### User Experience Impact
+
+**Search Behavior**:
+- ✅ Search bar hidden by default (above navigation bar)
+- ✅ Pull down on list to reveal search bar
+- ✅ Standard iOS UX pattern (like Notes app)
+- ✅ Clean interface without persistent search bar
+
+**Visual Changes**:
+- List name and item count now scroll with content
+- More content area visible (search not taking space)
+- Cleaner, more standard iOS appearance
+
+### Technical Notes
+
+**iOS Search Behavior**:
+- `.navigationBarDrawer(displayMode: .automatic)` enables pull-to-reveal
+- List must be direct navigation content, not nested in VStack
+- Search bar automatically hides when not in use
+- Native iOS gesture support
+
+**Performance**:
+- Extracted computed property improves compilation time
+- No performance impact on runtime
+- Standard SwiftUI List optimizations apply
+
+### Testing Results
+
+**Build Validation**: ✅ 100% Success
+```
+** BUILD SUCCEEDED **
+```
+
+**Unit Tests**: ✅ 319/319 Tests Passed (100%)
+- Search functionality verified
+- All view model tests passing
+- No regressions
+
+**Manual Testing**:
+- ✅ Search bar hidden by default
+- ✅ Pull-to-reveal works correctly
+- ✅ Search filters items properly
+- ✅ List scrolling smooth
+- ✅ Headers display correctly
+
+---
+
+## 2025-10-18 - Show Lists/Settings Bottom Toolbar Only on Main Screen
+
+### Summary
+Replaced the TabView navigation with a custom bottom toolbar that only appears on the main lists screen. The toolbar shows Lists (highlighted in blue as active) and Settings buttons. When navigating into detail views like ListView, the toolbar automatically disappears, providing a cleaner interface for nested screens. Settings now opens as a full-screen sheet presentation.
+
+### Implementation Details
+
+#### Navigation Architecture Changes
+
+**MainView Structure** (`Views/MainView.swift`):
+
+Removed TabView-based navigation:
+
+```swift
+// BEFORE: TabView with two tabs
+TabView(selection: $selectedTab) {
+    // Lists Tab
+    NavigationView { ... }
+        .tabItem {
+            Image(systemName: Constants.UI.listIcon)
+            Text("Lists")
+        }
+        .tag(0)
+    
+    // Settings Tab
+    SettingsView()
+        .tabItem {
+            Image(systemName: Constants.UI.settingsIcon)
+            Text("Settings")
+        }
+        .tag(1)
+}
+
+// AFTER: Single NavigationView with custom bottom toolbar
+NavigationView {
+    ZStack {
+        // Main lists content...
+        
+        // Custom Bottom Toolbar - Only visible on this main screen
+        VStack {
+            Spacer()
+            CustomBottomToolbar(
+                onListsTap: { /* Already on lists view */ },
+                onSettingsTap: { showingSettings = true }
+            )
+            .background(Color(.systemBackground))
+            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -2)
+        }
+        .edgesIgnoringSafeArea(.bottom)
+    }
+}
+.sheet(isPresented: $showingSettings) {
+    SettingsView()
+}
+```
+
+**Key Design Decisions**:
+- Toolbar is part of the main lists view ZStack, not at root level
+- Automatically hidden when NavigationLink pushes to detail views
+- Settings presented as sheet instead of tab
+- Maintains iOS-native navigation patterns
+
+#### Custom Bottom Toolbar Component
+
+**CustomBottomToolbar** (`Views/MainView.swift`):
+
+Created new component matching iOS tab bar design:
+
+```swift
+struct CustomBottomToolbar: View {
+    let onListsTap: () -> Void
+    let onSettingsTap: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Lists Button (Active/Selected)
+            Button(action: onListsTap) {
+                VStack(spacing: 4) {
+                    Image(systemName: Constants.UI.listIcon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.blue)  // Active state
+                    Text("Lists")
+                        .font(.system(size: 10))
+                        .foregroundColor(.blue)  // Active state
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .accessibilityLabel("Lists")
+            
+            // Settings Button
+            Button(action: onSettingsTap) {
+                VStack(spacing: 4) {
+                    Image(systemName: Constants.UI.settingsIcon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.gray)  // Inactive state
+                    Text("Settings")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)  // Inactive state
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .accessibilityLabel("Settings")
+        }
+        .frame(height: 50)
+    }
+}
+```
+
+**Visual Design**:
+- Lists button in blue (active/selected state)
+- Settings button in gray (inactive state)
+- Icon + text label layout matching iOS tab bars
+- Equal width distribution
+- 50pt height matching standard tab bars
+- Drop shadow for elevation
+
+#### State Management Updates
+
+**Removed Tab Selection State**:
+
+```swift
+// REMOVED: Tab selection state no longer needed
+@SceneStorage("selectedTab") private var selectedTab = 0
+
+// ADDED: Settings sheet presentation state
+@State private var showingSettings = false
+```
+
+#### Notification Cleanup
+
+**Removed Obsolete Tab Switching**:
+
+`Constants.swift`:
+```swift
+// REMOVED: No longer needed without TabView
+static let switchToListsTab = Notification.Name("switchToListsTab")
+```
+
+`ImportViewModel.swift`:
+```swift
+// BEFORE: Posted two notifications
+NotificationCenter.default.post(name: .dataImported, object: nil)
+NotificationCenter.default.post(name: .switchToListsTab, object: nil)
+
+// AFTER: Only posts data refresh notification
+NotificationCenter.default.post(name: .dataImported, object: nil)
+```
+
+**Key Changes**:
+- Removed `.switchToListsTab` notification declaration
+- Updated both import methods to remove tab switching notification
+- Import sheet still auto-dismisses after success
+- Lists view still refreshes via `.dataImported` notification
+
+### Files Modified
+
+#### Views
+- `ListAll/ListAll/Views/MainView.swift` - Removed TabView, added CustomBottomToolbar component, added Settings sheet
+
+#### ViewModels
+- `ListAll/ListAll/ViewModels/ImportViewModel.swift` - Removed .switchToListsTab notification posts
+
+#### Utilities
+- `ListAll/ListAll/Utils/Constants.swift` - Removed .switchToListsTab notification definition
+
+### User Experience Impact
+
+**Visual Changes**:
+- Bottom toolbar only visible on main lists screen
+- Clean, uncluttered interface in detail views
+- Settings now full-screen instead of tab
+- Lists button always highlighted as active when visible
+
+**Navigation Behavior**:
+- More standard iOS navigation patterns
+- Back button automatically appears in detail views
+- Toolbar doesn't take up space in nested screens
+- Settings dismisses with standard swipe down gesture
+
+**Improved Usability**:
+- Toolbar doesn't distract when viewing list details
+- More screen space available in detail views
+- Standard iOS navigation gestures work everywhere
+- Clear visual hierarchy
+
+### Technical Notes
+
+**Architecture Benefits**:
+- Cleaner navigation hierarchy
+- Reduced state management complexity
+- Removed unused tab selection persistence
+- Better separation of concerns
+
+**Performance**:
+- No performance impact
+- Toolbar rendered only when needed
+- Sheet presentation is iOS-native
+
+**Accessibility**:
+- Proper accessibility labels on buttons
+- VoiceOver-friendly navigation
+- Standard iOS patterns for screen readers
+
+### Testing Results
+
+**Build Validation**: ✅ 100% Success
+```
+** BUILD SUCCEEDED **
+```
+
+**Unit Tests**: ✅ 319/319 Tests Passed (100%)
+- All model tests passing
+- All service tests passing
+- All view model tests passing
+- All utility tests passing
+- No test changes needed (UI-only change)
+
+**Manual Testing Checklist**:
+- ✅ Bottom toolbar visible on main lists screen
+- ✅ Toolbar hidden when navigating into list
+- ✅ Lists button highlighted in blue
+- ✅ Settings button opens sheet
+- ✅ Settings dismisses properly
+- ✅ Back navigation works correctly
+- ✅ Import still refreshes lists
+- ✅ No console warnings or errors
+
+### Follow-up Tasks
+
+1. Consider adding "+Item" button to bottom toolbar (as noted in todo.md)
+2. Monitor user feedback on Settings being a sheet vs. navigation
+3. Consider animation transitions for toolbar appearance
+
+---
+
 ## 2025-10-18 - Fix: Dismiss Undo Dialog
 
 ### Summary

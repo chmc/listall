@@ -8,14 +8,12 @@ struct MainView: View {
     @StateObject private var tooltipManager = TooltipManager.shared
     @Environment(\.scenePhase) private var scenePhase
     
-    // State restoration: Persist tab selection across app suspensions
-    @SceneStorage("selectedTab") private var selectedTab = 0
-    
     // State restoration: Persist which list user was viewing
     @SceneStorage("selectedListId") private var selectedListIdString: String?
     @State private var hasRestoredNavigation = false
     
     @State private var showingCreateList = false
+    @State private var showingSettings = false
     @State private var editMode: EditMode = .inactive
     @State private var showingDeleteConfirmation = false
     @State private var showingShareFormatPicker = false
@@ -26,10 +24,9 @@ struct MainView: View {
     
     var body: some View {
         ZStack {
-            TabView(selection: $selectedTab) {
-                // Lists Tab
-                NavigationView {
-                    ZStack {
+            // Main Content - Lists View with Navigation
+            NavigationView {
+                ZStack {
                     VStack(spacing: 0) {
                         // Sync Status Bar
                         if cloudKitService.syncStatus != .available || cloudKitService.isSyncing {
@@ -239,27 +236,30 @@ struct MainView: View {
                                 }
                             )
                             .padding(.horizontal, Theme.Spacing.md)
-                            .padding(.bottom, Theme.Spacing.md)
+                            .padding(.bottom, 60) // Space for bottom toolbar
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(Theme.Animation.spring, value: viewModel.showArchivedNotification)
                         }
                     }
+                    
+                    // Custom Bottom Toolbar - Only visible on this main screen
+                    VStack {
+                        Spacer()
+                        CustomBottomToolbar(
+                            onListsTap: {
+                                // Already on lists view - no action needed
+                            },
+                            onSettingsTap: {
+                                showingSettings = true
+                            }
+                        )
+                        .background(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -2)
+                    }
+                    .edgesIgnoringSafeArea(.bottom)
                 }
             }
-            .tabItem {
-                Image(systemName: Constants.UI.listIcon)
-                Text("Lists")
-            }
-            .tag(0)
-            
-            // Settings Tab
-            SettingsView()
-                .tabItem {
-                    Image(systemName: Constants.UI.settingsIcon)
-                    Text("Settings")
-                }
-                .tag(1)
-        }
+            .navigationBarTitleDisplayMode(.large)
         .onAppear {
             viewModel.loadLists()
             Task {
@@ -326,10 +326,6 @@ struct MainView: View {
             // Refresh lists after import
             viewModel.loadLists()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .switchToListsTab)) { _ in
-            // Switch to Lists tab after import
-            selectedTab = 0
-        }
         .onReceive(NotificationCenter.default.publisher(for: .itemDataChanged)) { _ in
             // Refresh lists when items are added, deleted, or modified
             viewModel.loadLists()
@@ -384,6 +380,9 @@ struct MainView: View {
             
             // Tooltip overlay - shows above all content
             TooltipOverlay()
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
     }
     
@@ -457,6 +456,48 @@ struct ArchiveBanner: View {
                 .fill(Theme.Colors.background)
                 .shadow(color: Theme.Shadow.largeColor, radius: Theme.Shadow.largeRadius, x: Theme.Shadow.largeX, y: Theme.Shadow.largeY)
         )
+    }
+}
+
+// MARK: - Custom Bottom Toolbar Component
+struct CustomBottomToolbar: View {
+    let onListsTap: () -> Void
+    let onSettingsTap: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Lists Button (Active/Selected)
+            Button(action: onListsTap) {
+                VStack(spacing: 4) {
+                    Image(systemName: Constants.UI.listIcon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.blue)
+                    Text("Lists")
+                        .font(.system(size: 10))
+                        .foregroundColor(.blue)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .accessibilityLabel("Lists")
+            
+            // Settings Button
+            Button(action: onSettingsTap) {
+                VStack(spacing: 4) {
+                    Image(systemName: Constants.UI.settingsIcon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.gray)
+                    Text("Settings")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .accessibilityLabel("Settings")
+        }
+        .frame(height: 50)
+        .padding(.bottom, 8)
     }
 }
 

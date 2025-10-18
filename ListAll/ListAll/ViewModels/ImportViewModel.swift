@@ -228,9 +228,8 @@ class ImportViewModel: ObservableObject {
                 
                 successMessage = message
                 
-                // Post notifications to refresh lists and switch to Lists tab
+                // Post notification to refresh lists
                 NotificationCenter.default.post(name: .dataImported, object: nil)
-                NotificationCenter.default.post(name: .switchToListsTab, object: nil)
                 
                 // Dismiss after successful import
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
@@ -293,9 +292,8 @@ class ImportViewModel: ObservableObject {
                 // Clear the text field on success
                 importText = ""
                 
-                // Post notifications to refresh lists and switch to Lists tab
+                // Post notification to refresh lists
                 NotificationCenter.default.post(name: .dataImported, object: nil)
-                NotificationCenter.default.post(name: .switchToListsTab, object: nil)
                 
                 // Dismiss after successful import
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in

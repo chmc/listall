@@ -45,26 +45,80 @@ struct ListView: View {
         self._viewModel = StateObject(wrappedValue: ListViewModel(list: list))
     }
     
-    var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                // List name header - entire row is tappable for better UX
+    private var itemsList: some View {
+        SwiftUI.List {
+            // Header section
+            Section {
                 editableListNameHeader
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 
-                // Item count subtitle
                 HStack {
                     Text("\(list.activeItemCount)/\(list.itemCount) items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
                     Spacer()
                 }
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, 4)
-                .padding(.bottom, Theme.Spacing.sm)
-                
-                if viewModel.isLoading {
-                    ProgressView("Loading items...")
-                } else if viewModel.filteredItems.isEmpty {
+                .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.md, bottom: Theme.Spacing.sm, trailing: Theme.Spacing.md))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+            .listSectionSeparator(.hidden)
+            
+            // Items section
+            Section {
+                ForEach(viewModel.filteredItems) { item in
+                    ItemRowView(
+                        item: item,
+                        viewModel: viewModel,
+                        onToggle: {
+                            viewModel.toggleItemCrossedOut(item)
+                        },
+                        onEdit: {
+                            selectedItem = item
+                            showingEditItem = true
+                        },
+                        onDuplicate: {
+                            viewModel.duplicateItem(item)
+                        },
+                        onDelete: {
+                            viewModel.deleteItem(item)
+                        }
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                }
+                .onDelete(perform: viewModel.isInSelectionMode ? nil : deleteItems)
+                .onMove(perform: viewModel.currentSortOption == .orderNumber ? viewModel.moveItems : nil)
+            }
+        }
+        .listStyle(.plain)
+        .environment(\.editMode, editModeBinding)
+        .refreshable {
+            viewModel.loadItems()
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            if viewModel.isLoading {
+                ProgressView("Loading items...")
+            } else if viewModel.filteredItems.isEmpty {
+                VStack(spacing: 0) {
+                    // List name header - entire row is tappable for better UX
+                    editableListNameHeader
+                    
+                    // Item count subtitle
+                    HStack {
+                        Text("\(list.activeItemCount)/\(list.itemCount) items")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.top, 4)
+                    .padding(.bottom, Theme.Spacing.sm)
+                    
                     // Use new engaging empty state with tips and celebration
                     ItemsEmptyStateView(
                         hasItems: !viewModel.items.isEmpty,
@@ -73,38 +127,9 @@ struct ListView: View {
                         }
                     )
                     .padding(.top, 40)
-                } else {
-                SwiftUI.List {
-                    ForEach(viewModel.filteredItems) { item in
-                        ItemRowView(
-                            item: item,
-                            viewModel: viewModel,
-                            onToggle: {
-                                viewModel.toggleItemCrossedOut(item)
-                            },
-                            onEdit: {
-                                selectedItem = item
-                                showingEditItem = true
-                            },
-                            onDuplicate: {
-                                viewModel.duplicateItem(item)
-                            },
-                            onDelete: {
-                                viewModel.deleteItem(item)
-                            }
-                        )
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    }
-                    .onDelete(perform: viewModel.isInSelectionMode ? nil : deleteItems)
-                    // Only allow manual reordering when sorted by order number (works in both normal and selection mode)
-                    .onMove(perform: viewModel.currentSortOption == .orderNumber ? viewModel.moveItems : nil)
                 }
-                // Enable edit mode for drag-to-reorder in selection mode when sorted by order
-                .environment(\.editMode, editModeBinding)
-                .refreshable {
-                    viewModel.loadItems()
-                }
-            }
+            } else {
+                itemsList
             }
             
             // Undo Complete Banner
@@ -166,12 +191,9 @@ struct ListView: View {
                 }
             }
         }
+        .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search items")
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedItems.count) Selected" : "")
-        // Only show search when list has items
-        .if(!viewModel.items.isEmpty) { view in
-            view.searchable(text: $viewModel.searchText, prompt: "Search items")
-        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if !viewModel.items.isEmpty && viewModel.isInSelectionMode {

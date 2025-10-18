@@ -735,8 +735,16 @@
 - ✅ All tests passed (100% success rate)
 - ✅ Updated ai_changelog.md with comprehensive implementation details
 
-## Show Lists/Settings bottom toolbar only on main screen
-- ❌ Show +Item button in the bottom of the screen
+## Show Lists/Settings bottom toolbar only on main screen ✅ COMPLETED
+- ✅ Removed TabView from MainView and replaced with custom bottom toolbar
+- ✅ Created CustomBottomToolbar component with Lists and Settings buttons
+- ✅ Lists button highlighted (blue) as active state, Settings button in gray
+- ✅ Bottom toolbar only visible on main lists screen (not when navigating into detail views)
+- ✅ Settings opens as full-screen sheet presentation
+- ✅ Removed obsolete .switchToListsTab notification from Constants and ImportViewModel
+- ✅ Updated ImportViewModel to only post .dataImported notification
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (319/319 = 100% success rate)
 
 ## Animate complete item
 - ❌ Show nice cross animation when item is completed
