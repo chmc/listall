@@ -141,7 +141,7 @@ class ListViewModel: ObservableObject {
         loadItems() // Refresh the list
     }
     
-    private func hideUndoButton() {
+    func hideUndoButton() {
         undoTimer?.invalidate()
         undoTimer = nil
         showUndoButton = false
@@ -182,7 +182,7 @@ class ListViewModel: ObservableObject {
         loadItems() // Refresh the list
     }
     
-    private func hideDeleteUndoButton() {
+    func hideDeleteUndoButton() {
         deleteUndoTimer?.invalidate()
         deleteUndoTimer = nil
         showDeleteUndoButton = false

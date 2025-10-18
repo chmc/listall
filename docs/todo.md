@@ -725,8 +725,15 @@
 ## Fix: Lists view order does not work ✅ COMPLETED
 - ✅ Fixed drag and drop list reordering - synchronize DataManager's internal array after reordering
 
-## Fix: Dismiss undo dialog
-- ❌ Functionality to dismiss undo dialog
+## Fix: Dismiss undo dialog ✅ COMPLETED
+- ✅ Added dismiss button (X) to both UndoBanner and DeleteUndoBanner components
+- ✅ Made hideUndoButton() and hideDeleteUndoButton() public in ListViewModel
+- ✅ Wired up dismiss callbacks in ListView
+- ✅ Updated TestListViewModel with public dismiss methods
+- ✅ Added 2 comprehensive tests for manual dismiss functionality
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success rate)
+- ✅ Updated ai_changelog.md with comprehensive implementation details
 
 ## Fix: Crossed items does not update count in list
 

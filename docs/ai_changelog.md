@@ -1,5 +1,247 @@
 # AI Changelog
 
+## 2025-10-18 - Fix: Dismiss Undo Dialog
+
+### Summary
+Added manual dismiss functionality to both undo banners (complete undo and delete undo). Users can now dismiss undo notifications by tapping an "X" button instead of waiting for the 5-second auto-hide timer. This improves user control and allows users to clear the banner immediately after deciding not to undo an action.
+
+### Implementation Details
+
+#### Core Functionality
+
+**ListViewModel Enhancements** (`ViewModels/ListViewModel.swift`):
+
+Changed visibility of hide methods from `private` to `public` to allow manual dismissal:
+
+```swift
+// Made public for manual dismissal
+func hideUndoButton() {
+    undoTimer?.invalidate()
+    undoTimer = nil
+    showUndoButton = false
+    recentlyCompletedItem = nil
+}
+
+func hideDeleteUndoButton() {
+    deleteUndoTimer?.invalidate()
+    deleteUndoTimer = nil
+    showDeleteUndoButton = false
+    recentlyDeletedItem = nil
+}
+```
+
+**Key Design Decisions**:
+- Changed from `private` to public visibility to enable external dismissal
+- Maintains proper timer cleanup to prevent memory leaks
+- Dismissal clears both the banner state and the stored item reference
+- Works independently from the auto-hide timer
+
+#### UI Implementation
+
+**UndoBanner Component** (`Views/ListView.swift`):
+
+Added dismiss button and callback parameter:
+
+```swift
+struct UndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    let onDismiss: () -> Void  // NEW: Dismiss callback
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            // ... existing icon and text ...
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                    // ... existing styling ...
+            }
+            
+            // NEW: Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(Theme.Spacing.sm)
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        // ... existing styling ...
+    }
+}
+```
+
+**DeleteUndoBanner Component** (`Views/ListView.swift`):
+
+Added identical dismiss button and callback:
+
+```swift
+struct DeleteUndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    let onDismiss: () -> Void  // NEW: Dismiss callback
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            // ... existing icon and text ...
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                    // ... existing styling ...
+            }
+            
+            // NEW: Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(Theme.Spacing.sm)
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        // ... existing styling ...
+    }
+}
+```
+
+**ListView Integration**:
+
+Wired up dismiss callbacks to ViewModel methods:
+
+```swift
+// Undo Complete Banner
+if viewModel.showUndoButton, let item = viewModel.recentlyCompletedItem {
+    UndoBanner(
+        itemName: item.displayTitle,
+        onUndo: {
+            viewModel.undoComplete()
+        },
+        onDismiss: {
+            viewModel.hideUndoButton()  // NEW: Manual dismiss
+        }
+    )
+}
+
+// Undo Delete Banner
+if viewModel.showDeleteUndoButton, let item = viewModel.recentlyDeletedItem {
+    DeleteUndoBanner(
+        itemName: item.displayTitle,
+        onUndo: {
+            viewModel.undoDeleteItem()
+        },
+        onDismiss: {
+            viewModel.hideDeleteUndoButton()  // NEW: Manual dismiss
+        }
+    )
+}
+```
+
+#### UI/UX Design
+
+**Visual Design**:
+- X button positioned after the Undo button
+- Uses system `xmark` icon for consistency
+- Secondary color to indicate it's a less prominent action
+- Smaller font size (`.caption`) to be less prominent than the Undo button
+- Small padding for comfortable tap target
+
+**User Experience**:
+- Non-destructive action - only dismisses the notification
+- The original action (complete or delete) remains in effect
+- Provides immediate feedback by hiding the banner
+- Maintains the 5-second auto-hide as a fallback
+- Accessible with proper accessibility label
+
+#### Testing
+
+**Test Helpers Update** (`ListAllTests/TestHelpers.swift`):
+
+Updated `TestListViewModel` to match production implementation:
+
+```swift
+// Changed from private to public for testing
+func hideUndoButton() {
+    undoTimer?.invalidate()
+    undoTimer = nil
+    showUndoButton = false
+    recentlyCompletedItem = nil
+}
+
+func hideDeleteUndoButton() {
+    deleteUndoTimer?.invalidate()
+    deleteUndoTimer = nil
+    showDeleteUndoButton = false
+    recentlyDeletedItem = nil
+}
+```
+
+**New Test Cases** (`ListAllTests/ViewModelsTests.swift`):
+
+Added 2 comprehensive tests for manual dismiss functionality:
+
+1. **testListViewModelManualDismissCompleteUndo**: Tests manual dismissal of complete undo banner
+   - Completes an item to show undo banner
+   - Verifies banner is shown
+   - Manually dismisses the banner
+   - Verifies banner is hidden and state is cleared
+   - Confirms the item remains crossed out (action wasn't undone)
+
+2. **testListViewModelManualDismissDeleteUndo**: Tests manual dismissal of delete undo banner
+   - Deletes an item to show undo banner
+   - Verifies banner is shown
+   - Manually dismisses the banner
+   - Verifies banner is hidden and state is cleared
+   - Confirms the item remains deleted (action wasn't undone)
+
+### Build & Test Results
+
+**Build Status**: ✅ **SUCCESS**
+- Clean build completed successfully
+- No compilation errors or warnings
+- All Swift files compiled without issues
+
+**Test Status**: ✅ **ALL TESTS PASSED**
+- All existing tests continue to pass
+- 2 new tests added for dismiss functionality
+- Total test suite remains at 100% pass rate
+- Both manual dismiss scenarios validated
+
+### Technical Notes
+
+1. **Timer Management**: The dismiss methods properly invalidate and clean up timers to prevent memory leaks
+2. **State Consistency**: Dismissing clears both the visible banner and the stored item reference
+3. **Independent Operations**: Dismiss works independently from undo - they don't interfere with each other
+4. **Accessibility**: Both dismiss buttons include proper accessibility labels
+5. **Non-destructive**: Dismissing only hides the notification; the original action remains in effect
+
+### Files Modified
+
+1. `ListAll/ListAll/ViewModels/ListViewModel.swift`
+   - Changed `hideUndoButton()` from private to public
+   - Changed `hideDeleteUndoButton()` from private to public
+
+2. `ListAll/ListAll/Views/ListView.swift`
+   - Added `onDismiss` parameter to `UndoBanner` component
+   - Added dismiss button with X icon to `UndoBanner`
+   - Added `onDismiss` parameter to `DeleteUndoBanner` component
+   - Added dismiss button with X icon to `DeleteUndoBanner`
+   - Wired up dismiss callbacks in banner instantiations
+
+3. `ListAll/ListAllTests/TestHelpers.swift`
+   - Changed `hideUndoButton()` from private to public in `TestListViewModel`
+   - Changed `hideDeleteUndoButton()` from private to public in `TestListViewModel`
+
+4. `ListAll/ListAllTests/ViewModelsTests.swift`
+   - Added `testListViewModelManualDismissCompleteUndo()` test
+   - Added `testListViewModelManualDismissDeleteUndo()` test
+
+### Next Steps
+
+- None required - feature is complete and fully tested
+- Consider similar dismiss functionality for other temporary notifications if added in the future
+
+---
+
 ## 2025-10-13 - Fix: Lists View Order Does Not Work
 
 ### Summary

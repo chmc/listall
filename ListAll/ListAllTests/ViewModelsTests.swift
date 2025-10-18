@@ -995,6 +995,83 @@ class ViewModelsTests: XCTestCase {
         XCTAssertNotEqual(viewModel.recentlyCompletedItem?.id, viewModel.recentlyDeletedItem?.id)
     }
     
+    func testListViewModelManualDismissCompleteUndo() throws {
+        // Test manual dismissal of complete undo banner
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        
+        try mainViewModel.addList(name: "Test List")
+        
+        guard let list = mainViewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+        viewModel.createItem(title: "Test Item", description: "")
+        
+        guard let item = viewModel.items.first else {
+            XCTFail("Item should exist")
+            return
+        }
+        
+        // Complete the item
+        viewModel.toggleItemCrossedOut(item)
+        
+        // Verify undo button is shown
+        XCTAssertTrue(viewModel.showUndoButton)
+        XCTAssertNotNil(viewModel.recentlyCompletedItem)
+        
+        // Manually dismiss
+        viewModel.hideUndoButton()
+        
+        // Verify undo button is hidden
+        XCTAssertFalse(viewModel.showUndoButton)
+        XCTAssertNil(viewModel.recentlyCompletedItem)
+        
+        // Verify item remains crossed out
+        let completedItem = viewModel.items.first(where: { $0.id == item.id })
+        XCTAssertTrue(completedItem?.isCrossedOut ?? false)
+    }
+    
+    func testListViewModelManualDismissDeleteUndo() throws {
+        // Test manual dismissal of delete undo banner
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        
+        try mainViewModel.addList(name: "Test List")
+        
+        guard let list = mainViewModel.lists.first else {
+            XCTFail("List should exist")
+            return
+        }
+        
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+        viewModel.createItem(title: "Test Item", description: "Test description")
+        
+        guard let item = viewModel.items.first else {
+            XCTFail("Item should exist")
+            return
+        }
+        
+        // Delete the item
+        viewModel.deleteItem(item)
+        
+        // Verify undo button is shown
+        XCTAssertTrue(viewModel.showDeleteUndoButton)
+        XCTAssertNotNil(viewModel.recentlyDeletedItem)
+        
+        // Manually dismiss
+        viewModel.hideDeleteUndoButton()
+        
+        // Verify undo button is hidden
+        XCTAssertFalse(viewModel.showDeleteUndoButton)
+        XCTAssertNil(viewModel.recentlyDeletedItem)
+        
+        // Verify item remains deleted
+        XCTAssertTrue(viewModel.items.isEmpty)
+    }
+    
     func testListViewModelUndoButtonReplacesOnNewCompletion() throws {
         // Create a shared data manager
         let dataManager = TestHelpers.createTestDataManager()

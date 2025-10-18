@@ -115,6 +115,9 @@ struct ListView: View {
                         itemName: item.displayTitle,
                         onUndo: {
                             viewModel.undoComplete()
+                        },
+                        onDismiss: {
+                            viewModel.hideUndoButton()
                         }
                     )
                     .padding(.horizontal, Theme.Spacing.md)
@@ -132,6 +135,9 @@ struct ListView: View {
                         itemName: item.displayTitle,
                         onUndo: {
                             viewModel.undoDeleteItem()
+                        },
+                        onDismiss: {
+                            viewModel.hideDeleteUndoButton()
                         }
                     )
                     .padding(.horizontal, Theme.Spacing.md)
@@ -573,6 +579,7 @@ struct EditableHeaderButtonStyle: ButtonStyle {
 struct UndoBanner: View {
     let itemName: String
     let onUndo: () -> Void
+    let onDismiss: () -> Void
     
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
@@ -602,6 +609,14 @@ struct UndoBanner: View {
                     .background(Theme.Colors.primary)
                     .cornerRadius(Theme.CornerRadius.md)
             }
+            
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(Theme.Spacing.sm)
+            }
+            .accessibilityLabel("Dismiss")
         }
         .padding(Theme.Spacing.md)
         .background(
@@ -617,6 +632,7 @@ struct UndoBanner: View {
 struct DeleteUndoBanner: View {
     let itemName: String
     let onUndo: () -> Void
+    let onDismiss: () -> Void
     
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
@@ -646,6 +662,14 @@ struct DeleteUndoBanner: View {
                     .background(Theme.Colors.primary)
                     .cornerRadius(Theme.CornerRadius.md)
             }
+            
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(Theme.Spacing.sm)
+            }
+            .accessibilityLabel("Dismiss")
         }
         .padding(Theme.Spacing.md)
         .background(
