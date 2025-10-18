@@ -735,6 +735,12 @@
 - ✅ All tests passed (100% success rate)
 - ✅ Updated ai_changelog.md with comprehensive implementation details
 
+## Show Lists/Settings bottom toolbar only on main screen
+- ❌ Show +Item button in the bottom of the screen
+
+## Animate complete item
+- ❌ Show nice cross animation when item is completed
+
 ## Fix: Crossed items does not update count in list
 
 ## Fix: Archived lists screen has empty button on right corner
