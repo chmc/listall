@@ -12,9 +12,12 @@
 - **Minimum iOS Version:** iOS 16.0
 
 ### Future Platforms
-- **watchOS:** SwiftUI + WatchKit
-- **macOS:** SwiftUI + AppKit
-- **Android:** Kotlin + Jetpack Compose (future consideration)
+- **watchOS:** SwiftUI + WatchKit (Planned - See docs/watchos.md for detailed architecture)
+  - Core features: View lists, complete items, filter items
+  - Shared data layer with iOS via CloudKit
+  - Target: watchOS 9.0+
+- **macOS:** SwiftUI + AppKit (Future consideration)
+- **Android:** Kotlin + Jetpack Compose (Long-term consideration)
 
 ## Architecture Patterns
 

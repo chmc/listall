@@ -1027,8 +1027,221 @@
 - ❌ Create developer documentation
 - ❌ Update README with setup instructions
 
+## Phase 68: watchOS Companion App - Foundation
+**Goal**: Create watchOS target and share core data models
+- ❌ Create new watchOS App target in Xcode project
+- ❌ Configure watchOS deployment target (watchOS 9.0+)
+- ❌ Add shared framework/target for common code
+- ❌ Share data models (List.swift, Item.swift, ItemImage.swift, UserData.swift) between iOS and watchOS
+- ❌ Share CoreData model (.xcdatamodeld) with watchOS target
+- ❌ Configure CoreData stack for watchOS
+- ❌ Set up proper target membership for shared files
+- ❌ Configure proper build settings for watchOS target
+- ❌ Verify project builds successfully for both iOS and watchOS
+- ❌ Run tests to ensure no regression in iOS functionality
+
+### Phase 68 Sub-tasks:
+- ❌ Create watchOS app target with proper bundle identifiers
+- ❌ Configure watchOS app capabilities (iCloud, CloudKit)
+- ❌ Add Core Data and CloudKit frameworks to watchOS target
+- ❌ Share CoreDataManager with watchOS (update target membership)
+- ❌ Share DataRepository with watchOS (update target membership)
+- ❌ Share CloudKitService with watchOS (conditional compilation if needed)
+- ❌ Create watchOS-specific Assets.xcassets
+- ❌ Configure Info.plist for watchOS app
+- ❌ Test Core Data and CloudKit sync on watchOS simulator
+- ❌ Ensure data synchronization works between iOS and watchOS
+
+## Phase 69: watchOS UI - Lists View
+**Goal**: Implement main lists view for watchOS
+- ❌ Create WatchListsView (main screen showing all lists)
+- ❌ Create WatchListRowView component for list display
+- ❌ Implement navigation to list detail view
+- ❌ Add list name and item count display
+- ❌ Add active/completed item count badges
+- ❌ Implement pull-to-refresh for sync
+- ❌ Add empty state view for no lists
+- ❌ Style for watchOS (appropriate fonts, spacing, colors)
+- ❌ Test on various watchOS screen sizes
+- ❌ Add accessibility support (VoiceOver)
+
+### Phase 69 Sub-tasks:
+- ❌ Create WatchListsView.swift in watchOS Views folder
+- ❌ Create WatchListRowView.swift component
+- ❌ Create WatchMainViewModel for watchOS (or share iOS MainViewModel)
+- ❌ Implement List navigation with NavigationStack
+- ❌ Add proper list sorting by orderNumber
+- ❌ Display list metadata (item counts, last modified)
+- ❌ Add swipe actions for common operations (optional)
+- ❌ Implement search/filter functionality (optional)
+- ❌ Test with sample data on watchOS simulator
+- ❌ Test data sync between iOS and watchOS apps
+
+## Phase 70: watchOS UI - List Detail View
+**Goal**: Implement list detail view showing items
+- ❌ Create WatchListView showing items in a list
+- ❌ Create WatchItemRowView component for item display
+- ❌ Display item title, quantity, and completion status
+- ❌ Implement tap gesture to toggle item completion
+- ❌ Add visual indication for crossed-out items
+- ❌ Show item count summary at top
+- ❌ Add empty state for lists with no items
+- ❌ Implement proper scrolling for long lists
+- ❌ Add Digital Crown scrolling support
+- ❌ Test on various watchOS screen sizes
+
+### Phase 70 Sub-tasks:
+- ❌ Create WatchListView.swift for list detail
+- ❌ Create WatchItemRowView.swift component
+- ❌ Create WatchListViewModel (or share iOS ListViewModel)
+- ❌ Display sorted items (by orderNumber)
+- ❌ Implement item completion toggle (tap gesture)
+- ❌ Add visual styling for completed items (strikethrough, opacity)
+- ❌ Show item quantity if > 1
+- ❌ Add list title in navigation bar
+- ❌ Implement smooth animations for state changes
+- ❌ Test item completion sync with iOS app
+
+## Phase 71: watchOS UI - Item Filtering
+**Goal**: Implement filtering for active/completed/all items
+- ❌ Add filter picker at top of list view
+- ❌ Implement "All Items" filter option
+- ❌ Implement "Active Only" filter option (non-completed)
+- ❌ Implement "Completed Only" filter option (crossed-out)
+- ❌ Save filter preference per list
+- ❌ Update item count display based on filter
+- ❌ Add visual indicator for active filter
+- ❌ Implement smooth transition when changing filters
+- ❌ Persist filter preferences in UserDefaults
+- ❌ Test filter functionality on watchOS
+
+### Phase 71 Sub-tasks:
+- ❌ Create FilterOption enum (All, Active, Completed)
+- ❌ Add filter state to WatchListViewModel
+- ❌ Create filter picker UI component
+- ❌ Implement item filtering logic in ViewModel
+- ❌ Update item count summary based on filter
+- ❌ Add filter icon/badge to UI
+- ❌ Persist filter preference in UserDefaults (keyed by list ID)
+- ❌ Restore filter preference when opening list
+- ❌ Add haptic feedback when changing filter
+- ❌ Test all filter combinations
+
+## Phase 72: watchOS - Data Synchronization
+**Goal**: Ensure robust data sync between iOS and watchOS
+- ❌ Verify CloudKit sync works correctly on watchOS
+- ❌ Test real-time sync: changes on iOS appear on watchOS
+- ❌ Test real-time sync: changes on watchOS appear on iOS
+- ❌ Handle sync conflicts properly on watchOS
+- ❌ Add sync status indicator on watchOS
+- ❌ Implement pull-to-refresh for manual sync
+- ❌ Add error handling for sync failures
+- ❌ Test offline mode on watchOS
+- ❌ Test sync with multiple devices (iPhone + Watch)
+- ❌ Verify performance with large datasets
+
+### Phase 72 Sub-tasks:
+- ❌ Configure CloudKit properly for watchOS target
+- ❌ Test NSPersistentCloudKitContainer on watchOS
+- ❌ Implement sync status view for watchOS
+- ❌ Add sync error alerts and retry mechanisms
+- ❌ Test sync latency and performance
+- ❌ Handle app backgrounding and foregrounding
+- ❌ Implement WatchConnectivity framework for direct communication (optional)
+- ❌ Test sync with airplane mode / offline scenarios
+- ❌ Test sync with poor network conditions
+- ❌ Document sync behavior and troubleshooting
+
+## Phase 73: watchOS - Polish and Testing
+**Goal**: Polish watchOS app and ensure quality
+- ❌ Add watchOS app icon (various sizes)
+- ❌ Configure app name and display settings
+- ❌ Add haptic feedback for interactions
+- ❌ Implement smooth animations and transitions
+- ❌ Add loading states and progress indicators
+- ❌ Implement error states with proper messaging
+- ❌ Add accessibility labels and hints
+- ❌ Test VoiceOver support on watchOS
+- ❌ Test on all watchOS screen sizes (38mm-49mm)
+- ❌ Test on actual Apple Watch hardware
+
+### Phase 73 Sub-tasks:
+- ❌ Create watchOS app icon set (all required sizes)
+- ❌ Add haptic feedback for key actions (toggle completion, filter change)
+- ❌ Implement loading spinners for data operations
+- ❌ Add empty state views with helpful messages
+- ❌ Add error state views with retry buttons
+- ❌ Test memory usage on watchOS
+- ❌ Test battery impact of sync operations
+- ❌ Optimize performance for older Apple Watch models
+- ❌ Create user testing plan for watchOS app
+- ❌ Document known limitations and future improvements
+
+## Phase 74: watchOS - Advanced Features (Optional)
+**Goal**: Add advanced features if time permits
+- ❌ Add complications for watchOS (list counts, quick access)
+- ❌ Implement Siri shortcuts for common actions
+- ❌ Add quick actions from watch face
+- ❌ Implement swipe actions for items (delete, move)
+- ❌ Add item detail view showing description
+- ❌ Implement item creation on watchOS (dictation)
+- ❌ Add list selection for new items
+- ❌ Support for quantity adjustment
+- ❌ Implement undo/redo functionality
+- ❌ Add widgets for watch faces
+
+### Phase 74 Sub-tasks:
+- ❌ Design and implement watch complications
+- ❌ Create Siri intent definitions
+- ❌ Implement voice input for item creation
+- ❌ Add swipe gesture handlers
+- ❌ Create item detail view for watchOS
+- ❌ Implement quantity picker UI
+- ❌ Add undo manager integration
+- ❌ Test all advanced features thoroughly
+- ❌ Document usage of advanced features
+- ❌ Create demo videos for App Store
+
+## Phase 75: watchOS - Documentation and Deployment
+**Goal**: Document watchOS app and prepare for release
+- ❌ Create watchOS-specific documentation in docs/watchos.md
+- ❌ Document architecture decisions for watchOS
+- ❌ Document data synchronization approach
+- ❌ Add troubleshooting guide for sync issues
+- ❌ Create watchOS testing checklist
+- ❌ Update main README with watchOS information
+- ❌ Create watchOS App Store screenshots
+- ❌ Write watchOS-specific App Store description
+- ❌ Test watchOS app on TestFlight
+- ❌ Prepare for App Store submission (iOS + watchOS bundle)
+
+### Phase 75 Sub-tasks:
+- ❌ Create docs/watchos.md with architecture overview
+- ❌ Document shared code strategy
+- ❌ Document CloudKit sync implementation
+- ❌ Create troubleshooting guide for common issues
+- ❌ Document known limitations on watchOS
+- ❌ Create testing checklist for QA
+- ❌ Capture App Store screenshots (all watch sizes)
+- ❌ Write compelling watchOS feature descriptions
+- ❌ Test build and archive process
+- ❌ Submit to App Store Connect
+
+## watchOS Development - Testing Strategy
+**Testing Requirements:**
+- ❌ Create watchOS-specific unit tests
+- ❌ Test shared ViewModels work on watchOS
+- ❌ Test Core Data operations on watchOS
+- ❌ Test CloudKit sync on watchOS
+- ❌ Create UI tests for watchOS views
+- ❌ Test on watchOS Simulator (various sizes)
+- ❌ Test on actual Apple Watch hardware
+- ❌ Test data sync between iOS and watchOS
+- ❌ Test offline scenarios
+- ❌ Performance testing for large datasets
+
 ## Improvement 12: Future Platform Support
-- ❌ Design watchOS app architecture
+- ✅ Design watchOS app architecture (See Phases 68-75)
 - ❌ Plan macOS app adaptation
 - ❌ Research Android app requirements
 - ❌ Create shared data models for multi-platform
