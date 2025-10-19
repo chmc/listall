@@ -1056,7 +1056,9 @@ class TestMainViewModel: ObservableObject {
         
         let newList = List(name: trimmedName)
         dataManager.addList(newList)
-        lists.append(newList)
+        
+        // Refresh lists from dataManager (which already added the list)
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
     }
     
     func updateList(_ list: List, name: String) throws {
@@ -1243,9 +1245,8 @@ class TestMainViewModel: ObservableObject {
             dataManager.addItem(duplicatedItem, to: duplicatedList.id)
         }
         
-        // Add to local lists array and sort
-        lists.append(duplicatedList)
-        lists.sort { $0.orderNumber < $1.orderNumber }
+        // Refresh lists from dataManager (which already added the list)
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
     }
     
     private func generateDuplicateName(for originalName: String) -> String {

@@ -160,8 +160,9 @@ class MainViewModel: ObservableObject {
         
         let newList = List(name: trimmedName)
         dataManager.addList(newList)
-        lists.append(newList)
-        lists.sort { $0.orderNumber < $1.orderNumber }
+        
+        // Refresh lists from dataManager (which already added the list)
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
         
         // Trigger haptic feedback
         hapticManager.listCreated()
@@ -225,9 +226,8 @@ class MainViewModel: ObservableObject {
             dataManager.addItem(duplicatedItem, to: duplicatedList.id)
         }
         
-        // Add to local lists array and sort
-        lists.append(duplicatedList)
-        lists.sort { $0.orderNumber < $1.orderNumber }
+        // Refresh lists from dataManager (which already added the list)
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
     }
     
     private func generateDuplicateName(for originalName: String) -> String {

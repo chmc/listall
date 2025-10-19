@@ -1,5 +1,78 @@
 # AI Changelog
 
+## 2025-10-19 - Fix: Duplicate List Action Shows Copied List Twice
+
+### Summary
+Fixed a bug where duplicating a list caused the newly copied list to appear twice in the main screen. Also fixed the same issue affecting the "Create New List" action.
+
+### Problem Analysis
+The issue occurred in `MainViewModel.swift` where list creation methods were adding lists to the local array twice:
+
+**Root Cause**:
+1. `DataManager.addList()` already appends the new list to its internal `lists` array (line 238 in CoreDataManager.swift)
+2. `MainViewModel.duplicateList()` and `MainViewModel.addList()` were manually appending the list again to their local `lists` array
+3. Since `MainViewModel.lists` needs to stay synchronized with `DataManager.lists`, this created duplicate entries
+
+### Implementation Details
+
+#### MainViewModel.swift Changes
+
+**Fixed `duplicateList()` method** (lines 228-230):
+
+**Before**:
+```swift
+// Add to local lists array and sort
+lists.append(duplicatedList)
+lists.sort { $0.orderNumber < $1.orderNumber }
+```
+
+**After**:
+```swift
+// Refresh lists from dataManager (which already added the list)
+lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+```
+
+**Fixed `addList()` method** (lines 163-165):
+
+**Before**:
+```swift
+dataManager.addList(newList)
+lists.append(newList)
+lists.sort { $0.orderNumber < $1.orderNumber }
+```
+
+**After**:
+```swift
+dataManager.addList(newList)
+
+// Refresh lists from dataManager (which already added the list)
+lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+```
+
+#### TestHelpers.swift Changes
+
+Applied the same fixes to the mock `MainViewModel` in test helpers to ensure test consistency:
+- Fixed `duplicateList()` method (line 1247)
+- Fixed `addList()` method (line 1061)
+
+### Files Modified
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Fixed both `duplicateList()` and `addList()` methods
+- `ListAll/ListAllTests/TestHelpers.swift` - Fixed mock implementations to match
+
+### Build Validation
+- ✅ Clean build successful (no errors)
+- ✅ All compiler warnings are pre-existing (unrelated to changes)
+
+### Test Results
+- ✅ All 194 tests passed (100% success rate)
+- ✅ No test failures or regressions
+
+### Next Steps
+- Monitor for any edge cases in list creation/duplication
+- Consider refactoring to use a more centralized list management approach to prevent similar issues
+
+---
+
 ## 2025-10-19 - Fix: Empty Button on Archived Lists Screen
 
 ### Summary
