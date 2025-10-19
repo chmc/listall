@@ -791,6 +791,14 @@
 - ✅ All tests passed (194 tests, 100% success rate)
 - ✅ Documented changes in ai_changelog.md
 
+## Fix: Add new item, suggestions, user must be able to select existing item
+- ❌ Existing items should not be added as new items
+- ❌ Now existing items are added as new items
+- ❌ Only if new item any attribute (item title, description, images) differs then it is added as new item
+
+## Fix: Archived list undo dialog doesnt have dismiss button
+- ❌ Should work same as complete/delete item undo dialog
+
 ## 
 - ❌ 
 
