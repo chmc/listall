@@ -1,5 +1,71 @@
 # AI Changelog
 
+## 2025-10-19 - Fix: Crossed Items Count Not Updating in List
+
+### Summary
+Fixed a bug where the item count displayed in the list view (showing "X/Y items") was not updating when items were crossed out or uncrossed. The count now updates in real-time to reflect the current state of items.
+
+### Problem Analysis
+The issue occurred because `ListView` was displaying counts using static properties from the `list` object passed during initialization. When items were crossed out:
+1. Changes were persisted to DataManager and Core Data
+2. `ListViewModel.items` was refreshed with updated data
+3. But the `list` object in `ListView` remained unchanged
+4. The computed properties `list.activeItemCount` and `list.itemCount` showed stale data
+
+### Implementation Details
+
+#### ListView.swift Changes
+
+**Fixed Item Count Display in List Header** (line 58):
+- Changed from: `Text("\(list.activeItemCount)/\(list.itemCount) items")`
+- Changed to: `Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")`
+- Now reads directly from viewModel which always has fresh data
+
+**Fixed Item Count Display in Empty State** (line 113):
+- Changed from: `Text("\(list.activeItemCount)/\(list.itemCount) items")`
+- Changed to: `Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")`
+- Ensures consistency even when filtered items are empty
+
+**Added onDisappear Handler** (lines 478-481):
+- Added: `.onDisappear { mainViewModel.loadLists() }`
+- Refreshes the main view's lists when navigating back from ListView
+- Ensures the main screen (ListRowView) also displays updated counts
+- Provides seamless data sync across navigation stack
+
+### Technical Notes
+
+**Data Flow**:
+1. User crosses out an item in ListView
+2. `ListViewModel.toggleItemCrossedOut()` calls `DataRepository.toggleItemCrossedOut()`
+3. DataRepository updates the item and calls `DataManager.updateItem()`
+4. DataManager persists to Core Data and posts `.itemDataChanged` notification
+5. `ListViewModel.loadItems()` is called with animation, refreshing viewModel.items
+6. SwiftUI re-renders the count using `viewModel.activeItems.count` and `viewModel.items.count`
+7. When navigating back, `onDisappear` triggers `mainViewModel.loadLists()`
+8. Main screen updates with fresh counts from Core Data
+
+**Why This Fix Works**:
+- `viewModel.items` is always refreshed after any item state change
+- `viewModel.activeItems` is a computed property that filters current items
+- By reading from viewModel instead of the static list object, counts are always accurate
+- The onDisappear handler ensures parent views also get refreshed data
+
+### Files Modified
+- `ListAll/ListAll/Views/ListView.swift` - Updated item count displays to use viewModel data and added refresh on navigation
+
+### Testing
+- ✅ Build validation passed (100% success)
+- ✅ All unit tests passed (100% success rate)
+- ✅ Model tests validate count computations work correctly
+- ✅ Manual testing: Crossing out items now immediately updates count in both locations
+
+### Related Systems
+- Data persistence via DataManager and Core Data
+- SwiftUI view updates via @Published properties
+- Navigation stack data synchronization
+
+---
+
 ## 2025-10-19 - Animate Complete Item Feature (Fix Applied)
 
 ### Summary

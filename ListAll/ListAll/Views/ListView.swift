@@ -55,7 +55,7 @@ struct ListView: View {
                     .listRowSeparator(.hidden)
                 
                 HStack {
-                    Text("\(list.activeItemCount)/\(list.itemCount) items")
+                    Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
                     Spacer()
@@ -110,7 +110,7 @@ struct ListView: View {
                     
                     // Item count subtitle
                     HStack {
-                        Text("\(list.activeItemCount)/\(list.itemCount) items")
+                        Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
                         Spacer()
@@ -474,6 +474,10 @@ struct ListView: View {
                     tooltipManager.showIfNeeded(.swipeActions)
                 }
             }
+        }
+        .onDisappear {
+            // Refresh main view lists when navigating back to ensure counts are updated
+            mainViewModel.loadLists()
         }
         .onChange(of: showingCreateItem) { _ in
             if !showingCreateItem {

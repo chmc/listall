@@ -758,6 +758,12 @@
 - ✅ All tests passed (100% success rate)
 
 ## Fix: Crossed items does not update count in list
+- ✅ Identified root cause: ListView using static list object instead of viewModel data
+- ✅ Updated item count displays to use viewModel.activeItems.count and viewModel.items.count
+- ✅ Added onDisappear handler to refresh MainViewModel when navigating back
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success rate)
+- ✅ Documented changes in ai_changelog.md
 
 ## Fix: Archived lists screen has empty button on right corner
 - ❌ Remove empty button
