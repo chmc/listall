@@ -178,50 +178,49 @@ struct MainView: View {
                     }
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        HStack(spacing: Theme.Spacing.md) {
-                            if viewModel.isInSelectionMode {
-                                // Selection mode: Show actions menu (always visible)
-                                Menu {
-                                    Button(action: {
-                                        viewModel.selectAll()
-                                    }) {
-                                        Label("Select All", systemImage: "checkmark.circle")
-                                    }
-                                    
-                                    Button(action: {
-                                        viewModel.deselectAll()
-                                    }) {
-                                        Label("Deselect All", systemImage: "circle")
-                                    }
-                                    .disabled(viewModel.selectedLists.isEmpty)
-                                    
-                                    Divider()
-                                    
-                                    Button(role: .destructive, action: {
-                                        showingDeleteConfirmation = true
-                                    }) {
-                                        Label("Delete Lists", systemImage: "trash")
-                                    }
-                                    .disabled(viewModel.selectedLists.isEmpty)
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .foregroundColor(.primary)
-                                }
-                            } else if !viewModel.showingArchivedLists {
-                                // Normal mode: Show Add button (only for active lists)
+                        if viewModel.isInSelectionMode {
+                            // Selection mode: Show actions menu (always visible)
+                            Menu {
                                 Button(action: {
-                                    showingCreateList = true
+                                    viewModel.selectAll()
                                 }) {
-                                    Image(systemName: Constants.UI.addIcon)
-                                        .imageScale(.large)
-                                        .aspectRatio(1.0, contentMode: .fit)
-                                        .padding(.horizontal, -2)
+                                    Label("Select All", systemImage: "checkmark.circle")
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("AddListButton")
+                                
+                                Button(action: {
+                                    viewModel.deselectAll()
+                                }) {
+                                    Label("Deselect All", systemImage: "circle")
+                                }
+                                .disabled(viewModel.selectedLists.isEmpty)
+                                
+                                Divider()
+                                
+                                Button(role: .destructive, action: {
+                                    showingDeleteConfirmation = true
+                                }) {
+                                    Label("Delete Lists", systemImage: "trash")
+                                }
+                                .disabled(viewModel.selectedLists.isEmpty)
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .foregroundColor(.primary)
                             }
+                            .padding(.horizontal, Theme.Spacing.sm)
+                        } else if !viewModel.showingArchivedLists {
+                            // Normal mode: Show Add button (only for active lists)
+                            Button(action: {
+                                showingCreateList = true
+                            }) {
+                                Image(systemName: Constants.UI.addIcon)
+                                    .imageScale(.large)
+                                    .aspectRatio(1.0, contentMode: .fit)
+                                    .padding(.horizontal, -2)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("AddListButton")
+                            .padding(.horizontal, Theme.Spacing.sm)
                         }
-                        .padding(.horizontal, Theme.Spacing.sm)
                     }
                     }
                     

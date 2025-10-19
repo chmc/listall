@@ -766,7 +766,13 @@
 - ✅ Documented changes in ai_changelog.md
 
 ## Fix: Archived lists screen has empty button on right corner
-- ❌ Remove empty button
+- ✅ Identified root cause: HStack wrapper always rendered in toolbar item
+- ✅ Restructured toolbar item to conditionally render content at top level
+- ✅ Removed wrapping HStack that created empty placeholder
+- ✅ Verified toolbar displays correctly in all view states
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (194 tests, 100% success rate)
+- ✅ Documented changes in ai_changelog.md
 
 ## Fix: Duplicate list action shows new copied list twice in main screen
 

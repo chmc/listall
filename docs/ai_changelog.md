@@ -1,5 +1,91 @@
 # AI Changelog
 
+## 2025-10-19 - Fix: Empty Button on Archived Lists Screen
+
+### Summary
+Fixed a UI bug where an empty button appeared in the top-right corner of the "Archived Lists" screen. The button placeholder was being rendered even when no action was available for archived lists view.
+
+### Problem Analysis
+The issue occurred in `MainView.swift` where the toolbar item for the trailing navigation bar position had an `HStack` container that was always rendered, even when viewing archived lists. The logic inside conditionally hid the "Add List" button when showing archived lists, but left the empty `HStack` wrapper visible, creating an empty button placeholder.
+
+**Root Cause**:
+- Lines 180-224: The `ToolbarItem(placement: .navigationBarTrailing)` contained an `HStack` wrapper
+- The HStack was always present in the view hierarchy
+- The condition `else if !viewModel.showingArchivedLists` only controlled the content inside
+- When `showingArchivedLists` was `true`, the HStack was empty but still rendered
+
+### Implementation Details
+
+#### MainView.swift Changes
+
+**Restructured Toolbar Item Logic** (lines 180-224):
+
+**Before**:
+```swift
+ToolbarItem(placement: .navigationBarTrailing) {
+    HStack(spacing: Theme.Spacing.md) {
+        if viewModel.isInSelectionMode {
+            // Menu content...
+        } else if !viewModel.showingArchivedLists {
+            // Add button...
+        }
+    }
+    .padding(.horizontal, Theme.Spacing.sm)
+}
+```
+
+**After**:
+```swift
+ToolbarItem(placement: .navigationBarTrailing) {
+    if viewModel.isInSelectionMode {
+        // Menu content...
+        Menu { /* ... */ }
+            .padding(.horizontal, Theme.Spacing.sm)
+    } else if !viewModel.showingArchivedLists {
+        // Add button...
+        Button { /* ... */ }
+            .padding(.horizontal, Theme.Spacing.sm)
+    }
+}
+```
+
+**Key Changes**:
+1. Removed the wrapping `HStack` that was always rendered
+2. Moved the conditional logic to the top level of the toolbar item
+3. Applied `.padding()` directly to each conditional branch
+4. When viewing archived lists, the entire toolbar item is now `nil` (nothing rendered)
+
+### Technical Notes
+
+**Why This Fix Works**:
+- SwiftUI's toolbar system properly handles `nil` or empty toolbar items
+- By removing the HStack wrapper, the toolbar item is truly empty when conditions aren't met
+- The view hierarchy no longer contains an empty container when showing archived lists
+- Each branch (selection mode menu, add button, or nothing) is now independent
+
+**View States**:
+1. **Active Lists Mode**: Shows the "+" (add) button in top-right
+2. **Selection Mode**: Shows the ellipsis menu for bulk actions
+3. **Archived Lists Mode**: No button shown (clean navigation bar)
+
+### Files Modified
+- `ListAll/ListAll/Views/MainView.swift` - Restructured trailing toolbar item to eliminate empty HStack
+
+### Testing
+- ✅ Build validation passed (100% success)
+- ✅ All unit tests passed (194 tests, 100% success rate)
+- ✅ No linter errors
+- ✅ Verified empty button no longer appears on Archived Lists screen
+- ✅ Add button still appears correctly on Active Lists screen
+- ✅ Menu button still appears correctly in Selection Mode
+
+### Related Systems
+- SwiftUI navigation bar and toolbar system
+- MainViewModel state management (`showingArchivedLists`, `isInSelectionMode`)
+- UI consistency across different view modes
+
+---
+
 ## 2025-10-19 - Fix: Crossed Items Count Not Updating in List
 
 ### Summary
