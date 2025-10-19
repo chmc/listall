@@ -808,6 +808,10 @@
 ## Fix: Archived list undo dialog doesnt have dismiss button
 - ❌ Should work same as complete/delete item undo dialog
 
+## Swipe from right to left should do delete item
+- ❌ Swipe from left to right should show edit and duplicate actions
+- ❌ Remove long press item context actions, should have only drag&drop functionality
+
 ## 
 - ❌ 
 
