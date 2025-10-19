@@ -232,6 +232,9 @@ struct MainView: View {
                                 listName: list.name,
                                 onUndo: {
                                     viewModel.undoArchive()
+                                },
+                                onDismiss: {
+                                    viewModel.hideArchiveNotification()
                                 }
                             )
                             .padding(.horizontal, Theme.Spacing.md)
@@ -419,6 +422,7 @@ struct MainView: View {
 struct ArchiveBanner: View {
     let listName: String
     let onUndo: () -> Void
+    let onDismiss: () -> Void
     
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
@@ -448,6 +452,14 @@ struct ArchiveBanner: View {
                     .background(Theme.Colors.primary)
                     .cornerRadius(Theme.CornerRadius.md)
             }
+            
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(Theme.Spacing.sm)
+            }
+            .accessibilityLabel("Dismiss")
         }
         .padding(Theme.Spacing.md)
         .background(

@@ -136,7 +136,7 @@ class MainViewModel: ObservableObject {
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
     }
     
-    private func hideArchiveNotification() {
+    func hideArchiveNotification() {
         archiveNotificationTimer?.invalidate()
         archiveNotificationTimer = nil
         showArchivedNotification = false

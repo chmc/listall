@@ -1,5 +1,95 @@
 # AI Changelog
 
+## 2025-10-19 - Fix: Added Dismiss Button to Archive Undo Banner
+
+### Summary
+Added a dismiss (X) button to the archived list undo banner to match the pattern established by item complete and delete undo banners. Users can now manually dismiss the archive notification without waiting for the 5-second timeout.
+
+### Problem
+The archived list undo banner lacked a dismiss button, unlike the item undo banners (complete and delete). This created inconsistency in the UX - users could dismiss item undo banners but not the archive banner.
+
+### Implementation Details
+
+**Modified Files**:
+
+1. **MainViewModel.swift** (line 139):
+   - Changed `hideArchiveNotification()` from `private` to internal (public) visibility
+   - Allows the method to be called from MainView when user taps dismiss button
+
+2. **MainView.swift** (lines 419-468):
+   - Added `onDismiss` callback parameter to `ArchiveBanner` component
+   - Added dismiss button with X icon after the Undo button
+   - Button styling matches the pattern from `UndoBanner` and `DeleteUndoBanner`:
+     - System image: "xmark"
+     - Font: `.caption`
+     - Color: `.secondary`
+     - Padding: `Theme.Spacing.sm`
+     - Accessibility label: "Dismiss"
+
+3. **MainView.swift** (lines 236-238):
+   - Updated `ArchiveBanner` usage to pass `onDismiss` callback
+   - Callback invokes `viewModel.hideArchiveNotification()`
+
+**Code Pattern Applied**:
+```swift
+// ArchiveBanner component signature
+struct ArchiveBanner: View {
+    let listName: String
+    let onUndo: () -> Void
+    let onDismiss: () -> Void  // NEW
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            // ... existing content ...
+            
+            Button(action: onUndo) {
+                Text("Undo")
+                // ... styling ...
+            }
+            
+            // NEW: Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(Theme.Spacing.sm)
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        // ... rest of styling ...
+    }
+}
+```
+
+### UI/UX Consistency
+This change ensures all undo/notification banners in the app follow the same pattern:
+
+1. **Item Complete Undo Banner** (`UndoBanner`): Has Undo + Dismiss buttons ✅
+2. **Item Delete Undo Banner** (`DeleteUndoBanner`): Has Undo + Dismiss buttons ✅
+3. **Archive List Undo Banner** (`ArchiveBanner`): Has Undo + Dismiss buttons ✅ (NOW FIXED)
+
+All three banners now provide users with:
+- Primary action: "Undo" button (blue, prominent)
+- Secondary action: "X" dismiss button (gray, subtle)
+- Automatic timeout: 5 seconds (can be manually dismissed)
+
+### Build & Test Status
+- ✅ **Build**: Successful (100%)
+- ✅ **Tests**: All passed (TEST SUCCEEDED)
+- ✅ **Linter**: No errors
+
+### Files Modified
+- `ListAll/ListAll/ViewModels/MainViewModel.swift`
+- `ListAll/ListAll/Views/MainView.swift`
+
+### Technical Notes
+- The dismiss button follows iOS Human Interface Guidelines for notification banners
+- Consistent with Material Design patterns for snackbar actions
+- Maintains visual hierarchy: primary action (Undo) is more prominent than dismiss
+- Accessibility properly configured with descriptive label
+
+---
+
 ## 2025-10-19 - Enhancement: Uncross Existing Items When Adding from Suggestions
 
 ### Summary

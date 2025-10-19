@@ -806,7 +806,14 @@
 - ✅ Documentation updated in ai_changelog.md
 
 ## Fix: Archived list undo dialog doesnt have dismiss button
-- ❌ Should work same as complete/delete item undo dialog
+- ✅ Should work same as complete/delete item undo dialog
+- ✅ Added onDismiss callback parameter to ArchiveBanner component
+- ✅ Added dismiss button (X icon) to banner UI matching UndoBanner/DeleteUndoBanner pattern
+- ✅ Made hideArchiveNotification() method internal in MainViewModel
+- ✅ Updated ArchiveBanner usage to pass dismiss callback
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (TEST SUCCEEDED)
+- ✅ Documentation updated in ai_changelog.md
 
 ## Swipe from right to left should do delete item
 - ❌ Swipe from left to right should show edit and duplicate actions
