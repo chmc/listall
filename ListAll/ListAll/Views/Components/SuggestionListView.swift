@@ -228,10 +228,10 @@ struct SuggestionRowView: View {
 
 #Preview("Suggestions List") {
     let sampleSuggestions = [
-        ItemSuggestion(title: "Milk", description: "2% low fat", frequency: 5, lastUsed: Date().addingTimeInterval(-3600), score: 95.0, recencyScore: 95.0, frequencyScore: 85.0, totalOccurrences: 5),
-        ItemSuggestion(title: "Bread", description: "Whole wheat", frequency: 3, lastUsed: Date().addingTimeInterval(-86400), score: 85.0, recencyScore: 75.0, frequencyScore: 70.0, totalOccurrences: 3),
-        ItemSuggestion(title: "Eggs", frequency: 2, lastUsed: Date().addingTimeInterval(-86400 * 3), score: 75.0, recencyScore: 60.0, frequencyScore: 50.0, totalOccurrences: 2),
-        ItemSuggestion(title: "Butter", frequency: 1, lastUsed: Date().addingTimeInterval(-86400 * 7), score: 65.0, recencyScore: 40.0, frequencyScore: 30.0, totalOccurrences: 1)
+        ItemSuggestion(id: UUID(), title: "Milk", description: "2% low fat", quantity: 2, images: [], frequency: 5, lastUsed: Date().addingTimeInterval(-3600), score: 95.0, recencyScore: 95.0, frequencyScore: 85.0, totalOccurrences: 5),
+        ItemSuggestion(id: UUID(), title: "Bread", description: "Whole wheat", quantity: 1, images: [], frequency: 3, lastUsed: Date().addingTimeInterval(-86400), score: 85.0, recencyScore: 75.0, frequencyScore: 70.0, totalOccurrences: 3),
+        ItemSuggestion(id: UUID(), title: "Eggs", quantity: 12, images: [], frequency: 2, lastUsed: Date().addingTimeInterval(-86400 * 3), score: 75.0, recencyScore: 60.0, frequencyScore: 50.0, totalOccurrences: 2),
+        ItemSuggestion(id: UUID(), title: "Butter", quantity: 1, images: [], frequency: 1, lastUsed: Date().addingTimeInterval(-86400 * 7), score: 65.0, recencyScore: 40.0, frequencyScore: 30.0, totalOccurrences: 1)
     ]
     
     return VStack {

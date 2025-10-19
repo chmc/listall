@@ -333,20 +333,11 @@ struct ItemEditView: View {
     }
     
     private func applySuggestion(_ suggestion: ItemSuggestion) {
-        // Phase 14 enhancement: Apply all available details from suggestion
-        viewModel.title = suggestion.title
+        // Apply ALL details from the suggestion (title, description, quantity, images)
+        viewModel.applySuggestion(suggestion)
         
-        // Apply description if available (user can overwrite if needed)
-        if let suggestionDescription = suggestion.description,
-           !suggestionDescription.isEmpty {
-            // Only auto-fill if current description is empty, otherwise preserve user's work
-            if viewModel.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                viewModel.description = suggestionDescription
-            }
-        }
-        
-        // For Phase 14: We could add quantity suggestions here in the future
-        // Currently quantity defaults to 1, which is reasonable
+        // Update local quantity to reflect the suggested value
+        localQuantity = suggestion.quantity
         
         // Hide suggestions after applying
         withAnimation(.easeInOut(duration: 0.2)) {
@@ -357,8 +348,7 @@ struct ItemEditView: View {
         
         // Focus on description field to let user review/edit the applied suggestion
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // We could focus on description field here, but let's keep it simple for now
-            // The user can tap to edit any field they want to modify
+            // User can tap to edit any field they want to modify
         }
     }
     
@@ -400,6 +390,13 @@ class ItemEditViewModel: ObservableObject {
     private let editingItem: Item?
     private let dataRepository = DataRepository()
     private var originalItem: Item?
+    
+    // Track suggested item for duplicate detection
+    private var suggestedItem: Item?
+    private var suggestedItemTitle: String?
+    private var suggestedItemDescription: String?
+    private var suggestedItemQuantity: Int?
+    private var suggestedItemImages: [ItemImage]?
     
     var isEditing: Bool {
         editingItem != nil
@@ -468,6 +465,47 @@ class ItemEditViewModel: ObservableObject {
             images = item.images
             originalItem = item
         }
+    }
+    
+    // Apply suggestion from SuggestionService
+    func applySuggestion(_ suggestion: ItemSuggestion) {
+        // Get the full item from repository
+        suggestedItem = dataRepository.getItem(by: suggestion.id)
+        
+        // Store the suggested values for change detection
+        suggestedItemTitle = suggestion.title
+        suggestedItemDescription = suggestion.description
+        suggestedItemQuantity = suggestion.quantity
+        suggestedItemImages = suggestion.images
+        
+        // Apply all fields from suggestion
+        title = suggestion.title
+        description = suggestion.description ?? ""
+        quantity = suggestion.quantity
+        images = suggestion.images
+    }
+    
+    // Check if user made any changes from the suggested item
+    private func hasChangesFromSuggestion() -> Bool {
+        guard let suggestedTitle = suggestedItemTitle else {
+            return true // No suggestion applied, so user is creating their own item
+        }
+        
+        // Check if any field differs from the suggested values
+        let titleChanged = title != suggestedTitle
+        let descriptionChanged = description != (suggestedItemDescription ?? "")
+        let quantityChanged = quantity != (suggestedItemQuantity ?? 1)
+        
+        // Check if images changed
+        let imagesChanged: Bool
+        if let suggestedImages = suggestedItemImages {
+            imagesChanged = images.count != suggestedImages.count ||
+                           !images.elementsEqual(suggestedImages, by: { $0.id == $1.id })
+        } else {
+            imagesChanged = !images.isEmpty
+        }
+        
+        return titleChanged || descriptionChanged || quantityChanged || imagesChanged
     }
     
     func incrementQuantity() {
@@ -543,20 +581,49 @@ class ItemEditViewModel: ObservableObject {
             // Use the method that preserves all properties including images
             dataRepository.updateItem(updatedItem)
         } else {
-            // Create new item
-            var newItem = dataRepository.createItem(
-                in: list,
-                title: trimmedTitle,
-                description: trimmedDescription,
-                quantity: quantity
-            )
-            
-            // Add images to the new item
-            newItem.images = images
-            newItem.updateModifiedDate()
-            
-            // Update the item with images using the method that preserves all properties
-            dataRepository.updateItem(newItem)
+            // Check if user selected a suggestion without making changes
+            if let suggested = suggestedItem, !hasChangesFromSuggestion() {
+                // User selected existing item without changes
+                // Check if this item is already in the current list
+                let currentListItems = dataRepository.getItems(for: list)
+                
+                if let existingItem = currentListItems.first(where: { $0.id == suggested.id }) {
+                    // Item already in this list - uncross it (mark as active)
+                    // This is an intentional action to "reactivate" a completed item
+                    if existingItem.isCrossedOut {
+                        var uncrossedItem = existingItem
+                        uncrossedItem.isCrossedOut = false
+                        uncrossedItem.updateModifiedDate()
+                        dataRepository.updateItem(uncrossedItem)
+                    }
+                    // If item is already active (not crossed out), do nothing - user gets visual feedback that item exists
+                } else {
+                    // Add existing item to current list by creating a reference
+                    // We create a new item with the same properties but assign to current list
+                    var itemForCurrentList = suggested
+                    itemForCurrentList.listId = list.id
+                    itemForCurrentList.orderNumber = currentListItems.count
+                    itemForCurrentList.updateModifiedDate()
+                    
+                    // Add to current list
+                    dataRepository.addExistingItemToList(itemForCurrentList, listId: list.id)
+                }
+            } else {
+                // User either didn't use suggestion OR made changes - create new item
+                var newItem = dataRepository.createItem(
+                    in: list,
+                    title: trimmedTitle,
+                    description: trimmedDescription,
+                    quantity: quantity
+                )
+                
+                // Add images to the new item
+                newItem.images = images
+                newItem.updateModifiedDate()
+                
+                // Update the item with images using the method that preserves all properties
+                dataRepository.updateItem(newItem)
+            }
         }
         
         isSaving = false

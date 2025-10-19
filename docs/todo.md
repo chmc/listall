@@ -791,10 +791,19 @@
 - ✅ All tests passed (194 tests, 100% success rate)
 - ✅ Documented changes in ai_changelog.md
 
-## Fix: Add new item, suggestions, user must be able to select existing item
-- ❌ Existing items should not be added as new items
-- ❌ Now existing items are added as new items
-- ❌ Only if new item any attribute (item title, description, images) differs then it is added as new item
+## Fix: Add new item, suggestions, user must be able to select existing item ✅ COMPLETED
+- ✅ Existing items should not be added as new items
+- ✅ Now existing items are added as new items
+- ✅ Only if new item any attribute (item title, description, images) differs then it is added as new item
+- ✅ Enhanced ItemSuggestion to track item ID, quantity, and images
+- ✅ Added change detection in ItemEditViewModel
+- ✅ Implemented smart save logic to prevent duplicates
+- ✅ **ENHANCEMENT**: Automatically uncross existing items when adding from suggestions
+- ✅ No error dialogs - seamless reactivation of completed items
+- ✅ Smart behavior: uncrosses if crossed-out, does nothing if already active
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (TEST SUCCEEDED)
+- ✅ Documentation updated in ai_changelog.md
 
 ## Fix: Archived list undo dialog doesnt have dismiss button
 - ❌ Should work same as complete/delete item undo dialog

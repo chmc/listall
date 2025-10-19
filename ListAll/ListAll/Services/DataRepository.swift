@@ -50,6 +50,12 @@ class DataRepository: ObservableObject {
         return newItem
     }
     
+    /// Add an existing item from another list to the current list
+    /// This is used when user selects a suggestion without making changes
+    func addExistingItemToList(_ item: Item, listId: UUID) {
+        dataManager.addItem(item, to: listId)
+    }
+    
     func deleteItem(_ item: Item) {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)

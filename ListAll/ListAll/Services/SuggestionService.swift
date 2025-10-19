@@ -1,8 +1,11 @@
 import Foundation
 
 struct ItemSuggestion {
+    let id: UUID // ID of the source item this suggestion is based on
     let title: String
     let description: String?
+    let quantity: Int // Quantity from the source item
+    let images: [ItemImage] // Images from the source item
     let frequency: Int
     let lastUsed: Date
     let score: Double
@@ -11,8 +14,11 @@ struct ItemSuggestion {
     let totalOccurrences: Int // Total times this item appears across all lists
     let averageUsageGap: TimeInterval // Average time between uses
     
-    init(title: String, 
-         description: String? = nil, 
+    init(id: UUID = UUID(),
+         title: String, 
+         description: String? = nil,
+         quantity: Int = 1,
+         images: [ItemImage] = [],
          frequency: Int = 1, 
          lastUsed: Date = Date(), 
          score: Double = 0.0,
@@ -20,8 +26,11 @@ struct ItemSuggestion {
          frequencyScore: Double = 0.0,
          totalOccurrences: Int = 1,
          averageUsageGap: TimeInterval = 0.0) {
+        self.id = id
         self.title = title
         self.description = description
+        self.quantity = quantity
+        self.images = images
         self.frequency = frequency
         self.lastUsed = lastUsed
         self.score = score
@@ -182,8 +191,11 @@ class SuggestionService: ObservableObject {
                 if !addedSuggestionKeys.contains(key) {
                     // Slightly reduce score for global items to prioritize current list
                     let globalSuggestion = ItemSuggestion(
+                        id: suggestion.id, // Preserve item ID
                         title: suggestion.title,
                         description: suggestion.description,
+                        quantity: suggestion.quantity, // Preserve quantity
+                        images: suggestion.images, // Preserve images
                         frequency: suggestion.frequency,
                         lastUsed: suggestion.lastUsed,
                         score: suggestion.score * 0.9, // Reduced score for global items
@@ -244,8 +256,11 @@ class SuggestionService: ObservableObject {
             let combinedScore = (recencyScore * recencyWeight) + (frequencyScore * frequencyWeight)
             
             return ItemSuggestion(
+                id: recentItem.id, // Include the item ID
                 title: recentItem.title,
                 description: recentItem.itemDescription,
+                quantity: recentItem.quantity, // Include quantity
+                images: recentItem.images, // Include images
                 frequency: items.count,
                 lastUsed: lastUsed,
                 score: combinedScore,
@@ -322,8 +337,11 @@ class SuggestionService: ObservableObject {
                                   (frequencyScore * frequencyWeight)
                 
                 let suggestion = ItemSuggestion(
+                    id: item.id, // Include the item ID for tracking
                     title: item.title,
                     description: item.itemDescription,
+                    quantity: item.quantity, // Include quantity from source item
+                    images: item.images, // Include images from source item
                     frequency: 1, // Individual item frequency is always 1
                     lastUsed: lastUsed,
                     score: combinedScore,
