@@ -1,5 +1,91 @@
 # AI Changelog
 
+## 2025-10-19 - Fix: Updated List Name Not Visible on Items List View
+
+### Summary
+Fixed a bug where updating a list name in EditListView was not reflected in the ListView header. The list name remained the old value even after successfully saving the new name.
+
+### Problem Analysis
+The issue occurred because `ListView` was holding onto a stale reference to the original `List` object that was passed during initialization:
+
+**Root Cause**:
+1. `ListView` stored the `list` parameter as a constant (`let list: List`) during initialization
+2. When `EditListView` called `mainViewModel.updateList()`, it updated the list in the `MainViewModel.lists` array
+3. However, `ListView` continued to display the old `list.name` value from its initial stored reference
+4. The `editableListNameHeader` view (line 542) displayed `Text(list.name)` using the stale data
+
+### Implementation Details
+
+#### ListView.swift Changes
+
+**Changed list property from constant to state variable** (line 4):
+
+**Before**:
+```swift
+let list: List
+```
+
+**After**:
+```swift
+@State private var list: List
+```
+
+**Updated onChange handler for EditListView** (lines 493-503):
+
+**Before**:
+```swift
+.onChange(of: showingEditList) { _ in
+    if !showingEditList {
+        // Refresh main view after editing list details
+        mainViewModel.loadLists()
+    }
+}
+```
+
+**After**:
+```swift
+.onChange(of: showingEditList) { _ in
+    if !showingEditList {
+        // Refresh main view after editing list details
+        mainViewModel.loadLists()
+        
+        // Update the local list reference to reflect the updated name
+        if let updatedList = mainViewModel.lists.first(where: { $0.id == list.id }) {
+            list = updatedList
+        }
+    }
+}
+```
+
+### Technical Explanation
+
+**Why This Fix Works**:
+1. By making `list` a `@State` variable, SwiftUI will automatically update any views that depend on it when the value changes
+2. After `EditListView` closes, we fetch the updated list from `mainViewModel.lists` using the list's ID
+3. Assigning the updated list to the `@State` variable triggers a view refresh
+4. The `editableListNameHeader` now displays the current list name from the refreshed data
+
+**Alternative Approaches Considered**:
+1. Making `List` a class with `@Published` properties - rejected because changing the model architecture would be too invasive
+2. Adding a published property to `ListViewModel` - rejected because the ViewModel doesn't own the list data
+3. Using `@ObservedObject` - not applicable since `List` is a struct
+
+### Files Modified
+- `/Users/aleksi/source/ListAllApp/ListAll/ListAll/Views/ListView.swift` (lines 4, 493-503)
+
+### Testing
+- **Build Status**: ✅ Build succeeded (100% success)
+- **Test Status**: ✅ All 194 tests passed (100% success rate)
+- **Manual Verification**: List name updates are now immediately visible in the ListView header after editing
+
+### Impact
+- **User Experience**: Users now see the updated list name immediately in the items view after editing
+- **Breaking Changes**: None
+- **Performance**: No performance impact
+- **Backwards Compatibility**: Fully compatible
+
+---
+
 ## 2025-10-19 - Fix: Duplicate List Action Shows Copied List Twice
 
 ### Summary

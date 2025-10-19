@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ListView: View {
-    let list: List
+    @State private var list: List
     @ObservedObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: ListViewModel
     @StateObject private var sharingService = SharingService()
@@ -494,6 +494,11 @@ struct ListView: View {
             if !showingEditList {
                 // Refresh main view after editing list details
                 mainViewModel.loadLists()
+                
+                // Update the local list reference to reflect the updated name
+                if let updatedList = mainViewModel.lists.first(where: { $0.id == list.id }) {
+                    list = updatedList
+                }
             }
         }
     }
