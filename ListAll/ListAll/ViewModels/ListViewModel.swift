@@ -98,7 +98,11 @@ class ListViewModel: ObservableObject {
         let itemId = item.id
         
         dataRepository.toggleItemCrossedOut(item)
-        loadItems() // Refresh the list
+        
+        // Use explicit animation for smooth visual feedback
+        withAnimation(Theme.Animation.spring) {
+            loadItems() // Refresh the list
+        }
         
         // Trigger haptic feedback
         if wasCompleted {
@@ -138,7 +142,10 @@ class ListViewModel: ObservableObject {
         // Hide undo button immediately BEFORE loading items
         hideUndoButton()
         
-        loadItems() // Refresh the list
+        // Use explicit animation for smooth visual feedback
+        withAnimation(Theme.Animation.spring) {
+            loadItems() // Refresh the list
+        }
     }
     
     func hideUndoButton() {

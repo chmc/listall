@@ -33,12 +33,14 @@ struct ItemRowView: View {
     
     private var itemContent: some View {
         VStack(alignment: .leading, spacing: 1) {
-                // Title with strikethrough animation
+                // Title with enhanced strikethrough animation
                 Text(item.displayTitle)
                     .font(Theme.Typography.body)
                     .strikethrough(item.isCrossedOut, color: Theme.Colors.secondary)
                     .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
-                    .animation(Theme.Animation.quick, value: item.isCrossedOut)
+                    .scaleEffect(item.isCrossedOut ? 0.98 : 1.0)
+                    .opacity(item.isCrossedOut ? 0.7 : 1.0)
+                    .animation(Theme.Animation.spring, value: item.isCrossedOut)
                 
                 // Description (if available) - with proper mixed text and URL handling
                 if item.hasDescription {
@@ -54,6 +56,8 @@ struct ItemRowView: View {
                     .lineLimit(nil) // Allow unlimited lines
                     .fixedSize(horizontal: false, vertical: true)
                     .allowsHitTesting(true) // Allow URL links to be tapped with higher priority
+                    .scaleEffect(item.isCrossedOut ? 0.98 : 1.0)
+                    .animation(Theme.Animation.spring, value: item.isCrossedOut)
                 }
                 
                 // Secondary info row
@@ -80,6 +84,8 @@ struct ItemRowView: View {
                     
                     Spacer()
                 }
+                .scaleEffect(item.isCrossedOut ? 0.98 : 1.0)
+                .animation(Theme.Animation.spring, value: item.isCrossedOut)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
