@@ -138,52 +138,13 @@ struct ItemRowView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .contentShape(Rectangle())
         .if(!isInSelectionMode) { view in
-            view.contextMenu {
-                // Context menu actions
-                Button(action: {
-                    onEdit?()
-                }) {
-                    Label("Edit", systemImage: "pencil")
-                }
-                
-                Button(action: {
-                    onDuplicate?()
-                }) {
-                    Label("Duplicate", systemImage: "doc.on.doc")
-                }
-                
-                Divider()
-                
-                Button(action: {
-                    onDelete?()
-                }) {
-                    Label("Delete", systemImage: "trash")
-                }
-                .foregroundColor(.red)
-            }
-        }
-        .if(!isInSelectionMode) { view in
-            view.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            view.swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(action: {
                     onDelete?()
                 }) {
                     Label("Delete", systemImage: "trash")
                 }
                 .tint(.red)
-                
-                Button(action: {
-                    onDuplicate?()
-                }) {
-                    Label("Duplicate", systemImage: "doc.on.doc")
-                }
-                .tint(.blue)
-                
-                Button(action: {
-                    onEdit?()
-                }) {
-                    Label("Edit", systemImage: "pencil")
-                }
-                .tint(.orange)
             }
         }
     }

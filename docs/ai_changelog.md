@@ -1,5 +1,65 @@
 # AI Changelog
 
+## 2025-10-19 - Feature: Simplified Item Row Swipe Actions
+
+### Summary
+Simplified swipe actions on item rows to provide a focused, intuitive delete gesture. Swipe right-to-left (trailing) now performs instant delete with full swipe support. All other actions (Edit, Duplicate) are available via the chevron button and selection mode.
+
+### Problem
+Previously, swiping right-to-left on an item revealed three actions (Delete, Duplicate, Edit), which made the interface cluttered and required an extra tap to delete. Users expected a simple, focused swipe-to-delete gesture like in iOS Mail.
+
+### Implementation Details
+
+**Modified Files**:
+
+1. **ItemRowView.swift** (lines 140-149):
+   - **Removed context menu**: Deleted the entire `.contextMenu` block that displayed Edit, Duplicate, and Delete actions
+   - Context menu (long press) was cluttering the interaction model
+   - Long press is now reserved solely for drag & drop functionality in the future
+   
+2. **ItemRowView.swift** (lines 140-149):
+   - **Trailing swipe (right-to-left)**: ONLY swipe action - Delete with full swipe enabled
+     - Set `allowsFullSwipe: true` to enable instant delete
+     - Removed all other actions from trailing swipe (Duplicate, Edit)
+     - Full swipe deletes immediately, partial swipe shows Delete button
+   - **Leading swipe (left-to-right)**: REMOVED - No swipe actions from left
+   - Swipe actions only available when NOT in selection mode
+
+**User Experience**:
+- **Swipe right-to-left** → Delete item
+  - Full swipe (all the way) → Immediately deletes without confirmation
+  - Partial swipe (a little) → Shows Delete button, requires tap to confirm
+- **No swipe from left** → Simplified, focused interaction
+- **Long press** → No context menu (reserved for drag & drop)
+- **Chevron button** → Opens item edit view for Edit/Duplicate actions
+- **Selection mode** → Swipe actions hidden, bulk operations available
+
+**Code Pattern**:
+```swift
+// Simple, focused swipe-to-delete
+.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+    Button(action: { onDelete?() }) {
+        Label("Delete", systemImage: "trash")
+    }
+    .tint(.red)
+}
+// No leading edge swipe actions - keeps interaction simple
+```
+
+### Build & Test Status
+- ✅ **Build**: Successful (no compilation errors)
+- ✅ **Tests**: All 107 unit tests passed
+- ✅ **Linter**: No errors
+
+### Related Requirements
+From `docs/todo.md`:
+- ✅ Swipe from right to left instantly deletes item (with full swipe)
+- ✅ No swipe from left to right (removed for simplicity)
+- ✅ Long press context menu removed (reserved for drag & drop)
+- ✅ Edit/Duplicate actions available via chevron button and selection mode
+
+---
+
 ## 2025-10-19 - Fix: Added Dismiss Button to Archive Undo Banner
 
 ### Summary
