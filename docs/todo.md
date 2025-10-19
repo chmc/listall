@@ -826,16 +826,20 @@
 - ✅ All tests passed (107 unit tests - 100% success rate)
 - ✅ Documentation updated in ai_changelog.md
 
-## Image Gallery Enhancement
-- ❌ Create full-screen image viewer
-- ❌ Add swipe gesture navigation between images
-- ❌ Add pinch-to-zoom functionality
-- ❌ Add image reordering in edit mode
-- ❌ Add image preview from item row
-- ❌ Improve thumbnail generation performance
-- ❌ Add image loading states and placeholders
-- ❌ Validate build and tests pass
-- ❌ Document changes in ai_changelog.md
+## Image Gallery Enhancement ✅ COMPLETED
+- ✅ Create full-screen image viewer (already existed)
+- ✅ Add swipe gesture navigation between images
+- ✅ Add pinch-to-zoom functionality (already existed)
+- ✅ Add image reordering in edit mode (arrow buttons)
+- ✅ Add image preview from item row (REVERTED per user request - kept simple icon + count)
+- ✅ Improve thumbnail generation performance (NSCache integration)
+- ✅ Add image loading states and placeholders (already existed)
+- ✅ Validate build and tests pass
+- ✅ Document changes in ai_changelog.md
+- ✅ Fix pinch-to-zoom using UIScrollView AutoLayout pattern (CRITICAL)
+- ✅ Document UIScrollView AutoLayout learning in learnings.md
+**STATUS**: ✅ FULLY COMPLETE - All features working with native iOS behavior
+**FINAL FIX**: Implemented Apple-recommended AutoLayout with layout guides pattern for UIScrollView image zooming after multiple failed attempts with manual frame calculations. Image viewing now works perfectly with smooth pinch-to-zoom, pan, and centering exactly like native iOS Photos app.
 
 ## 
 - ❌ 

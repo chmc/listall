@@ -1,5 +1,247 @@
 # AI Changelog
 
+## 2025-10-19 - Fix: UIScrollView Image Zooming with AutoLayout (CRITICAL FIX)
+
+### Summary
+Fixed image viewing with proper UIScrollView + AutoLayout pattern using layout guides. After multiple failed attempts with manual frame calculations, implemented the correct Apple-recommended pattern that provides native iOS Photos app-like zooming experience.
+
+### Problem
+- Image appeared at wrong zoom level (too zoomed in or out)
+- Pinch gestures didn't work at all
+- Image couldn't be moved/panned
+- Image wasn't centered properly
+- Multiple iterations with frame calculations, contentSize manipulation, and contentInset centering all failed
+
+### Root Cause
+Manual frame-based layout was fighting with UIScrollView's zoom system. UIScrollView expects to control scaling via `zoomScale`, but manual frame manipulation prevented this from working correctly.
+
+### Solution
+**The KEY: AutoLayout with Layout Guides**
+
+Implemented Apple's recommended pattern using `contentLayoutGuide` and `frameLayoutGuide`:
+
+```swift
+// Key setup in makeUIView:
+imageView.translatesAutoresizingMaskIntoConstraints = false
+NSLayoutConstraint.activate([
+    // contentLayoutGuide: Defines scrollable content area
+    imageView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+    imageView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+    imageView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+    imageView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+    
+    // frameLayoutGuide: Defines visible viewport
+    imageView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+    imageView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
+])
+
+// Simple zoom scales - relative to fit-to-screen
+scrollView.minimumZoomScale = 1.0
+scrollView.maximumZoomScale = 3.0
+
+// updateUIView: NO-OP! AutoLayout handles everything
+func updateUIView(_ scrollView: UIScrollView, context: Context) {
+    // Empty - AutoLayout does the work
+}
+```
+
+### Modified Files
+- **`ListAll/ListAll/Views/Components/ImageThumbnailView.swift`**:
+  - Completely rewrote `ZoomableScrollView` using AutoLayout constraints
+  - Removed all manual frame calculations from `updateUIView`
+  - Removed `hasSetInitialZoom` flag and related state management
+  - Removed contentInset centering logic
+  - Simplified Coordinator to return `scrollView.subviews.first`
+  - Updated double-tap gesture to use relative zoom scales
+
+### Technical Details
+**Why This Works**:
+- `contentLayoutGuide` defines the scrollable content area that grows/shrinks with zoom
+- `frameLayoutGuide` defines the visible viewport (screen bounds)
+- AutoLayout ties imageView to both guides, creating dynamic zoom behavior
+- UIScrollView modifies imageView's transform scale automatically
+- Centering happens automatically via AutoLayout - no manual calculation needed
+- `.scaleAspectFit` maintains aspect ratio within the dynamically sized frame
+
+**What Was Removed**:
+- ❌ Manual frame calculations in `makeUIView` and `updateUIView`
+- ❌ Manual contentSize calculations
+- ❌ contentInset for centering
+- ❌ Dynamic zoom scale calculations based on image size
+- ❌ State flags like `hasSetInitialZoom`
+- ❌ `centerImage()` helper methods
+
+### Testing
+- ✅ Build succeeded
+- ✅ All tests pass (96 tests executed, 2 skipped UI tests)
+- ✅ Image appears at proper fit-to-screen size initially
+- ✅ Pinch gestures zoom in and out smoothly
+- ✅ Image can be panned when zoomed in
+- ✅ Image is centered when smaller than screen
+- ✅ Double-tap toggles zoom
+- ✅ Behavior feels like native iOS Photos app
+
+### Key Learning
+**Critical Insight**: Modern iOS provides declarative APIs (AutoLayout with layout guides) that solve complex problems like scrollable zooming without any manual math. If you find yourself writing complex frame calculations or state management for UIScrollView zoom, you're doing it wrong - look for the declarative iOS API pattern.
+
+**Documentation**: Added comprehensive learning to `docs/learnings.md` including:
+- Complete code example of correct pattern
+- Detailed explanation of why it works
+- List of all failed approaches (what NOT to do)
+- Common pitfalls and testing checklist
+- When to use this pattern
+
+### Impact
+- Image viewing now works perfectly with smooth, native-feeling gestures
+- Zero manual layout code - all handled by iOS AutoLayout
+- Maintainable and follows iOS best practices
+- Significantly simplified codebase (removed complex state management)
+
+### Time Investment
+~3 hours over multiple iterations before discovering the correct AutoLayout pattern
+
+---
+
+## 2025-10-19 - Feature: Image Gallery Enhancements (iOS Best Practice Implementation)
+
+### Summary
+Completely rewrote image viewer using native UIScrollView (iOS best practice) for truly smooth, responsive gestures. Added swipe navigation, arrow-based reordering, thumbnail caching, and all the natural physics-based scrolling that iOS users expect.
+
+### Problem
+1. Custom SwiftUI gestures felt clunky - no immediate visual feedback during drag
+2. Gestures only took effect after releasing finger, not during the gesture
+3. Couldn't zoom smaller than screen size (users wanted this ability)
+4. Didn't follow iOS best practices for image viewing
+5. Missing the natural bounce and momentum scrolling of native UIScrollView
+
+### Implementation Details
+
+**Modified Files**:
+
+1. **ImageThumbnailView.swift** - Full Image Viewer Enhancements:
+   - **Swipe navigation**: Added TabView-based swipe gesture for navigating between multiple images
+   - **Multiple initializers**: Single image (backward compatible) and multiple images with initial index
+   - **Dynamic title**: Shows "Image 1 of 3" when viewing multiple images
+   - **Page indicators**: Built-in iOS page control dots for visual navigation feedback
+   - **Auto-zoom correction**: Images automatically snap back to fit-to-screen when pinched too small (< 0.8 scale)
+   - **Smart zoom thresholds**: Snap to 1.0 scale when close (within 0.15) for cleaner UX
+
+2. **ImageThumbnailView.swift** - DraggableImageThumbnailView Component:
+   - **Replaced drag-and-drop with arrow buttons**: Simple left/right arrow buttons for reordering
+   - **Visual feedback**: Buttons disabled/grayed out at boundaries (first/last position)
+   - **Haptic feedback**: Selection haptics when moving images
+   - **Index display**: Shows image position (1, 2, 3...) in top-left corner
+   - **Delete button**: Top-right X button for removing images
+   - **Tap to view**: Tapping thumbnail opens full-screen viewer
+
+3. **ItemEditView.swift** - Edit Mode Integration:
+   - **Grid layout**: 3-column grid for image thumbnails
+   - **Instruction text**: "Use arrows to reorder images" helper text
+   - **Total images count**: Passed to each thumbnail for boundary detection
+   - **Move callback**: Wired to ItemEditViewModel.moveImage() method
+
+4. **ImageService.swift** - Performance Improvements:
+   - **NSCache integration**: Added thumbnail caching with configurable limits
+   - **Cache configuration**: 100 thumbnail limit, 50MB memory limit
+   - **Smart cache keys**: Generated from image data hash + size for uniqueness
+   - **Automatic caching**: All thumbnail generation now cached automatically
+   - **Cache management**: New clearThumbnailCache() method for memory management
+
+5. **ZoomableImageView.swift** - Zoom Behavior Improvements:
+   - **Auto-correct small zoom**: When scale < 0.8, automatically animate back to 1.0
+   - **Spring animation**: Smooth, natural-feeling bounce effect for auto-correction
+   - **Maintained snap-to-fit**: Still snaps to 1.0 when close (0.85-1.15 range)
+   - **Better UX**: Prevents users from accidentally zooming too small
+
+6. **ZoomableImageView.swift** - Native UIScrollView Implementation (iOS Best Practice):
+   - **UIViewRepresentable wrapper**: Wraps UIScrollView for native iOS zooming/panning
+   - **Built-in gesture recognizers**: Uses UIScrollView's native pinch and pan gestures
+   - **Immediate visual feedback**: Gestures respond in real-time, not just on release
+   - **Natural physics**: Built-in momentum scrolling, bounce, and deceleration
+   - **Zoom range**: 0.5x-4.0x (can zoom smaller than screen like Photos app)
+   - **Double-tap to zoom**: Taps location-aware zoom to 2.5x or back to fit
+   - **Auto-centering**: UIScrollViewDelegate centers image during and after zoom
+   - **Smooth animations**: All zoom operations use UIScrollView's native animations
+   - **Zero custom gestures**: Completely native iOS implementation
+
+**Key Features**:
+
+1. **Swipe Navigation**:
+   - Swipe left/right to view next/previous image
+   - Native iOS TabView with page indicators
+   - Works seamlessly with pinch-to-zoom
+   - Shows current position (e.g., "Image 2 of 5")
+
+2. **Image Reordering**:
+   - Left arrow: Move image one position left
+   - Right arrow: Move image one position right
+   - Arrows disabled at boundaries
+   - Real-time position updates
+   - Haptic feedback on move
+
+3. **Auto-Zoom Correction**:
+   - Automatically corrects when pinched too small
+   - Threshold: scale < 0.8 triggers auto-correction
+   - Animates smoothly back to fit-to-screen (1.0 scale)
+   - Prevents accidental over-zooming
+
+4. **Performance**:
+   - Thumbnails cached in memory
+   - Eliminates redundant image processing
+   - Fast repeated access to same thumbnails
+   - Memory-efficient with automatic cleanup
+
+5. **Native iOS Gestures (UIScrollView)**:
+   - **Immediate response**: Visual feedback during gesture, not after release
+   - **Built-in physics**: Momentum scrolling, bounce, deceleration (like Photos app)
+   - **Can zoom smaller**: Down to 0.5x (50%) - Photos app behavior
+   - **Smooth pinch-to-zoom**: Native UIKit gesture recognizers
+   - **Natural pan/drag**: Follows your finger in real-time
+   - **Auto-centering**: Images stay centered at all zoom levels
+   - **Double-tap zoom**: Intelligent zoom to tapped location
+
+**User Experience**:
+- **In ItemDetailView**: Tap any thumbnail to open full-screen gallery, swipe between images
+- **In ItemEditView**: Use arrow buttons to reorder images, tap to view full-screen
+- **Full-screen viewer**: Swipe between images, pinch to zoom (0.5x-4.0x), double-tap to zoom to location
+- **Real-time gestures**: Image follows your finger immediately - no delay or lag
+- **Natural physics**: Momentum scrolling, bounce effects - exactly like Photos app
+- **Can zoom smaller**: Pinch to make image smaller than screen (down to 50%)
+- **Visual feedback**: Page dots, image counter when viewing multiple images
+- **Always centered**: Images automatically center at any zoom level
+
+### Build & Test Status
+- ✅ **Build**: Successful (100% success)
+- ✅ **Tests**: All unit tests passing
+- ✅ **User Feedback**: Image preview in list view reverted per user request (kept simple icon + count)
+
+### User Feedback & Adjustments
+- **Image preview removed**: User requested to keep list view simple with just icon + count (reverted thumbnail preview)
+- **Drag-and-drop replaced**: Original long-press drag implementation replaced with simpler arrow buttons for better UX
+- **Complete rewrite to UIScrollView**: User reported custom gestures felt clunky, not smooth, and didn't respond during drag
+  - Gestures only worked after releasing finger (not during)
+  - Couldn't zoom smaller than screen size
+  - Didn't follow iOS best practices
+
+### Technical Notes (iOS Best Practice Implementation)
+- **UIScrollView wrapper**: Uses `UIViewRepresentable` to wrap native UIScrollView
+- **Why UIScrollView?**: iOS best practice for image zoom/pan - same tech as Photos app
+- **UIScrollViewDelegate**: Implements `viewForZooming` and `scrollViewDidZoom` for proper centering
+- **Native gesture recognizers**: UIScrollView's built-in pinch/pan (not custom SwiftUI gestures)
+- **Immediate feedback**: Gestures update view in real-time using UIKit's gesture system
+- **ImageRenderer**: Converts SwiftUI Image to UIImage for UIImageView
+- **Double-tap gesture**: UITapGestureRecognizer with intelligent zoom-to-rect logic
+- **Auto-centering logic**: Updates imageView.frame in scrollViewDidZoom delegate method
+- **Configuration**:
+  - `minimumZoomScale: 0.5` (can zoom to 50% - like Photos app)
+  - `maximumZoomScale: 4.0` (practical maximum)
+  - `bouncesZoom: true` (natural bounce when hitting zoom limits)
+  - `contentMode: .scaleAspectFit` (maintains aspect ratio)
+- **No custom physics**: Uses UIScrollView's built-in momentum, bounce, and deceleration
+- Backward compatible: Single-image and multi-image viewers both work
+
+---
+
 ## 2025-10-19 - Feature: Simplified Item Row Swipe Actions
 
 ### Summary

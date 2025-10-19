@@ -187,20 +187,31 @@ struct ItemEditView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Display existing images
+                        // Display existing images with reordering arrows
                         if !viewModel.images.isEmpty {
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: Theme.Spacing.sm) {
-                                ForEach(viewModel.images.indices, id: \.self) { index in
-                                    ImageThumbnailView(
-                                        itemImage: viewModel.images[index],
-                                        onDelete: {
-                                            viewModel.removeImage(at: index)
-                                        }
-                                    )
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                Text("Use arrows to reorder images")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.secondary)
+                                
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible())
+                                ], spacing: Theme.Spacing.sm) {
+                                    ForEach(viewModel.images.indices, id: \.self) { index in
+                                        DraggableImageThumbnailView(
+                                            itemImage: viewModel.images[index],
+                                            index: index,
+                                            totalImages: viewModel.images.count,
+                                            onDelete: {
+                                                viewModel.removeImage(at: index)
+                                            },
+                                            onMove: { fromIndex, toIndex in
+                                                viewModel.moveImage(from: fromIndex, to: toIndex)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

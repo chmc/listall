@@ -15,6 +15,16 @@ class ImageService: ObservableObject {
         static let thumbnailSize: CGSize = CGSize(width: 200, height: 200)
         static let compressionQuality: CGFloat = 0.8
         static let maxImageDimension: CGFloat = 2048
+        static let maxCacheSize: Int = 100 // Maximum number of thumbnails to cache
+    }
+    
+    // MARK: - Thumbnail Cache
+    private var thumbnailCache = NSCache<NSString, UIImage>()
+    
+    private init() {
+        // Configure cache
+        thumbnailCache.countLimit = Configuration.maxCacheSize
+        thumbnailCache.totalCostLimit = 50 * 1024 * 1024 // 50MB
     }
     
     // MARK: - Image Processing
@@ -76,7 +86,7 @@ class ImageService: ObservableObject {
         return compressedData ?? data
     }
     
-    /// Creates a thumbnail from an image
+    /// Creates a thumbnail from an image with caching
     func createThumbnail(from image: UIImage, size: CGSize = Configuration.thumbnailSize) -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { _ in
@@ -84,10 +94,29 @@ class ImageService: ObservableObject {
         }
     }
     
-    /// Creates a thumbnail from image data
+    /// Creates a thumbnail from image data with caching
     func createThumbnail(from data: Data, size: CGSize = Configuration.thumbnailSize) -> UIImage? {
+        // Create cache key from data hash and size
+        let cacheKey = "\(data.hashValue)_\(Int(size.width))x\(Int(size.height))" as NSString
+        
+        // Check cache first
+        if let cachedThumbnail = thumbnailCache.object(forKey: cacheKey) {
+            return cachedThumbnail
+        }
+        
+        // Generate thumbnail if not cached
         guard let image = UIImage(data: data) else { return nil }
-        return createThumbnail(from: image, size: size)
+        let thumbnail = createThumbnail(from: image, size: size)
+        
+        // Store in cache
+        thumbnailCache.setObject(thumbnail, forKey: cacheKey)
+        
+        return thumbnail
+    }
+    
+    /// Clears the thumbnail cache
+    func clearThumbnailCache() {
+        thumbnailCache.removeAllObjects()
     }
     
     // MARK: - ItemImage Management

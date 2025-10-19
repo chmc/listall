@@ -716,3 +716,159 @@
 - **Action Required**: **None** - These should be ignored, not fixed
 - **Real Device Behavior**: These warnings don't appear when running on actual iOS devices
 - **Rule**: Don't attempt to fix simulator infrastructure warnings; focus debugging efforts on actual app functionality issues
+
+---
+
+## UIKit Integration and Native Component Patterns
+
+### UIScrollView Image Zooming with AutoLayout (October 2025)
+
+- **Issue**: Implementing smooth, native-feeling pinch-to-zoom for images in SwiftUI proved extremely difficult with multiple failed approaches over many iterations.
+
+- **Symptoms**:
+  - Image appeared at wrong zoom level (too zoomed in or out)
+  - Pinch gestures didn't work at all
+  - Image couldn't be moved/panned
+  - Image wasn't centered properly
+  - Zoom behavior felt "clunky" and not like native Photos app
+
+- **Failed Approaches** (What DOESN'T Work):
+  1. **Manual frame calculations**: Setting `imageView.frame = scrollView.bounds` locks imageView to screen size, preventing UIScrollView from scaling it
+  2. **Manual contentSize manipulation**: Setting `scrollView.contentSize = uiImage.size` without proper constraints causes layout conflicts
+  3. **contentInset for centering**: Using `scrollView.contentInset` to center images manually is error-prone and fights AutoLayout
+  4. **`.scaleAspectFit` with manual scaling**: Letting UIImageView scale the image conflicts with UIScrollView's zoom scaling
+  5. **Hardcoded zoom scales**: Setting `minimumZoomScale = 0.5`, `maximumZoomScale = 4.0` before knowing image/screen dimensions causes incorrect initial zoom
+  6. **`hasSetInitialZoom` flag patterns**: Complex state management to prevent zoom resets indicates architectural problems
+  7. **`updateUIView` calculations**: Doing layout calculations in `updateUIView` causes zoom to reset on every SwiftUI view update
+
+- **Root Cause**: Mixing manual frame-based layout with UIScrollView's zoom system creates conflicts. UIScrollView expects to control scaling via `zoomScale`, but manual frame manipulation fights this.
+
+- **The CORRECT Solution**: AutoLayout with Layout Guides
+
+```swift
+struct ZoomableScrollView: UIViewRepresentable {
+    let uiImage: UIImage
+    
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.delegate = context.coordinator
+        scrollView.minimumZoomScale = 1.0  // Start at natural fit
+        scrollView.maximumZoomScale = 3.0  // Allow 3x zoom
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.bouncesZoom = true
+        scrollView.backgroundColor = .black
+        
+        // Create UIImageView
+        let imageView = UIImageView(image: uiImage)
+        imageView.contentMode = .scaleAspectFit
+        imageView.isUserInteractionEnabled = true
+        scrollView.addSubview(imageView)
+        
+        // KEY: Use AutoLayout with layout guides (NOT manual frames)
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            // contentLayoutGuide: Defines the scrollable content area
+            imageView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            
+            // frameLayoutGuide: Defines the visible frame (screen bounds)
+            imageView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            imageView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
+        ])
+        
+        return scrollView
+    }
+    
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        // NO-OP: AutoLayout handles everything automatically
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIScrollViewDelegate {
+        let parent: ZoomableScrollView
+        
+        init(_ parent: ZoomableScrollView) {
+            self.parent = parent
+        }
+        
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            return scrollView.subviews.first  // Return the imageView
+        }
+    }
+}
+```
+
+- **Why This Works**:
+  1. **`contentLayoutGuide`**: Defines the scrollable content area - as image zooms, content area grows/shrinks
+  2. **`frameLayoutGuide`**: Defines the visible viewport - stays fixed at screen size
+  3. **AutoLayout Magic**: Constraints tie imageView to both guides, allowing it to:
+     - Fill the screen at 1.0x zoom (via frameLayoutGuide constraints)
+     - Expand beyond screen when zoomed in (via contentLayoutGuide defining scrollable area)
+     - Maintain aspect ratio (via `.scaleAspectFit`)
+     - Center automatically when smaller than screen
+  4. **No Manual Calculations**: Zero frame math, contentSize math, or centering logic needed
+  5. **SwiftUI Compatible**: No `updateUIView` interference since AutoLayout is declarative
+
+- **Key Technical Insights**:
+  - **Layout Guides > Manual Frames**: iOS 11+ layout guides are designed specifically for this use case
+  - **Declarative Layout**: AutoLayout constraints are declarative, set once in `makeUIView`, never touched again
+  - **Two-Guide System**: Using both `contentLayoutGuide` and `frameLayoutGuide` together is the key to zoom behavior
+  - **UIScrollView's Role**: UIScrollView modifies the imageView's transform scale, AutoLayout adjusts content area automatically
+  - **`.scaleAspectFit` is Correct**: When used with AutoLayout, it doesn't conflict with zoom - it maintains aspect ratio within the growing/shrinking frame
+  - **Centering is Free**: AutoLayout automatically centers content smaller than the frame - no contentInset needed
+
+- **What NOT to Do**:
+  - ❌ Set imageView frame manually in `makeUIView` or `updateUIView`
+  - ❌ Set scrollView contentSize manually
+  - ❌ Use contentInset for centering
+  - ❌ Calculate or set zoom scales based on image size (use 1.0 and 3.0 relative scales)
+  - ❌ Add any logic to `updateUIView` - should be empty/no-op
+  - ❌ Use `hasSetInitialZoom` or similar state flags
+  - ❌ Try to "fix" centering with frame manipulation
+
+- **Common Pitfalls**:
+  1. **Thinking You Need to Calculate**: The urge to calculate frames, contentSize, scales is strong - resist it
+  2. **Fighting AutoLayout**: If you're manually setting frames, you're fighting AutoLayout
+  3. **Over-complicating `updateUIView`**: It should do nothing; AutoLayout handles updates
+  4. **Not Using Both Layout Guides**: Using only one guide or neither doesn't achieve proper zoom behavior
+  5. **Wrong contentMode**: `.scaleAspectFill` or `.center` don't work well; `.scaleAspectFit` is correct
+
+- **Testing Checklist**:
+  - [ ] Image appears at proper fit-to-screen size initially (not zoomed in/out)
+  - [ ] Pinch gestures zoom in and out smoothly
+  - [ ] Image can be panned when zoomed in
+  - [ ] Image is centered when smaller than screen
+  - [ ] Double-tap toggles zoom (if implemented)
+  - [ ] Behavior feels like native Photos app
+  - [ ] No visual glitches during zoom/pan
+  - [ ] Works with images of all sizes (small, medium, huge)
+
+- **Performance Considerations**:
+  - AutoLayout with layout guides is highly optimized by iOS
+  - No per-frame recalculations needed
+  - UIScrollView's native zoom uses GPU acceleration
+  - Better performance than manual frame updates
+
+- **When to Use This Pattern**:
+  - Any UIScrollView-based image viewer in SwiftUI
+  - Photo galleries with pinch-to-zoom
+  - PDF/document viewers with zoom
+  - Any content that needs native iOS zoom behavior
+  - Anytime you're wrapping UIScrollView in UIViewRepresentable
+
+- **Related Apple Documentation**:
+  - UIScrollView Programming Guide (layout guides section)
+  - UILayoutGuide (contentLayoutGuide and frameLayoutGuide)
+  - UIViewRepresentable (SwiftUI integration)
+
+- **Result**: ✅ Image viewing now works perfectly with smooth pinch-to-zoom, pan, and centering that feels exactly like the native iOS Photos app.
+
+- **Time Investment**: ~3 hours over multiple failed attempts before finding the correct AutoLayout pattern
+
+- **Lesson**: When integrating UIKit components into SwiftUI, use the native UIKit patterns (AutoLayout with layout guides) rather than trying to manually manage layout with frames and calculations. Modern iOS provides declarative APIs (layout guides) that solve complex problems like scrollable zooming without any manual math. If you find yourself writing complex frame calculations or state management, you're likely doing it wrong - look for the declarative iOS API that solves it for you.

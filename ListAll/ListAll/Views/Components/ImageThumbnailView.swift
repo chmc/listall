@@ -81,30 +81,82 @@ struct ImageThumbnailView: View {
 
 // MARK: - Full Image View
 struct FullImageView: View {
-    let itemImage: ItemImage
+    let images: [ItemImage]
+    let initialIndex: Int
     @Environment(\.dismiss) private var dismiss
     @StateObject private var imageService = ImageService.shared
+    @State private var currentIndex: Int
+    
+    init(itemImage: ItemImage) {
+        self.images = [itemImage]
+        self.initialIndex = 0
+        self._currentIndex = State(initialValue: 0)
+    }
+    
+    init(images: [ItemImage], initialIndex: Int = 0) {
+        self.images = images
+        self.initialIndex = min(max(initialIndex, 0), images.count - 1)
+        self._currentIndex = State(initialValue: min(max(initialIndex, 0), images.count - 1))
+    }
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                if let image = imageService.swiftUIImage(from: itemImage) {
-                    ZoomableImageView(image: image)
-                } else {
+                if images.isEmpty {
                     VStack {
                         Image(systemName: "photo")
                             .foregroundColor(.white)
                             .font(.system(size: 60))
-                        Text("Unable to load image")
+                        Text("No images to display")
                             .foregroundColor(.white)
                             .font(.headline)
                             .padding(.top)
                     }
+                } else if images.count == 1 {
+                    // Single image - no page view needed
+                    if let uiImage = images[0].uiImage,
+                       let swiftUIImage = imageService.swiftUIImage(from: images[0]) {
+                        ZoomableImageView(image: swiftUIImage, uiImage: uiImage)
+                    } else {
+                        VStack {
+                            Image(systemName: "photo")
+                                .foregroundColor(.white)
+                                .font(.system(size: 60))
+                            Text("Unable to load image")
+                                .foregroundColor(.white)
+                                .font(.headline)
+                                .padding(.top)
+                        }
+                    }
+                } else {
+                    // Multiple images - use TabView for swipe navigation
+                    TabView(selection: $currentIndex) {
+                        ForEach(images.indices, id: \.self) { index in
+                            if let uiImage = images[index].uiImage,
+                               let swiftUIImage = imageService.swiftUIImage(from: images[index]) {
+                                ZoomableImageView(image: swiftUIImage, uiImage: uiImage)
+                                    .tag(index)
+                            } else {
+                                VStack {
+                                    Image(systemName: "photo")
+                                        .foregroundColor(.white)
+                                        .font(.system(size: 60))
+                                    Text("Unable to load image")
+                                        .foregroundColor(.white)
+                                        .font(.headline)
+                                        .padding(.top)
+                                }
+                                .tag(index)
+                            }
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .always))
+                    .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
                 }
             }
-            .navigationTitle("Image")
+            .navigationTitle(images.count > 1 ? "Image \(currentIndex + 1) of \(images.count)" : "Image")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -118,117 +170,110 @@ struct FullImageView: View {
     }
 }
 
-// MARK: - Zoomable Image View
+// MARK: - Zoomable Image View (UIScrollView-based - iOS Best Practice)
 struct ZoomableImageView: View {
     let image: Image
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-    @State private var imageSize: CGSize = .zero
-    @State private var containerSize: CGSize = .zero
+    let uiImage: UIImage?
     
-    private let minScale: CGFloat = 0.5
-    private let maxScale: CGFloat = 5.0
+    init(image: Image, uiImage: UIImage? = nil) {
+        self.image = image
+        self.uiImage = uiImage
+    }
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Main zoomable image
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .onAppear {
-                        containerSize = geometry.size
-                        // Calculate initial fit-to-screen scale
-                        resetToFitScreen()
-                    }
-                    .onChange(of: geometry.size) { newSize in
-                        containerSize = newSize
-                        resetToFitScreen()
-                    }
-                    .gesture(
-                        SimultaneousGesture(
-                            // Magnification gesture for zooming
-                            MagnificationGesture()
-                                .onChanged { value in
-                                    let newScale = lastScale * value
-                                    scale = max(minScale, min(maxScale, newScale))
-                                }
-                                .onEnded { _ in
-                                    lastScale = scale
-                                    // Snap to fit if close to 1.0
-                                    if abs(scale - 1.0) < 0.1 {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            scale = 1.0
-                                            lastScale = 1.0
-                                            offset = .zero
-                                            lastOffset = .zero
-                                        }
-                                    }
-                                },
-                            
-                            // Drag gesture for panning
-                            DragGesture()
-                                .onChanged { value in
-                                    let newOffset = CGSize(
-                                        width: lastOffset.width + value.translation.width,
-                                        height: lastOffset.height + value.translation.height
-                                    )
-                                    offset = constrainOffset(newOffset)
-                                }
-                                .onEnded { _ in
-                                    lastOffset = offset
-                                }
-                        )
-                    )
-                    // Double tap to zoom in/out
-                    .onTapGesture(count: 2) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            if scale > 1.5 {
-                                // Zoom out to fit
-                                scale = 1.0
-                                lastScale = 1.0
-                                offset = .zero
-                                lastOffset = .zero
-                            } else {
-                                // Zoom in to 2x
-                                scale = 2.0
-                                lastScale = 2.0
-                                offset = .zero
-                                lastOffset = .zero
-                            }
-                        }
-                    }
+        if let uiImage = uiImage {
+            ZoomableScrollView(uiImage: uiImage)
+        } else {
+            // Fallback: show error
+            VStack {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundColor(.yellow)
+                    .font(.system(size: 60))
+                Text("Image data unavailable")
+                    .foregroundColor(.white)
+                    .font(.headline)
+                    .padding(.top)
             }
         }
     }
+}
+
+// MARK: - UIScrollView Wrapper (Native iOS Zooming)
+struct ZoomableScrollView: UIViewRepresentable {
+    let uiImage: UIImage
     
-    // MARK: - Helper Methods
-    
-    private func resetToFitScreen() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            scale = 1.0
-            lastScale = 1.0
-            offset = .zero
-            lastOffset = .zero
-        }
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.delegate = context.coordinator
+        scrollView.minimumZoomScale = 1.0
+        scrollView.maximumZoomScale = 3.0
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.bouncesZoom = true
+        scrollView.backgroundColor = .black
+        
+        // Create UIImageView
+        let imageView = UIImageView(image: uiImage)
+        imageView.contentMode = .scaleAspectFit
+        imageView.isUserInteractionEnabled = true
+        scrollView.addSubview(imageView)
+        
+        // Use AutoLayout with layout guides (proven Apple pattern)
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            imageView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            imageView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            imageView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
+        ])
+        
+        // Add double-tap gesture
+        let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
+        
+        return scrollView
     }
     
-    private func constrainOffset(_ newOffset: CGSize) -> CGSize {
-        // Calculate the maximum allowed offset based on current scale
-        let scaledImageWidth = containerSize.width * scale
-        let scaledImageHeight = containerSize.height * scale
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        // No need to update - AutoLayout handles sizing
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIScrollViewDelegate {
+        let parent: ZoomableScrollView
         
-        let maxOffsetX = max(0, (scaledImageWidth - containerSize.width) / 2)
-        let maxOffsetY = max(0, (scaledImageHeight - containerSize.height) / 2)
+        init(_ parent: ZoomableScrollView) {
+            self.parent = parent
+        }
         
-        let constrainedX = max(-maxOffsetX, min(maxOffsetX, newOffset.width))
-        let constrainedY = max(-maxOffsetY, min(maxOffsetY, newOffset.height))
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            return scrollView.subviews.first
+        }
         
-        return CGSize(width: constrainedX, height: constrainedY)
+        @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+            guard let scrollView = gesture.view as? UIScrollView else { return }
+            
+            // If already zoomed in, zoom back to 1.0
+            if scrollView.zoomScale > 1.0 {
+                scrollView.setZoomScale(1.0, animated: true)
+            } else {
+                // Zoom in to 2x at tap location
+                let pointInView = gesture.location(in: scrollView)
+                let scrollViewSize = scrollView.bounds.size
+                let w = scrollViewSize.width / 2.0
+                let h = scrollViewSize.height / 2.0
+                let x = pointInView.x - (w / 2.0)
+                let y = pointInView.y - (h / 2.0)
+                let rectToZoomTo = CGRect(x: x, y: y, width: w, height: h)
+                scrollView.zoom(to: rectToZoomTo, animated: true)
+            }
+        }
     }
 }
 
@@ -300,7 +345,7 @@ struct ImageGalleryView: View {
                 get: { selectedImageIndex },
                 set: { selectedImageIndex = $0 }
             )) { index in
-                FullImageView(itemImage: images[index])
+                FullImageView(images: images, initialIndex: index)
             }
         }
     }
@@ -383,6 +428,141 @@ struct ImageThumbnailCard: View {
         }
         .scaleEffect(isLoading ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isLoading)
+    }
+}
+
+// MARK: - Draggable Image Thumbnail View (for Edit Mode)
+struct DraggableImageThumbnailView: View {
+    let itemImage: ItemImage
+    let index: Int
+    let totalImages: Int
+    let onDelete: () -> Void
+    let onMove: (Int, Int) -> Void
+    
+    @StateObject private var imageService = ImageService.shared
+    @State private var showingDeleteAlert = false
+    @State private var showingFullImage = false
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            ZStack {
+                // Thumbnail Image with tap gesture
+                if let thumbnail = imageService.swiftUIThumbnail(from: itemImage) {
+                    thumbnail
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 100, height: 100)
+                        .clipped()
+                        .cornerRadius(Theme.CornerRadius.md)
+                        .onTapGesture {
+                            showingFullImage = true
+                        }
+                } else {
+                    // Placeholder for invalid image
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .fill(Theme.Colors.groupedBackground)
+                        .frame(width: 100, height: 100)
+                        .overlay(
+                            VStack {
+                                Image(systemName: "photo")
+                                    .foregroundColor(Theme.Colors.secondary)
+                                    .font(.title2)
+                                Text("Invalid")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.secondary)
+                            }
+                        )
+                        .onTapGesture {
+                            showingFullImage = true
+                        }
+                }
+                
+                // Delete Button - top right
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showingDeleteAlert = true
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.white)
+                                .background(Color.red)
+                                .clipShape(Circle())
+                                .font(.title3)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .simultaneousGesture(
+                            TapGesture()
+                                .onEnded { _ in
+                                    // This prevents the underlying tap gesture from firing
+                                }
+                        )
+                        .padding(4)
+                    }
+                    Spacer()
+                }
+                
+                // Index indicator (top-left)
+                VStack {
+                    HStack {
+                        Text("\(index + 1)")
+                            .font(Theme.Typography.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(4)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .padding(4)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+            }
+            
+            // Move buttons (left/right arrows)
+            if totalImages > 1 {
+                HStack(spacing: 8) {
+                    // Move left button
+                    Button(action: {
+                        if index > 0 {
+                            HapticManager.shared.trigger(.selection)
+                            onMove(index, index - 1)
+                        }
+                    }) {
+                        Image(systemName: "arrow.left.circle.fill")
+                            .foregroundColor(index > 0 ? .blue : .gray.opacity(0.3))
+                            .font(.title3)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(index == 0)
+                    
+                    // Move right button
+                    Button(action: {
+                        if index < totalImages - 1 {
+                            HapticManager.shared.trigger(.selection)
+                            onMove(index, index + 1)
+                        }
+                    }) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundColor(index < totalImages - 1 ? .blue : .gray.opacity(0.3))
+                            .font(.title3)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(index == totalImages - 1)
+                }
+            }
+        }
+        .alert("Delete Image?", isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                onDelete()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This action cannot be undone.")
+        }
+        .sheet(isPresented: $showingFullImage) {
+            FullImageView(itemImage: itemImage)
+        }
     }
 }
 
