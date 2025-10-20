@@ -1,6 +1,7 @@
 import Foundation
 import CloudKit
 import CoreData
+import Combine
 
 class CloudKitService: ObservableObject {
     @Published var isSyncing = false

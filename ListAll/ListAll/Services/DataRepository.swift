@@ -1,5 +1,6 @@
 import Foundation
 import CoreData
+import Combine
 
 class DataRepository: ObservableObject {
     private let coreDataManager = CoreDataManager.shared
