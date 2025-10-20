@@ -75,6 +75,12 @@
 		451B4B8A2EA65E29006B59E1 /* Exceptions for "ListAll" folder in "ListAllWatch Watch App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Models/CoreData/CoreDataManager.swift,
+				"Models/CoreData/ItemEntity+Extensions.swift",
+				"Models/CoreData/ItemImageEntity+Extensions.swift",
+				Models/CoreData/ListAll.xcdatamodeld,
+				"Models/CoreData/ListEntity+Extensions.swift",
+				"Models/CoreData/UserDataEntity+Extensions.swift",
 				Models/Item.swift,
 				Models/ItemImage.swift,
 				Models/List.swift,

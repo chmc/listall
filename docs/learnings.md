@@ -877,6 +877,69 @@ struct ZoomableScrollView: UIViewRepresentable {
 
 ## watchOS Multi-Platform Development
 
+### Combine Import Required on watchOS (Phase 68.4 - October 2025)
+
+- **Issue**: watchOS build failed with "type 'CoreDataManager' does not conform to protocol 'ObservableObject'" error
+
+- **Symptoms**:
+  - Code compiled fine on iOS
+  - Same code failed on watchOS with missing protocol conformance
+  - Error message: "initializer 'init(wrappedValue:)' is not available due to missing import of defining module 'Combine'"
+  - Affected: `ObservableObject` protocol and `@Published` property wrapper
+
+- **Root Cause**: iOS auto-imports Combine framework through SwiftUI, watchOS doesn't
+  - On iOS: SwiftUI implicitly imports Combine, making `ObservableObject` and `@Published` available
+  - On watchOS: Combine must be explicitly imported even when using SwiftUI
+  - This is a platform difference in framework dependencies
+
+- **Solution**: Add explicit `import Combine` to CoreDataManager.swift
+  ```swift
+  import Foundation
+  import CoreData
+  import CloudKit
+  import Combine  // ✅ Required for watchOS
+  
+  class CoreDataManager: ObservableObject {
+      @Published var lists: [List] = []
+      // ...
+  }
+  ```
+
+- **Key Insights**:
+  - **Platform Differences**: Same Swift code may require different imports on iOS vs watchOS
+  - **Explicit > Implicit**: Always import frameworks explicitly rather than relying on transitive imports
+  - **ObservableObject Requires Combine**: On watchOS, you cannot use `ObservableObject` or `@Published` without importing Combine
+  - **Check Each Platform**: Multi-platform code should be built for each target to catch platform-specific requirements
+  - **Error Messages Are Clear**: Compiler explicitly told us to "add import of module 'Combine'"
+
+- **When to Add Combine Import**:
+  - Any class using `ObservableObject` protocol
+  - Any property using `@Published` wrapper
+  - Any code using Combine publishers/subscribers
+  - watchOS targets (iOS may work without it due to implicit import)
+  - Better to always import explicitly for clarity
+
+- **Testing Checklist**:
+  - [ ] Build iOS target successfully
+  - [ ] Build watchOS target successfully (don't assume iOS success means watchOS will work)
+  - [ ] Check for protocol conformance errors
+  - [ ] Verify `@Published` properties compile
+  - [ ] Run tests on both platforms
+
+- **Prevention**:
+  - Add `import Combine` to any file using `ObservableObject` as standard practice
+  - Build watchOS target early and often during development
+  - Don't rely on implicit framework imports
+  - Use explicit imports for better code clarity
+
+- **Result**: ✅ CoreDataManager now compiles successfully on both iOS and watchOS
+
+- **Time Investment**: ~5 minutes (error clear, fix simple)
+
+- **Lesson**: When sharing code between iOS and watchOS, always build both targets to catch platform-specific import requirements. Explicit imports are better than relying on transitive/implicit imports.
+
+---
+
 ### Platform-Specific Code Organization (Phase 68.2 - October 2025)
 
 - **Issue**: Preparing iOS codebase for watchOS compatibility requires identifying which services can be shared vs which are iOS-only.
