@@ -15,6 +15,16 @@ class CoreDataManager: ObservableObject {
             fatalError("Failed to retrieve a persistent store description.")
         }
         
+        // Configure App Groups shared container URL
+        let appGroupID = "group.io.github.chmc.ListAll"
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            let storeURL = containerURL.appendingPathComponent("ListAll.sqlite")
+            storeDescription.url = storeURL
+            print("Core Data: Using App Groups container at \(storeURL.path)")
+        } else {
+            print("Core Data: Warning - App Groups container not available, using default location")
+        }
+        
         // Enable automatic migration
         storeDescription.shouldMigrateStoreAutomatically = true
         storeDescription.shouldInferMappingModelAutomatically = true
