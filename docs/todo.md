@@ -1028,29 +1028,189 @@
 - ❌ Update README with setup instructions
 
 ## Phase 68: watchOS Companion App - Foundation
-**Goal**: Create watchOS target and share core data models
-- ❌ Create new watchOS App target in Xcode project
-- ❌ Configure watchOS deployment target (watchOS 9.0+)
-- ❌ Add shared framework/target for common code
-- ❌ Share data models (List.swift, Item.swift, ItemImage.swift, UserData.swift) between iOS and watchOS
-- ❌ Share CoreData model (.xcdatamodeld) with watchOS target
-- ❌ Configure CoreData stack for watchOS
-- ❌ Set up proper target membership for shared files
-- ❌ Configure proper build settings for watchOS target
-- ❌ Verify project builds successfully for both iOS and watchOS
-- ❌ Run tests to ensure no regression in iOS functionality
+**Goal**: Create watchOS target and share core data models with proper App Groups configuration
+**Duration**: 5-7 days
+**Apple Best Practices**: Follow Apple's guidelines for watchOS apps, App Groups, and CloudKit integration
 
-### Phase 68 Sub-tasks:
-- ❌ Create watchOS app target with proper bundle identifiers
-- ❌ Configure watchOS app capabilities (iCloud, CloudKit)
-- ❌ Add Core Data and CloudKit frameworks to watchOS target
-- ❌ Share CoreDataManager with watchOS (update target membership)
-- ❌ Share DataRepository with watchOS (update target membership)
-- ❌ Share CloudKitService with watchOS (conditional compilation if needed)
-- ❌ Create watchOS-specific Assets.xcassets
-- ❌ Configure Info.plist for watchOS app
-- ❌ Test Core Data and CloudKit sync on watchOS simulator
-- ❌ Ensure data synchronization works between iOS and watchOS
+## Phase 68.0: Prerequisites (Do First!)
+- ❌ Verify iOS app builds successfully (xcodebuild clean build)
+- ❌ Verify iOS tests pass 100% (xcodebuild test)
+- ❌ Create git commit with current state
+- ❌ Create feature branch: `git checkout -b feature/watchos-phase68`
+- ❌ Review Apple's watchOS App Programming Guide
+- ❌ Review App Groups documentation
+
+## Phase 68.1: App Groups Configuration (CRITICAL - Apple Required)
+**Why**: App Groups are required for iOS and watchOS to share the same Core Data store
+- ❌ Add App Groups capability to iOS target in Xcode
+  - Identifier: `group.com.yourcompany.listall` (use your actual team/company ID)
+  - Enable in Signing & Capabilities tab
+- ❌ Add App Groups capability to watchOS target
+  - Use same identifier: `group.com.yourcompany.listall`
+  - Verify both targets use identical identifier
+- ❌ Update CoreDataManager to use App Groups container URL
+  ```swift
+  let appGroupID = "group.com.yourcompany.listall"
+  if let containerURL = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: appGroupID
+  ) {
+      storeDescription.url = containerURL.appendingPathComponent("ListAll.sqlite")
+  }
+  ```
+- ❌ Build iOS app and verify it still works with App Groups container
+- ❌ Run iOS tests to ensure no regressions (must be 100% pass)
+
+## Phase 68.2: Platform-Specific Code Preparation (Apple Compatibility)
+**Why**: Some iOS APIs are not available on watchOS
+- ❌ Audit ImageService.swift for iOS-only APIs (PhotosUI, UIImagePickerController)
+  - Add `#if os(iOS)` guards around iOS-specific code
+  - Create watchOS stubs if needed
+- ❌ Audit BiometricAuthService.swift for iOS-only APIs
+  - LocalAuthentication is available on both platforms
+  - Check for any UIKit dependencies
+- ❌ Audit ExportService.swift for iOS-only APIs
+  - Check UIActivityViewController usage
+  - Add platform guards if needed
+- ❌ Audit ImportService.swift for iOS-only APIs
+  - Check file picker dependencies
+- ❌ Create list of "safe to share" vs "iOS-only" files in learnings.md
+
+## Phase 68.3: Share Data Models (Apple Multi-Target Pattern)
+**Why**: Models are pure Swift and safe to share across platforms
+- ❌ Add List.swift to watchOS target membership
+  - In Xcode: Select file → File Inspector → Target Membership → Check watchOS target
+- ❌ Add Item.swift to watchOS target membership
+- ❌ Add ItemImage.swift to watchOS target membership
+- ❌ Add UserData.swift to watchOS target membership
+- ❌ Build watchOS target - verify models compile cleanly
+  - Command: `xcodebuild -scheme "ListAllWatch Watch App" -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)' build`
+
+## Phase 68.4: Share CoreData Stack (Apple Recommended Approach)
+**Why**: NSPersistentContainer works on both iOS and watchOS
+- ❌ Add ListAll.xcdatamodeld to watchOS target membership
+- ❌ Add CoreDataManager.swift to watchOS target membership (with App Groups configured)
+- ❌ Add ListEntity+Extensions.swift to watchOS target membership
+- ❌ Add ItemEntity+Extensions.swift to watchOS target membership
+- ❌ Add ItemImageEntity+Extensions.swift to watchOS target membership
+- ❌ Add UserDataEntity+Extensions.swift to watchOS target membership
+- ❌ Build watchOS target - verify CoreData compiles
+- ❌ Fix any compilation errors with platform guards if needed
+
+## Phase 68.5: Share Essential Services (Selective Sharing)
+**Why**: DataRepository and CloudKitService work on both platforms
+- ❌ Add DataRepository.swift to watchOS target membership
+- ❌ Add CloudKitService.swift to watchOS target membership
+- ❌ Add DataMigrationService.swift to watchOS target membership (if needed)
+- ❌ Build watchOS target - verify services compile
+- ❌ Fix compilation errors with `#if os(iOS)` guards where needed
+- ❌ Update CloudKitService if hardcoded container ID needs adjustment
+
+## Phase 68.6: Configure watchOS Capabilities (Apple Requirements)
+**Why**: CloudKit and iCloud required for data synchronization
+- ❌ Add iCloud capability to watchOS target
+  - Signing & Capabilities → + Capability → iCloud
+- ❌ Enable CloudKit in watchOS iCloud capability
+  - Check "CloudKit" checkbox
+  - Select container: `iCloud.io.github.chmc.ListAll` (or your container)
+- ❌ Verify entitlements file created for watchOS target
+  - Should contain: com.apple.developer.icloud-services, com.apple.developer.icloud-container-identifiers
+- ❌ Ensure both iOS and watchOS use same CloudKit container identifier
+
+## Phase 68.7: Configure Build Settings (Apple Standards)
+**Why**: Proper deployment targets and Swift versions
+- ❌ Set WATCHOS_DEPLOYMENT_TARGET = 9.0
+  - Target → Build Settings → Deployment → watchOS Deployment Target
+- ❌ Verify SWIFT_VERSION = 5.9 (or higher)
+  - Should match iOS target's Swift version
+- ❌ Configure proper code signing for watchOS
+  - Automatically manage signing recommended
+- ❌ Verify bundle identifiers follow Apple convention
+  - iOS: `com.yourcompany.listall`
+  - watchOS: `com.yourcompany.listall.watchkitapp`
+- ❌ Set product name and display name for watchOS app
+
+## Phase 68.8: Initial Build & Testing (Apple Testing Standards)
+**Why**: Validate setup before implementing UI
+- ❌ Clean build iOS target
+  - Command: `xcodebuild -scheme ListAll clean build`
+  - Must succeed with no errors
+- ❌ Clean build watchOS target
+  - Command: `xcodebuild -scheme "ListAllWatch Watch App" clean build`
+  - Must succeed with no errors
+- ❌ Run iOS tests - verify 100% pass (no regressions)
+  - Command: `xcodebuild -scheme ListAll test`
+  - All tests must pass
+- ❌ Launch watchOS simulator
+  - Xcode → Product → Destination → Apple Watch Series 9 (45mm)
+  - Run watchOS app
+- ❌ Verify watchOS app launches without crashes
+- ❌ Add debug logging to CoreDataManager initialization on watchOS
+- ❌ Verify CoreData container initializes on watchOS (check console logs)
+
+## Phase 68.9: Data Access Verification (Apple App Groups Testing)
+**Why**: Verify both apps can access shared Core Data store
+- ❌ Launch iOS app and create a test list with items
+- ❌ Verify data saved to App Groups container
+  - Check: ~/Library/Developer/CoreSimulator/.../Shared AppGroup Containers/
+- ❌ Launch watchOS app (basic ContentView)
+- ❌ Add temporary code to read lists from CoreDataManager.shared
+- ❌ Verify watchOS can read lists created by iOS app
+- ❌ Document container location in learnings.md
+- ❌ Remove temporary debug code
+
+## Phase 68.10: CloudKit Sync Testing (Apple CloudKit Best Practices)
+**Why**: Verify CloudKit works on watchOS before building UI
+- ❌ Verify CloudKit account status from watchOS
+  - Use CloudKitService.checkAccountStatus()
+  - Should return .available if iCloud signed in
+- ❌ Test CloudKit sync from iOS → watchOS
+  - Create/modify list on iOS
+  - Wait for CloudKit sync (~5 seconds)
+  - Verify change appears in watchOS Core Data
+- ❌ Test CloudKit sync from watchOS → iOS
+  - Add test code to modify data on watchOS
+  - Verify change syncs to iOS
+- ❌ Document any sync delays or issues in learnings.md
+- ❌ Test offline scenario (airplane mode)
+
+## Phase 68.11: Documentation & Cleanup (Apple Documentation Standards)
+- ❌ Update docs/architecture.md with watchOS target information
+- ❌ Document shared files vs platform-specific files
+- ❌ Create architecture diagram showing iOS ↔ CloudKit ↔ watchOS
+- ❌ Document App Groups configuration in architecture.md
+- ❌ Update ai_changelog.md with Phase 68 completion details
+- ❌ Document any issues encountered in learnings.md
+- ❌ Create summary of testing results
+- ❌ Remove any temporary debug code
+
+### Success Criteria (Apple Quality Standards)
+✅ **Build Success**: Both iOS and watchOS targets build cleanly (0 errors, 0 warnings)
+✅ **Test Success**: iOS tests pass 100% (no regressions)
+✅ **Launch Success**: watchOS app launches without crashes
+✅ **Data Sharing**: Both apps can access same Core Data store via App Groups
+✅ **CloudKit Sync**: Data syncs between iOS and watchOS via CloudKit
+✅ **No Data Loss**: No data corruption or loss during App Groups migration
+✅ **Documentation**: Architecture and learnings documented
+
+### Apple Resources Referenced
+- 📚 watchOS App Programming Guide
+- 📚 App Groups Entitlement Documentation
+- 📚 NSPersistentCloudKitContainer Documentation
+- 📚 Core Data Multi-Target Setup
+- 📚 CloudKit Quick Start Guide
+
+### Known Limitations (Document These)
+- watchOS app has placeholder UI (ContentView) - Phase 69 will add real UI
+- No item creation on watchOS yet - Phase 74 (advanced features)
+- No complications yet - Phase 74 (advanced features)
+- Images not displayed on watchOS - by design (small screen)
+
+### Rollback Plan (Apple Safety Best Practice)
+If Phase 68 fails critically:
+1. `git checkout main` - return to stable branch
+2. Delete watchOS target if needed
+3. Revert App Groups changes to CoreDataManager if iOS breaks
+4. Document issues in learnings.md for future attempts
 
 ## Phase 69: watchOS UI - Lists View
 **Goal**: Implement main lists view for watchOS
