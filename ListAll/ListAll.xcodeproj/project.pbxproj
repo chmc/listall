@@ -69,9 +69,20 @@
 		F1E5F97C2E78695B0007B178 /* ListAll.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListAll.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1E5F9892E78695F0007B178 /* ListAllTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ListAllTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1E5F9932E78695F0007B178 /* ListAllUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ListAllUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F1E5F9A02E78696A0007B178 /* ListAll.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ListAll.entitlements; sourceTree = "<group>"; };
-		451D22732EA540A10007B178 /* ListAllWatch Watch App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ListAllWatch Watch App.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		451B4B8A2EA65E29006B59E1 /* Exceptions for "ListAll" folder in "ListAllWatch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/Item.swift,
+				Models/ItemImage.swift,
+				Models/List.swift,
+				Models/UserData.swift,
+			);
+			target = 451D224E2EA54063004688D4 /* ListAllWatch Watch App */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		451D22502EA54063004688D4 /* ListAllWatch Watch App */ = {
@@ -91,6 +102,9 @@
 		};
 		F1E5F97E2E78695B0007B178 /* ListAll */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				451B4B8A2EA65E29006B59E1 /* Exceptions for "ListAll" folder in "ListAllWatch Watch App" target */,
+			);
 			path = ListAll;
 			sourceTree = "<group>";
 		};

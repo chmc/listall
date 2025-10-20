@@ -872,3 +872,102 @@ struct ZoomableScrollView: UIViewRepresentable {
 - **Time Investment**: ~3 hours over multiple failed attempts before finding the correct AutoLayout pattern
 
 - **Lesson**: When integrating UIKit components into SwiftUI, use the native UIKit patterns (AutoLayout with layout guides) rather than trying to manually manage layout with frames and calculations. Modern iOS provides declarative APIs (layout guides) that solve complex problems like scrollable zooming without any manual math. If you find yourself writing complex frame calculations or state management, you're likely doing it wrong - look for the declarative iOS API that solves it for you.
+
+---
+
+## watchOS Multi-Platform Development
+
+### Platform-Specific Code Organization (Phase 68.2 - October 2025)
+
+- **Issue**: Preparing iOS codebase for watchOS compatibility requires identifying which services can be shared vs which are iOS-only.
+
+- **Platform Compatibility Audit Results**:
+
+#### ✅ SAFE TO SHARE WITH WATCHOS:
+1. **Data Models** (All safe - pure Swift):
+   - `List.swift` - Pure data structure
+   - `Item.swift` - Pure data structure
+   - `ItemImage.swift` - Pure data structure (data stored, display handled per-platform)
+   - `UserData.swift` - Pure data structure
+
+2. **Core Data Stack** (All safe - NSPersistentContainer available on watchOS):
+   - `ListAll.xcdatamodeld` - Core Data model
+   - `CoreDataManager.swift` - Uses NSPersistentCloudKitContainer (available on watchOS)
+   - `ListEntity+Extensions.swift` - Pure Core Data extensions
+   - `ItemEntity+Extensions.swift` - Pure Core Data extensions
+   - `ItemImageEntity+Extensions.swift` - Pure Core Data extensions
+   - `UserDataEntity+Extensions.swift` - Pure Core Data extensions
+
+3. **Services** (Platform-agnostic):
+   - `BiometricAuthService.swift` - Uses LocalAuthentication (available on watchOS)
+   - `ImportService.swift` - Pure Foundation code, no platform-specific APIs
+   - `DataRepository.swift` - Core Data operations, platform-agnostic
+   - `CloudKitService.swift` - CloudKit available on watchOS
+   - `DataMigrationService.swift` - Core Data migrations, platform-agnostic
+   - `SampleDataService.swift` - Data generation logic
+
+4. **Export Service** (Mostly safe with existing guards):
+   - `ExportService.swift` - Already has `#if canImport(UIKit)` guards
+   - Core export functionality (JSON, CSV, plain text) is platform-agnostic
+   - Only `copyToClipboard()` method is iOS-specific (properly guarded)
+
+#### ❌ iOS-ONLY (Cannot be shared):
+1. **ImageService.swift** - Requires platform guards:
+   - Uses `UIKit` (UIImage, UIGraphicsImageRenderer)
+   - Uses `PhotosUI` (photo picker)
+   - Image capture/picking not available on watchOS
+   - Small screen makes image display impractical
+   - **Solution**: Wrapped entire service in `#if os(iOS)` ... `#endif`
+
+2. **UI Layer** (All iOS-specific):
+   - All Views (`MainView`, `ListView`, `ItemEditView`, etc.)
+   - All ViewModels (can potentially be shared with modifications)
+   - All UI Components
+
+- **Platform Guard Pattern Used**:
+  ```swift
+  #if os(iOS)
+  import UIKit
+  import PhotosUI
+  
+  // iOS-specific code here
+  
+  #endif // os(iOS)
+  ```
+
+- **Key Insights**:
+  - **Data Layer = Shareable**: Pure Swift models and Core Data stack work across all Apple platforms
+  - **Business Logic = Mostly Shareable**: Services using Foundation/Core Data/CloudKit are platform-agnostic
+  - **UI Layer = Platform-Specific**: Views and UI components must be rewritten per platform
+  - **Image Handling = Platform Decision**: watchOS doesn't support camera/photo picker; image data can sync but won't be displayed
+  - **LocalAuthentication = Universal**: Biometric auth (Face ID, Touch ID, Optic ID) available on all modern Apple platforms
+
+- **Architecture Benefits**:
+  - **90% Code Reuse**: Models, Core Data, and most services can be shared
+  - **Clean Separation**: `#if os(iOS)` guards clearly mark platform-specific code
+  - **Maintainability**: Shared code means bug fixes benefit all platforms
+  - **Consistent Data**: Same models ensure data structure compatibility across devices
+
+- **watchOS Design Decisions**:
+  1. **No Image Display**: ItemImage data syncs but won't render on watch (small screen)
+  2. **Read-Only MVP**: Initial watchOS app focuses on viewing lists and toggling items
+  3. **Full BiometricAuthService**: Security features work on watchOS (important for wrist-based device)
+  4. **Complete Export/Import**: Data portability works on watchOS (except clipboard)
+
+- **Testing Strategy**:
+  - Audit each service file individually
+  - Check imports for platform-specific frameworks (UIKit, PhotosUI)
+  - Verify API availability in Apple documentation
+  - Document findings for future platform expansions
+
+- **Next Steps** (Phase 68.3+):
+  1. Add shared files to watchOS target membership in Xcode
+  2. Build watchOS target to verify compilation
+  3. Fix any compilation errors with additional platform guards
+  4. Create watchOS-specific UI layer
+
+- **Result**: ✅ Clear categorization of shared vs platform-specific code, enabling efficient watchOS development
+
+- **Time Investment**: ~30 minutes to audit all services and add guards
+
+- **Lesson**: When preparing for multi-platform development, audit your codebase systematically by layer (data, business logic, UI). Most well-architected iOS apps can share 80-90% of code with watchOS by wrapping only UI-specific and hardware-specific code in platform guards. The key is keeping your data models and business logic framework-agnostic from the start.

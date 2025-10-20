@@ -1,9 +1,12 @@
 import Foundation
+#if os(iOS)
 import UIKit
 import SwiftUI
 import PhotosUI
 
 // MARK: - Image Processing Service
+// Note: This service is iOS-only due to UIKit and PhotosUI dependencies
+// watchOS does not support image capture, picking, or complex image processing
 class ImageService: ObservableObject {
     
     // MARK: - Singleton
@@ -293,3 +296,4 @@ extension ImageService {
         return Image(uiImage: thumbnail)
     }
 }
+#endif // os(iOS)
