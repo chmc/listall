@@ -9,6 +9,8 @@ class CoreDataManager: ObservableObject {
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
+        // Note: Using NSPersistentContainer instead of NSPersistentCloudKitContainer
+        // CloudKit sync will be enabled when developer account is available
         let container = NSPersistentContainer(name: "ListAll")
         
         // Configure store description for migration
@@ -37,6 +39,11 @@ class CoreDataManager: ObservableObject {
         // Enable automatic migration
         storeDescription.shouldMigrateStoreAutomatically = true
         storeDescription.shouldInferMappingModelAutomatically = true
+        
+        // Note: CloudKit configuration commented out - requires paid developer account
+        // Uncomment when ready to enable CloudKit sync:
+        // let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
+        // storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
         
         container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
