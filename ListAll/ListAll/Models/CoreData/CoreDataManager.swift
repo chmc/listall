@@ -21,9 +21,17 @@ class CoreDataManager: ObservableObject {
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
             let storeURL = containerURL.appendingPathComponent("ListAll.sqlite")
             storeDescription.url = storeURL
-            print("Core Data: Using App Groups container at \(storeURL.path)")
+            #if os(watchOS)
+            print("✅ [watchOS] Core Data: Using App Groups container at \(storeURL.path)")
+            #else
+            print("✅ [iOS] Core Data: Using App Groups container at \(storeURL.path)")
+            #endif
         } else {
-            print("Core Data: Warning - App Groups container not available, using default location")
+            #if os(watchOS)
+            print("⚠️ [watchOS] Core Data: Warning - App Groups container not available, using default location")
+            #else
+            print("⚠️ [iOS] Core Data: Warning - App Groups container not available, using default location")
+            #endif
         }
         
         // Enable automatic migration
@@ -32,7 +40,11 @@ class CoreDataManager: ObservableObject {
         
         container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
-                print("Core Data error: \(error), \(error.userInfo)")
+                #if os(watchOS)
+                print("❌ [watchOS] Core Data error: \(error), \(error.userInfo)")
+                #else
+                print("❌ [iOS] Core Data error: \(error), \(error.userInfo)")
+                #endif
                 
                 // If migration fails, try to delete and recreate the store
                 if error.code == 134110 { // Migration error
@@ -62,6 +74,20 @@ class CoreDataManager: ObservableObject {
     
     private init() {
         // Initialize Core Data stack
+        #if os(watchOS)
+        print("🔵 [watchOS] CoreDataManager initializing...")
+        #else
+        print("🔵 [iOS] CoreDataManager initializing...")
+        #endif
+        
+        // Force load of persistent container
+        _ = persistentContainer
+        
+        #if os(watchOS)
+        print("🔵 [watchOS] CoreDataManager initialized successfully")
+        #else
+        print("🔵 [iOS] CoreDataManager initialized successfully")
+        #endif
     }
     
     // MARK: - Core Data Operations
