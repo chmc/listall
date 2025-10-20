@@ -1122,17 +1122,6 @@
 
 **Result**: All three essential services (DataRepository, CloudKitService, DataMigrationService) successfully shared with watchOS. Both iOS and watchOS targets build cleanly. All unit tests pass.
 
-## Phase 68.6: Configure watchOS Capabilities (Apple Requirements)
-**Why**: CloudKit and iCloud required for data synchronization
-- ❌ Add iCloud capability to watchOS target
-  - Signing & Capabilities → + Capability → iCloud
-- ❌ Enable CloudKit in watchOS iCloud capability
-  - Check "CloudKit" checkbox
-  - Select container: `iCloud.io.github.chmc.ListAll` (or your container)
-- ❌ Verify entitlements file created for watchOS target
-  - Should contain: com.apple.developer.icloud-services, com.apple.developer.icloud-container-identifiers
-- ❌ Ensure both iOS and watchOS use same CloudKit container identifier
-
 ## Phase 68.7: Configure Build Settings (Apple Standards)
 **Why**: Proper deployment targets and Swift versions
 - ❌ Set WATCHOS_DEPLOYMENT_TARGET = 9.0
@@ -1403,6 +1392,23 @@ If Phase 68 fails critically:
 - ❌ Write compelling watchOS feature descriptions
 - ❌ Test build and archive process
 - ❌ Submit to App Store Connect
+
+## Phase 68.6: Configure watchOS Capabilities (Apple Requirements) ⏸️ DEFERRED
+**Why**: CloudKit and iCloud required for data synchronization
+**Status**: DEFERRED - Requires paid Apple Developer account ($99/year)
+**Impact**: App works with local data only (no iCloud sync between devices)
+**When to Complete**: Before App Store submission or when testing multi-device sync
+
+- ⏸️ Add iCloud capability to watchOS target
+  - Signing & Capabilities → + Capability → iCloud
+- ⏸️ Enable CloudKit in watchOS iCloud capability
+  - Check "CloudKit" checkbox
+  - Select container: `iCloud.io.github.chmc.ListAll` (or your container)
+- ⏸️ Verify entitlements file created for watchOS target
+  - Should contain: com.apple.developer.icloud-services, com.apple.developer.icloud-container-identifiers
+- ⏸️ Ensure both iOS and watchOS use same CloudKit container identifier
+
+**Note**: CloudKitService code already handles missing entitlements gracefully - app continues to work with local Core Data storage via App Groups.
 
 ## watchOS Development - Testing Strategy
 **Testing Requirements:**
