@@ -3,9 +3,20 @@ import CoreData
 import CloudKit
 import Combine
 
+// MARK: - Notification Names
+// Note: Also defined in Constants.swift for iOS target
+// Duplicated here to support watchOS target without requiring Constants.swift
+extension Notification.Name {
+    static let coreDataRemoteChange = Notification.Name("CoreDataRemoteChange")
+}
+
 // MARK: - Core Data Manager
 class CoreDataManager: ObservableObject {
     static let shared = CoreDataManager()
+    
+    // Debouncing timer for remote changes
+    private var remoteChangeDebounceTimer: Timer?
+    private let remoteChangeDebounceInterval: TimeInterval = 0.5 // 500ms debounce
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
@@ -90,10 +101,84 @@ class CoreDataManager: ObservableObject {
         // Force load of persistent container
         _ = persistentContainer
         
+        // Setup remote change notification observer
+        setupRemoteChangeNotifications()
+        
         #if os(watchOS)
         print("🔵 [watchOS] CoreDataManager initialized successfully")
         #else
         print("🔵 [iOS] CoreDataManager initialized successfully")
+        #endif
+    }
+    
+    deinit {
+        // Clean up observers and timers
+        NotificationCenter.default.removeObserver(self)
+        remoteChangeDebounceTimer?.invalidate()
+    }
+    
+    // MARK: - Remote Change Notifications
+    
+    private func setupRemoteChangeNotifications() {
+        // Observe remote changes from other processes (e.g., watchOS app)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePersistentStoreRemoteChange(_:)),
+            name: .NSPersistentStoreRemoteChange,
+            object: persistentContainer.persistentStoreCoordinator
+        )
+        
+        #if os(watchOS)
+        print("✅ [watchOS] Remote change notifications enabled")
+        #else
+        print("✅ [iOS] Remote change notifications enabled")
+        #endif
+    }
+    
+    @objc private func handlePersistentStoreRemoteChange(_ notification: Notification) {
+        #if os(watchOS)
+        print("📡 [watchOS] Remote change detected from iOS app")
+        #else
+        print("📡 [iOS] Remote change detected from watchOS app")
+        #endif
+        
+        // Ensure we're on the main thread for UI safety
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handlePersistentStoreRemoteChange(notification)
+            }
+            return
+        }
+        
+        // Debounce rapid changes to prevent excessive reloads
+        remoteChangeDebounceTimer?.invalidate()
+        remoteChangeDebounceTimer = Timer.scheduledTimer(withTimeInterval: remoteChangeDebounceInterval, repeats: false) { [weak self] _ in
+            self?.processRemoteChange()
+        }
+    }
+    
+    private func processRemoteChange() {
+        #if os(watchOS)
+        print("🔄 [watchOS] Processing remote change - refreshing view context")
+        #else
+        print("🔄 [iOS] Processing remote change - refreshing view context")
+        #endif
+        
+        // Refresh view context to pull in changes from other processes
+        viewContext.perform {
+            self.viewContext.refreshAllObjects()
+        }
+        
+        // Post notification for DataManager and ViewModels to reload their data
+        NotificationCenter.default.post(
+            name: .coreDataRemoteChange,
+            object: nil
+        )
+        
+        #if os(watchOS)
+        print("✅ [watchOS] Remote change processed successfully")
+        #else
+        print("✅ [iOS] Remote change processed successfully")
         #endif
     }
     
@@ -238,6 +323,31 @@ class DataManager: ObservableObject {
     private let coreDataManager = CoreDataManager.shared
     
     private init() {
+        loadData()
+        
+        // Listen for remote changes from other processes (iOS/watchOS)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRemoteChange(_:)),
+            name: .coreDataRemoteChange,
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Remote Change Handling
+    
+    @objc private func handleRemoteChange(_ notification: Notification) {
+        #if os(watchOS)
+        print("🔄 [watchOS] DataManager: Reloading data due to remote change from iOS")
+        #else
+        print("🔄 [iOS] DataManager: Reloading data due to remote change from watchOS")
+        #endif
+        
+        // Reload data from Core Data to reflect changes made by other process
         loadData()
     }
     
