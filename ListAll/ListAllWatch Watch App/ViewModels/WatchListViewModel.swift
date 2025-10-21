@@ -15,6 +15,7 @@ class WatchListViewModel: ObservableObject {
     @Published var items: [Item] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var currentFilter: ItemFilterOption = .all
     
     let list: List
     private let dataManager = DataManager.shared
@@ -26,6 +27,7 @@ class WatchListViewModel: ObservableObject {
     
     init(list: List) {
         self.list = list
+        restoreFilterPreference()
         setupDataListener()
         setupWatchConnectivityObserver()
         loadItems()
@@ -114,9 +116,10 @@ class WatchListViewModel: ObservableObject {
     
     // MARK: - Computed Properties
     
-    /// Returns items sorted by order number
+    /// Returns items sorted by order number, filtered by current filter
     var sortedItems: [Item] {
-        return items.sorted { $0.orderNumber < $1.orderNumber }
+        let sorted = items.sorted { $0.orderNumber < $1.orderNumber }
+        return applyFilter(to: sorted)
     }
     
     /// Returns active (non-completed) items
@@ -142,6 +145,54 @@ class WatchListViewModel: ObservableObject {
     /// Returns total item count
     var totalItemCount: Int {
         return items.count
+    }
+    
+    // MARK: - Filter Management
+    
+    /// Apply current filter to items
+    private func applyFilter(to items: [Item]) -> [Item] {
+        switch currentFilter {
+        case .all:
+            return items
+        case .active:
+            return items.filter { !$0.isCrossedOut }
+        case .completed:
+            return items.filter { $0.isCrossedOut }
+        case .hasDescription:
+            // Not commonly used on watchOS, but support it anyway
+            return items.filter { $0.hasDescription }
+        case .hasImages:
+            // Not commonly used on watchOS, but support it anyway
+            return items.filter { $0.hasImages }
+        }
+    }
+    
+    /// Change the current filter and persist preference
+    func setFilter(_ filter: ItemFilterOption) {
+        currentFilter = filter
+        saveFilterPreference()
+    }
+    
+    // MARK: - Filter Persistence
+    
+    /// UserDefaults key for filter preferences (keyed by list ID)
+    private var filterPreferenceKey: String {
+        return "watchListFilter_\(list.id.uuidString)"
+    }
+    
+    /// Save filter preference to UserDefaults
+    private func saveFilterPreference() {
+        UserDefaults.standard.set(currentFilter.rawValue, forKey: filterPreferenceKey)
+    }
+    
+    /// Restore filter preference from UserDefaults
+    private func restoreFilterPreference() {
+        if let savedFilterString = UserDefaults.standard.string(forKey: filterPreferenceKey),
+           let savedFilter = ItemFilterOption.allCases.first(where: { $0.rawValue == savedFilterString }) {
+            currentFilter = savedFilter
+        } else {
+            currentFilter = .all // Default to showing all items
+        }
     }
 }
 

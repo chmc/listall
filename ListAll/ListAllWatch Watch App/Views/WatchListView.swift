@@ -23,8 +23,8 @@ struct WatchListView: View {
             if viewModel.isLoading && viewModel.items.isEmpty {
                 // Show loading indicator on initial load
                 ProgressView("Loading...")
-            } else if viewModel.items.isEmpty {
-                // Show empty state
+            } else if viewModel.sortedItems.isEmpty {
+                // Show empty state (respects current filter)
                 emptyStateView
             } else {
                 // Show items
@@ -62,10 +62,23 @@ struct WatchListView: View {
     private var itemsContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // Item count summary at top
+                // Filter picker and item count summary at top
+                HStack {
+                    WatchFilterPicker(
+                        selectedFilter: $viewModel.currentFilter
+                    ) { newFilter in
+                        viewModel.setFilter(newFilter)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                
                 itemCountSummary
                     .padding(.horizontal)
-                    .padding(.vertical, 8)
+                    .padding(.bottom, 8)
                 
                 // Items list
                 ForEach(viewModel.sortedItems) { item in
@@ -131,19 +144,78 @@ struct WatchListView: View {
     // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(spacing: 12) {
-            Image(systemName: "list.bullet")
+            Image(systemName: emptyStateIcon)
                 .font(.system(size: 40))
                 .foregroundColor(.secondary)
             
-            Text("No Items")
+            Text(emptyStateTitle)
                 .font(.headline)
             
-            Text("Add items on your iPhone")
+            Text(emptyStateMessage)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding()
+    }
+    
+    // MARK: - Empty State Content
+    
+    private var emptyStateIcon: String {
+        if viewModel.items.isEmpty {
+            return "list.bullet"
+        }
+        
+        switch viewModel.currentFilter {
+        case .all:
+            return "list.bullet"
+        case .active:
+            return "circle"
+        case .completed:
+            return "checkmark.circle"
+        case .hasDescription:
+            return "text.alignleft"
+        case .hasImages:
+            return "photo"
+        }
+    }
+    
+    private var emptyStateTitle: String {
+        if viewModel.items.isEmpty {
+            return "No Items"
+        }
+        
+        switch viewModel.currentFilter {
+        case .all:
+            return "No Items"
+        case .active:
+            return "No Active Items"
+        case .completed:
+            return "No Completed Items"
+        case .hasDescription:
+            return "No Items with Description"
+        case .hasImages:
+            return "No Items with Images"
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        if viewModel.items.isEmpty {
+            return "Add items on your iPhone"
+        }
+        
+        switch viewModel.currentFilter {
+        case .all:
+            return "Add items on your iPhone"
+        case .active:
+            return "All items are completed"
+        case .completed:
+            return "No completed items yet"
+        case .hasDescription:
+            return "No items have descriptions"
+        case .hasImages:
+            return "No items have images"
+        }
     }
 }
 

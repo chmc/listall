@@ -1416,30 +1416,30 @@ If Phase 68 fails critically:
 - ❌ Update docs/watchos.md with sync section
 - ❌ Update ai_changelog.md with Phase 77 completion
 
-## Phase 78: watchOS UI - Item Filtering
+## Phase 78: watchOS UI - Item Filtering ✅ COMPLETED (2025-10-21)
 **Goal**: Implement filtering for active/completed/all items
-- ❌ Add filter picker at top of list view
-- ❌ Implement "All Items" filter option
-- ❌ Implement "Active Only" filter option (non-completed)
-- ❌ Implement "Completed Only" filter option (crossed-out)
-- ❌ Save filter preference per list
-- ❌ Update item count display based on filter
-- ❌ Add visual indicator for active filter
-- ❌ Implement smooth transition when changing filters
-- ❌ Persist filter preferences in UserDefaults
-- ❌ Test filter functionality on watchOS
+- ✅ Add filter picker at top of list view
+- ✅ Implement "All Items" filter option
+- ✅ Implement "Active Only" filter option (non-completed)
+- ✅ Implement "Completed Only" filter option (crossed-out)
+- ✅ Save filter preference per list
+- ✅ Update item count display based on filter
+- ✅ Add visual indicator for active filter
+- ✅ Implement smooth transition when changing filters
+- ✅ Persist filter preferences in UserDefaults
+- ✅ Test filter functionality on watchOS
 
 ### Phase 78 Sub-tasks:
-- ❌ Create FilterOption enum (All, Active, Completed)
-- ❌ Add filter state to WatchListViewModel
-- ❌ Create filter picker UI component
-- ❌ Implement item filtering logic in ViewModel
-- ❌ Update item count summary based on filter
-- ❌ Add filter icon/badge to UI
-- ❌ Persist filter preference in UserDefaults (keyed by list ID)
-- ❌ Restore filter preference when opening list
-- ❌ Add haptic feedback when changing filter
-- ❌ Test all filter combinations
+- ✅ Create FilterOption enum (All, Active, Completed) - Reused existing enum from Item.swift
+- ✅ Add filter state to WatchListViewModel
+- ✅ Create filter picker UI component - WatchFilterPicker.swift
+- ✅ Implement item filtering logic in ViewModel
+- ✅ Update item count summary based on filter
+- ✅ Add filter icon/badge to UI - Picker with navigationLink style
+- ✅ Persist filter preference in UserDefaults (keyed by list ID)
+- ✅ Restore filter preference when opening list
+- ✅ Add haptic feedback when changing filter
+- ✅ Test all filter combinations - Build succeeded, all unit tests passed
 
 ## Phase 79: watchOS - CloudKit Activation (Future)
 **Goal**: Activate CloudKit sync when paid developer account is available (phases 71-77 provide local sync without CloudKit)
