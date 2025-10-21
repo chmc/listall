@@ -33,6 +33,12 @@ class CoreDataManager: ObservableObject {
         let appGroupID = "group.io.github.chmc.ListAll"
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
             let storeURL = containerURL.appendingPathComponent("ListAll.sqlite")
+            
+            // Migrate from old location if needed (iOS only - first time after App Groups was added)
+            #if os(iOS)
+            migrateToAppGroupsIfNeeded(newStoreURL: storeURL)
+            #endif
+            
             storeDescription.url = storeURL
             #if os(watchOS)
             print("✅ [watchOS] Core Data: Using App Groups container at \(storeURL.path)")
@@ -219,6 +225,74 @@ class CoreDataManager: ObservableObject {
     }
     
     // MARK: - Data Migration
+    
+    /// Migrates Core Data store from old location (app's Documents) to App Groups shared container
+    /// This is only needed once when upgrading from pre-App Groups version
+    private func migrateToAppGroupsIfNeeded(newStoreURL: URL) {
+        let fileManager = FileManager.default
+        
+        // Check if App Groups store already exists
+        if fileManager.fileExists(atPath: newStoreURL.path) {
+            print("✅ [iOS] App Groups store already exists, no migration needed")
+            return
+        }
+        
+        // Check for old store in app's Documents directory
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("ℹ️ [iOS] No Documents directory found")
+            return
+        }
+        
+        let oldStoreURL = documentsURL.appendingPathComponent("ListAll.sqlite")
+        
+        // If old store doesn't exist, nothing to migrate
+        guard fileManager.fileExists(atPath: oldStoreURL.path) else {
+            print("ℹ️ [iOS] No old store found at \(oldStoreURL.path), no migration needed")
+            return
+        }
+        
+        print("🔄 [iOS] Found old Core Data store, migrating to App Groups...")
+        
+        do {
+            // Create App Groups directory if it doesn't exist
+            let appGroupsDirectory = newStoreURL.deletingLastPathComponent()
+            if !fileManager.fileExists(atPath: appGroupsDirectory.path) {
+                try fileManager.createDirectory(at: appGroupsDirectory, withIntermediateDirectories: true, attributes: nil)
+            }
+            
+            // Copy the main database file
+            try fileManager.copyItem(at: oldStoreURL, to: newStoreURL)
+            print("✅ [iOS] Copied main database file")
+            
+            // Copy associated files (WAL and SHM) if they exist
+            let walOldURL = documentsURL.appendingPathComponent("ListAll.sqlite-wal")
+            let walNewURL = newStoreURL.deletingLastPathComponent().appendingPathComponent("ListAll.sqlite-wal")
+            if fileManager.fileExists(atPath: walOldURL.path) {
+                try? fileManager.copyItem(at: walOldURL, to: walNewURL)
+                print("✅ [iOS] Copied WAL file")
+            }
+            
+            let shmOldURL = documentsURL.appendingPathComponent("ListAll.sqlite-shm")
+            let shmNewURL = newStoreURL.deletingLastPathComponent().appendingPathComponent("ListAll.sqlite-shm")
+            if fileManager.fileExists(atPath: shmOldURL.path) {
+                try? fileManager.copyItem(at: shmOldURL, to: shmNewURL)
+                print("✅ [iOS] Copied SHM file")
+            }
+            
+            print("✅ [iOS] Successfully migrated Core Data to App Groups!")
+            print("📁 [iOS] New location: \(newStoreURL.path)")
+            
+            // Delete old store files to prevent confusion
+            try? fileManager.removeItem(at: oldStoreURL)
+            try? fileManager.removeItem(at: walOldURL)
+            try? fileManager.removeItem(at: shmOldURL)
+            print("🗑️ [iOS] Deleted old store files")
+            
+        } catch {
+            print("❌ [iOS] Failed to migrate store to App Groups: \(error)")
+            print("⚠️ [iOS] Will use empty App Groups store - please export and reimport your data")
+        }
+    }
     
     private func deleteAndRecreateStore(container: NSPersistentContainer, storeDescription: NSPersistentStoreDescription) {
         guard let storeURL = storeDescription.url else {
