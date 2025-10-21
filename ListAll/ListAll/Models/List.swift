@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - List Model
-struct List: Identifiable, Codable, Equatable {
+struct List: Identifiable, Codable, Equatable, Hashable {
     var id: UUID
     var name: String
     var orderNumber: Int

@@ -70,7 +70,7 @@ enum SortDirection: String, CaseIterable, Identifiable, Codable {
 }
 
 // MARK: - Item Model
-struct Item: Identifiable, Codable, Equatable {
+struct Item: Identifiable, Codable, Equatable, Hashable {
     var id: UUID
     var title: String
     var itemDescription: String?
