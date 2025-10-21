@@ -5,17 +5,41 @@ import Combine
 class DataRepository: ObservableObject {
     private let coreDataManager = CoreDataManager.shared
     private let dataManager = DataManager.shared
+    private let watchConnectivityService = WatchConnectivityService.shared
+    
+    // MARK: - Initialization
+    
+    init() {
+        // Observe incoming sync notifications from paired device
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSyncRequest),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
     
     // MARK: - List Operations
     
     func createList(name: String) -> List {
         let newList = List(name: name)
         dataManager.addList(newList)
+        
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
+        
         return newList
     }
     
     func deleteList(_ list: List) {
         dataManager.deleteList(withId: list.id)
+        
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
     }
     
     func updateList(_ list: List, name: String) {
@@ -23,6 +47,9 @@ class DataRepository: ObservableObject {
         updatedList.name = name
         updatedList.updateModifiedDate()
         dataManager.updateList(updatedList)
+        
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
     }
     
     func getAllLists() -> [List] {
@@ -46,7 +73,8 @@ class DataRepository: ObservableObject {
         newItem.listId = list.id
         dataManager.addItem(newItem, to: list.id)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
         
         return newItem
     }
@@ -55,13 +83,17 @@ class DataRepository: ObservableObject {
     /// This is used when user selects a suggestion without making changes
     func addExistingItemToList(_ item: Item, listId: UUID) {
         dataManager.addItem(item, to: listId)
+        
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
     }
     
     func deleteItem(_ item: Item) {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)
             
-            // Notification is now sent from DataManager after loadData() completes
+            // Notify paired device of data change
+            watchConnectivityService.sendSyncNotification()
         }
     }
     
@@ -73,14 +105,16 @@ class DataRepository: ObservableObject {
         updatedItem.updateModifiedDate()
         dataManager.updateItem(updatedItem)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
     }
     
     /// Updates an item with all its properties including images
     func updateItem(_ item: Item) {
         dataManager.updateItem(item)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
     }
     
     func toggleItemCrossedOut(_ item: Item) {
@@ -88,7 +122,8 @@ class DataRepository: ObservableObject {
         updatedItem.toggleCrossedOut()
         dataManager.updateItem(updatedItem)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Notify paired device of data change
+        watchConnectivityService.sendSyncNotification()
     }
     
     func getItems(for list: List) -> [Item] {
@@ -413,5 +448,14 @@ class DataRepository: ObservableObject {
     /// Updates a fully-configured item (for import operations)
     func updateItemForImport(_ item: Item) {
         dataManager.updateItem(item)
+    }
+    
+    // MARK: - Sync Operations
+    
+    /// Handles incoming sync requests from paired device
+    /// This is called when the other device makes data changes and notifies us to reload
+    @objc private func handleSyncRequest(_ notification: Notification) {
+        // Reload data from Core Data to reflect changes made by paired device
+        reloadData()
     }
 }

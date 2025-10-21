@@ -88,6 +88,7 @@
 				Services/CloudKitService.swift,
 				Services/DataMigrationService.swift,
 				Services/DataRepository.swift,
+				Services/WatchConnectivityService.swift,
 				"Utils/Extensions/String+Extensions.swift",
 				Utils/Helpers/ValidationHelper.swift,
 			);
@@ -532,6 +533,7 @@
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ListAllWatch-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ListAllWatch;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = io.github.chmc.ListAll;
@@ -566,6 +568,7 @@
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ListAllWatch-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ListAllWatch;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = io.github.chmc.ListAll;

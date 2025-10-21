@@ -808,8 +808,25 @@ class TestDataRepository: DataRepository {
         return dataManager.lists
     }
     
+    override func createList(name: String) -> List {
+        let newList = List(name: name)
+        dataManager.addList(newList)
+        return newList
+    }
+    
+    override func updateList(_ list: List, name: String) {
+        var updatedList = list
+        updatedList.name = name
+        updatedList.updateModifiedDate()
+        dataManager.updateList(updatedList)
+    }
+    
     override func deleteList(_ list: List) {
         dataManager.deleteList(withId: list.id)
+    }
+    
+    override func getList(by id: UUID) -> List? {
+        return dataManager.lists.first { $0.id == id }
     }
     
     override func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {

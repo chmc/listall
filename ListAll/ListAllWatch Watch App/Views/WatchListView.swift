@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if os(watchOS)
+import WatchKit
+#endif
 
 /// Detail view showing items in a list on watchOS
 struct WatchListView: View {
@@ -45,7 +48,9 @@ struct WatchListView: View {
                 ForEach(viewModel.sortedItems) { item in
                     WatchItemRowView(item: item) {
                         // Toggle item completion with haptic feedback
+                        #if os(watchOS)
                         WKInterfaceDevice.current().play(.click)
+                        #endif
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.toggleItemCompletion(item)
                         }
