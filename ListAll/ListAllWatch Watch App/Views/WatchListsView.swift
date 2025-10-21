@@ -41,13 +41,7 @@ struct WatchListsView: View {
             }
         }
         .navigationDestination(for: List.self) { list in
-            // TODO: Will be implemented in Phase 70
-            Text("List Detail View\nComing in Phase 70")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .navigationTitle(list.name)
-                .navigationBarTitleDisplayMode(.inline)
+            WatchListView(list: list)
         }
         .refreshable {
             await viewModel.refresh()
