@@ -424,6 +424,9 @@ class TestListViewModel: ObservableObject {
     @Published var isInSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
     
+    // Watch sync properties
+    @Published var isSyncingFromWatch = false
+    
     private let dataManager: TestDataManager
     private let dataRepository: TestDataRepository
     private let list: List
@@ -436,11 +439,43 @@ class TestListViewModel: ObservableObject {
         self.dataManager = dataManager
         self.dataRepository = TestDataRepository(dataManager: dataManager)
         loadItems()
+        setupWatchConnectivityObserver()
     }
     
     deinit {
         undoTimer?.invalidate()
         deleteUndoTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Watch Connectivity Integration
+    
+    private func setupWatchConnectivityObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWatchSyncNotification(_:)),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleWatchSyncNotification(_ notification: Notification) {
+        refreshItemsFromWatch()
+    }
+    
+    func refreshItemsFromWatch() {
+        // Show sync indicator briefly
+        isSyncingFromWatch = true
+        
+        // Reload items from DataManager (which already has the updated data from Core Data)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.loadItems()
+            
+            // Hide sync indicator after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isSyncingFromWatch = false
+            }
+        }
     }
     
     func loadItems() {
@@ -1028,6 +1063,9 @@ class TestMainViewModel: ObservableObject {
     @Published var recentlyArchivedList: List?
     @Published var showArchivedNotification = false
     
+    // Watch sync properties
+    @Published var isSyncingFromWatch = false
+    
     private let dataManager: TestDataManager
     private var archiveNotificationTimer: Timer?
     private let archiveNotificationTimeout: TimeInterval = 5.0
@@ -1035,10 +1073,42 @@ class TestMainViewModel: ObservableObject {
     init(dataManager: TestDataManager) {
         self.dataManager = dataManager
         loadLists()
+        setupWatchConnectivityObserver()
     }
     
     deinit {
         archiveNotificationTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Watch Connectivity Integration
+    
+    private func setupWatchConnectivityObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWatchSyncNotification(_:)),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleWatchSyncNotification(_ notification: Notification) {
+        refreshFromWatch()
+    }
+    
+    func refreshFromWatch() {
+        // Show sync indicator briefly
+        isSyncingFromWatch = true
+        
+        // Reload lists from DataManager (which already has the updated data from Core Data)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.loadLists()
+            
+            // Hide sync indicator after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isSyncingFromWatch = false
+            }
+        }
     }
     
     private func loadLists() {

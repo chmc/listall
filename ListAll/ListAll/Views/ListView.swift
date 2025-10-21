@@ -58,6 +58,19 @@ struct ListView: View {
                     Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
+                    
+                    // Watch sync indicator (subtle)
+                    if viewModel.isSyncingFromWatch {
+                        HStack(spacing: 4) {
+                            Image(systemName: "applewatch")
+                                .font(.system(size: 10))
+                            Text("syncing...")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.secondary)
+                        .transition(.opacity)
+                    }
+                    
                     Spacer()
                 }
                 .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.md, bottom: Theme.Spacing.sm, trailing: Theme.Spacing.md))

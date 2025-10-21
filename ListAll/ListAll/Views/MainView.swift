@@ -36,6 +36,20 @@ struct MainView: View {
                                 .padding(.bottom, 12)
                         }
                         
+                        // Watch Sync Indicator (subtle)
+                        if viewModel.isSyncingFromWatch {
+                            HStack(spacing: 6) {
+                                Image(systemName: "applewatch")
+                                    .font(.system(size: 12))
+                                Text("Syncing with Watch...")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                            .padding(.vertical, 4)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                        
                         // Main Content
                         if viewModel.isLoading {
                             ProgressView("Loading lists...")

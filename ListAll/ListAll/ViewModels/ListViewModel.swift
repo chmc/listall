@@ -30,6 +30,9 @@ class ListViewModel: ObservableObject {
     @Published var isInSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
     
+    // Watch sync properties
+    @Published var isSyncingFromWatch = false
+    
     private let dataManager = DataManager.shared // Changed from coreDataManager
     private let dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
@@ -44,6 +47,46 @@ class ListViewModel: ObservableObject {
         // self.viewContext = coreDataManager.container.viewContext // Removed CoreData initialization
         loadUserPreferences()
         loadItems()
+        setupWatchConnectivityObserver()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        undoTimer?.invalidate()
+        deleteUndoTimer?.invalidate()
+    }
+    
+    // MARK: - Watch Connectivity Integration
+    
+    private func setupWatchConnectivityObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWatchSyncNotification(_:)),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleWatchSyncNotification(_ notification: Notification) {
+        #if os(iOS)
+        print("🔄 [iOS] ListViewModel: Received sync notification from Watch")
+        #endif
+        refreshItemsFromWatch()
+    }
+    
+    func refreshItemsFromWatch() {
+        // Show sync indicator briefly
+        isSyncingFromWatch = true
+        
+        // Reload items from DataManager (which already has the updated data from Core Data)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.loadItems()
+            
+            // Hide sync indicator after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isSyncingFromWatch = false
+            }
+        }
     }
     
     func loadItems() {
@@ -153,11 +196,6 @@ class ListViewModel: ObservableObject {
         undoTimer = nil
         showUndoButton = false
         recentlyCompletedItem = nil
-    }
-    
-    deinit {
-        undoTimer?.invalidate()
-        deleteUndoTimer?.invalidate()
     }
     
     // MARK: - Undo Delete Functionality

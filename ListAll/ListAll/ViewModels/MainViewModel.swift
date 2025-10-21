@@ -34,8 +34,50 @@ class MainViewModel: ObservableObject {
     private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
     private let hapticManager = HapticManager.shared
     
+    // Watch sync properties
+    @Published var isSyncingFromWatch = false
+    
     init() {
         loadLists()
+        setupWatchConnectivityObserver()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        archiveNotificationTimer?.invalidate()
+    }
+    
+    // MARK: - Watch Connectivity Integration
+    
+    private func setupWatchConnectivityObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWatchSyncNotification(_:)),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleWatchSyncNotification(_ notification: Notification) {
+        #if os(iOS)
+        print("🔄 [iOS] MainViewModel: Received sync notification from Watch")
+        #endif
+        refreshFromWatch()
+    }
+    
+    func refreshFromWatch() {
+        // Show sync indicator briefly
+        isSyncingFromWatch = true
+        
+        // Reload lists from DataManager (which already has the updated data from Core Data)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.loadLists()
+            
+            // Hide sync indicator after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isSyncingFromWatch = false
+            }
+        }
     }
     
     var displayedLists: [List] {
@@ -141,10 +183,6 @@ class MainViewModel: ObservableObject {
         archiveNotificationTimer = nil
         showArchivedNotification = false
         recentlyArchivedList = nil
-    }
-    
-    deinit {
-        archiveNotificationTimer?.invalidate()
     }
     
     func addList(name: String) throws -> List {
