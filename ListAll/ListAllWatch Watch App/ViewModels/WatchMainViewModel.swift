@@ -19,9 +19,17 @@ class WatchMainViewModel: ObservableObject {
     private let dataManager = DataManager.shared
     private var cancellables = Set<AnyCancellable>()
     
+    // Watch sync properties
+    @Published var isSyncingFromiOS = false
+    
     init() {
         setupDataListener()
+        setupWatchConnectivityObserver()
         loadLists()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     /// Setup listener for data changes from Core Data
@@ -33,6 +41,39 @@ class WatchMainViewModel: ObservableObject {
                 self?.loadLists()
             }
             .store(in: &cancellables)
+    }
+    
+    // MARK: - Watch Connectivity Integration
+    
+    private func setupWatchConnectivityObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleiOSSyncNotification(_:)),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleiOSSyncNotification(_ notification: Notification) {
+        #if os(watchOS)
+        print("🔄 [watchOS] WatchMainViewModel: Received sync notification from iOS")
+        #endif
+        refreshFromiOS()
+    }
+    
+    func refreshFromiOS() {
+        // Show sync indicator briefly
+        isSyncingFromiOS = true
+        
+        // Reload lists from DataManager (which already has the updated data from Core Data)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.loadLists()
+            
+            // Hide sync indicator after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isSyncingFromiOS = false
+            }
+        }
     }
     
     /// Load all active (non-archived) lists

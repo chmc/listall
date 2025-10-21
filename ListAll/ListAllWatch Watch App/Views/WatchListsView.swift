@@ -27,7 +27,30 @@ struct WatchListsView: View {
             }
             .navigationTitle("Lists")
             .navigationBarTitleDisplayMode(.inline)
+            .overlay(alignment: .bottom) {
+                if viewModel.isSyncingFromiOS {
+                    syncIndicator
+                }
+            }
         }
+    }
+    
+    // MARK: - Sync Indicator
+    private var syncIndicator: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .scaleEffect(0.7)
+            Text("Syncing...")
+                .font(.caption2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.blue.opacity(0.9))
+        .foregroundColor(.white)
+        .cornerRadius(20)
+        .padding(.bottom, 8)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.spring(), value: viewModel.isSyncingFromiOS)
     }
     
     // MARK: - Lists Content
