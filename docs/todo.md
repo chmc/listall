@@ -1318,7 +1318,104 @@ If Phase 68 fails critically:
 - ✅ Implement smooth animations for state changes
 - ✅ Test item completion sync with iOS app
 
-## Phase 71: watchOS UI - Item Filtering
+## Phase 71: WatchConnectivityService Foundation
+**Goal**: Create WatchConnectivity service for direct iPhone↔Watch communication (works without paid developer account)
+- ❌ Create WatchConnectivityService.swift in ListAll/Services/ [SHARED with watchOS]
+- ❌ Import WatchConnectivity framework
+- ❌ Create WCSessionDelegate conformance
+- ❌ Implement session activation (activationDidCompleteWith method)
+- ❌ Implement session reachability tracking
+- ❌ Add sendSyncNotification() method to send messages to paired device
+- ❌ Implement didReceiveMessage delegate method for incoming messages
+- ❌ Add platform detection (#if os(iOS) vs #if os(watchOS))
+- ❌ Add error handling for session failures
+- ❌ Add logging for debugging sync issues
+- ❌ Share WatchConnectivityService.swift with watchOS target membership
+- ❌ Build validation for both iOS and watchOS targets
+- ❌ Write 5 unit tests for WatchConnectivityService
+- ❌ Update ai_changelog.md with Phase 71 completion
+
+## Phase 72: DataRepository Sync Integration
+**Goal**: Integrate WatchConnectivity into DataRepository to trigger sync on data changes
+- ❌ Add WatchConnectivityService property to DataRepository
+- ❌ Initialize WatchConnectivityService in DataRepository.init()
+- ❌ Update addList() to send sync notification after save
+- ❌ Update updateList() to send sync notification after save
+- ❌ Update deleteList() to send sync notification after save
+- ❌ Update addItem() to send sync notification after save
+- ❌ Update updateItem() to send sync notification after save
+- ❌ Update deleteItem() to send sync notification after save
+- ❌ Add handleSyncRequest() method to reload data when notified
+- ❌ Build validation for both iOS and watchOS targets
+- ❌ Write 3 unit tests for sync integration
+- ❌ Update ai_changelog.md with Phase 72 completion
+
+## Phase 73: CoreData Remote Change Notifications
+**Goal**: Add observers for Core Data changes from other processes (iOS/watchOS)
+- ❌ Add NSPersistentStoreRemoteChangeNotification observer in CoreDataManager
+- ❌ Create handleRemoteChange() method in CoreDataManager
+- ❌ Post custom notification when remote changes detected
+- ❌ Add thread safety checks (main queue vs background context)
+- ❌ Update DataManager to listen for remote change notifications
+- ❌ Implement automatic data reload on remote change
+- ❌ Add debouncing to prevent excessive reloads
+- ❌ Build validation for both iOS and watchOS targets
+- ❌ Write 4 unit tests for remote change handling
+- ❌ Update ai_changelog.md with Phase 73 completion
+
+## Phase 74: iOS ViewModel Sync Integration
+**Goal**: Update iOS ViewModels to respond to sync notifications from watchOS
+- ❌ Add NotificationCenter observer in MainViewModel for WatchConnectivity sync
+- ❌ Implement refreshFromWatch() method in MainViewModel
+- ❌ Add NotificationCenter observer in ListViewModel for item changes
+- ❌ Implement refreshItemsFromWatch() method in ListViewModel
+- ❌ Add visual sync indicator (optional, subtle)
+- ❌ Test iOS app refreshes when watchOS makes changes
+- ❌ Build validation for iOS target
+- ❌ Write 3 unit tests for iOS sync behavior
+- ❌ Update ai_changelog.md with Phase 74 completion
+
+## Phase 75: watchOS ViewModel Sync Integration
+**Goal**: Update watchOS ViewModels to respond to sync notifications from iOS
+- ❌ Update WatchMainViewModel to listen for WatchConnectivity notifications
+- ❌ Implement refreshFromiOS() method in WatchMainViewModel
+- ❌ Update WatchListViewModel to listen for item change notifications
+- ❌ Implement refreshItemsFromiOS() method in WatchListViewModel
+- ❌ Add pull-to-refresh as manual sync fallback
+- ❌ Test watchOS app refreshes when iOS makes changes
+- ❌ Build validation for watchOS target
+- ❌ Write 3 unit tests for watchOS sync behavior
+- ❌ Update ai_changelog.md with Phase 75 completion
+
+## Phase 76: Sync Testing and Validation
+**Goal**: Comprehensive testing of bidirectional sync between iPhone and Watch
+- ❌ Test: Create list on iPhone → verify appears on Watch within 1 second
+- ❌ Test: Add item on iPhone → verify appears on Watch within 1 second
+- ❌ Test: Complete item on Watch → verify updates on iPhone within 1 second
+- ❌ Test: Delete list on Watch → verify removes on iPhone within 1 second
+- ❌ Test: Sync when devices paired and reachable
+- ❌ Test: Graceful fallback when Watch not reachable
+- ❌ Test: Rapid changes (10 items in 5 seconds) - no data loss
+- ❌ Test: Background app sync (iPhone backgrounded, Watch makes change)
+- ❌ Test: Large dataset sync (100+ items) - performance check
+- ❌ Test: Conflict scenario (both devices offline, then reconnect)
+- ❌ Build validation for both targets
+- ❌ Run all unit tests (must maintain 100% pass rate)
+- ❌ Update ai_changelog.md with test results
+
+## Phase 77: Sync Documentation
+**Goal**: Document the WatchConnectivity sync architecture and troubleshooting
+- ❌ Update docs/architecture.md with sync flow diagrams
+- ❌ Document WatchConnectivity + App Groups architecture
+- ❌ Document how this works with future CloudKit
+- ❌ Create troubleshooting guide in docs/learnings.md
+- ❌ Add "Sync not working" troubleshooting steps
+- ❌ Document sync timing expectations (< 1 second)
+- ❌ Document fallback behavior when not paired
+- ❌ Update docs/watchos.md with sync section
+- ❌ Update ai_changelog.md with Phase 77 completion
+
+## Phase 78: watchOS UI - Item Filtering
 **Goal**: Implement filtering for active/completed/all items
 - ❌ Add filter picker at top of list view
 - ❌ Implement "All Items" filter option
@@ -1331,7 +1428,7 @@ If Phase 68 fails critically:
 - ❌ Persist filter preferences in UserDefaults
 - ❌ Test filter functionality on watchOS
 
-### Phase 71 Sub-tasks:
+### Phase 78 Sub-tasks:
 - ❌ Create FilterOption enum (All, Active, Completed)
 - ❌ Add filter state to WatchListViewModel
 - ❌ Create filter picker UI component
@@ -1343,8 +1440,9 @@ If Phase 68 fails critically:
 - ❌ Add haptic feedback when changing filter
 - ❌ Test all filter combinations
 
-## Phase 72: watchOS - Data Synchronization
-**Goal**: Ensure robust data sync between iOS and watchOS
+## Phase 79: watchOS - CloudKit Activation (Future)
+**Goal**: Activate CloudKit sync when paid developer account is available (phases 71-77 provide local sync without CloudKit)
+- ❌ Note: This phase is for FUTURE CloudKit activation only - local sync via WatchConnectivity already works
 - ❌ Verify CloudKit sync works correctly on watchOS
 - ❌ Test real-time sync: changes on iOS appear on watchOS
 - ❌ Test real-time sync: changes on watchOS appear on iOS
@@ -1356,19 +1454,19 @@ If Phase 68 fails critically:
 - ❌ Test sync with multiple devices (iPhone + Watch)
 - ❌ Verify performance with large datasets
 
-### Phase 72 Sub-tasks:
+### Phase 79 Sub-tasks:
 - ❌ Configure CloudKit properly for watchOS target
 - ❌ Test NSPersistentCloudKitContainer on watchOS
 - ❌ Implement sync status view for watchOS
 - ❌ Add sync error alerts and retry mechanisms
 - ❌ Test sync latency and performance
 - ❌ Handle app backgrounding and foregrounding
-- ❌ Implement WatchConnectivity framework for direct communication (optional)
+- ❌ Note: WatchConnectivity already implemented in Phases 71-77
 - ❌ Test sync with airplane mode / offline scenarios
 - ❌ Test sync with poor network conditions
 - ❌ Document sync behavior and troubleshooting
 
-## Phase 73: watchOS - Polish and Testing
+## Phase 80: watchOS - Polish and Testing
 **Goal**: Polish watchOS app and ensure quality
 - ❌ Add watchOS app icon (various sizes)
 - ❌ Configure app name and display settings
@@ -1381,7 +1479,7 @@ If Phase 68 fails critically:
 - ❌ Test on all watchOS screen sizes (38mm-49mm)
 - ❌ Test on actual Apple Watch hardware
 
-### Phase 73 Sub-tasks:
+### Phase 80 Sub-tasks:
 - ❌ Create watchOS app icon set (all required sizes)
 - ❌ Add haptic feedback for key actions (toggle completion, filter change)
 - ❌ Implement loading spinners for data operations
@@ -1393,7 +1491,7 @@ If Phase 68 fails critically:
 - ❌ Create user testing plan for watchOS app
 - ❌ Document known limitations and future improvements
 
-## Phase 74: watchOS - Advanced Features (Optional)
+## Phase 81: watchOS - Advanced Features (Optional)
 **Goal**: Add advanced features if time permits
 - ❌ Add complications for watchOS (list counts, quick access)
 - ❌ Implement Siri shortcuts for common actions
@@ -1406,7 +1504,7 @@ If Phase 68 fails critically:
 - ❌ Implement undo/redo functionality
 - ❌ Add widgets for watch faces
 
-### Phase 74 Sub-tasks:
+### Phase 81 Sub-tasks:
 - ❌ Design and implement watch complications
 - ❌ Create Siri intent definitions
 - ❌ Implement voice input for item creation
@@ -1418,7 +1516,7 @@ If Phase 68 fails critically:
 - ❌ Document usage of advanced features
 - ❌ Create demo videos for App Store
 
-## Phase 75: watchOS - Documentation and Deployment
+## Phase 82: watchOS - Documentation and Deployment
 **Goal**: Document watchOS app and prepare for release
 - ❌ Create watchOS-specific documentation in docs/watchos.md
 - ❌ Document architecture decisions for watchOS
@@ -1431,7 +1529,7 @@ If Phase 68 fails critically:
 - ❌ Test watchOS app on TestFlight
 - ❌ Prepare for App Store submission (iOS + watchOS bundle)
 
-### Phase 75 Sub-tasks:
+### Phase 82 Sub-tasks:
 - ❌ Create docs/watchos.md with architecture overview
 - ❌ Document shared code strategy
 - ❌ Document CloudKit sync implementation
