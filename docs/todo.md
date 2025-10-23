@@ -851,6 +851,10 @@
 - Changes sync within 1-2 seconds with automatic conflict resolution
 **BUILD**: ✅ All builds succeeded, ✅ All tests passed (100%)
 
+## Fix: Complete item on watch does not sync to iOS when list is open in iOS
+- ❌ Specifically when iOS has list open, changes does not sync
+- ❌ I have to go to main screen and back to list to see changes
+
 ## 
 - ❌ 
 
