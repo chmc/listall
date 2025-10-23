@@ -1,20 +1,45 @@
 import Foundation
 import CoreData
+import Combine
 
 class DataRepository: ObservableObject {
     private let coreDataManager = CoreDataManager.shared
     private let dataManager = DataManager.shared
+    private let watchConnectivityService = WatchConnectivityService.shared
+    
+    // MARK: - Initialization
+    
+    init() {
+        // Observe incoming sync notifications from paired device
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSyncRequest),
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
     
     // MARK: - List Operations
     
     func createList(name: String) -> List {
         let newList = List(name: name)
         dataManager.addList(newList)
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
+        
         return newList
     }
     
     func deleteList(_ list: List) {
         dataManager.deleteList(withId: list.id)
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func updateList(_ list: List, name: String) {
@@ -22,6 +47,9 @@ class DataRepository: ObservableObject {
         updatedList.name = name
         updatedList.updateModifiedDate()
         dataManager.updateList(updatedList)
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func getAllLists() -> [List] {
@@ -39,13 +67,42 @@ class DataRepository: ObservableObject {
     // MARK: - Item Operations
     
     func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {
+        let normalizedDescription = description.isEmpty ? nil : description
+        
+        // Smart duplicate detection: Check if an item with same title AND metadata already exists
+        let existingItems = dataManager.getItems(forListId: list.id)
+        if let existingItem = existingItems.first(where: { item in
+            item.title == title &&
+            item.itemDescription == normalizedDescription &&
+            item.quantity == quantity
+        }) {
+            // Found item with exact same metadata
+            if existingItem.isCrossedOut {
+                // Uncross the existing item instead of creating duplicate
+                var uncrossedItem = existingItem
+                uncrossedItem.isCrossedOut = false
+                uncrossedItem.updateModifiedDate()
+                dataManager.updateItem(uncrossedItem)
+                
+                // Send updated data to paired device
+                watchConnectivityService.sendListsData(dataManager.lists)
+                
+                return uncrossedItem
+            } else {
+                // Item already exists and is not crossed out - just return it
+                return existingItem
+            }
+        }
+        
+        // No matching item found or metadata differs - create new item
         var newItem = Item(title: title)
-        newItem.itemDescription = description.isEmpty ? nil : description
+        newItem.itemDescription = normalizedDescription
         newItem.quantity = quantity
         newItem.listId = list.id
         dataManager.addItem(newItem, to: list.id)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
         
         return newItem
     }
@@ -53,14 +110,42 @@ class DataRepository: ObservableObject {
     /// Add an existing item from another list to the current list
     /// This is used when user selects a suggestion without making changes
     func addExistingItemToList(_ item: Item, listId: UUID) {
-        dataManager.addItem(item, to: listId)
+        // CRITICAL: Create a copy with new ID to avoid duplicate detection issues
+        // The item might exist in another list with the same ID, and ID-based
+        // duplicate detection would update the existing item instead of creating a new one
+        var newItem = item
+        newItem.id = UUID() // New ID for the copy
+        newItem.listId = listId
+        newItem.createdAt = Date()
+        newItem.modifiedAt = Date()
+        newItem.isCrossedOut = false // Always add suggested items as active (uncrossed)
+        
+        // Get the highest order number in destination list and add 1
+        let destinationItems = dataManager.getItems(forListId: listId)
+        let maxOrderNumber = destinationItems.map { $0.orderNumber }.max() ?? -1
+        newItem.orderNumber = maxOrderNumber + 1
+        
+        // Copy images with new IDs
+        newItem.images = item.images.map { image in
+            var newImage = image
+            newImage.id = UUID()
+            newImage.itemId = newItem.id
+            newImage.createdAt = Date()
+            return newImage
+        }
+        
+        dataManager.addItem(newItem, to: listId)
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func deleteItem(_ item: Item) {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)
             
-            // Notification is now sent from DataManager after loadData() completes
+            // Send updated data to paired device
+            watchConnectivityService.sendListsData(dataManager.lists)
         }
     }
     
@@ -72,14 +157,16 @@ class DataRepository: ObservableObject {
         updatedItem.updateModifiedDate()
         dataManager.updateItem(updatedItem)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     /// Updates an item with all its properties including images
     func updateItem(_ item: Item) {
         dataManager.updateItem(item)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func toggleItemCrossedOut(_ item: Item) {
@@ -87,7 +174,8 @@ class DataRepository: ObservableObject {
         updatedItem.toggleCrossedOut()
         dataManager.updateItem(updatedItem)
         
-        // Notification is now sent from DataManager after loadData() completes
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func getItems(for list: List) -> [Item] {
@@ -127,6 +215,9 @@ class DataRepository: ObservableObject {
             item.updateModifiedDate()
             dataManager.updateItem(item)
         }
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func reorderMultipleItems(in list: List, itemsToMove: [Item], to insertionIndex: Int) {
@@ -165,6 +256,9 @@ class DataRepository: ObservableObject {
             item.updateModifiedDate()
             dataManager.updateItem(item)
         }
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func updateItemOrderNumbers(for list: List, items: [Item]) {
@@ -173,6 +267,9 @@ class DataRepository: ObservableObject {
             item.updateModifiedDate()
             dataManager.updateItem(item)
         }
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func moveItem(_ item: Item, to destinationList: List) {
@@ -192,6 +289,9 @@ class DataRepository: ObservableObject {
         movedItem.orderNumber = maxOrderNumber + 1
         
         dataManager.addItem(movedItem, to: destinationList.id)
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     func copyItem(_ item: Item, to destinationList: List) {
@@ -217,6 +317,9 @@ class DataRepository: ObservableObject {
         }
         
         dataManager.addItem(copiedItem, to: destinationList.id)
+        
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
     }
     
     // MARK: - Image Operations
@@ -412,5 +515,14 @@ class DataRepository: ObservableObject {
     /// Updates a fully-configured item (for import operations)
     func updateItemForImport(_ item: Item) {
         dataManager.updateItem(item)
+    }
+    
+    // MARK: - Sync Operations
+    
+    /// Handles incoming sync requests from paired device
+    /// This is called when the other device makes data changes and notifies us to reload
+    @objc private func handleSyncRequest(_ notification: Notification) {
+        // Reload data from Core Data to reflect changes made by paired device
+        reloadData()
     }
 }

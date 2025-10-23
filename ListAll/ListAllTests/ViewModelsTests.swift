@@ -2380,4 +2380,98 @@ class ViewModelsTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredItems.count, 1)
         XCTAssertEqual(viewModel.filteredItems[0].title, "Item without description")
     }
+    
+    // MARK: - iOS WatchConnectivity Sync Tests (Phase 74)
+    
+    func testMainViewModel_WatchSyncNotification_RefreshesLists() throws {
+        // Given: MainViewModel with initial lists
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Initial List")
+        let initialCount = viewModel.lists.count
+        
+        // When: WatchConnectivitySyncReceived notification is posted
+        let expectation = XCTestExpectation(description: "Sync indicator should appear and disappear")
+        
+        // Initial sync indicator state should be false
+        XCTAssertFalse(viewModel.isSyncingFromWatch)
+        
+        // Post sync notification
+        NotificationCenter.default.post(
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+        
+        // Then: Sync indicator should be set to true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            XCTAssertTrue(viewModel.isSyncingFromWatch)
+            
+            // And: Sync indicator should disappear after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                XCTAssertFalse(viewModel.isSyncingFromWatch)
+                expectation.fulfill()
+            }
+        }
+        
+        wait(for: [expectation], timeout: 2.0)
+    }
+    
+    func testMainViewModel_RefreshFromWatch_ReloadsData() throws {
+        // Given: MainViewModel with initial data
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        
+        // When: refreshFromWatch is called
+        viewModel.refreshFromWatch()
+        
+        // Then: isSyncingFromWatch should be true initially
+        XCTAssertTrue(viewModel.isSyncingFromWatch)
+        
+        // And: Lists should be reloaded (we verify by checking count is maintained)
+        let expectation = XCTestExpectation(description: "Data should be reloaded")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            XCTAssertEqual(viewModel.lists.count, 1)
+            XCTAssertEqual(viewModel.lists.first?.name, "Test List")
+            expectation.fulfill()
+        }
+        
+        wait(for: [expectation], timeout: 1.0)
+    }
+    
+    func testListViewModel_WatchSyncNotification_RefreshesItems() throws {
+        // Given: ListViewModel with initial items
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+        let testList = viewModel.lists.first!
+        let listViewModel = TestHelpers.createTestListViewModel(with: testList)
+        listViewModel.createItem(title: "Initial Item", description: "", quantity: 1)
+        let initialCount = listViewModel.items.count
+        
+        // When: WatchConnectivitySyncReceived notification is posted
+        let expectation = XCTestExpectation(description: "Items should be refreshed")
+        
+        // Initial sync indicator state should be false
+        XCTAssertFalse(listViewModel.isSyncingFromWatch)
+        
+        // Post sync notification
+        NotificationCenter.default.post(
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+        
+        // Then: Sync indicator should be set to true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            XCTAssertTrue(listViewModel.isSyncingFromWatch)
+            
+            // And: Items should be maintained after refresh
+            XCTAssertEqual(listViewModel.items.count, initialCount)
+            
+            // And: Sync indicator should disappear after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                XCTAssertFalse(listViewModel.isSyncingFromWatch)
+                expectation.fulfill()
+            }
+        }
+        
+        wait(for: [expectation], timeout: 2.0)
+    }
 }

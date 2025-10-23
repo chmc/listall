@@ -1,5 +1,9 @@
 import Foundation
+#if os(iOS)
 import UIKit
+#elseif os(watchOS)
+import WatchKit
+#endif
 
 struct ValidationHelper {
     
@@ -72,9 +76,15 @@ struct ValidationHelper {
         }
         
         // Validate that it's actually image data
+        #if os(iOS)
         guard UIImage(data: imageData) != nil else {
             return .failure("Invalid image format")
         }
+        #elseif os(watchOS)
+        guard UIImage(data: imageData) != nil else {
+            return .failure("Invalid image format")
+        }
+        #endif
         
         return .success
     }

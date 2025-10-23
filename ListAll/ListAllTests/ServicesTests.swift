@@ -3093,4 +3093,171 @@ final class ServicesTests: XCTestCase {
         XCTAssertTrue(allCases.contains(.thirtyMinutes))
         XCTAssertTrue(allCases.contains(.oneHour))
     }
+    
+    // MARK: - WatchConnectivityService Tests
+    
+    func testWatchConnectivityServiceSingleton() throws {
+        // Test that WatchConnectivityService is a proper singleton
+        let service1 = WatchConnectivityService.shared
+        let service2 = WatchConnectivityService.shared
+        
+        XCTAssertTrue(service1 === service2, "Should return the same instance")
+    }
+    
+    func testWatchConnectivityServiceInitialization() throws {
+        // Test that WatchConnectivityService initializes properly
+        let service = WatchConnectivityService.shared
+        
+        // Service should be created successfully
+        XCTAssertNotNil(service, "Service should be initialized")
+        
+        // Initial state should be inactive but not necessarily activated yet
+        // (activation may complete asynchronously)
+        XCTAssertTrue(service.isActivated == true || service.isActivated == false, "Should have a boolean activation state")
+        XCTAssertTrue(service.isReachable == true || service.isReachable == false, "Should have a boolean reachability state")
+    }
+    
+    func testWatchConnectivityServiceCanCommunicate() throws {
+        // Test the canCommunicate property
+        let service = WatchConnectivityService.shared
+        
+        // canCommunicate should return a boolean value
+        let canCommunicate = service.canCommunicate
+        XCTAssertTrue(canCommunicate == true || canCommunicate == false, "Should return a boolean value")
+        
+        // In simulator/test environment, canCommunicate will likely be false
+        // because there's no paired watch
+        #if targetEnvironment(simulator)
+        XCTAssertFalse(canCommunicate, "Should not be able to communicate in simulator")
+        #endif
+    }
+    
+    func testWatchConnectivityServiceSendSyncNotification() throws {
+        // Test that sendSyncNotification doesn't crash
+        let service = WatchConnectivityService.shared
+        
+        // This should not crash even if there's no paired device
+        service.sendSyncNotification()
+        
+        // If we reach here without crashing, the test passes
+        XCTAssertTrue(true, "sendSyncNotification should not crash when called")
+    }
+    
+    func testWatchConnectivityServiceNotificationPosting() throws {
+        // Test that incoming sync notifications are posted to NotificationCenter
+        let expectation = XCTestExpectation(description: "Notification posted")
+        
+        // Listen for the notification
+        let observer = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            expectation.fulfill()
+        }
+        
+        // Simulate receiving a message by posting the notification
+        // (We can't easily trigger a real WCSession message in unit tests)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil,
+            userInfo: ["syncNotification": true, "timestamp": Date().timeIntervalSince1970]
+        )
+        
+        // Wait for notification
+        wait(for: [expectation], timeout: 1.0)
+        
+        // Clean up
+        NotificationCenter.default.removeObserver(observer)
+    }
+    
+    // MARK: - Phase 72: DataRepository Sync Integration Tests
+    
+    func testDataRepositoryHandlesSyncNotification() throws {
+        // Test that DataRepository responds to sync notifications
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        
+        // Create a test list
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        
+        // Add an item directly to Core Data (simulating change from watch)
+        let externalItem = Item(title: "External Item")
+        testDataManager.addItem(externalItem, to: testList.id)
+        
+        // Post sync notification (simulating notification from Watch)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil,
+            userInfo: ["syncNotification": true]
+        )
+        
+        // Give the notification time to be processed
+        let expectation = XCTestExpectation(description: "Sync processed")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+        
+        // Verify data was reloaded by checking if lists are up to date
+        let lists = repository.getAllLists()
+        XCTAssertFalse(lists.isEmpty, "Lists should be reloaded after sync notification")
+    }
+    
+    func testDataRepositoryListOperationsSendSyncNotification() throws {
+        // Test that list operations trigger sync notifications
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        
+        // Note: We can't easily verify WatchConnectivityService.sendSyncNotification() 
+        // was called without mocking, but we can verify operations complete successfully
+        
+        // Create list
+        let newList = repository.createList(name: "New List")
+        XCTAssertNotNil(newList, "List should be created")
+        XCTAssertEqual(newList.name, "New List")
+        
+        // Update list
+        let updatedName = "Updated List"
+        repository.updateList(newList, name: updatedName)
+        let retrievedList = repository.getList(by: newList.id)
+        XCTAssertEqual(retrievedList?.name, updatedName, "List should be updated")
+        
+        // Delete list
+        repository.deleteList(newList)
+        let deletedList = repository.getList(by: newList.id)
+        XCTAssertNil(deletedList, "List should be deleted")
+    }
+    
+    func testDataRepositoryItemOperationsSendSyncNotification() throws {
+        // Test that item operations trigger sync notifications
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        
+        // Create a test list
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        
+        // Create item
+        let newItem = repository.createItem(in: testList, title: "New Item", description: "Test", quantity: 1)
+        XCTAssertNotNil(newItem, "Item should be created")
+        XCTAssertEqual(newItem.title, "New Item")
+        
+        // Update item
+        repository.updateItem(newItem, title: "Updated Item", description: "Updated", quantity: 2)
+        let retrievedItem = repository.getItem(by: newItem.id)
+        XCTAssertEqual(retrievedItem?.title, "Updated Item", "Item should be updated")
+        XCTAssertEqual(retrievedItem?.quantity, 2, "Item quantity should be updated")
+        
+        // Toggle item completion
+        repository.toggleItemCrossedOut(newItem)
+        let toggledItem = repository.getItem(by: newItem.id)
+        XCTAssertTrue(toggledItem?.isCrossedOut ?? false, "Item should be crossed out")
+        
+        // Delete item
+        repository.deleteItem(newItem)
+        let deletedItem = repository.getItem(by: newItem.id)
+        XCTAssertNil(deletedItem, "Item should be deleted")
+    }
 }

@@ -70,7 +70,7 @@ enum SortDirection: String, CaseIterable, Identifiable, Codable {
 }
 
 // MARK: - Item Model
-struct Item: Identifiable, Codable, Equatable {
+struct Item: Identifiable, Codable, Equatable, Hashable {
     var id: UUID
     var title: String
     var itemDescription: String?
@@ -158,5 +158,49 @@ extension Item {
         } else {
             return "\(quantity)x"
         }
+    }
+}
+
+// MARK: - Sync Data Model (for WatchConnectivity)
+
+/// Lightweight version of Item for WatchConnectivity sync (excludes image data to reduce size)
+struct ItemSyncData: Codable {
+    let id: UUID
+    let title: String
+    let itemDescription: String?
+    let quantity: Int
+    let orderNumber: Int
+    let isCrossedOut: Bool
+    let createdAt: Date
+    let modifiedAt: Date
+    let listId: UUID?
+    let imageCount: Int // Just track count, not actual images
+    
+    /// Convert from full Item model (strips image data)
+    init(from item: Item) {
+        self.id = item.id
+        self.title = item.title
+        self.itemDescription = item.itemDescription
+        self.quantity = item.quantity
+        self.orderNumber = item.orderNumber
+        self.isCrossedOut = item.isCrossedOut
+        self.createdAt = item.createdAt
+        self.modifiedAt = item.modifiedAt
+        self.listId = item.listId
+        self.imageCount = item.images.count
+    }
+    
+    /// Convert to full Item model (without images)
+    func toItem() -> Item {
+        var item = Item(title: self.title, listId: self.listId)
+        item.id = self.id
+        item.itemDescription = self.itemDescription
+        item.quantity = self.quantity
+        item.orderNumber = self.orderNumber
+        item.isCrossedOut = self.isCrossedOut
+        item.createdAt = self.createdAt
+        item.modifiedAt = self.modifiedAt
+        item.images = [] // Images not synced via WatchConnectivity
+        return item
     }
 }

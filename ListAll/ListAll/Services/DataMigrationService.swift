@@ -1,5 +1,6 @@
 import Foundation
 import CoreData
+import Combine
 
 class DataMigrationService {
     private let coreDataManager = CoreDataManager.shared

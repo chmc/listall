@@ -9,9 +9,14 @@ import SwiftUI
 
 @main
 struct ListAllWatch_Watch_AppApp: App {
+    init() {
+        // Initialize Core Data on app launch
+        _ = CoreDataManager.shared
+    }
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            WatchListsView()
         }
     }
 }

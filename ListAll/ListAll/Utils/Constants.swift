@@ -129,4 +129,5 @@ struct Constants {
 extension Notification.Name {
     static let dataImported = Notification.Name("dataImported")
     static let itemDataChanged = Notification.Name("ItemDataChanged")
+    // Note: .coreDataRemoteChange is defined in CoreDataManager.swift to support watchOS target
 }

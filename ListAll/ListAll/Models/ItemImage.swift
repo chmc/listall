@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 // MARK: - ItemImage Model
-struct ItemImage: Identifiable, Codable, Equatable {
+struct ItemImage: Identifiable, Codable, Equatable, Hashable {
     var id: UUID
     var imageData: Data?
     var orderNumber: Int
