@@ -857,6 +857,9 @@
 - ✅ No need to navigate away and back - automatic refresh within 1-2 seconds
 **BUILD**: ✅ All builds succeeded, ✅ All unit tests passed (100%)
 
+## New list on iOS does not sync to watch
+- ❌ New list should appear to watch automatically
+
 ## 
 - ❌ 
 
