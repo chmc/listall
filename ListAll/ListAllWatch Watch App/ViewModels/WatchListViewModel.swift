@@ -113,6 +113,16 @@ class WatchListViewModel: ObservableObject {
     func toggleItemCompletion(_ item: Item) {
         dataRepository.toggleItemCrossedOut(item)
         // Items will be reloaded automatically via notification
+        
+        // CRITICAL: Sync change to iOS immediately
+        // When user completes an item on watchOS, iOS needs to know about it
+        #if os(watchOS)
+        print("✅ [watchOS] Item toggled: \(item.title) (crossed out: \(item.isCrossedOut))")
+        print("📤 [watchOS] Syncing change to iOS...")
+        #endif
+        
+        // Send updated lists to iOS via WatchConnectivity
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     // MARK: - Computed Properties

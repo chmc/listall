@@ -158,6 +158,16 @@ class ListViewModel: ObservableObject {
         if !wasCompleted, let refreshedItem = items.first(where: { $0.id == itemId }) {
             showUndoForCompletedItem(refreshedItem)
         }
+        
+        // CRITICAL: Sync change to watchOS immediately
+        // When user completes/uncompletes an item on iOS, watchOS needs to know about it
+        #if os(iOS)
+        print("✅ [iOS] Item toggled: \(item.title) (crossed out: \(!wasCompleted))")
+        print("📤 [iOS] Syncing change to watchOS...")
+        #endif
+        
+        // Send updated lists to watchOS via WatchConnectivity
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     // MARK: - Undo Complete Functionality
