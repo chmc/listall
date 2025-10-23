@@ -841,6 +841,9 @@
 **STATUS**: ✅ FULLY COMPLETE - All features working with native iOS behavior
 **FINAL FIX**: Implemented Apple-recommended AutoLayout with layout guides pattern for UIScrollView image zooming after multiple failed attempts with manual frame calculations. Image viewing now works perfectly with smooth pinch-to-zoom, pan, and centering exactly like native iOS Photos app.
 
+## Complete item on watch does not sync to iOS
+- ❌ Watch actions must sync back to iOS
+
 ## 
 - ❌ 
 
