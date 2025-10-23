@@ -59,10 +59,20 @@ class ListViewModel: ObservableObject {
     // MARK: - Watch Connectivity Integration
     
     private func setupWatchConnectivityObserver() {
+        // Listen for old sync notifications (backward compatibility)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleWatchSyncNotification(_:)),
             name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+        
+        // CRITICAL FIX: Listen for new lists data notifications
+        // This ensures the list view updates in real-time when watch sends data
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWatchListsData(_:)),
+            name: NSNotification.Name("WatchConnectivityListsDataReceived"),
             object: nil
         )
     }
@@ -71,6 +81,16 @@ class ListViewModel: ObservableObject {
         #if os(iOS)
         print("🔄 [iOS] ListViewModel: Received sync notification from Watch")
         #endif
+        refreshItemsFromWatch()
+    }
+    
+    @objc private func handleWatchListsData(_ notification: Notification) {
+        #if os(iOS)
+        print("📥 [iOS] ListViewModel: Received lists data from Watch - refreshing current list")
+        #endif
+        
+        // MainViewModel has already updated Core Data at this point
+        // We just need to reload items for this list from the updated data
         refreshItemsFromWatch()
     }
     
