@@ -94,6 +94,12 @@ struct MainView: View {
                         .environment(\.editMode, $editMode)
                         .listStyle(.plain)
                         .padding(.top, 8)
+                        .refreshable {
+                            // Sync with CloudKit
+                            await cloudKitService.sync()
+                            // Sync with Apple Watch
+                            viewModel.manualSync()
+                        }
                     }
                     
                     // Programmatic navigation for auto-opening newly created list
@@ -152,15 +158,20 @@ struct MainView: View {
                                 }
                                 
                                 // Sync button (only for active lists)
+                                // Syncs with both CloudKit and Apple Watch
                                 if !viewModel.showingArchivedLists {
                                     Button(action: {
+                                        // Sync with CloudKit
                                         Task {
                                             await cloudKitService.sync()
                                         }
+                                        // Sync with Apple Watch
+                                        viewModel.manualSync()
                                     }) {
                                         Image(systemName: Constants.UI.syncIcon)
                                     }
-                                    .disabled(cloudKitService.isSyncing)
+                                    .disabled(cloudKitService.isSyncing || viewModel.isSyncingFromWatch)
+                                    .help("Sync with iCloud and Apple Watch")
                                 }
                             }
                             

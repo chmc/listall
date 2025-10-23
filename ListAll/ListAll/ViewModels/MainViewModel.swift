@@ -38,8 +38,32 @@ class MainViewModel: ObservableObject {
     @Published var isSyncingFromWatch = false
     
     init() {
-        loadLists()
         setupWatchConnectivityObserver()
+        
+        // CRITICAL ORDER:
+        // 1. Load lists first time
+        loadLists()
+        
+        // 2. Clean up duplicates (modifies Core Data)
+        #if os(iOS)
+        print("🧹 [iOS] Checking for duplicate items on launch...")
+        #endif
+        dataManager.removeDuplicateItems()
+        
+        // 3. RELOAD lists after cleanup to get clean data
+        #if os(iOS)
+        print("🔄 [iOS] Reloading lists after cleanup...")
+        #endif
+        loadLists()
+        
+        // 4. Auto-sync clean data to Watch (after WatchConnectivity activates)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            #if os(iOS)
+            print("🚀 [iOS] Auto-sync on launch: Sending clean data to Watch...")
+            print("📊 [iOS] Sending \(self.lists.count) lists with \(self.lists.reduce(0) { $0 + $1.items.count }) total items")
+            #endif
+            WatchConnectivityService.shared.sendListsData(self.dataManager.lists)
+        }
     }
     
     deinit {
@@ -50,10 +74,19 @@ class MainViewModel: ObservableObject {
     // MARK: - Watch Connectivity Integration
     
     private func setupWatchConnectivityObserver() {
+        // Listen for old sync notifications (backward compatibility)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleWatchSyncNotification(_:)),
             name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+        
+        // Listen for new lists data notifications
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWatchListsData(_:)),
+            name: NSNotification.Name("WatchConnectivityListsDataReceived"),
             object: nil
         )
     }
@@ -63,6 +96,141 @@ class MainViewModel: ObservableObject {
         print("🔄 [iOS] MainViewModel: Received sync notification from Watch")
         #endif
         refreshFromWatch()
+    }
+    
+    @objc private func handleWatchListsData(_ notification: Notification) {
+        #if os(iOS)
+        print("📥 [iOS] MainViewModel: Received lists data from Watch")
+        #endif
+        
+        guard let receivedLists = notification.userInfo?["lists"] as? [List] else {
+            print("❌ [iOS] Failed to extract lists from notification")
+            return
+        }
+        
+        print("📥 [iOS] Processing \(receivedLists.count) lists from Watch")
+        
+        // Show sync indicator
+        isSyncingFromWatch = true
+        
+        // Update Core Data with received lists
+        updateCoreDataWithLists(receivedLists)
+        
+        // Reload UI
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.loadLists()
+            
+            // Hide sync indicator after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isSyncingFromWatch = false
+            }
+        }
+    }
+    
+    private func updateCoreDataWithLists(_ receivedLists: [List]) {
+        for receivedList in receivedLists {
+            // Check if list already exists in local database
+            if let existingList = dataManager.lists.first(where: { $0.id == receivedList.id }) {
+                #if os(iOS)
+                print("🔄 [iOS] Syncing existing list: \(receivedList.name) (\(receivedList.items.count) items from Watch)")
+                #endif
+                
+                // Update list metadata only if received version is newer
+                if receivedList.modifiedAt > existingList.modifiedAt {
+                    #if os(iOS)
+                    print("  ⬆️ [iOS] List metadata is newer, updating")
+                    #endif
+                    dataManager.updateList(receivedList)
+                }
+                
+                // CRITICAL FIX: Always update items, regardless of list's modifiedAt
+                // This ensures item additions, deletions, and property changes (like isCrossedOut) always sync
+                // Item-level conflict resolution (checking each item's modifiedAt) handles conflicts correctly
+                updateItemsForList(receivedList, existingList: existingList)
+            } else {
+                // Add new list
+                #if os(iOS)
+                print("➕ [iOS] Adding new list: \(receivedList.name) with \(receivedList.items.count) items")
+                #endif
+                dataManager.addList(receivedList)
+                
+                // Add all items for this new list
+                for item in receivedList.items {
+                    #if os(iOS)
+                    print("  ➕ [iOS] Adding item: \(item.title)")
+                    #endif
+                    dataManager.addItem(item, to: receivedList.id)
+                }
+            }
+        }
+        
+        // Remove lists that no longer exist on Watch (except archived ones)
+        // CRITICAL: Only remove lists if we actually received data (not an empty sync)
+        if !receivedLists.isEmpty {
+            let receivedListIds = Set(receivedLists.map { $0.id })
+            let localActiveListIds = Set(dataManager.lists.filter { !$0.isArchived }.map { $0.id })
+            let listsToRemove = localActiveListIds.subtracting(receivedListIds)
+            
+            for listIdToRemove in listsToRemove {
+                #if os(iOS)
+                print("🗑️ [iOS] Removing deleted list")
+                #endif
+                dataManager.deleteList(withId: listIdToRemove)
+            }
+        } else {
+            #if os(iOS)
+            print("⚠️ [iOS] Received empty sync from Watch - not deleting any lists")
+            #endif
+        }
+        
+        // CRITICAL: Reload all data from Core Data ONCE after all changes
+        #if os(iOS)
+        print("🔄 [iOS] Reloading all data from Core Data after sync...")
+        #endif
+        dataManager.loadData()
+        
+        #if os(iOS)
+        let totalItems = receivedLists.reduce(0) { $0 + $1.items.count }
+        let actualItems = dataManager.lists.reduce(0) { $0 + $1.items.count }
+        print("✅ [iOS] Core Data updated with \(receivedLists.count) lists and \(totalItems) items")
+        print("✅ [iOS] DataManager now has \(actualItems) items loaded")
+        #endif
+    }
+    
+    /// Updates items for an existing list (add new, update existing, remove deleted)
+    private func updateItemsForList(_ receivedList: List, existingList: List) {
+        let receivedItemIds = Set(receivedList.items.map { $0.id })
+        let existingItemIds = Set(existingList.items.map { $0.id })
+        
+        // Add new items or update existing ones
+        for receivedItem in receivedList.items {
+            if existingItemIds.contains(receivedItem.id) {
+                // Update existing item if received version is newer
+                if let existingItem = existingList.items.first(where: { $0.id == receivedItem.id }) {
+                    if receivedItem.modifiedAt > existingItem.modifiedAt {
+                        #if os(iOS)
+                        print("  ⬆️ [iOS] Updating item: \(receivedItem.title)")
+                        #endif
+                        dataManager.updateItem(receivedItem)
+                    }
+                }
+            } else {
+                // Add new item
+                #if os(iOS)
+                print("  ➕ [iOS] Adding item: \(receivedItem.title)")
+                #endif
+                dataManager.addItem(receivedItem, to: receivedList.id)
+            }
+        }
+        
+        // Remove items that no longer exist
+        let itemsToRemove = existingItemIds.subtracting(receivedItemIds)
+        for itemIdToRemove in itemsToRemove {
+            #if os(iOS)
+            print("  🗑️ [iOS] Removing deleted item")
+            #endif
+            dataManager.deleteItem(withId: itemIdToRemove, from: receivedList.id)
+        }
     }
     
     func refreshFromWatch() {
@@ -80,6 +248,28 @@ class MainViewModel: ObservableObject {
         }
     }
     
+    /// Manual sync - request data from Watch and send our data to Watch
+    func manualSync() {
+        #if os(iOS)
+        print("🔄 [iOS] Manual sync triggered by user")
+        #endif
+        
+        isSyncingFromWatch = true
+        
+        // Send our data to Watch
+        let watchConnectivity = WatchConnectivityService.shared
+        watchConnectivity.sendListsData(dataManager.lists)
+        
+        // Reload local data (in case Watch sent us data)
+        dataManager.loadData()
+        loadLists()
+        
+        // Hide sync indicator after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.isSyncingFromWatch = false
+        }
+    }
+    
     var displayedLists: [List] {
         showingArchivedLists ? archivedLists : lists
     }
@@ -88,12 +278,19 @@ class MainViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        // CRITICAL: Always reload from Core Data first to get latest data
+        dataManager.loadData()
+        
         if showingArchivedLists {
             // Load archived lists
             archivedLists = dataManager.loadArchivedLists()
         } else {
             // Get active lists from DataManager
             lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+            
+            #if os(iOS)
+            print("📊 [iOS] Loaded \(lists.count) lists with \(lists.reduce(0) { $0 + $1.items.count }) total items")
+            #endif
         }
         
         isLoading = false
@@ -126,12 +323,18 @@ class MainViewModel: ObservableObject {
         archivedLists.removeAll { $0.id == list.id }
         // Reload active lists to include restored list
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     func archiveList(_ list: List) {
         dataManager.deleteList(withId: list.id) // This archives the list
         // Remove from active lists
         lists.removeAll { $0.id == list.id }
+        
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
         
         // Show archive notification
         showArchiveNotification(for: list)
@@ -176,6 +379,9 @@ class MainViewModel: ObservableObject {
         
         // Reload active lists to include restored list
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     func hideArchiveNotification() {

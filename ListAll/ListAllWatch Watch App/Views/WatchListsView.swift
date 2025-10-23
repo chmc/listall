@@ -27,6 +27,28 @@ struct WatchListsView: View {
             }
             .navigationTitle("Lists")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        Task {
+                            await viewModel.refresh()
+                        }
+                    } label: {
+                        ZStack {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(viewModel.isLoading ? .gray : .blue)
+                                .opacity(viewModel.isLoading ? 0.5 : 1.0)
+                            
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                    }
+                    .disabled(viewModel.isLoading)
+                }
+            }
             .overlay(alignment: .bottom) {
                 if viewModel.isSyncingFromiOS {
                     syncIndicator
@@ -56,11 +78,29 @@ struct WatchListsView: View {
     // MARK: - Lists Content
     private var listsContent: some View {
         SwiftUI.List {
-            ForEach(viewModel.lists) { list in
-                NavigationLink(value: list) {
-                    WatchListRowView(list: list)
+            // Refresh hint section
+            Section {
+                HStack {
+                    Image(systemName: "arrow.down")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Pull down or tap refresh button")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
                 .listRowBackground(Color.clear)
+                .padding(.vertical, 4)
+            }
+            
+            // Lists section
+            Section {
+                ForEach(viewModel.lists) { list in
+                    NavigationLink(value: list) {
+                        WatchListRowView(list: list)
+                    }
+                    .listRowBackground(Color.clear)
+                }
             }
         }
         .navigationDestination(for: List.self) { list in

@@ -20,9 +20,13 @@ class CoreDataManager: ObservableObject {
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
-        // Note: Using NSPersistentContainer instead of NSPersistentCloudKitContainer
-        // CloudKit sync will be enabled when developer account is available
+        // Using NSPersistentCloudKitContainer for CloudKit sync (activated with paid developer account)
+        // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
+        #if os(watchOS)
         let container = NSPersistentContainer(name: "ListAll")
+        #else
+        let container = NSPersistentCloudKitContainer(name: "ListAll")
+        #endif
         
         // Configure store description for migration
         guard let storeDescription = container.persistentStoreDescriptions.first else {
@@ -57,10 +61,12 @@ class CoreDataManager: ObservableObject {
         storeDescription.shouldMigrateStoreAutomatically = true
         storeDescription.shouldInferMappingModelAutomatically = true
         
-        // Note: CloudKit configuration commented out - requires paid developer account
-        // Uncomment when ready to enable CloudKit sync:
-        // let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
-        // storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
+        // Enable CloudKit sync (activated with paid developer account)
+        // Note: Only enable for iOS - watchOS has persistent portal config issues
+        #if os(iOS)
+        let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
+        storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
+        #endif
         
         container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
@@ -433,11 +439,46 @@ class DataManager: ObservableObject {
         request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
         
+        // CRITICAL: Eagerly fetch items relationship to avoid empty items arrays
+        request.relationshipKeyPathsForPrefetching = ["items"]
+        
+        #if os(watchOS)
+        print("💾 [watchOS] DataManager: Fetching lists from Core Data...")
+        #endif
+        
         do {
             let listEntities = try coreDataManager.viewContext.fetch(request)
+            
+            #if DEBUG
+            // Log what Core Data actually fetched
+            print("💾 [DataManager] Fetched \(listEntities.count) ListEntity objects from Core Data")
+            for listEntity in listEntities {
+                let itemCount = listEntity.items?.count ?? 0
+                print("💾   - '\(listEntity.name ?? "Unknown")': Has \(itemCount) items in Core Data")
+            }
+            #endif
+            
             lists = listEntities.map { $0.toList() }
+            
+            #if os(watchOS)
+            print("💾 [watchOS] DataManager: Fetched \(listEntities.count) lists from Core Data")
+            if !listEntities.isEmpty {
+                print("💾 [watchOS] DataManager: List names: \(listEntities.compactMap { $0.name }.joined(separator: ", "))")
+                // Log items count for debugging
+                let totalItems = lists.reduce(0) { $0 + $1.items.count }
+                print("💾 [watchOS] DataManager: Total items across all lists: \(totalItems)")
+            }
+            #elseif os(iOS)
+            print("💾 [iOS] DataManager: Fetched \(listEntities.count) lists from Core Data")
+            if !listEntities.isEmpty {
+                // Log per-list item counts
+                for list in lists {
+                    print("💾 [iOS]   - '\(list.name)': \(list.items.count) items")
+                }
+            }
+            #endif
         } catch {
-            print("Failed to fetch lists: \(error)")
+            print("❌ Failed to fetch lists: \(error)")
             // Fallback to sample data
             if lists.isEmpty {
                 createSampleData()
@@ -610,6 +651,34 @@ class DataManager: ObservableObject {
     func addItem(_ item: Item, to listId: UUID) {
         let context = coreDataManager.viewContext
         
+        // Check if item already exists (prevent duplicates during sync)
+        let itemCheck: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        itemCheck.predicate = NSPredicate(format: "id == %@", item.id as CVarArg)
+        
+        do {
+            let existingItems = try context.fetch(itemCheck)
+            if let existingItem = existingItems.first {
+                // Item already exists, update it instead
+                #if os(watchOS)
+                print("  ⚠️ [watchOS] Item already exists, updating: \(item.title)")
+                #else
+                print("  ⚠️ [iOS] Item already exists, updating: \(item.title)")
+                #endif
+                existingItem.title = item.title
+                existingItem.itemDescription = item.itemDescription
+                existingItem.quantity = Int32(item.quantity)
+                existingItem.orderNumber = Int32(item.orderNumber)
+                existingItem.isCrossedOut = item.isCrossedOut
+                existingItem.modifiedAt = item.modifiedAt
+                
+                saveData()
+                // Don't call loadData() here - let the caller handle batching
+                return
+            }
+        } catch {
+            print("Failed to check for existing item: \(error)")
+        }
+        
         // Find the list
         let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         listRequest.predicate = NSPredicate(format: "id == %@", listId as CVarArg)
@@ -635,9 +704,9 @@ class DataManager: ObservableObject {
                 }
                 
                 saveData()
-                loadData()
+                // Don't call loadData() here - let the caller handle batching
                 
-                // Notify after data is fully loaded
+                // Notify after data is saved (but don't reload yet to avoid excessive reloads)
                 NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
             }
         } catch {
@@ -706,6 +775,7 @@ class DataManager: ObservableObject {
     func getItems(forListId listId: UUID) -> [Item] {
         let request: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
         request.predicate = NSPredicate(format: "list.id == %@", listId as CVarArg)
+        // Sort by orderNumber to ensure consistent display order
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ItemEntity.orderNumber, ascending: true)]
         
         do {
@@ -744,5 +814,68 @@ class DataManager: ObservableObject {
     
     func checkCloudKitStatus() async -> CKAccountStatus {
         return await coreDataManager.checkCloudKitStatus()
+    }
+    
+    // MARK: - Data Cleanup
+    
+    /// Remove duplicate items from Core Data (cleanup for sync bug)
+    /// This removes items with duplicate IDs, keeping the most recently modified version
+    func removeDuplicateItems() {
+        let context = coreDataManager.viewContext
+        let request: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        
+        do {
+            let allItems = try context.fetch(request)
+            
+            // Group items by ID
+            var itemsById: [UUID: [ItemEntity]] = [:]
+            for item in allItems {
+                guard let id = item.id else { continue }
+                if itemsById[id] == nil {
+                    itemsById[id] = []
+                }
+                itemsById[id]?.append(item)
+            }
+            
+            // Find and remove duplicates
+            var duplicatesRemoved = 0
+            for (id, items) in itemsById {
+                if items.count > 1 {
+                    // Sort by modifiedAt, keep most recent
+                    let sorted = items.sorted { ($0.modifiedAt ?? Date.distantPast) > ($1.modifiedAt ?? Date.distantPast) }
+                    let toKeep = sorted.first!
+                    let toRemove = sorted.dropFirst()
+                    
+                    for duplicate in toRemove {
+                        context.delete(duplicate)
+                        duplicatesRemoved += 1
+                    }
+                    
+                    #if os(iOS)
+                    print("🧹 [iOS] Removed \(toRemove.count) duplicate(s) of item: \(toKeep.title ?? "Unknown")")
+                    #elseif os(watchOS)
+                    print("🧹 [watchOS] Removed \(toRemove.count) duplicate(s) of item: \(toKeep.title ?? "Unknown")")
+                    #endif
+                }
+            }
+            
+            if duplicatesRemoved > 0 {
+                #if os(iOS)
+                print("🧹 [iOS] Total duplicates removed: \(duplicatesRemoved)")
+                #elseif os(watchOS)
+                print("🧹 [watchOS] Total duplicates removed: \(duplicatesRemoved)")
+                #endif
+                saveData()
+                loadData() // Reload to reflect changes
+            } else {
+                #if os(iOS)
+                print("✅ [iOS] No duplicate items found in Core Data")
+                #elseif os(watchOS)
+                print("✅ [watchOS] No duplicate items found in Core Data")
+                #endif
+            }
+        } catch {
+            print("❌ Failed to check for duplicate items: \(error)")
+        }
     }
 }

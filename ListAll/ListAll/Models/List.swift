@@ -80,3 +80,39 @@ extension List {
         }
     }
 }
+
+// MARK: - Sync Data Model (for WatchConnectivity)
+
+/// Lightweight version of List for WatchConnectivity sync (excludes image data to reduce size)
+struct ListSyncData: Codable {
+    let id: UUID
+    let name: String
+    let orderNumber: Int
+    let createdAt: Date
+    let modifiedAt: Date
+    let isArchived: Bool
+    let items: [ItemSyncData]
+    
+    /// Convert from full List model (strips images)
+    init(from list: List) {
+        self.id = list.id
+        self.name = list.name
+        self.orderNumber = list.orderNumber
+        self.createdAt = list.createdAt
+        self.modifiedAt = list.modifiedAt
+        self.isArchived = list.isArchived
+        self.items = list.items.map { ItemSyncData(from: $0) }
+    }
+    
+    /// Convert to full List model (without images)
+    func toList() -> List {
+        var list = List(name: self.name)
+        list.id = self.id
+        list.orderNumber = self.orderNumber
+        list.createdAt = self.createdAt
+        list.modifiedAt = self.modifiedAt
+        list.isArchived = self.isArchived
+        list.items = self.items.map { $0.toItem() }
+        return list
+    }
+}

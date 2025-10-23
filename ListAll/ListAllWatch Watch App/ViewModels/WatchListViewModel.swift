@@ -86,9 +86,10 @@ class WatchListViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        // Get items from DataManager (sorted by order number)
+        // Get items from DataManager
+        // IMPORTANT: Preserve order from sync (matches iOS display order)
+        // Don't sort here - items are already in correct order from iOS
         items = dataManager.getItems(forListId: list.id)
-            .sorted { $0.orderNumber < $1.orderNumber }
         
         isLoading = false
     }
@@ -116,10 +117,11 @@ class WatchListViewModel: ObservableObject {
     
     // MARK: - Computed Properties
     
-    /// Returns items sorted by order number, filtered by current filter
+    /// Returns items in display order (preserves iOS sort), filtered by current filter
     var sortedItems: [Item] {
-        let sorted = items.sorted { $0.orderNumber < $1.orderNumber }
-        return applyFilter(to: sorted)
+        // Don't sort - items are already in correct display order from iOS
+        // This ensures Watch displays items in same order as iOS, regardless of iOS sort preference
+        return applyFilter(to: items)
     }
     
     /// Returns active (non-completed) items
@@ -191,7 +193,7 @@ class WatchListViewModel: ObservableObject {
            let savedFilter = ItemFilterOption.allCases.first(where: { $0.rawValue == savedFilterString }) {
             currentFilter = savedFilter
         } else {
-            currentFilter = .all // Default to showing all items
+            currentFilter = .active // Default to showing only active items (like iOS)
         }
     }
 }

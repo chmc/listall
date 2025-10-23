@@ -18,30 +18,28 @@ struct WatchListRowView: View {
                 .lineLimit(2)
                 .foregroundColor(.primary)
             
-            HStack(spacing: 8) {
-                // Active items count
-                if list.activeItemCount > 0 {
-                    Label("\(list.activeItemCount) active", systemImage: "circle")
-                        .font(.caption2)
-                        .foregroundColor(.blue)
-                }
-                
-                // Completed items count
-                if list.crossedOutItemCount > 0 {
-                    Label("\(list.crossedOutItemCount) done", systemImage: "checkmark.circle.fill")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                }
-                
-                // Show message if no items
-                if list.itemCount == 0 {
-                    Text("No items")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
+            // Show item count in iOS format: "7 (22) items"
+            Text(itemCountText)
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
+    }
+    
+    /// Format item count like iOS: "7 (22) items"
+    private var itemCountText: String {
+        let activeCount = list.activeItemCount
+        let totalCount = list.itemCount
+        
+        if totalCount == 0 {
+            return "No items"
+        } else if activeCount == totalCount {
+            // All items are active
+            return "\(totalCount) \(totalCount == 1 ? "item" : "items")"
+        } else {
+            // Show active count with total in parentheses
+            return "\(activeCount) (\(totalCount)) \(totalCount == 1 ? "item" : "items")"
+        }
     }
 }
 
