@@ -43,10 +43,8 @@ struct WatchFilterPicker: View {
         Picker(selection: Binding(
             get: { selectedFilter },
             set: { newValue in
-                #if os(watchOS)
-                WKInterfaceDevice.current().play(.click)
-                #endif
-                withAnimation(.easeInOut(duration: 0.2)) {
+                WatchHapticManager.shared.playFilterChange()
+                withAnimation(WatchAnimationManager.filterChange) {
                     selectedFilter = newValue
                     onFilterChange(newValue)
                 }
@@ -60,6 +58,8 @@ struct WatchFilterPicker: View {
             Text("Filter")
         }
         .pickerStyle(.navigationLink)
+        .accessibilityLabel("Filter items")
+        .accessibilityHint("Choose which items to display")
     }
 }
 

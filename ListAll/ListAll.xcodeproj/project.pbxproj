@@ -534,7 +534,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ListAllWatch-Watch-App-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = ListAllWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = ListAll;
 				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = io.github.chmc.ListAll;
@@ -570,7 +570,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ListAllWatch-Watch-App-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = ListAllWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = ListAll;
 				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = io.github.chmc.ListAll;

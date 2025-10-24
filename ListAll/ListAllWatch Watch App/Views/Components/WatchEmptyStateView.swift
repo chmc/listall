@@ -26,6 +26,8 @@ struct WatchEmptyStateView: View {
                 .padding(.horizontal)
         }
         .padding()
+        .accessibilityLabel("No lists available")
+        .accessibilityHint("Create lists on your iPhone to see them here")
     }
 }
 

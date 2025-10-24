@@ -14,9 +14,16 @@ struct WatchListsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.lists.isEmpty {
+                if let errorMessage = viewModel.errorMessage {
+                    // Show error state
+                    WatchErrorView(message: errorMessage) {
+                        Task {
+                            await viewModel.refresh()
+                        }
+                    }
+                } else if viewModel.isLoading && viewModel.lists.isEmpty {
                     // Show loading indicator on initial load
-                    ProgressView("Loading...")
+                    WatchLoadingView(message: "Loading lists...")
                 } else if viewModel.lists.isEmpty {
                     // Show empty state
                     WatchEmptyStateView()
@@ -30,6 +37,7 @@ struct WatchListsView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        WatchHapticManager.shared.playRefresh()
                         Task {
                             await viewModel.refresh()
                         }
@@ -47,6 +55,8 @@ struct WatchListsView: View {
                         }
                     }
                     .disabled(viewModel.isLoading)
+                    .accessibilityLabel("Refresh lists")
+                    .accessibilityHint("Sync with iPhone to get latest lists")
                 }
             }
             .overlay(alignment: .bottom) {
@@ -59,20 +69,15 @@ struct WatchListsView: View {
     
     // MARK: - Sync Indicator
     private var syncIndicator: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .scaleEffect(0.7)
-            Text("Syncing...")
-                .font(.caption2)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.blue.opacity(0.9))
-        .foregroundColor(.white)
-        .cornerRadius(20)
-        .padding(.bottom, 8)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .animation(.spring(), value: viewModel.isSyncingFromiOS)
+        WatchSyncLoadingView()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.blue.opacity(0.9))
+            .foregroundColor(.white)
+            .cornerRadius(20)
+            .padding(.bottom, 8)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(WatchAnimationManager.syncIndicator, value: viewModel.isSyncingFromiOS)
     }
     
     // MARK: - Lists Content
@@ -100,6 +105,8 @@ struct WatchListsView: View {
                         WatchListRowView(list: list)
                     }
                     .listRowBackground(Color.clear)
+                    .accessibilityLabel("\(list.name) list")
+                    .accessibilityHint("Tap to view items in this list")
                 }
             }
         }

@@ -98,14 +98,22 @@ class WatchListViewModel: ObservableObject {
     func refresh() async {
         await MainActor.run {
             isLoading = true
+            errorMessage = nil
         }
         
-        // Reload data from Core Data
-        dataManager.loadData()
-        
-        await MainActor.run {
-            loadItems()
-            isLoading = false
+        do {
+            // Reload data from Core Data
+            dataManager.loadData()
+            
+            await MainActor.run {
+                loadItems()
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Failed to load items: \(error.localizedDescription)"
+                isLoading = false
+            }
         }
     }
     

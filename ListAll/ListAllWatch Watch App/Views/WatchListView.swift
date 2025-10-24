@@ -20,9 +20,16 @@ struct WatchListView: View {
     
     var body: some View {
         Group {
-            if viewModel.isLoading && viewModel.items.isEmpty {
+            if let errorMessage = viewModel.errorMessage {
+                // Show error state
+                WatchErrorView(message: errorMessage) {
+                    Task {
+                        await viewModel.refresh()
+                    }
+                }
+            } else if viewModel.isLoading && viewModel.items.isEmpty {
                 // Show loading indicator on initial load
-                ProgressView("Loading...")
+                WatchLoadingView(message: "Loading items...")
             } else if viewModel.sortedItems.isEmpty {
                 // Show empty state (respects current filter)
                 emptyStateView
@@ -42,20 +49,15 @@ struct WatchListView: View {
     
     // MARK: - Sync Indicator
     private var syncIndicator: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .scaleEffect(0.7)
-            Text("Syncing...")
-                .font(.caption2)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.blue.opacity(0.9))
-        .foregroundColor(.white)
-        .cornerRadius(20)
-        .padding(.bottom, 8)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .animation(.spring(), value: viewModel.isSyncingFromiOS)
+        WatchSyncLoadingView()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.blue.opacity(0.9))
+            .foregroundColor(.white)
+            .cornerRadius(20)
+            .padding(.bottom, 8)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(WatchAnimationManager.syncIndicator, value: viewModel.isSyncingFromiOS)
     }
     
     // MARK: - Items Content
@@ -83,11 +85,7 @@ struct WatchListView: View {
                 // Items list
                 ForEach(viewModel.sortedItems) { item in
                     WatchItemRowView(item: item) {
-                        // Toggle item completion with haptic feedback
-                        #if os(watchOS)
-                        WKInterfaceDevice.current().play(.click)
-                        #endif
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(WatchAnimationManager.itemToggle) {
                             viewModel.toggleItemCompletion(item)
                         }
                     }

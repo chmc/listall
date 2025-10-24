@@ -13,7 +13,10 @@ struct WatchItemRowView: View {
     let onToggle: () -> Void
     
     var body: some View {
-        Button(action: onToggle) {
+        Button(action: {
+            WatchHapticManager.shared.playItemToggle()
+            onToggle()
+        }) {
             HStack(spacing: 8) {
                 // Completion indicator
                 Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
@@ -50,8 +53,12 @@ struct WatchItemRowView: View {
             .padding(.vertical, 4)
             .opacity(item.isCrossedOut ? 0.6 : 1.0)
             .contentShape(Rectangle())
+            .itemToggleAnimation()
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(item.isCrossedOut ? "Completed: \(item.displayTitle)" : "Incomplete: \(item.displayTitle)")
+        .accessibilityHint("Tap to toggle completion status")
+        .accessibilityAddTraits(item.isCrossedOut ? .isSelected : [])
     }
 }
 
