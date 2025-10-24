@@ -907,9 +907,6 @@
 - ✅ List ordering now syncs reliably between devices
 - ✅ Added comprehensive logging for debugging order sync issues
 
-## Improve: Swipe gestures to watch app
-- ❌ Gesture transition to swipe from list view to main screen
-
 ## Improve: Item image size
 - ❌ Research industrial standard and apple recommendation for attached image size
 - ❌ Use industrial standard for compressing images
