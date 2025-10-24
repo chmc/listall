@@ -1,13 +1,84 @@
 {
-  "images" : [
+  "images": [
     {
-      "idiom" : "universal",
-      "platform" : "watchos",
-      "size" : "1024x1024"
+      "idiom": "watch",
+      "size": "24x24",
+      "scale": "2x",
+      "filename": "watch_watch_24pt@2x.png",
+      "role": "notificationCenter"
+    },
+    {
+      "idiom": "watch",
+      "size": "27.5x27.5",
+      "scale": "2x",
+      "filename": "watch_watch_27_5pt@2x.png",
+      "role": "notificationCenter"
+    },
+    {
+      "idiom": "watch",
+      "size": "29x29",
+      "scale": "2x",
+      "filename": "watch_watch_29pt@2x.png",
+      "role": "companionSettings"
+    },
+    {
+      "idiom": "watch",
+      "size": "29x29",
+      "scale": "3x",
+      "filename": "watch_watch_29pt@3x.png",
+      "role": "companionSettings"
+    },
+    {
+      "idiom": "watch",
+      "size": "40x40",
+      "scale": "2x",
+      "filename": "watch_watch_40pt@2x.png",
+      "role": "appLauncher"
+    },
+    {
+      "idiom": "watch",
+      "size": "44x44",
+      "scale": "2x",
+      "filename": "watch_watch_44pt@2x.png",
+      "role": "appLauncher"
+    },
+    {
+      "idiom": "watch",
+      "size": "50x50",
+      "scale": "2x",
+      "filename": "watch_watch_50pt@2x.png",
+      "role": "appLauncher"
+    },
+    {
+      "idiom": "watch",
+      "size": "86x86",
+      "scale": "2x",
+      "filename": "watch_watch_86pt@2x.png",
+      "role": "appLauncher"
+    },
+    {
+      "idiom": "watch",
+      "size": "98x98",
+      "scale": "2x",
+      "filename": "watch_watch_98pt@2x.png",
+      "role": "appLauncher"
+    },
+    {
+      "idiom": "watch",
+      "size": "108x108",
+      "scale": "2x",
+      "filename": "watch_watch_108pt@2x.png",
+      "role": "appLauncher"
+    },
+    {
+      "idiom": "watch-marketing",
+      "size": "1024x1024",
+      "scale": "1x",
+      "filename": "watch_watch-marketing_1024pt@1x.png"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "version": 1,
+    "author": "xcode"
   }
 }
