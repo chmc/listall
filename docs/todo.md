@@ -889,6 +889,15 @@
 - ✅ Create user testing plan for watchOS app
 - ✅ Document known limitations and future improvements
 
+## Improve: Watch app refresh button and manual refresh functionality
+- ❌ Research industrial standard and apple recommendation way to do it
+- ❌ Polish the UX of manual refresh
+
+## Improve: Item image size
+- ❌ Research industrial standard and apple recommendation for attached image size
+- ❌ Use industrial standard for compressing images
+- ❌ Do not store original size images to app and to items
+
 ## Phase 81: watchOS - Advanced Features (Optional)
 **Goal**: Add advanced features if time permits
 - ❌ Add complications for watchOS (list counts, quick access)
