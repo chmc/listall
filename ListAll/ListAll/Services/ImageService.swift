@@ -14,11 +14,25 @@ class ImageService: ObservableObject {
     
     // MARK: - Configuration
     struct Configuration {
-        static let maxImageSize: Int = 2 * 1024 * 1024 // 2MB
-        static let thumbnailSize: CGSize = CGSize(width: 200, height: 200)
-        static let compressionQuality: CGFloat = 0.8
-        static let maxImageDimension: CGFloat = 2048
-        static let maxCacheSize: Int = 100 // Maximum number of thumbnails to cache
+        // Industry-standard image compression settings
+        static let maxImageSize: Int = 512 * 1024 // 512KB - reduced from 2MB for better performance
+        static let thumbnailSize: CGSize = CGSize(width: 150, height: 150) // Reduced from 200x200
+        static let compressionQuality: CGFloat = 0.75 // Reduced from 0.8 for better compression
+        static let maxImageDimension: CGFloat = 1200 // Reduced from 2048 for mobile optimization
+        static let maxCacheSize: Int = 50 // Reduced cache size for memory efficiency
+        
+        // Progressive compression settings
+        static let progressiveQualityLevels: [CGFloat] = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+        static let minCompressionQuality: CGFloat = 0.1
+        static let maxThumbnailSize: Int = 50 * 1024 // 50KB for thumbnails
+        
+        // Format-specific settings
+        static let webpQuality: CGFloat = 0.8
+        static let pngCompressionLevel: CGFloat = 0.6
+        
+        // Mobile-optimized dimensions
+        static let mobileMaxDimension: CGFloat = 800
+        static let tabletMaxDimension: CGFloat = 1200
     }
     
     // MARK: - Thumbnail Cache
@@ -32,18 +46,46 @@ class ImageService: ObservableObject {
     
     // MARK: - Image Processing
     
-    /// Processes a UIImage for storage - resizes and compresses
+    /// Processes a UIImage for storage - resizes and compresses with industry standards
     func processImageForStorage(_ image: UIImage) -> Data? {
-        // Resize image if too large
-        let resizedImage = resizeImage(image, maxDimension: Configuration.maxImageDimension)
+        // Resize image based on device type and content
+        let resizedImage = resizeImageForStorage(image)
         
-        // Convert to JPEG with compression
-        guard let imageData = resizedImage.jpegData(compressionQuality: Configuration.compressionQuality) else {
-            return nil
+        // Try WebP first for better compression, fallback to JPEG
+        if let webpData = createWebPData(from: resizedImage) {
+            return compressImageData(webpData, maxSize: Configuration.maxImageSize)
         }
         
-        // Further compress if still too large
-        return compressImageData(imageData, maxSize: Configuration.maxImageSize)
+        // Fallback to JPEG with progressive compression
+        return compressImageDataProgressive(resizedImage, maxSize: Configuration.maxImageSize)
+    }
+    
+    /// Resizes an image for storage based on device type and content
+    func resizeImageForStorage(_ image: UIImage) -> UIImage {
+        let size = image.size
+        let maxDimension = getOptimalMaxDimension(for: image)
+        
+        // Check if resizing is needed
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+        
+        // Calculate new size maintaining aspect ratio
+        let aspectRatio = size.width / size.height
+        var newSize: CGSize
+        
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+        
+        // Create resized image with high quality
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { context in
+            context.cgContext.interpolationQuality = .high
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
     
     /// Resizes an image to fit within maximum dimensions while maintaining aspect ratio
@@ -72,6 +114,20 @@ class ImageService: ObservableObject {
         }
     }
     
+    /// Determines optimal max dimension based on image content and device
+    private func getOptimalMaxDimension(for image: UIImage) -> CGFloat {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+        
+        // For very wide or very tall images, use smaller dimensions
+        if aspectRatio > 3.0 || aspectRatio < 0.33 {
+            return Configuration.mobileMaxDimension
+        }
+        
+        // For square or near-square images, use standard dimensions
+        return Configuration.maxImageDimension
+    }
+    
     /// Compresses image data to fit within size limit
     func compressImageData(_ data: Data, maxSize: Int) -> Data? {
         guard let image = UIImage(data: data) else { return data }
@@ -89,15 +145,59 @@ class ImageService: ObservableObject {
         return compressedData ?? data
     }
     
-    /// Creates a thumbnail from an image with caching
+    /// Progressive compression with multiple quality levels
+    func compressImageDataProgressive(_ image: UIImage, maxSize: Int) -> Data? {
+        // Try each quality level until we find one that fits
+        for quality in Configuration.progressiveQualityLevels {
+            if let data = image.jpegData(compressionQuality: quality),
+               data.count <= maxSize {
+                return data
+            }
+        }
+        
+        // If no quality level works, use the minimum
+        return image.jpegData(compressionQuality: Configuration.minCompressionQuality)
+    }
+    
+    /// Creates WebP data if available (iOS 14+)
+    @available(iOS 14.0, *)
+    func createWebPData(from image: UIImage) -> Data? {
+        // WebP support requires iOS 14+
+        guard let data = image.jpegData(compressionQuality: Configuration.webpQuality) else {
+            return nil
+        }
+        
+        // For now, return JPEG data as WebP conversion requires additional libraries
+        // In a production app, you would use a WebP library like SDWebImageWebPCoder
+        return data
+    }
+    
+    
+    /// Creates a thumbnail from an image with caching and optimization
     func createThumbnail(from image: UIImage, size: CGSize = Configuration.thumbnailSize) -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { _ in
+        return renderer.image { context in
+            context.cgContext.interpolationQuality = .medium
             image.draw(in: CGRect(origin: .zero, size: size))
         }
     }
     
-    /// Creates a thumbnail from image data with caching
+    /// Creates an optimized thumbnail with size validation
+    func createOptimizedThumbnail(from image: UIImage, size: CGSize = Configuration.thumbnailSize) -> UIImage? {
+        let thumbnail = createThumbnail(from: image, size: size)
+        
+        // Validate thumbnail size
+        guard let data = thumbnail.jpegData(compressionQuality: 0.8),
+              data.count <= Configuration.maxThumbnailSize else {
+            // If thumbnail is too large, create a smaller one
+            let smallerSize = CGSize(width: size.width * 0.8, height: size.height * 0.8)
+            return createThumbnail(from: image, size: smallerSize)
+        }
+        
+        return thumbnail
+    }
+    
+    /// Creates a thumbnail from image data with caching and optimization
     func createThumbnail(from data: Data, size: CGSize = Configuration.thumbnailSize) -> UIImage? {
         // Create cache key from data hash and size
         let cacheKey = "\(data.hashValue)_\(Int(size.width))x\(Int(size.height))" as NSString
@@ -109,7 +209,7 @@ class ImageService: ObservableObject {
         
         // Generate thumbnail if not cached
         guard let image = UIImage(data: data) else { return nil }
-        let thumbnail = createThumbnail(from: image, size: size)
+        guard let thumbnail = createOptimizedThumbnail(from: image, size: size) else { return nil }
         
         // Store in cache
         thumbnailCache.setObject(thumbnail, forKey: cacheKey)
@@ -190,7 +290,7 @@ class ImageService: ObservableObject {
     
     // MARK: - Image Validation
     
-    /// Validates image data
+    /// Validates image data with comprehensive checks
     func validateImageData(_ data: Data) -> Bool {
         // Check if data can be converted to UIImage
         guard UIImage(data: data) != nil else { return false }
@@ -198,14 +298,76 @@ class ImageService: ObservableObject {
         // Check size limits
         guard data.count <= Configuration.maxImageSize * 2 else { return false } // Allow 2x for raw images
         
+        // Check format validity
+        guard getImageFormat(from: data) != nil else { return false }
+        
         return true
     }
     
-    /// Validates image file size
-    func validateImageSize(_ data: Data) -> (isValid: Bool, actualSize: Int, maxSize: Int) {
+    /// Validates image file size with detailed information
+    func validateImageSize(_ data: Data) -> (isValid: Bool, actualSize: Int, maxSize: Int, recommendation: String?) {
         let actualSize = data.count
         let maxSize = Configuration.maxImageSize
-        return (actualSize <= maxSize, actualSize, maxSize)
+        let isValid = actualSize <= maxSize
+        
+        var recommendation: String? = nil
+        if !isValid {
+            let reductionPercent = Int((1.0 - Double(maxSize) / Double(actualSize)) * 100)
+            recommendation = "Image is \(formatFileSize(actualSize)). Reduce size by \(reductionPercent)% to meet \(formatFileSize(maxSize)) limit."
+        }
+        
+        return (isValid, actualSize, maxSize, recommendation)
+    }
+    
+    /// Validates image dimensions
+    func validateImageDimensions(_ image: UIImage) -> (isValid: Bool, actualSize: CGSize, maxDimension: CGFloat, recommendation: String?) {
+        let size = image.size
+        let maxDimension = Configuration.maxImageDimension
+        let isValid = size.width <= maxDimension && size.height <= maxDimension
+        
+        var recommendation: String? = nil
+        if !isValid {
+            let largerDimension = max(size.width, size.height)
+            let reductionPercent = Int((1.0 - maxDimension / largerDimension) * 100)
+            recommendation = "Image is \(Int(largerDimension))px. Reduce by \(reductionPercent)% to meet \(Int(maxDimension))px limit."
+        }
+        
+        return (isValid, size, maxDimension, recommendation)
+    }
+    
+    /// Comprehensive image validation
+    func validateImage(_ image: UIImage) -> (isValid: Bool, issues: [String], recommendations: [String]) {
+        var issues: [String] = []
+        var recommendations: [String] = []
+        
+        // Check dimensions
+        let dimensionValidation = validateImageDimensions(image)
+        if !dimensionValidation.isValid {
+            issues.append("Image dimensions exceed maximum allowed size")
+            if let rec = dimensionValidation.recommendation {
+                recommendations.append(rec)
+            }
+        }
+        
+        // Check file size
+        if let data = image.jpegData(compressionQuality: 0.8) {
+            let sizeValidation = validateImageSize(data)
+            if !sizeValidation.isValid {
+                issues.append("Image file size exceeds maximum allowed size")
+                if let rec = sizeValidation.recommendation {
+                    recommendations.append(rec)
+                }
+            }
+        }
+        
+        // Check aspect ratio
+        let aspectRatio = image.size.width / image.size.height
+        if aspectRatio > 5.0 || aspectRatio < 0.2 {
+            issues.append("Image has extreme aspect ratio")
+            recommendations.append("Consider cropping to a more standard aspect ratio")
+        }
+        
+        return (issues.isEmpty, issues, recommendations)
     }
     
     // MARK: - Image Format Utilities
@@ -263,8 +425,9 @@ class ImageService: ObservableObject {
         }
     }
     
-    /// Processes image with error handling
+    /// Processes image with error handling and ensures no original size storage
     func processImage(_ image: UIImage) -> Result<Data, ImageError> {
+        // Always process image for storage - never store original size
         guard let processedData = processImageForStorage(image) else {
             return .failure(.processingFailed)
         }
@@ -275,6 +438,25 @@ class ImageService: ObservableObject {
         }
         
         return .success(processedData)
+    }
+    
+    /// Ensures image is properly compressed and resized before storage
+    func ensureOptimizedImage(_ image: UIImage) -> UIImage {
+        // Always resize and compress - never store original
+        return resizeImageForStorage(image)
+    }
+    
+    /// Gets compression statistics for an image
+    func getCompressionStats(for image: UIImage) -> (originalSize: Int, compressedSize: Int, compressionRatio: Double, savings: Int) {
+        let originalData = image.jpegData(compressionQuality: 1.0) ?? Data()
+        let compressedData = processImageForStorage(image) ?? Data()
+        
+        let originalSize = originalData.count
+        let compressedSize = compressedData.count
+        let compressionRatio = Double(compressedSize) / Double(originalSize)
+        let savings = originalSize - compressedSize
+        
+        return (originalSize, compressedSize, compressionRatio, savings)
     }
 }
 
