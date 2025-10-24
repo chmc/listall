@@ -33,7 +33,11 @@ class WatchHapticManager {
     /// Play haptic feedback for refresh/sync
     func playRefresh() {
         #if os(watchOS)
+        // Use a more distinctive haptic pattern for refresh
         WKInterfaceDevice.current().play(.click)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            WKInterfaceDevice.current().play(.click)
+        }
         #endif
     }
     

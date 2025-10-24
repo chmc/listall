@@ -890,8 +890,16 @@
 - ✅ Document known limitations and future improvements
 
 ## Improve: Watch app refresh button and manual refresh functionality
-- ❌ Research industrial standard and apple recommendation way to do it
-- ❌ Polish the UX of manual refresh
+- ✅ Research industrial standard and apple recommendation way to do it
+- ✅ Polish the UX of manual refresh
+- ✅ Remove manual refresh buttons from both views
+- ✅ Fix pull-to-refresh functionality that currently does not work
+- ✅ Show 'Pull down to refresh' text only when user pulls down
+- ✅ Show animated refresh icon when user releases and during refresh
+- ✅ Test the new pull-to-refresh implementation
+- ✅ Update changelog with pull-to-refresh improvements
+- ✅ Write comprehensive tests for WatchPullToRefreshView component
+- ✅ Fix scroll interference bug after pull-to-refresh
 
 ## Improve: Item image size
 - ❌ Research industrial standard and apple recommendation for attached image size

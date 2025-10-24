@@ -32,38 +32,13 @@ struct WatchListsView: View {
                     listsContent
                 }
             }
-            .navigationTitle("Lists")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        WatchHapticManager.shared.playRefresh()
-                        Task {
-                            await viewModel.refresh()
-                        }
-                    } label: {
-                        ZStack {
-                            Image(systemName: "arrow.clockwise")
-                                .foregroundColor(viewModel.isLoading ? .gray : .blue)
-                                .opacity(viewModel.isLoading ? 0.5 : 1.0)
-                            
-                            if viewModel.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                                    .scaleEffect(0.8)
-                            }
-                        }
-                    }
-                    .disabled(viewModel.isLoading)
-                    .accessibilityLabel("Refresh lists")
-                    .accessibilityHint("Sync with iPhone to get latest lists")
-                }
+        .navigationTitle("Lists")
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottom) {
+            if viewModel.isSyncingFromiOS {
+                syncIndicator
             }
-            .overlay(alignment: .bottom) {
-                if viewModel.isSyncingFromiOS {
-                    syncIndicator
-                }
-            }
+        }
         }
     }
     
@@ -82,38 +57,25 @@ struct WatchListsView: View {
     
     // MARK: - Lists Content
     private var listsContent: some View {
-        SwiftUI.List {
-            // Refresh hint section
-            Section {
-                HStack {
-                    Image(systemName: "arrow.down")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("Pull down or tap refresh button")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .listRowBackground(Color.clear)
-                .padding(.vertical, 4)
-            }
-            
-            // Lists section
-            Section {
-                ForEach(viewModel.lists) { list in
-                    NavigationLink(value: list) {
-                        WatchListRowView(list: list)
+        WatchPullToRefreshView {
+            SwiftUI.List {
+                // Lists section
+                Section {
+                    ForEach(viewModel.lists) { list in
+                        NavigationLink(value: list) {
+                            WatchListRowView(list: list)
+                        }
+                        .listRowBackground(Color.clear)
+                        .accessibilityLabel("\(list.name) list")
+                        .accessibilityHint("Tap to view items in this list")
                     }
-                    .listRowBackground(Color.clear)
-                    .accessibilityLabel("\(list.name) list")
-                    .accessibilityHint("Tap to view items in this list")
                 }
             }
-        }
-        .navigationDestination(for: List.self) { list in
-            WatchListView(list: list)
-        }
-        .refreshable {
+            .navigationDestination(for: List.self) { list in
+                WatchListView(list: list)
+            }
+        } onRefresh: {
+            WatchHapticManager.shared.playRefresh()
             await viewModel.refresh()
         }
     }

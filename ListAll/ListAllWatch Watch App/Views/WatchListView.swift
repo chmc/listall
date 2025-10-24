@@ -62,41 +62,43 @@ struct WatchListView: View {
     
     // MARK: - Items Content
     private var itemsContent: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                // Filter picker and item count summary at top
-                HStack {
-                    WatchFilterPicker(
-                        selectedFilter: $viewModel.currentFilter
-                    ) { newFilter in
-                        viewModel.setFilter(newFilter)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-                
-                itemCountSummary
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-                
-                // Items list
-                ForEach(viewModel.sortedItems) { item in
-                    WatchItemRowView(item: item) {
-                        withAnimation(WatchAnimationManager.itemToggle) {
-                            viewModel.toggleItemCompletion(item)
+        WatchPullToRefreshView {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // Filter picker and item count summary at top
+                    HStack {
+                        WatchFilterPicker(
+                            selectedFilter: $viewModel.currentFilter
+                        ) { newFilter in
+                            viewModel.setFilter(newFilter)
                         }
+                        
+                        Spacer()
                     }
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
                     
-                    Divider()
-                        .padding(.leading, 36)
+                    itemCountSummary
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                    
+                    // Items list
+                    ForEach(viewModel.sortedItems) { item in
+                        WatchItemRowView(item: item) {
+                            withAnimation(WatchAnimationManager.itemToggle) {
+                                viewModel.toggleItemCompletion(item)
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        
+                        Divider()
+                            .padding(.leading, 36)
+                    }
                 }
             }
-        }
-        .refreshable {
+        } onRefresh: {
+            WatchHapticManager.shared.playRefresh()
             await viewModel.refresh()
         }
     }
