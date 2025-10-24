@@ -408,6 +408,9 @@ class MainViewModel: ObservableObject {
         // Refresh lists from dataManager (which already added the list)
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
         
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
+        
         // Trigger haptic feedback
         hapticManager.listCreated()
         
@@ -440,6 +443,9 @@ class MainViewModel: ObservableObject {
         if let index = lists.firstIndex(where: { $0.id == list.id }) {
             lists[index] = updatedList
         }
+        
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     func duplicateList(_ list: List) throws {
@@ -472,6 +478,9 @@ class MainViewModel: ObservableObject {
         
         // Refresh lists from dataManager (which already added the list)
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     private func generateDuplicateName(for originalName: String) -> String {
@@ -502,6 +511,9 @@ class MainViewModel: ObservableObject {
         // Batch update all lists at once - saves to Core Data and syncs DataManager
         dataManager.updateListsOrder(lists)
         
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
+        
         // Trigger haptic feedback
         hapticManager.dragDropped()
     }
@@ -530,6 +542,9 @@ class MainViewModel: ObservableObject {
         }
         lists.removeAll { selectedLists.contains($0.id) }
         selectedLists.removeAll()
+        
+        // Send updated data to paired device
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     func enterSelectionMode() {
