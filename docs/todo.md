@@ -901,10 +901,23 @@
 - ✅ Write comprehensive tests for WatchPullToRefreshView component
 - ✅ Fix scroll interference bug after pull-to-refresh
 
+## Fix: Lists order is not synced to watch
+- ❌ iOS and watch has different order
+
+## Improve: Swipe gestures to watch app
+- ❌ Gesture transition to swipe from list view to main screen
+
 ## Improve: Item image size
 - ❌ Research industrial standard and apple recommendation for attached image size
 - ❌ Use industrial standard for compressing images
 - ❌ Do not store original size images to app and to items
+
+###########################################################
+
+## 
+- ❌ 
+
+###########################################################
 
 ## Phase 81: watchOS - Advanced Features (Optional)
 **Goal**: Add advanced features if time permits
@@ -956,13 +969,6 @@
 - ❌ Test build and archive process
 - ❌ Submit to App Store Connect
 
-
-###########################################################
-
-## 
-- ❌ 
-
-###########################################################
 
 
 
