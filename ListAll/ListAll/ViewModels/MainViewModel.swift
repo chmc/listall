@@ -135,10 +135,20 @@ class MainViewModel: ObservableObject {
                 print("🔄 [iOS] Syncing existing list: \(receivedList.name) (\(receivedList.items.count) items from Watch)")
                 #endif
                 
-                // Update list metadata only if received version is newer
-                if receivedList.modifiedAt > existingList.modifiedAt {
+                // CRITICAL FIX: Always sync orderNumber regardless of modifiedAt timestamp
+                // List ordering is critical and should always be kept in sync
+                var needsOrderUpdate = false
+                if receivedList.orderNumber != existingList.orderNumber {
                     #if os(iOS)
-                    print("  ⬆️ [iOS] List metadata is newer, updating")
+                    print("  🔄 [iOS] Order number changed: \(existingList.orderNumber) → \(receivedList.orderNumber)")
+                    #endif
+                    needsOrderUpdate = true
+                }
+                
+                // Update list metadata if received version is newer OR if order changed
+                if receivedList.modifiedAt > existingList.modifiedAt || needsOrderUpdate {
+                    #if os(iOS)
+                    print("  ⬆️ [iOS] List metadata is newer or order changed, updating")
                     #endif
                     dataManager.updateList(receivedList)
                 }
