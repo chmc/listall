@@ -1,0 +1,58 @@
+{
+  "type": "FeatureCollection",
+  "info": {
+    "name": "ListAll - Not Applicable",
+    "description": "This file is only required for routing/navigation apps. ListAll is a list management app and does not provide routing or navigation services. This file is included as a placeholder for documentation purposes only."
+  },
+  "comment": "ROUTING APP COVERAGE FILE - NOT NEEDED FOR ListAll",
+  "why_not_needed": [
+    "ListAll is not a routing or navigation app",
+    "ListAll does not provide turn-by-turn directions",
+    "ListAll does not display maps or routes",
+    "This file is only required for apps that offer routing services",
+    "You do NOT need to submit this file to App Store Connect for ListAll"
+  ],
+  "when_this_is_needed": {
+    "app_types": [
+      "Navigation apps (GPS, Maps)",
+      "Ride-sharing apps (Uber, Lyft)",
+      "Food delivery apps with driver routing",
+      "Fleet management apps",
+      "Any app offering turn-by-turn directions"
+    ],
+    "what_it_contains": [
+      "GeoJSON format file",
+      "Geographic coverage area where routing works",
+      "Polygon coordinates defining service area",
+      "Required if app provides routing outside of Apple Maps"
+    ]
+  },
+  "for_reference_only": {
+    "example_structure": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Coverage Area Example"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [-122.4, 37.8],
+                [-122.4, 37.7],
+                [-122.3, 37.7],
+                [-122.3, 37.8],
+                [-122.4, 37.8]
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "conclusion": "You can safely ignore or delete this file. It is not needed for ListAll's App Store submission.",
+  "features": []
+}
+

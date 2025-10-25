@@ -1,0 +1,118 @@
+APP STORE CONNECT INFORMATION
+================================
+
+APP NAME
+--------
+ListAll
+
+SUBTITLE (30 chars max)
+-----------------------
+Smart Lists with Sync
+
+BUNDLE ID
+---------
+io.github.chmc.ListAll
+
+SKU
+---
+listall-ios-2025
+
+VERSION
+-------
+1.0
+
+BUILD
+-----
+1
+
+
+CATEGORY INFORMATION
+====================
+
+PRIMARY CATEGORY
+----------------
+Productivity
+
+SECONDARY CATEGORY (Optional)
+------------------------------
+Utilities
+
+
+COPYRIGHT
+=========
+© 2025 Aleksi Sutela. All rights reserved.
+
+
+AGE RATING
+==========
+4+ (No Objectionable Content)
+
+Questionnaire Answers:
+- Cartoon or Fantasy Violence: None
+- Realistic Violence: None
+- Sexual Content or Nudity: None
+- Profanity or Crude Humor: None
+- Alcohol, Tobacco, or Drug Use: None
+- Mature/Suggestive Themes: None
+- Horror/Fear Themes: None
+- Medical/Treatment Information: None
+- Gambling: None
+- Unrestricted Web Access: No
+- User Generated Content: No
+
+
+PRICING
+=======
+Initial Price: FREE (can be changed before submission)
+
+Availability: All Territories
+
+
+REVIEW NOTES
+============
+ListAll is a privacy-focused list management app with iOS and watchOS support.
+
+KEY TESTING INSTRUCTIONS:
+1. Create a new list by tapping the + button on main screen
+2. Add items to the list with title, description, and quantity
+3. Test adding photos to items using camera or photo library
+4. Type similar item names multiple times to see smart suggestions appear
+5. Cross out items by tapping the checkbox
+6. Archive the list from the list menu (3 dots)
+7. Test Face ID/Touch ID lock from Settings (if available on test device)
+
+WATCHOS TESTING:
+1. Open the watchOS app on paired Apple Watch
+2. Lists should sync automatically from iPhone
+3. Tap items to mark as complete
+4. Changes sync back to iPhone immediately
+
+PRIVACY PERMISSIONS:
+- Camera: Used to attach photos to list items
+- Photo Library: Used to select existing photos for list items
+- Face ID/Touch ID: Optional security feature to lock the app
+- iCloud: Optional sync feature (disabled by default)
+
+NO THIRD-PARTY SERVICES:
+- All data stored locally or in user's iCloud
+- No analytics or tracking
+- No ads
+- No subscriptions
+- No in-app purchases
+
+SPECIAL NOTES:
+- App works completely offline
+- No account creation required
+- All features available immediately
+- Sample data can be generated from Settings for testing
+
+
+CONTACT INFORMATION
+===================
+First Name: Aleksi
+Last Name: Sutela
+Phone: [TO BE FILLED]
+Email: [TO BE FILLED]
+
+Demo Account: Not required (no login system)
+

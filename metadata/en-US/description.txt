@@ -1,0 +1,67 @@
+Organize your life with ListAll - the intelligent list management app that learns from your habits and helps you stay organized.
+
+KEY FEATURES:
+
+📝 SMART LISTS
+• Create unlimited lists for shopping, tasks, packing, and more
+• Organize items with titles, descriptions, quantities, and photos
+• Cross out items as you complete them
+• Archive lists when done, restore anytime
+
+🤖 INTELLIGENT SUGGESTIONS
+• Get smart item suggestions based on your history
+• Add frequently used items with one tap
+• Autocomplete saves time and reduces typing
+
+📸 VISUAL LISTS
+• Attach multiple photos to any item
+• Zoom, swipe, and organize images
+• Perfect for shopping lists, packing lists, or visual reminders
+
+⌚ APPLE WATCH COMPANION
+• View all your lists on your wrist
+• Check off items on the go
+• Real-time sync between iPhone and Watch
+• Works independently - no phone required
+
+🔐 PRIVACY & SECURITY
+• Optional Face ID/Touch ID protection
+• Biometric authentication to keep lists private
+• Secure local storage with optional iCloud sync
+• Your data stays yours - no third-party servers
+
+✨ POWERFUL FEATURES
+• Search across all lists and items
+• Sort and filter items your way
+• Bulk operations - select, move, copy, or delete multiple items
+• Undo delete - recover accidentally removed items
+• Drag-and-drop reordering
+• Export/import lists (JSON, CSV, plain text)
+• Share lists with others
+• Dark mode support
+
+☁️ SEAMLESS SYNC (OPTIONAL)
+• iCloud sync keeps data in sync across devices
+• Works offline - syncs when connected
+• Automatic background updates
+
+PERFECT FOR:
+• Shopping lists (groceries, hardware, gifts)
+• To-do lists and task management
+• Packing lists for travel
+• Recipe ingredients
+• Event planning
+• Project checklists
+• Household inventory
+• Collection tracking
+• And much more!
+
+WHAT USERS LOVE:
+• Clean, intuitive interface
+• Fast and responsive
+• No ads, no subscriptions
+• Privacy-focused
+• Regular updates and improvements
+
+Whether you're planning a trip, managing household chores, or keeping track of your shopping, ListAll is your perfect companion. Download now and experience the most flexible list management app on iOS!
+

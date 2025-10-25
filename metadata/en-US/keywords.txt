@@ -1,0 +1,1 @@
+list,shopping,todo,tasks,organize,checklist,grocery,watch,sync,smart,suggestion,photos,items,packing

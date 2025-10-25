@@ -1,0 +1,215 @@
+APP PRIVACY QUESTIONNAIRE - ListAll
+=====================================
+
+This document contains answers for the App Privacy section in App Store Connect.
+These answers should be used when filling out the privacy questionnaire.
+
+Last Updated: October 25, 2025
+
+=====================================
+SECTION 1: DATA COLLECTION
+=====================================
+
+Question: Does this app collect data from this app?
+Answer: NO
+
+Explanation: ListAll does not collect any data. All data stays on the user's device
+or in their personal iCloud account (if they enable sync).
+
+=====================================
+SECTION 2: DATA TYPES (if NO above, skip this section)
+=====================================
+
+Since we answered NO to data collection, we don't fill out data types.
+
+However, for clarity on what the app DOES NOT collect:
+
+NOT COLLECTED:
+- Contact Info (Name, Email Address, Phone Number, Physical Address, etc.)
+- Health & Fitness
+- Financial Info
+- Location
+- Sensitive Info
+- Contacts
+- User Content (beyond local storage)
+- Browsing History
+- Search History
+- Identifiers (User ID, Device ID, etc.)
+- Purchases
+- Usage Data
+- Diagnostics
+- Other Data
+
+=====================================
+SECTION 3: APP FUNCTIONALITY
+=====================================
+
+The app provides:
+1. List management
+2. Item organization with photos
+3. Smart suggestions based on local history
+4. Optional iCloud sync (user's private data)
+5. Export/import functionality
+6. Apple Watch companion app
+
+All functionality works locally. No data sent to developer.
+
+=====================================
+SECTION 4: THIRD-PARTY CODE
+=====================================
+
+Question: Does this app use third-party code?
+Answer: NO
+
+Explanation: ListAll is built entirely with Apple's native frameworks:
+- SwiftUI for UI
+- Core Data for local storage
+- CloudKit for optional iCloud sync (user's private cloud)
+- No third-party SDKs, analytics, or tracking
+
+=====================================
+SECTION 5: THIRD-PARTY ADVERTISING
+=====================================
+
+Question: Does this app display third-party advertising?
+Answer: NO
+
+Explanation: ListAll has no advertisements of any kind.
+
+=====================================
+SECTION 6: APP TRACKING TRANSPARENCY
+=====================================
+
+Question: Do you or your third-party partners track users?
+Answer: NO
+
+Explanation: ListAll does not track users or use any tracking technologies.
+No App Tracking Transparency (ATT) prompt needed.
+
+=====================================
+DETAILED PRIVACY PRACTICES
+=====================================
+
+### What Data is Processed Locally Only:
+
+1. LISTS AND ITEMS
+   - Data Type: User content (lists, items, descriptions)
+   - Linked to User: No (stays local)
+   - Used for Tracking: No
+   - Purpose: App functionality
+
+2. PHOTOS
+   - Data Type: Photos/videos attached to items
+   - Linked to User: No (stays local)
+   - Used for Tracking: No
+   - Purpose: App functionality
+
+3. USER PREFERENCES
+   - Data Type: Settings (theme, security preferences)
+   - Linked to User: No (stays local)
+   - Used for Tracking: No
+   - Purpose: App functionality
+
+4. iCLOUD DATA (if user enables sync)
+   - Data Type: Same as above
+   - Linked to User: Yes (stored in user's iCloud)
+   - Used for Tracking: No
+   - Purpose: Sync across user's devices
+   - Note: This is the user's private iCloud - developer has no access
+
+=====================================
+PERMISSIONS USED AND WHY
+=====================================
+
+1. CAMERA
+   - Why: Take photos of items
+   - When: Only when user taps camera button
+   - Data handling: Stored locally in app
+   - Privacy: No upload, no analysis, no sharing
+
+2. PHOTO LIBRARY
+   - Why: Select existing photos
+   - When: Only when user taps photo picker
+   - Data handling: Copied to app's local database
+   - Privacy: No upload, no analysis, no sharing
+
+3. FACE ID / TOUCH ID
+   - Why: Optional app lock for privacy
+   - When: Only if user enables in Settings
+   - Data handling: Local authentication only
+   - Privacy: No biometric data stored or transmitted
+
+4. iCLOUD (optional)
+   - Why: Sync data across user's devices
+   - When: Only if user enables in Settings
+   - Data handling: User's private iCloud container
+   - Privacy: Developer cannot access user's iCloud data
+
+=====================================
+COMPLIANCE STATEMENTS
+=====================================
+
+GDPR Compliance: YES
+- No personal data collected
+- User has full control over their data
+- Data can be exported or deleted anytime
+- No processing of EU citizens' data by developer
+
+CCPA Compliance: YES
+- No sale of personal information
+- No collection of personal information
+- California residents have full control
+
+COPPA Compliance: YES
+- No data collection from children
+- No personal information processed
+- Safe for all ages (rated 4+)
+
+=====================================
+ATTESTATION
+=====================================
+
+I attest that:
+
+✓ The information provided is true and accurate
+✓ ListAll does not collect user data
+✓ All data processing is local or in user's iCloud
+✓ No third-party services are used
+✓ No tracking or analytics are implemented
+✓ Privacy policy is accurate and up-to-date
+
+Developer: Aleksi Sutela
+Date: October 25, 2025
+
+=====================================
+HOW TO USE THIS IN APP STORE CONNECT
+=====================================
+
+1. Go to App Store Connect
+2. Select your app
+3. Go to App Privacy section
+4. Click "Get Started"
+
+5. Question: "Does your app collect data from this app?"
+   → Select "No"
+
+6. Question: "Does this app use third-party code?"
+   → Select "No"
+
+7. Question: "Do you or your third-party partners track users?"
+   → Select "No"
+
+8. Click "Publish"
+
+That's it! Since you don't collect data, the questionnaire is very simple.
+
+=====================================
+NOTES
+=====================================
+
+- If Apple asks for clarification about iCloud, explain it's the user's private iCloud
+- The developer never sees or has access to iCloud data
+- All photos are stored locally (or in user's iCloud if sync enabled)
+- Smart suggestions are processed entirely on-device
+- No network requests except to user's iCloud (if enabled)
+

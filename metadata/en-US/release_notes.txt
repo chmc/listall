@@ -1,0 +1,31 @@
+Welcome to ListAll 1.0!
+
+This is the initial release of ListAll, your smart list management companion.
+
+WHAT'S INCLUDED:
+
+✨ Complete list management system
+• Create unlimited lists for any purpose
+• Add items with titles, descriptions, quantities, and photos
+• Smart suggestions based on your history
+• Cross out items and archive lists
+
+⌚ Apple Watch app
+• View and manage your lists from your wrist
+• Complete items with a tap
+• Seamless sync with your iPhone
+
+🔐 Privacy & Security
+• Face ID/Touch ID protection
+• All data stored securely on your device
+• Optional iCloud sync for backup
+
+📤 Export & Share
+• Export lists to multiple formats
+• Share lists with friends and family
+• Import data from other apps
+
+We're just getting started! Future updates will bring even more features and improvements. Thank you for trying ListAll!
+
+Questions or feedback? Contact us at the support URL.
+
