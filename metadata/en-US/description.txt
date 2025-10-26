@@ -2,35 +2,35 @@ Organize your life with ListAll - the intelligent list management app that learn
 
 KEY FEATURES:
 
-📝 SMART LISTS
+SMART LISTS
 • Create unlimited lists for shopping, tasks, packing, and more
 • Organize items with titles, descriptions, quantities, and photos
 • Cross out items as you complete them
 • Archive lists when done, restore anytime
 
-🤖 INTELLIGENT SUGGESTIONS
+INTELLIGENT SUGGESTIONS
 • Get smart item suggestions based on your history
 • Add frequently used items with one tap
 • Autocomplete saves time and reduces typing
 
-📸 VISUAL LISTS
+VISUAL LISTS
 • Attach multiple photos to any item
 • Zoom, swipe, and organize images
 • Perfect for shopping lists, packing lists, or visual reminders
 
-⌚ APPLE WATCH COMPANION
+APPLE WATCH COMPANION
 • View all your lists on your wrist
 • Check off items on the go
 • Real-time sync between iPhone and Watch
 • Works independently - no phone required
 
-🔐 PRIVACY & SECURITY
+PRIVACY & SECURITY
 • Optional Face ID/Touch ID protection
 • Biometric authentication to keep lists private
 • Secure local storage with optional iCloud sync
 • Your data stays yours - no third-party servers
 
-✨ POWERFUL FEATURES
+POWERFUL FEATURES
 • Search across all lists and items
 • Sort and filter items your way
 • Bulk operations - select, move, copy, or delete multiple items
@@ -40,7 +40,7 @@ KEY FEATURES:
 • Share lists with others
 • Dark mode support
 
-☁️ SEAMLESS SYNC (OPTIONAL)
+SEAMLESS SYNC (OPTIONAL)
 • iCloud sync keeps data in sync across devices
 • Works offline - syncs when connected
 • Automatic background updates
