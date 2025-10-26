@@ -75,6 +75,7 @@
 		451B4B8A2EA65E29006B59E1 /* Exceptions for "ListAll" folder in "ListAllWatch Watch App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Localizable.xcstrings,
 				Models/CoreData/CoreDataManager.swift,
 				"Models/CoreData/ItemEntity+Extensions.swift",
 				"Models/CoreData/ItemImageEntity+Extensions.swift",
@@ -91,6 +92,7 @@
 				Services/WatchConnectivityService.swift,
 				"Utils/Extensions/String+Extensions.swift",
 				Utils/Helpers/ValidationHelper.swift,
+				Utils/LocalizationManager.swift,
 			);
 			target = 451D224E2EA54063004688D4 /* ListAllWatch Watch App */;
 		};

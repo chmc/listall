@@ -1,10 +1,3 @@
-//
-//  WatchEmptyStateView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 20.10.2025.
-//
-
 import SwiftUI
 
 /// Empty state view for when there are no lists
@@ -15,19 +8,19 @@ struct WatchEmptyStateView: View {
                 .font(.system(size: 40))
                 .foregroundColor(.secondary)
             
-            Text("No Lists")
+            Text(watchLocalizedString("No Lists", comment: "watchOS empty state title when there are no lists"))
                 .font(.headline)
                 .foregroundColor(.primary)
             
-            Text("Create lists on your iPhone to see them here")
+            Text(watchLocalizedString("Create lists on your iPhone to see them here", comment: "watchOS empty state message for lists"))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
         .padding()
-        .accessibilityLabel("No lists available")
-        .accessibilityHint("Create lists on your iPhone to see them here")
+        .accessibilityLabel(watchLocalizedString("No lists available", comment: "watchOS accessibility label for empty lists state"))
+        .accessibilityHint(watchLocalizedString("Create lists on your iPhone to see them here", comment: "watchOS empty state message for lists"))
     }
 }
 

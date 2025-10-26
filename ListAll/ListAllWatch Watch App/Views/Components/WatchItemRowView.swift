@@ -1,10 +1,3 @@
-//
-//  WatchItemRowView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 21.10.2025.
-//
-
 import SwiftUI
 
 /// A row component displaying an item with completion status

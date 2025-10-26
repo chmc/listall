@@ -1,15 +1,9 @@
-//
-//  WatchListsView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 20.10.2025.
-//
-
 import SwiftUI
 
 /// Main view showing all lists on watchOS
 struct WatchListsView: View {
     @StateObject private var viewModel = WatchMainViewModel()
+    @EnvironmentObject private var localizationManager: WatchLocalizationManager
     
     var body: some View {
         NavigationStack {
@@ -23,7 +17,7 @@ struct WatchListsView: View {
                     }
                 } else if viewModel.isLoading && viewModel.lists.isEmpty {
                     // Show loading indicator on initial load
-                    WatchLoadingView(message: "Loading lists...")
+                    WatchLoadingView(message: watchLocalizedString("Loading lists...", comment: "watchOS loading message when loading lists"))
                 } else if viewModel.lists.isEmpty {
                     // Show empty state
                     WatchEmptyStateView()
@@ -32,7 +26,7 @@ struct WatchListsView: View {
                     listsContent
                 }
             }
-        .navigationTitle("Lists")
+        .navigationTitle(watchLocalizedString("Lists", comment: "watchOS navigation title for lists view"))
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .bottom) {
             if viewModel.isSyncingFromiOS {
@@ -66,8 +60,8 @@ struct WatchListsView: View {
                             WatchListRowView(list: list)
                         }
                         .listRowBackground(Color.clear)
-                        .accessibilityLabel("\(list.name) list")
-                        .accessibilityHint("Tap to view items in this list")
+                        .accessibilityLabel("\(list.name) " + watchLocalizedString("list", comment: "watchOS accessibility label suffix for list"))
+                        .accessibilityHint(watchLocalizedString("Tap to view items in this list", comment: "watchOS accessibility hint for list row"))
                     }
                 }
             }

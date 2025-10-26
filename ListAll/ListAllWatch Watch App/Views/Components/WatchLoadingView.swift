@@ -1,10 +1,3 @@
-//
-//  WatchLoadingView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 20.10.2025.
-//
-
 import SwiftUI
 
 /// Loading view component for watchOS
@@ -12,7 +5,7 @@ struct WatchLoadingView: View {
     let message: String
     let showProgress: Bool
     
-    init(message: String = "Loading...", showProgress: Bool = true) {
+    init(message: String = watchLocalizedString("Loading...", comment: "watchOS generic loading message"), showProgress: Bool = true) {
         self.message = message
         self.showProgress = showProgress
     }
@@ -61,7 +54,7 @@ struct WatchSyncLoadingView: View {
                     .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true).delay(0.4), value: isPulsing)
             }
             
-            Text("Syncing...")
+            Text(watchLocalizedString("Syncing...", comment: "watchOS sync indicator message"))
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
@@ -82,7 +75,7 @@ struct WatchErrorView: View {
                 .font(.system(size: 30))
                 .foregroundColor(.orange)
             
-            Text("Error")
+            Text(watchLocalizedString("Error", comment: "watchOS error title"))
                 .font(.headline)
                 .foregroundColor(.primary)
             
@@ -92,7 +85,7 @@ struct WatchErrorView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             
-            Button("Retry") {
+            Button(watchLocalizedString("Retry", comment: "watchOS retry button text")) {
                 WatchHapticManager.shared.playRefresh()
                 onRetry()
             }

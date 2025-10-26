@@ -1,10 +1,3 @@
-//
-//  WatchFilterPicker.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 21.10.2025.
-//
-
 import SwiftUI
 #if os(watchOS)
 import WatchKit
@@ -16,15 +9,15 @@ extension ItemFilterOption {
     var shortLabel: String {
         switch self {
         case .all:
-            return "All"
+            return NSLocalizedString("All", comment: "watchOS filter option - all items")
         case .active:
-            return "Active"
+            return NSLocalizedString("Active", comment: "watchOS filter option - active items")
         case .completed:
-            return "Done"
+            return NSLocalizedString("Done", comment: "watchOS filter option - completed items")
         case .hasDescription:
-            return "Desc"
+            return NSLocalizedString("Desc", comment: "watchOS filter option - items with description (short)")
         case .hasImages:
-            return "Images"
+            return NSLocalizedString("Images", comment: "watchOS filter option - items with images")
         }
     }
     
@@ -55,11 +48,11 @@ struct WatchFilterPicker: View {
                     .tag(option)
             }
         } label: {
-            Text("Filter")
+            Text(NSLocalizedString("Filter", comment: "watchOS filter picker label"))
         }
         .pickerStyle(.navigationLink)
-        .accessibilityLabel("Filter items")
-        .accessibilityHint("Choose which items to display")
+        .accessibilityLabel(NSLocalizedString("Filter items", comment: "watchOS accessibility label for filter picker"))
+        .accessibilityHint(NSLocalizedString("Choose which items to display", comment: "watchOS accessibility hint for filter picker"))
     }
 }
 

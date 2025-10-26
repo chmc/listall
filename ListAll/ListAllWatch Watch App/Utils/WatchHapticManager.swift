@@ -1,5 +1,9 @@
-//
-//  WatchHapticManager.swift
+import Foundation
+#if os(watchOS)
+import WatchKit
+#endif
+
+/// Manages haptic feedback on watchOSapticManager.swift
 //  ListAllWatch Watch App
 //
 //  Created by AI Assistant on 20.10.2025.

@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  ListAllWatch Watch App
-//
-//  Created by Aleksi Sutela on 19.10.2025.
-//
-
 import SwiftUI
 
 struct ContentView: View {

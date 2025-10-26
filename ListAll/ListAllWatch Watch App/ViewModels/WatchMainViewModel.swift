@@ -1,10 +1,3 @@
-//
-//  WatchMainViewModel.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 20.10.2025.
-//
-
 import Foundation
 import SwiftUI
 import Combine

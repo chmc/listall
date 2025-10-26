@@ -1,10 +1,3 @@
-//
-//  WatchListView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 21.10.2025.
-//
-
 import SwiftUI
 #if os(watchOS)
 import WatchKit
@@ -29,7 +22,7 @@ struct WatchListView: View {
                 }
             } else if viewModel.isLoading && viewModel.items.isEmpty {
                 // Show loading indicator on initial load
-                WatchLoadingView(message: "Loading items...")
+                WatchLoadingView(message: watchLocalizedString("Loading items...", comment: "watchOS loading message when loading items"))
             } else if viewModel.sortedItems.isEmpty {
                 // Show empty state (respects current filter)
                 emptyStateView
@@ -131,7 +124,10 @@ struct WatchListView: View {
             Spacer()
             
             // Total count
-            Text("\(viewModel.totalItemCount) total")
+            Text(String.localizedStringWithFormat(
+                watchLocalizedString("%lld total", comment: "watchOS item count - total items"),
+                Int64(viewModel.totalItemCount)
+            ))
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
@@ -182,39 +178,39 @@ struct WatchListView: View {
     
     private var emptyStateTitle: String {
         if viewModel.items.isEmpty {
-            return "No Items"
+            return watchLocalizedString("No Items", comment: "watchOS empty state title when there are no items")
         }
         
         switch viewModel.currentFilter {
         case .all:
-            return "No Items"
+            return watchLocalizedString("No Items", comment: "watchOS empty state title when there are no items")
         case .active:
-            return "No Active Items"
+            return watchLocalizedString("No Active Items", comment: "watchOS empty state title when there are no active items")
         case .completed:
-            return "No Completed Items"
+            return watchLocalizedString("No Completed Items", comment: "watchOS empty state title when there are no completed items")
         case .hasDescription:
-            return "No Items with Description"
+            return watchLocalizedString("No Items with Description", comment: "watchOS empty state title when there are no items with description")
         case .hasImages:
-            return "No Items with Images"
+            return watchLocalizedString("No Items with Images", comment: "watchOS empty state title when there are no items with images")
         }
     }
     
     private var emptyStateMessage: String {
         if viewModel.items.isEmpty {
-            return "Add items on your iPhone"
+            return watchLocalizedString("Add items on your iPhone", comment: "watchOS empty state message for items")
         }
         
         switch viewModel.currentFilter {
         case .all:
-            return "Add items on your iPhone"
+            return watchLocalizedString("Add items on your iPhone", comment: "watchOS empty state message for items")
         case .active:
-            return "All items are completed"
+            return watchLocalizedString("All items are completed", comment: "watchOS empty state message when all items are completed")
         case .completed:
-            return "No completed items yet"
+            return watchLocalizedString("No completed items yet", comment: "watchOS empty state message when there are no completed items")
         case .hasDescription:
-            return "No items have descriptions"
+            return watchLocalizedString("No items have descriptions", comment: "watchOS empty state message when no items have descriptions")
         case .hasImages:
-            return "No items have images"
+            return watchLocalizedString("No items have images", comment: "watchOS empty state message when no items have images")
         }
     }
 }

@@ -1,10 +1,3 @@
-//
-//  WatchPullToRefreshView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 24.10.2025.
-//
-
 import SwiftUI
 
 /// Custom pull-to-refresh component for watchOS with dynamic text and animated refresh icon
@@ -54,7 +47,7 @@ struct WatchPullToRefreshView<Content: View>: View {
                             Image(systemName: "arrow.down")
                                 .font(.caption)
                                 .foregroundColor(.blue)
-                            Text("Pull down to refresh")
+                            Text(watchLocalizedString("Pull down to refresh", comment: "watchOS pull-to-refresh instruction text"))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }

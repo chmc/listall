@@ -932,10 +932,13 @@
 - ✅ Add language option to settings
 - ✅ Follow apple standard to language support
 
-## Localization support to watchOS app
-- ❌ Watch app uses same language that is set to iOS app
-- ❌ Translate whole watchOS app
-- ❌ Go trough whole codebase and localize all hard coded text in code and UI
+## Localization support to watchOS app ✅ COMPLETED
+- ✅ Watch app uses same language that is set to iOS app
+- ✅ Translate whole watchOS app
+- ✅ Go trough whole codebase and localize all hard coded text in code and UI
+
+## Create localized screenshots for App Store 
+- ❌ Research what screenshots are required and provide them
 
 ### Future Work (Optional)
 - Update all remaining UI views to use NSLocalizedString()

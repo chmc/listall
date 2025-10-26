@@ -69,6 +69,36 @@ class WatchConnectivityService: NSObject, ObservableObject {
     
     // MARK: - Public Methods
     
+    #if os(iOS)
+    /// Sends language preference to watchOS
+    func sendLanguagePreference(_ languageCode: String) {
+        guard let session = session else {
+            logger.warning("Cannot send language preference: WatchConnectivity not supported")
+            return
+        }
+        
+        guard session.isPaired, session.isWatchAppInstalled else {
+            logger.info("Cannot send language preference: watch not paired or app not installed")
+            return
+        }
+        
+        let message: [String: Any] = ["language": languageCode]
+        
+        if session.isReachable {
+            // Watch is reachable, send immediately
+            session.sendMessage(message, replyHandler: { reply in
+                self.logger.info("Language preference sent successfully: \(languageCode)")
+            }, errorHandler: { error in
+                self.logger.error("Failed to send language preference: \(error.localizedDescription)")
+            })
+        } else {
+            // Watch not reachable, queue for background delivery
+            _ = session.transferUserInfo(message)
+            logger.info("Queued language preference for background delivery: \(languageCode)")
+        }
+    }
+    #endif
+    
     /// Sends a sync notification to the paired device
     /// This notifies the other device that data has changed and it should reload
     func sendSyncNotification() {
@@ -435,6 +465,14 @@ extension WatchConnectivityService: WCSessionDelegate {
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         logger.info("Received message from paired device: \(message)")
         
+        // Check if this is a language update from iOS
+        #if os(watchOS)
+        if let languageCode = message["language"] as? String {
+            handleLanguageUpdate(languageCode)
+            return
+        }
+        #endif
+        
         // Check if this is a sync notification
         if message[MessageKey.syncNotification] as? Bool == true {
             handleIncomingSyncNotification(message)
@@ -444,6 +482,15 @@ extension WatchConnectivityService: WCSessionDelegate {
     func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         logger.info("Received message with reply handler from paired device: \(message)")
         
+        // Check if this is a language update from iOS
+        #if os(watchOS)
+        if let languageCode = message["language"] as? String {
+            handleLanguageUpdate(languageCode)
+            replyHandler(["received": true, "language": languageCode])
+            return
+        }
+        #endif
+        
         // Check if this is a sync notification
         if message[MessageKey.syncNotification] as? Bool == true {
             handleIncomingSyncNotification(message)
@@ -452,6 +499,30 @@ extension WatchConnectivityService: WCSessionDelegate {
         // Send acknowledgment reply
         replyHandler(["received": true])
     }
+    
+    #if os(watchOS)
+    /// Handle language update from iOS
+    private func handleLanguageUpdate(_ languageCode: String) {
+        print("🌍 [watchOS] Received language update from iOS: \(languageCode)")
+        
+        // Save to watchOS's own UserDefaults
+        if let sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll") {
+            sharedDefaults.set(languageCode, forKey: "AppLanguage")
+            sharedDefaults.synchronize()
+            print("🌍 [watchOS] Saved language '\(languageCode)' to App Groups")
+        }
+        
+        // Also save to standard UserDefaults as backup
+        UserDefaults.standard.set(languageCode, forKey: "AppLanguage")
+        UserDefaults.standard.synchronize()
+        
+        // Trigger WatchLocalizationManager to refresh
+        DispatchQueue.main.async {
+            WatchLocalizationManager.shared.refreshLanguage()
+            print("🌍 [watchOS] Language refresh triggered")
+        }
+    }
+    #endif
     
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
         let ts = Self.timestamp()

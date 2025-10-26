@@ -1,10 +1,3 @@
-//
-//  WatchListRowView.swift
-//  ListAllWatch Watch App
-//
-//  Created by AI Assistant on 20.10.2025.
-//
-
 import SwiftUI
 
 /// A row component displaying a list with its name and item counts
@@ -32,13 +25,20 @@ struct WatchListRowView: View {
         let totalCount = list.itemCount
         
         if totalCount == 0 {
-            return "No items"
+                return watchLocalizedString("No Items", comment: "watchOS list row: no items label")
         } else if activeCount == totalCount {
             // All items are active
-            return "\(totalCount) \(totalCount == 1 ? "item" : "items")"
+                return String.localizedStringWithFormat(
+                    watchLocalizedString("%lld items", comment: "watchOS list row: total items count"),
+                    Int64(totalCount)
+                )
         } else {
             // Show active count with total in parentheses
-            return "\(activeCount) (\(totalCount)) \(totalCount == 1 ? "item" : "items")"
+                return String.localizedStringWithFormat(
+                    watchLocalizedString("%lld (%lld) items", comment: "watchOS list row: active and total items count"),
+                    Int64(activeCount),
+                    Int64(totalCount)
+                )
         }
     }
 }
