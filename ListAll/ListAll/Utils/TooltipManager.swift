@@ -20,17 +20,17 @@ enum TooltipType: String, CaseIterable {
     var title: String {
         switch self {
         case .addListButton:
-            return "Create Lists"
+            return String(localized: "Create Lists")
         case .itemSuggestions:
-            return "Smart Suggestions"
+            return String(localized: "Smart Suggestions")
         case .searchFunctionality:
-            return "Search Items"
+            return String(localized: "Search Items")
         case .sortFilterOptions:
-            return "Sort & Filter"
+            return String(localized: "Sort & Filter")
         case .swipeActions:
-            return "Swipe Actions"
+            return String(localized: "Swipe Actions")
         case .archiveFunctionality:
-            return "Archive Lists"
+            return String(localized: "Archive Lists")
         }
     }
     
@@ -54,17 +54,17 @@ enum TooltipType: String, CaseIterable {
     var message: String {
         switch self {
         case .addListButton:
-            return "Tap + to create your first list"
+            return String(localized: "Tap + to create your first list")
         case .itemSuggestions:
-            return "💡 Suggestions appear based on your previous items"
+            return String(localized: "💡 Suggestions appear based on your previous items")
         case .searchFunctionality:
-            return "Search across all items in this list"
+            return String(localized: "Search across all items in this list")
         case .sortFilterOptions:
-            return "Sort and filter items to organize your view"
+            return String(localized: "Sort and filter items to organize your view")
         case .swipeActions:
-            return "Swipe left on items for quick actions like delete and duplicate"
+            return String(localized: "Swipe left on items for quick actions like delete and duplicate")
         case .archiveFunctionality:
-            return "Archive completed lists to keep your workspace clean"
+            return String(localized: "Archive completed lists to keep your workspace clean")
         }
     }
     

@@ -20,7 +20,7 @@ struct ArchivedListView: View {
                         Image(systemName: "archivebox")
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
-                        Text("Archived")
+                        Text(String(localized: "Archived"))
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
                     }
@@ -51,10 +51,10 @@ struct ArchivedListView: View {
                         .font(.system(size: 60))
                         .foregroundColor(Theme.Colors.secondary)
                     
-                    Text("No Items")
+                    Text(String(localized: "No Items"))
                         .font(Theme.Typography.title)
                     
-                    Text("This list was empty when archived")
+                    Text(String(localized: "This list was empty when archived"))
                         .font(Theme.Typography.body)
                         .emptyStateStyle()
                 }
@@ -75,7 +75,7 @@ struct ArchivedListView: View {
                 }
             }
         }
-        .navigationTitle("Archived List")
+        .navigationTitle(String(localized: "Archived List"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -86,7 +86,7 @@ struct ArchivedListView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.uturn.backward")
-                            Text("Restore")
+                            Text(String(localized: "Restore"))
                         }
                         .foregroundColor(.blue)
                     }
@@ -101,23 +101,23 @@ struct ArchivedListView: View {
                 }
             }
         }
-        .alert("Restore List", isPresented: $showingRestoreConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Restore") {
+        .alert(String(localized: "Restore List"), isPresented: $showingRestoreConfirmation) {
+            Button(String(localized: "Cancel"), role: .cancel) { }
+            Button(String(localized: "Restore")) {
                 mainViewModel.restoreList(list)
                 presentationMode.wrappedValue.dismiss()
             }
         } message: {
-            Text("Do you want to restore \"\(list.name)\" to your active lists?")
+            Text(String(format: String(localized: "Do you want to restore \"%@\" to your active lists?"), list.name))
         }
-        .alert("Permanently Delete List", isPresented: $showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete Permanently", role: .destructive) {
+        .alert(String(localized: "Permanently Delete List"), isPresented: $showingDeleteConfirmation) {
+            Button(String(localized: "Cancel"), role: .cancel) { }
+            Button(String(localized: "Delete Permanently"), role: .destructive) {
                 mainViewModel.permanentlyDeleteList(list)
                 presentationMode.wrappedValue.dismiss()
             }
         } message: {
-            Text("Are you sure you want to permanently delete \"\(list.name)\"? This action cannot be undone. All items and images in this list will be permanently deleted.")
+            Text(String(format: String(localized: "Are you sure you want to permanently delete \"%@\"? This action cannot be undone. All items and images in this list will be permanently deleted."), list.name))
         }
     }
 }

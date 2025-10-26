@@ -24,11 +24,11 @@ struct ListsEmptyStateView: View {
                 
                 // Welcome message
                 VStack(spacing: Theme.Spacing.sm) {
-                    Text("Welcome to ListAll")
+                    Text(String(localized: "Welcome to ListAll"))
                         .font(Theme.Typography.largeTitle)
                         .fontWeight(.bold)
                     
-                    Text("Organize everything in one place")
+                    Text(String(localized: "Organize everything in one place"))
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.secondary)
                         .multilineTextAlignment(.center)
@@ -36,7 +36,7 @@ struct ListsEmptyStateView: View {
                 
                 // Sample list templates
                 VStack(spacing: Theme.Spacing.md) {
-                    Text("Get Started with a Template")
+                    Text(String(localized: "Get Started with a Template"))
                         .font(Theme.Typography.headline)
                         .foregroundColor(Theme.Colors.primary)
                         .padding(.top, Theme.Spacing.md)
@@ -54,7 +54,7 @@ struct ListsEmptyStateView: View {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.3))
                         .frame(height: 1)
-                    Text("or")
+                    Text(String(localized: "or"))
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
                         .padding(.horizontal, Theme.Spacing.sm)
@@ -69,7 +69,7 @@ struct ListsEmptyStateView: View {
                     HStack(spacing: Theme.Spacing.sm) {
                         Image(systemName: Constants.UI.addIcon)
                             .font(.system(size: 18, weight: .semibold))
-                        Text("Create Custom List")
+                        Text(String(localized: "Create Custom List"))
                             .font(Theme.Typography.headline)
                     }
                     .foregroundColor(.white)
@@ -82,7 +82,7 @@ struct ListsEmptyStateView: View {
                 
                 // Feature highlights
                 VStack(spacing: Theme.Spacing.md) {
-                    Text("ListAll Features")
+                    Text(String(localized: "ListAll Features"))
                         .font(Theme.Typography.headline)
                         .foregroundColor(Theme.Colors.primary)
                         .padding(.top, Theme.Spacing.lg)
@@ -231,17 +231,17 @@ struct ItemsEmptyStateView: View {
                     .foregroundColor(Theme.Colors.success)
             }
             
-            Text("All Done! 🎉")
+            Text(String(localized: "All Done! 🎉"))
                 .font(Theme.Typography.largeTitle)
                 .fontWeight(.bold)
             
-            Text("You've completed all items in this list.")
+            Text(String(localized: "You've completed all items in this list."))
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.secondary)
                 .multilineTextAlignment(.center)
             
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("What's next?")
+                Text(String(localized: "What's next?"))
                     .font(Theme.Typography.headline)
                     .padding(.top, Theme.Spacing.md)
                 
@@ -264,10 +264,10 @@ struct ItemsEmptyStateView: View {
                 .font(.system(size: 60))
                 .foregroundColor(Theme.Colors.secondary)
             
-            Text("No Items Yet")
+            Text(String(localized: "No Items Yet"))
                 .font(Theme.Typography.title)
             
-            Text("Start adding items to your list")
+            Text(String(localized: "Start adding items to your list"))
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.secondary)
                 .multilineTextAlignment(.center)
@@ -276,7 +276,7 @@ struct ItemsEmptyStateView: View {
             Button(action: onAddItem) {
                 HStack {
                     Image(systemName: Constants.UI.addIcon)
-                    Text("Add Your First Item")
+                    Text(String(localized: "Add Your First Item"))
                 }
                 .font(Theme.Typography.headline)
                 .foregroundColor(.white)

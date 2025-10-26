@@ -10,6 +10,21 @@ enum ItemSortOption: String, CaseIterable, Identifiable, Codable {
     
     var id: String { rawValue }
     
+    var displayName: String {
+        switch self {
+        case .orderNumber:
+            return String(localized: "Order")
+        case .title:
+            return String(localized: "Title")
+        case .createdAt:
+            return String(localized: "Created Date")
+        case .modifiedAt:
+            return String(localized: "Modified Date")
+        case .quantity:
+            return String(localized: "Quantity")
+        }
+    }
+    
     var systemImage: String {
         switch self {
         case .orderNumber:
@@ -36,6 +51,21 @@ enum ItemFilterOption: String, CaseIterable, Identifiable, Codable {
     
     var id: String { rawValue }
     
+    var displayName: String {
+        switch self {
+        case .all:
+            return String(localized: "All Items")
+        case .active:
+            return String(localized: "Active Only")
+        case .completed:
+            return String(localized: "Crossed Out Only")
+        case .hasDescription:
+            return String(localized: "With Description")
+        case .hasImages:
+            return String(localized: "With Images")
+        }
+    }
+    
     var systemImage: String {
         switch self {
         case .all:
@@ -58,6 +88,15 @@ enum SortDirection: String, CaseIterable, Identifiable, Codable {
     case descending = "Descending"
     
     var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .ascending:
+            return String(localized: "Ascending")
+        case .descending:
+            return String(localized: "Descending")
+        }
+    }
     
     var systemImage: String {
         switch self {

@@ -58,11 +58,11 @@ struct ContentView: View {
                 // else: timeout hasn't elapsed, stay authenticated
             }
         }
-        .alert("Authentication Failed", isPresented: $showAuthError) {
-            Button("Try Again") {
+        .alert(String(localized: "Authentication Failed"), isPresented: $showAuthError) {
+            Button(String(localized: "Try Again")) {
                 authenticate()
             }
-            Button("Cancel", role: .cancel) {
+            Button(String(localized: "Cancel"), role: .cancel) {
                 showAuthError = false
             }
         } message: {
@@ -131,11 +131,11 @@ struct AuthenticationView: View {
                 .foregroundColor(.blue)
             
             VStack(spacing: 12) {
-                Text("ListAll")
+                Text(String(localized: "ListAll"))
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
-                Text("Locked")
+                Text(String(localized: "Locked"))
                     .font(.title3)
                     .foregroundColor(.secondary)
             }
@@ -149,10 +149,10 @@ struct AuthenticationView: View {
                         Image(systemName: biometricType.iconName)
                             .font(.title3)
                         if biometricType != .none {
-                            Text("Unlock with \(biometricType.displayName)")
+                            Text(String(format: String(localized: "Unlock with %@"), biometricType.displayName))
                                 .font(.headline)
                         } else {
-                            Text("Unlock with Passcode")
+                            Text(String(localized: "Unlock with Passcode"))
                                 .font(.headline)
                         }
                     }
@@ -167,7 +167,7 @@ struct AuthenticationView: View {
                 VStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(1.5)
-                    Text("Authenticating...")
+                    Text(String(localized: "Authenticating..."))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

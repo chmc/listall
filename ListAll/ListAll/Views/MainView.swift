@@ -41,7 +41,7 @@ struct MainView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "applewatch")
                                     .font(.system(size: 12))
-                                Text("Syncing with Watch...")
+                                Text(String(localized: "Syncing with Watch..."))
                                     .font(.caption)
                             }
                             .foregroundColor(.secondary)
@@ -508,14 +508,14 @@ struct CustomBottomToolbar: View {
                     Image(systemName: Constants.UI.listIcon)
                         .font(.system(size: 24))
                         .foregroundColor(.blue)
-                    Text("Lists")
+                    Text(String(localized: "Lists"))
                         .font(.system(size: 10))
                         .foregroundColor(.blue)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }
-            .accessibilityLabel("Lists")
+            .accessibilityLabel(String(localized: "Lists"))
             
             // Settings Button
             Button(action: onSettingsTap) {
@@ -523,14 +523,14 @@ struct CustomBottomToolbar: View {
                     Image(systemName: Constants.UI.settingsIcon)
                         .font(.system(size: 24))
                         .foregroundColor(.gray)
-                    Text("Settings")
+                    Text(String(localized: "Settings"))
                         .font(.system(size: 10))
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }
-            .accessibilityLabel("Settings")
+            .accessibilityLabel(String(localized: "Settings"))
         }
         .frame(height: 50)
         .padding(.bottom, 8)

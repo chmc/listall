@@ -282,7 +282,7 @@ struct ListView: View {
                                 Image(systemName: "arrow.up.arrow.down")
                                     .foregroundColor(.primary)
                             }
-                            .help("Sort and filter options")
+                            .help(String(localized: "Sort and filter options"))
                             
                             Button(action: {
                                 viewModel.toggleShowCrossedOutItems()
@@ -587,7 +587,7 @@ struct ListView: View {
             HStack(spacing: 6) {
                 Image(systemName: Constants.UI.addIcon)
                     .font(.system(size: 18, weight: .semibold))
-                Text("Item")
+                Text(String(localized: "Item"))
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.primary)

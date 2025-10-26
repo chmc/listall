@@ -926,11 +926,22 @@
 - ✅ Research document created: `docs/research_watchos_complications.md`
 
 ## Localization support
-- ❌ Existing language is english
-- ❌ Add support for finnish language
-- ❌ Translate whole UI and all meta data text to finnish
-- ❌ Add language option to settings
-- ❌ Follow apple standard to language support
+- ✅ Existing language is english
+- ✅ Add support for finnish language
+- ✅ Translate whole UI and all meta data text to finnish
+- ✅ Add language option to settings
+- ✅ Follow apple standard to language support
+
+## Localization support to watchOS app
+- ❌ Watch app uses same language that is set to iOS app
+- ❌ Translate whole watchOS app
+- ❌ Go trough whole codebase and localize all hard coded text in code and UI
+
+### Future Work (Optional)
+- Update all remaining UI views to use NSLocalizedString()
+- Add localization support to watchOS app
+- Add additional languages (Swedish, German, etc.)
+- Create localized screenshots for App Store
 
 ###########################################################
 

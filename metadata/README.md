@@ -23,6 +23,7 @@ This folder contains all the information needed to submit ListAll to the App Sto
 | File | Purpose | Char Limit | Required |
 |------|---------|------------|----------|
 | `description.txt` | App Store description | 4000 | ✓ |
+| `subtitle.txt` | Short app summary under name | 30 | - |
 | `promotional_text.txt` | Short promotional text | 170 | - |
 | `keywords.txt` | Search keywords | 100 | ✓ |
 | `support_url.txt` | Customer support URL | - | ✓ |

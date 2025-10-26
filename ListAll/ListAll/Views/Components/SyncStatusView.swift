@@ -58,7 +58,7 @@ struct SyncStatusView: View {
                 .fontWeight(.medium)
             
             if let lastSync = cloudKitService.lastSyncDate {
-                Text("Last sync: \(lastSync, formatter: timeFormatter)")
+                Text(String(localized: "Last sync: \(timeFormatter.string(from: lastSync))"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -92,23 +92,23 @@ struct SyncStatusView: View {
     private var syncStatusTitle: String {
         switch cloudKitService.syncStatus {
         case .available:
-            return "Synced"
+            return String(localized: "Synced")
         case .syncing:
-            return "Syncing..."
+            return String(localized: "Syncing...")
         case .offline:
-            return "Offline"
+            return String(localized: "Offline")
         case .error:
-            return "Sync Error"
+            return String(localized: "Sync Error")
         case .noAccount:
-            return "No iCloud Account"
+            return String(localized: "No iCloud Account")
         case .restricted:
-            return "iCloud Restricted"
+            return String(localized: "iCloud Restricted")
         case .temporarilyUnavailable:
-            return "Temporarily Unavailable"
+            return String(localized: "Temporarily Unavailable")
         case .couldNotDetermine:
-            return "Unknown Status"
+            return String(localized: "Unknown Status")
         case .unknown:
-            return "Checking..."
+            return String(localized: "Checking...")
         }
     }
     
@@ -126,7 +126,7 @@ struct SyncProgressView: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Syncing...")
+                Text(String(localized: "Syncing..."))
                     .font(.headline)
                 Spacer()
                 Text("\(Int(cloudKitService.syncProgress * 100))%")
@@ -138,7 +138,7 @@ struct SyncProgressView: View {
                 .progressViewStyle(LinearProgressViewStyle())
             
             if cloudKitService.pendingOperations > 0 {
-                Text("\(cloudKitService.pendingOperations) operations pending")
+                Text(String(localized: "\(cloudKitService.pendingOperations) operations pending"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

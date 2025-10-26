@@ -38,6 +38,15 @@ struct Constants {
         case left = "Left"
         
         var id: String { rawValue }
+        
+        var displayName: String {
+            switch self {
+            case .right:
+                return String(localized: "Right")
+            case .left:
+                return String(localized: "Left")
+            }
+        }
     }
     
     // MARK: - Authentication Timeout Duration
@@ -54,34 +63,34 @@ struct Constants {
         var displayName: String {
             switch self {
             case .immediate:
-                return "Immediately"
+                return String(localized: "Immediately")
             case .oneMinute:
-                return "1 minute"
+                return String(localized: "1 minute")
             case .fiveMinutes:
-                return "5 minutes"
+                return String(localized: "5 minutes")
             case .fifteenMinutes:
-                return "15 minutes"
+                return String(localized: "15 minutes")
             case .thirtyMinutes:
-                return "30 minutes"
+                return String(localized: "30 minutes")
             case .oneHour:
-                return "1 hour"
+                return String(localized: "1 hour")
             }
         }
         
         var description: String {
             switch self {
             case .immediate:
-                return "Require authentication every time"
+                return String(localized: "Require authentication every time")
             case .oneMinute:
-                return "After 1 minute in background"
+                return String(localized: "After 1 minute in background")
             case .fiveMinutes:
-                return "After 5 minutes in background"
+                return String(localized: "After 5 minutes in background")
             case .fifteenMinutes:
-                return "After 15 minutes in background"
+                return String(localized: "After 15 minutes in background")
             case .thirtyMinutes:
-                return "After 30 minutes in background"
+                return String(localized: "After 30 minutes in background")
             case .oneHour:
-                return "After 1 hour in background"
+                return String(localized: "After 1 hour in background")
             }
         }
     }

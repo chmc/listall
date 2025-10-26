@@ -4,7 +4,7 @@
 
 ### App Identity
 - **Name**: ListAll
-- **Subtitle**: Smart Lists with Sync
+- **Subtitle**: Smart Shopping Lists & Tasks (EN) / Älykäs ostoslista & tehtävät (FI)
 - **Bundle ID**: io.github.chmc.ListAll
 - **SKU**: listall-ios-2025
 - **Version**: 1.0 (Build 1)

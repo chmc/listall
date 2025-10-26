@@ -20,26 +20,26 @@ struct EditListView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("List Details")) {
-                    TextField("List Name", text: $listName)
+                Section(header: Text(String(localized: "List Details"))) {
+                    TextField(String(localized: "List Name"), text: $listName)
                         .textFieldStyle(.plain)
                         .autocapitalization(.sentences)
                         .focused($isListNameFieldFocused)
                         .accessibilityIdentifier("EditListNameTextField")
                 }
             }
-            .navigationTitle("Edit List")
+            .navigationTitle(String(localized: "Edit List"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button(String(localized: "Cancel")) {
                         dismiss()
                     }
                     .accessibilityIdentifier("EditCancelButton")
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button(String(localized: "Save")) {
                         updateList()
                     }
                     .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
@@ -49,8 +49,8 @@ struct EditListView: View {
                 }
             }
         }
-        .alert("Error", isPresented: $showingAlert) {
-            Button("OK") { }
+        .alert(String(localized: "Error"), isPresented: $showingAlert) {
+            Button(String(localized: "OK")) { }
         } message: {
             Text(alertMessage)
         }

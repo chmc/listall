@@ -12,26 +12,26 @@ struct CreateListView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("List Details")) {
-                    TextField("List Name", text: $listName)
+                Section(header: Text(String(localized: "List Details"))) {
+                    TextField(String(localized: "List Name"), text: $listName)
                         .textFieldStyle(.plain)
                         .autocapitalization(.sentences)
                         .focused($isListNameFieldFocused)
                         .accessibilityIdentifier("ListNameTextField")
                 }
             }
-            .navigationTitle("New List")
+            .navigationTitle(String(localized: "New List"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button(String(localized: "Cancel")) {
                         dismiss()
                     }
                     .accessibilityIdentifier("CancelButton")
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
+                    Button(String(localized: "Create")) {
                         createList()
                     }
                     .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
@@ -39,8 +39,8 @@ struct CreateListView: View {
                 }
             }
         }
-        .alert("Error", isPresented: $showingAlert) {
-            Button("OK") { }
+        .alert(String(localized: "Error"), isPresented: $showingAlert) {
+            Button(String(localized: "OK")) { }
         } message: {
             Text(alertMessage)
         }

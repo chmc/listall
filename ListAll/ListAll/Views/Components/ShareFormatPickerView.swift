@@ -21,57 +21,57 @@ struct ShareFormatPickerView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Select Format")) {
+                Section(header: Text(String(localized: "Select Format"))) {
                     FormatOptionRow(
-                        title: "Plain Text",
-                        description: "Simple text format, easy to read",
+                        title: String(localized: "Plain Text"),
+                        description: String(localized: "Simple text format, easy to read"),
                         icon: "doc.text",
                         isSelected: selectedFormat == .plainText,
                         onTap: { selectedFormat = .plainText }
                     )
                     
                     FormatOptionRow(
-                        title: "JSON",
-                        description: "Structured data format",
+                        title: String(localized: "JSON"),
+                        description: String(localized: "Structured data format"),
                         icon: "doc.badge.gearshape",
                         isSelected: selectedFormat == .json,
                         onTap: { selectedFormat = .json }
                     )
                 }
                 
-                Section(header: Text("Share Options")) {
-                    Toggle("Include Crossed Out Items", isOn: $shareOptions.includeCrossedOutItems)
-                    Toggle("Include Descriptions", isOn: $shareOptions.includeDescriptions)
-                    Toggle("Include Quantities", isOn: $shareOptions.includeQuantities)
-                    Toggle("Include Dates", isOn: $shareOptions.includeDates)
+                Section(header: Text(String(localized: "Share Options"))) {
+                    Toggle(String(localized: "Include Crossed Out Items"), isOn: $shareOptions.includeCrossedOutItems)
+                    Toggle(String(localized: "Include Descriptions"), isOn: $shareOptions.includeDescriptions)
+                    Toggle(String(localized: "Include Quantities"), isOn: $shareOptions.includeQuantities)
+                    Toggle(String(localized: "Include Dates"), isOn: $shareOptions.includeDates)
                     
                     if selectedFormat == .json {
-                        Toggle("Include Images", isOn: $shareOptions.includeImages)
-                            .help("Images will be embedded as base64 in JSON")
+                        Toggle(String(localized: "Include Images"), isOn: $shareOptions.includeImages)
+                            .help(String(localized: "Images will be embedded as base64 in JSON"))
                     }
                 }
                 
                 Section {
-                    Button("Use Default Options") {
+                    Button(String(localized: "Use Default Options")) {
                         shareOptions = .default
                     }
                     
-                    Button("Use Minimal Options") {
+                    Button(String(localized: "Use Minimal Options")) {
                         shareOptions = .minimal
                     }
                 }
             }
-            .navigationTitle("Share")
+            .navigationTitle(String(localized: "Share"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button(String(localized: "Cancel")) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Share") {
+                    Button(String(localized: "Share")) {
                         onShare(selectedFormat, shareOptions)
                         dismiss()
                     }

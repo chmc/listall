@@ -6,12 +6,14 @@ struct SettingsView: View {
     @State private var showingImportSheet = false
     @State private var showingResetTooltipsAlert = false
     @State private var showingAllTips = false
+    @State private var showingLanguageRestartAlert = false
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
     @AppStorage(Constants.UserDefaultsKeys.requiresBiometricAuth) private var requiresBiometricAuth = false
     @AppStorage(Constants.UserDefaultsKeys.authTimeoutDuration) private var authTimeoutDurationRaw: Int = Constants.AuthTimeoutDuration.immediate.rawValue
     @StateObject private var biometricService = BiometricAuthService.shared
     @StateObject private var hapticManager = HapticManager.shared
     @StateObject private var tooltipManager = TooltipManager.shared
+    @StateObject private var localizationManager = LocalizationManager.shared
     
     private var addButtonPosition: Binding<Constants.AddButtonPosition> {
         Binding(
@@ -34,10 +36,29 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             SwiftUI.List {
+                Section(header: Text("Language"), footer: Text("Change the app language. You may need to restart the app for all changes to take effect.")) {
+                    Picker("App Language", selection: Binding(
+                        get: { localizationManager.currentLanguage },
+                        set: { newLanguage in
+                            localizationManager.setLanguage(newLanguage)
+                            showingLanguageRestartAlert = true
+                        }
+                    )) {
+                        ForEach(LocalizationManager.AppLanguage.allCases) { language in
+                            HStack {
+                                Text(language.flagEmoji)
+                                Text(language.nativeDisplayName)
+                            }
+                            .tag(language)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                }
+                
                 Section(header: Text("Display"), footer: Text("Haptic feedback provides tactile responses for app interactions")) {
                     Picker("Add item button position", selection: addButtonPosition) {
                         ForEach(Constants.AddButtonPosition.allCases) { position in
-                            Text(position.rawValue).tag(position)
+                            Text(position.displayName).tag(position)
                         }
                     }
                     
@@ -190,16 +211,22 @@ struct SettingsView: View {
         } message: {
             Text("This will show all feature tips again as if you're using the app for the first time. Tips will appear when you use different features.")
         }
+        .alert("Language Changed", isPresented: $showingLanguageRestartAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("The language has been changed. Some changes will take effect immediately, but you may need to restart the app for all text to update.")
+        }
     }
     
     private var helpFooterText: Text {
-        return Text("Feature tips help you discover app functionality. Reset to see all tips again.")
+        return Text(String(localized: "Feature tips help you discover app functionality. Reset to see all tips again."))
     }
     
     private var securityFooterText: Text {
         if biometricType != .none && requiresBiometricAuth {
             let timeoutDesc = authTimeoutDuration.wrappedValue.displayName.lowercased()
-            return Text("Authentication will be required \(timeoutDesc) when returning to the app. You can use \(biometricType.displayName) or your device passcode.")
+            let localizedString = String(format: String(localized: "Authentication will be required %@ when returning to the app. You can use %@ or your device passcode."), timeoutDesc, biometricType.displayName)
+            return Text(localizedString)
         } else if biometricType != .none {
             return Text("When enabled, you'll need to authenticate with \(biometricType.displayName) or passcode to unlock the app.")
         } else {
@@ -534,19 +561,19 @@ struct ImportView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Import Source Selection
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Import Source")
+                        Text(String(localized: "Import Source"))
                             .font(.headline)
                         
-                        Picker("Import Source", selection: $viewModel.importSource) {
-                            Text("From File").tag(ImportSource.file)
-                            Text("From Text").tag(ImportSource.text)
+                        Picker(String(localized: "Import Source"), selection: $viewModel.importSource) {
+                            Text(String(localized: "From File")).tag(ImportSource.file)
+                            Text(String(localized: "From Text")).tag(ImportSource.text)
                         }
                         .pickerStyle(SegmentedPickerStyle())
                     }
                     
                     // Merge Strategy Selection
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Import Strategy")
+                        Text(String(localized: "Import Strategy"))
                             .font(.headline)
                         
                         ForEach(viewModel.strategyOptions, id: \.self) { strategy in
@@ -599,7 +626,7 @@ struct ImportView: View {
                         }) {
                             HStack {
                                 Image(systemName: "square.and.arrow.down")
-                                Text("Select File to Import")
+                                Text(String(localized: "Select File to Import"))
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -611,16 +638,16 @@ struct ImportView: View {
                     } else {
                         // Text Import UI
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Paste Data")
+                            Text(String(localized: "Paste Data"))
                                 .font(.headline)
                             
-                            Text("Supports JSON or plain text (one item per line)")
+                            Text(String(localized: "Supports JSON or plain text (one item per line)"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
                             ZStack(alignment: .topLeading) {
                                 if viewModel.importText.isEmpty {
-                                    Text("Paste your data here...\n\nExamples:\n• JSON export format\n• Plain text lists\n• One item per line\n• Markdown checkboxes")
+                                    Text(String(localized: "Paste your data here...\n\nExamples:\n• JSON export format\n• Plain text lists\n• One item per line\n• Markdown checkboxes"))
                                         .foregroundColor(.gray.opacity(0.5))
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 12)
@@ -644,7 +671,7 @@ struct ImportView: View {
                                 }) {
                                     HStack {
                                         Image(systemName: "trash")
-                                        Text("Clear")
+                                        Text(String(localized: "Clear"))
                                     }
                                     .foregroundColor(.red)
                                 }
@@ -660,7 +687,7 @@ struct ImportView: View {
                                 }) {
                                     HStack {
                                         Image(systemName: "doc.on.clipboard")
-                                        Text("Paste")
+                                        Text(String(localized: "Paste"))
                                     }
                                 }
                             }
@@ -672,7 +699,7 @@ struct ImportView: View {
                             }) {
                                 HStack {
                                     Image(systemName: "square.and.arrow.down")
-                                    Text("Import from Text")
+                                    Text(String(localized: "Import from Text"))
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -717,7 +744,7 @@ struct ImportView: View {
                                 // Detailed progress
                                 VStack(spacing: 8) {
                                     HStack {
-                                        Text("Importing...")
+                                        Text(String(localized: "Importing..."))
                                             .font(.headline)
                                         Spacer()
                                         Text("\(progress.progressPercentage)%")
@@ -734,10 +761,10 @@ struct ImportView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                     
                                     HStack {
-                                        Text("Lists: \(progress.processedLists)/\(progress.totalLists)")
+                                        Text(String(localized: "Lists: \(progress.processedLists)/\(progress.totalLists)"))
                                             .font(.caption2)
                                         Spacer()
-                                        Text("Items: \(progress.processedItems)/\(progress.totalItems)")
+                                        Text(String(localized: "Items: \(progress.processedItems)/\(progress.totalItems)"))
                                             .font(.caption2)
                                     }
                                     .foregroundColor(.secondary)
@@ -746,7 +773,7 @@ struct ImportView: View {
                                 // Simple progress
                                 HStack(spacing: 12) {
                                     ProgressView()
-                                    Text("Importing...")
+                                    Text(String(localized: "Importing..."))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -762,11 +789,11 @@ struct ImportView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Import Data")
+            .navigationTitle(String(localized: "Import Data"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(String(localized: "Done")) {
                         viewModel.cleanup()
                         dismiss()
                     }
@@ -821,14 +848,18 @@ struct ImportPreviewView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Summary Card
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Import Summary")
+                        Text(String(localized: "Import Summary"))
                             .font(.headline)
                         
                         if preview.listsToCreate > 0 {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(.green)
-                                Text("\(preview.listsToCreate) new \(preview.listsToCreate == 1 ? "list" : "lists")")
+                                if preview.listsToCreate == 1 {
+                                    Text(String(localized: "1 new list"))
+                                } else {
+                                    Text(String(localized: "\(preview.listsToCreate) new lists"))
+                                }
                             }
                         }
                         
@@ -836,7 +867,11 @@ struct ImportPreviewView: View {
                             HStack {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .foregroundColor(.orange)
-                                Text("\(preview.listsToUpdate) \(preview.listsToUpdate == 1 ? "list" : "lists") to update")
+                                if preview.listsToUpdate == 1 {
+                                    Text(String(localized: "1 list to update"))
+                                } else {
+                                    Text(String(localized: "\(preview.listsToUpdate) lists to update"))
+                                }
                             }
                         }
                         
@@ -844,7 +879,11 @@ struct ImportPreviewView: View {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(.green)
-                                Text("\(preview.itemsToCreate) new \(preview.itemsToCreate == 1 ? "item" : "items")")
+                                if preview.itemsToCreate == 1 {
+                                    Text(String(localized: "1 new item"))
+                                } else {
+                                    Text(String(localized: "\(preview.itemsToCreate) new items"))
+                                }
                             }
                         }
                         
@@ -852,7 +891,11 @@ struct ImportPreviewView: View {
                             HStack {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .foregroundColor(.orange)
-                                Text("\(preview.itemsToUpdate) \(preview.itemsToUpdate == 1 ? "item" : "items") to update")
+                                if preview.itemsToUpdate == 1 {
+                                    Text(String(localized: "1 item to update"))
+                                } else {
+                                    Text(String(localized: "\(preview.itemsToUpdate) items to update"))
+                                }
                             }
                         }
                     }
@@ -866,7 +909,7 @@ struct ImportPreviewView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundColor(.orange)
-                                Text("Conflicts (\(preview.conflicts.count))")
+                                Text(String(localized: "Conflicts (\(preview.conflicts.count))"))
                                     .font(.headline)
                             }
                             
@@ -883,7 +926,7 @@ struct ImportPreviewView: View {
                             }
                             
                             if preview.conflicts.count > 5 {
-                                Text("And \(preview.conflicts.count - 5) more...")
+                                Text(String(localized: "And \(preview.conflicts.count - 5) more..."))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -895,7 +938,7 @@ struct ImportPreviewView: View {
                     
                     // Strategy Info
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Import Strategy")
+                        Text(String(localized: "Import Strategy"))
                             .font(.headline)
                         HStack {
                             Image(systemName: viewModel.strategyIcon(viewModel.selectedStrategy))
@@ -918,7 +961,7 @@ struct ImportPreviewView: View {
                         }) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                Text("Confirm Import")
+                                Text(String(localized: "Confirm Import"))
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -931,7 +974,7 @@ struct ImportPreviewView: View {
                             dismiss()
                             viewModel.cancelPreview()
                         }) {
-                            Text("Cancel")
+                            Text(String(localized: "Cancel"))
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(Color.gray.opacity(0.2))
@@ -942,7 +985,7 @@ struct ImportPreviewView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Import Preview")
+            .navigationTitle(String(localized: "Import Preview"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -1004,14 +1047,14 @@ struct AllFeatureTipsView: View {
                             .textCase(.none)
                     }
                 } footer: {
-                    Text("Tips marked with ✓ have been viewed. Tips will appear automatically when you use features, or you can reset them to see all tips again from Settings.")
+                    Text(String(localized: "Tips marked with ✓ have been viewed. Tips will appear automatically when you use features, or you can reset them to see all tips again from Settings."))
                 }
             }
-            .navigationTitle("Feature Tips")
+            .navigationTitle(String(localized: "Feature Tips"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(String(localized: "Done")) {
                         dismiss()
                     }
                 }

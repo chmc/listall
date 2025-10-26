@@ -10,7 +10,7 @@ struct ItemOrganizationView: View {
                 // Sort Options Section
                 Section {
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Text("Sort By")
+                        Text(String(localized: "Sort By"))
                             .font(Theme.Typography.headline)
                         
                         LazyVGrid(columns: [
@@ -23,7 +23,7 @@ struct ItemOrganizationView: View {
                                 }) {
                                     HStack {
                                         Image(systemName: option.systemImage)
-                                        Text(option.rawValue)
+                                        Text(option.displayName)
                                         Spacer()
                                         if viewModel.currentSortOption == option {
                                             Image(systemName: "checkmark")
@@ -44,7 +44,7 @@ struct ItemOrganizationView: View {
                         
                         // Sort Direction
                         HStack {
-                            Text("Direction")
+                            Text(String(localized: "Direction"))
                                 .font(Theme.Typography.body)
                             
                             Spacer()
@@ -56,7 +56,7 @@ struct ItemOrganizationView: View {
                             }) {
                                 HStack {
                                     Image(systemName: viewModel.currentSortDirection.systemImage)
-                                    Text(viewModel.currentSortDirection.rawValue)
+                                    Text(viewModel.currentSortDirection.displayName)
                                 }
                                 .padding(.horizontal, Theme.Spacing.md)
                                 .padding(.vertical, Theme.Spacing.sm)
@@ -74,7 +74,7 @@ struct ItemOrganizationView: View {
                             HStack(spacing: Theme.Spacing.sm) {
                                 Image(systemName: "hand.draw")
                                     .foregroundColor(.green)
-                                Text("Drag-to-reorder enabled")
+                                Text(String(localized: "Drag-to-reorder enabled"))
                                     .font(Theme.Typography.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -83,7 +83,7 @@ struct ItemOrganizationView: View {
                             HStack(spacing: Theme.Spacing.sm) {
                                 Image(systemName: "hand.raised.slash")
                                     .foregroundColor(.orange)
-                                Text("Drag-to-reorder disabled (change to 'Order' to enable)")
+                                Text(String(localized: "Drag-to-reorder disabled (change to 'Order' to enable)"))
                                     .font(Theme.Typography.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -91,7 +91,7 @@ struct ItemOrganizationView: View {
                         }
                     }
                 } header: {
-                    Label("Sorting", systemImage: "arrow.up.arrow.down")
+                    Label(String(localized: "Sorting"), systemImage: "arrow.up.arrow.down")
                 }
                 
                 // Filter Options Section
@@ -104,7 +104,7 @@ struct ItemOrganizationView: View {
                                 HStack {
                                     Image(systemName: option.systemImage)
                                         .frame(width: 20)
-                                    Text(option.rawValue)
+                                    Text(option.displayName)
                                     Spacer()
                                     if viewModel.currentFilterOption == option {
                                         Image(systemName: "checkmark")
@@ -123,49 +123,49 @@ struct ItemOrganizationView: View {
                         }
                     }
                 } header: {
-                    Label("Filtering", systemImage: "line.3.horizontal.decrease")
+                    Label(String(localized: "Filtering"), systemImage: "line.3.horizontal.decrease")
                 }
                 
                 // Current Status Section
                 Section {
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         HStack {
-                            Text("Total Items:")
+                            Text(String(localized: "Total Items:"))
                             Spacer()
                             Text("\(viewModel.items.count)")
                                 .foregroundColor(.secondary)
                         }
                         
                         HStack {
-                            Text("Filtered Items:")
+                            Text(String(localized: "Filtered Items:"))
                             Spacer()
                             Text("\(viewModel.filteredItems.count)")
                                 .foregroundColor(.blue)
                         }
                         
                         HStack {
-                            Text("Active Items:")
+                            Text(String(localized: "Active Items:"))
                             Spacer()
                             Text("\(viewModel.activeItems.count)")
                                 .foregroundColor(.green)
                         }
                         
                         HStack {
-                            Text("Completed Items:")
+                            Text(String(localized: "Completed Items:"))
                             Spacer()
                             Text("\(viewModel.completedItems.count)")
                                 .foregroundColor(.orange)
                         }
                     }
                 } header: {
-                    Label("Summary", systemImage: "chart.bar")
+                    Label(String(localized: "Summary"), systemImage: "chart.bar")
                 }
             }
-            .navigationTitle("Organization")
+            .navigationTitle(String(localized: "Organization"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(String(localized: "Done")) {
                         dismiss()
                     }
                 }

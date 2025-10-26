@@ -54,22 +54,22 @@ class ImportViewModel: ObservableObject {
     func strategyName(_ strategy: ImportOptions.MergeStrategy) -> String {
         switch strategy {
         case .merge:
-            return "Merge"
+            return String(localized: "Merge")
         case .replace:
-            return "Replace All"
+            return String(localized: "Replace All")
         case .append:
-            return "Append as New"
+            return String(localized: "Append as New")
         }
     }
     
     func strategyDescription(_ strategy: ImportOptions.MergeStrategy) -> String {
         switch strategy {
         case .merge:
-            return "Update existing items and add new ones"
+            return String(localized: "Update existing items and add new ones")
         case .replace:
-            return "Delete all data and import fresh"
+            return String(localized: "Delete all data and import fresh")
         case .append:
-            return "Create duplicates with new IDs"
+            return String(localized: "Create duplicates with new IDs")
         }
     }
     

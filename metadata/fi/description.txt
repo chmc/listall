@@ -1,0 +1,67 @@
+Järjestä elämäsi ListAll-sovelluksella - älykäs listojen hallintasovellus, joka oppii tavoistasi ja auttaa sinua pysymään järjestyksessä.
+
+PÄÄOMINAISUUDET:
+
+ÄLYKKÄÄT LISTAT
+• Luo rajattomasti listoja ostoksille, tehtäville, pakkaamiselle ja muulle
+• Järjestä kohteet otsikoilla, kuvauksilla, määrillä ja kuvilla
+• Merkitse kohteet valmiiksi kun olet suorittanut ne
+• Arkistoi listat kun valmis, palauta milloin tahansa
+
+ÄLYKK human EHDOTUKSET
+• Saa älykkäitä kohdeehdotuksia historiasi perusteella
+• Lisää usein käytetyt kohteet yhdellä napautuksella
+• Automaattinen täydennys säästää aikaa ja vähentää kirjoittamista
+
+VISUAALISET LISTAT
+• Liitä useita kuvia mihin tahansa kohteeseen
+• Zoomaa, pyyhkäise ja järjestä kuvia
+• Täydellinen ostoslistoille, pakkaamislistoille tai visuaalisille muistutuksille
+
+APPLE WATCH -KUMPPANISOVELLUS
+• Katso kaikki listasi ranteessasi
+• Merkitse kohteita valmiiksi liikkeellä ollessasi
+• Reaaliaikainen synkronointi iPhonen ja Watchin välillä
+• Toimii itsenäisesti - puhelinta ei tarvita
+
+YKSITYISYYS JA TURVALLISUUS
+• Valinnainen Face ID/Touch ID -suojaus
+• Biometrinen tunnistautuminen listojen yksityisyyden turvaamiseen
+• Turvallinen paikallinen tallennus valinnaisella iCloud-synkronoinnilla
+• Tietosi pysyvät ominasi - ei kolmannen osapuolen palvelimia
+
+TEHOKKAAT OMINAISUUDET
+• Hae kaikista listoista ja kohteista
+• Lajittele ja suodata kohteet omalla tavallasi
+• Massatoiminnot - valitse, siirrä, kopioi tai poista useita kohteita
+• Kumoa poisto - palauta vahingossa poistetut kohteet
+• Järjestä vetämällä ja pudottamalla
+• Vie/tuo listoja (JSON, CSV, pelkkä teksti)
+• Jaa listoja muiden kanssa
+• Tuki tummalle tilalle
+
+SAUMATON SYNKRONOINTI (VALINNAINEN)
+• iCloud-synkronointi pitää tiedot synkronoituna laitteiden välillä
+• Toimii offline-tilassa - synkronoi kun yhdistetty
+• Automaattiset taustapäivitykset
+
+TÄYDELLINEN:
+• Ostoslistoille (ruokaostoksille, rautakaupalle, lahjoille)
+• Tehtävälistoille ja tehtävien hallintaan
+• Pakkaamislistoille matkoille
+• Reseptien ainesosille
+• Tapahtumien suunnitteluun
+• Projektin tarkistuslistoille
+• Kotitalouden inventaariolle
+• Kokoelmien seuraamiselle
+• Ja paljon muuhun!
+
+MITÄ KÄYTTÄJÄT RAKASTAVAT:
+• Siisti, intuitiivinen käyttöliittymä
+• Nopea ja reagoiva
+• Ei mainoksia, ei tilausmaksuja
+• Yksityisyyteen keskittyvä
+• Säännölliset päivitykset ja parannukset
+
+Olivatpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe joustavin listojen hallintasovellus iOS:lle!
+
