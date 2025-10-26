@@ -925,6 +925,13 @@
 - ✅ Tasks split into Phase 81+ with detailed breakdown
 - ✅ Research document created: `docs/research_watchos_complications.md`
 
+## Localization support
+- ❌ Existing language is english
+- ❌ Add support for finnish language
+- ❌ Translate whole UI and all meta data text to finnish
+- ❌ Add language option to settings
+- ❌ Follow apple standard to language support
+
 ###########################################################
 
 ## 
