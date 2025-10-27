@@ -5361,9 +5361,6 @@
         }
       }
     },
-    "Syncing..." : {
-      "comment" : "watchOS sync indicator message"
-    },
     "Take Photo" : {
       "extractionState" : "manual",
       "localizations" : {

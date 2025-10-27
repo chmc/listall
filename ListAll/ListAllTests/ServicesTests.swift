@@ -3063,23 +3063,33 @@ final class ServicesTests: XCTestCase {
     }
     
     func testAuthTimeoutDurationDisplayNames() throws {
-        // Test that all timeout durations have proper display names
-        XCTAssertEqual(Constants.AuthTimeoutDuration.immediate.displayName, "Immediately")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.oneMinute.displayName, "1 minute")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.fiveMinutes.displayName, "5 minutes")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.fifteenMinutes.displayName, "15 minutes")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.thirtyMinutes.displayName, "30 minutes")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.oneHour.displayName, "1 hour")
+        // Test that all timeout durations have proper display names (locale-independent)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.immediate.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneMinute.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fiveMinutes.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fifteenMinutes.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.thirtyMinutes.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneHour.displayName.isEmpty)
+        
+        // Verify each case has a unique display name
+        let displayNames = Constants.AuthTimeoutDuration.allCases.map { $0.displayName }
+        let uniqueNames = Set(displayNames)
+        XCTAssertEqual(displayNames.count, uniqueNames.count, "Each timeout duration should have a unique display name")
     }
     
     func testAuthTimeoutDurationDescriptions() throws {
-        // Test that all timeout durations have proper descriptions
-        XCTAssertEqual(Constants.AuthTimeoutDuration.immediate.description, "Require authentication every time")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.oneMinute.description, "After 1 minute in background")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.fiveMinutes.description, "After 5 minutes in background")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.fifteenMinutes.description, "After 15 minutes in background")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.thirtyMinutes.description, "After 30 minutes in background")
-        XCTAssertEqual(Constants.AuthTimeoutDuration.oneHour.description, "After 1 hour in background")
+        // Test that all timeout durations have proper descriptions (locale-independent)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.immediate.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneMinute.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fiveMinutes.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fifteenMinutes.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.thirtyMinutes.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneHour.description.isEmpty)
+        
+        // Verify each case has a unique description
+        let descriptions = Constants.AuthTimeoutDuration.allCases.map { $0.description }
+        let uniqueDescriptions = Set(descriptions)
+        XCTAssertEqual(descriptions.count, uniqueDescriptions.count, "Each timeout duration should have a unique description")
     }
     
     func testAuthTimeoutDurationAllCases() throws {

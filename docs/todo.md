@@ -937,9 +937,9 @@
 - ✅ Translate whole watchOS app
 - ✅ Go trough whole codebase and localize all hard coded text in code and UI
 
-## Remove main screen synchronize box
-- ❌ Remove box that says Ei yhteyttä, viimeisin synkronointi
-- ❌ This is redundant no need
+## Remove main screen synchronize box ✅ COMPLETED
+- ✅ Remove box that says Ei yhteyttä, viimeisin synkronointi
+- ✅ This is redundant no need
 
 ## Create localized screenshots for App Store 
 - ❌ Research what screenshots are required and provide them

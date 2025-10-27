@@ -28,14 +28,6 @@ struct MainView: View {
             NavigationView {
                 ZStack {
                     VStack(spacing: 0) {
-                        // Sync Status Bar
-                        if cloudKitService.syncStatus != .available || cloudKitService.isSyncing {
-                            SyncStatusView(cloudKitService: cloudKitService)
-                                .padding(.horizontal)
-                                .padding(.top, 8)
-                                .padding(.bottom, 12)
-                        }
-                        
                         // Watch Sync Indicator (subtle)
                         if viewModel.isSyncingFromWatch {
                             HStack(spacing: 6) {
