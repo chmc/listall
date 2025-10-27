@@ -941,6 +941,12 @@
 - ✅ Remove box that says Ei yhteyttä, viimeisin synkronointi
 - ✅ This is redundant no need
 
+## Import from json file causes duplicate lists
+- ❌ In iOS app appears duplicate lists
+- ❌ Crossing items effects to duplicate lists
+- ❌ Duplicate lists do not appear in watch app
+- ❌ Not all lists are duplicated, perhaps only ones that are edited by import?
+
 ## Create localized screenshots for App Store 
 - ❌ Research what screenshots are required and provide them
 
