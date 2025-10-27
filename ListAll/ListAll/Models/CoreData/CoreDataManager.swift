@@ -818,6 +818,74 @@ class DataManager: ObservableObject {
     
     // MARK: - Data Cleanup
     
+    /// Remove duplicate lists from Core Data (cleanup for CloudKit sync bug)
+    /// This removes lists with duplicate IDs, keeping the most recently modified version
+    func removeDuplicateLists() {
+        let context = coreDataManager.viewContext
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        
+        do {
+            let allLists = try context.fetch(request)
+            
+            // Group lists by ID
+            var listsById: [UUID: [ListEntity]] = [:]
+            for list in allLists {
+                guard let id = list.id else { continue }
+                if listsById[id] == nil {
+                    listsById[id] = []
+                }
+                listsById[id]?.append(list)
+            }
+            
+            // Find and remove duplicates
+            var duplicatesRemoved = 0
+            for (id, lists) in listsById {
+                if lists.count > 1 {
+                    // Sort by modifiedAt, keep most recent
+                    let sorted = lists.sorted { ($0.modifiedAt ?? Date.distantPast) > ($1.modifiedAt ?? Date.distantPast) }
+                    let toKeep = sorted.first!
+                    let toRemove = sorted.dropFirst()
+                    
+                    for duplicate in toRemove {
+                        // Delete items in duplicate list first
+                        if let items = duplicate.items as? Set<ItemEntity> {
+                            for item in items {
+                                // Transfer items to the list we're keeping
+                                item.list = toKeep
+                            }
+                        }
+                        context.delete(duplicate)
+                        duplicatesRemoved += 1
+                    }
+                    
+                    #if os(iOS)
+                    print("🧹 [iOS] Removed \(toRemove.count) duplicate(s) of list: \(toKeep.name ?? "Unknown")")
+                    #elseif os(watchOS)
+                    print("🧹 [watchOS] Removed \(toRemove.count) duplicate(s) of list: \(toKeep.name ?? "Unknown")")
+                    #endif
+                }
+            }
+            
+            if duplicatesRemoved > 0 {
+                #if os(iOS)
+                print("🧹 [iOS] Total duplicate lists removed: \(duplicatesRemoved)")
+                #elseif os(watchOS)
+                print("🧹 [watchOS] Total duplicate lists removed: \(duplicatesRemoved)")
+                #endif
+                saveData()
+                loadData() // Reload to reflect changes
+            } else {
+                #if os(iOS)
+                print("✅ [iOS] No duplicate lists found in Core Data")
+                #elseif os(watchOS)
+                print("✅ [watchOS] No duplicate lists found in Core Data")
+                #endif
+            }
+        } catch {
+            print("❌ Failed to check for duplicate lists: \(error)")
+        }
+    }
+    
     /// Remove duplicate items from Core Data (cleanup for sync bug)
     /// This removes items with duplicate IDs, keeping the most recently modified version
     func removeDuplicateItems() {

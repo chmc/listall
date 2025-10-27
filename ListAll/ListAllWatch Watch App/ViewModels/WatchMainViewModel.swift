@@ -25,9 +25,10 @@ class WatchMainViewModel: ObservableObject {
         
         // 2. Clean up duplicates (modifies Core Data)
         #if os(watchOS)
-        print("🧹 [watchOS] Checking for duplicate items on launch...")
+        print("🧹 [watchOS] Checking for duplicate lists and items on launch...")
         #endif
-        dataManager.removeDuplicateItems()
+        dataManager.removeDuplicateLists()  // Remove duplicate lists first
+        dataManager.removeDuplicateItems()  // Then remove duplicate items
         
         // 3. RELOAD lists after cleanup to get clean data
         #if os(watchOS)

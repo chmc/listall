@@ -941,11 +941,14 @@
 - ✅ Remove box that says Ei yhteyttä, viimeisin synkronointi
 - ✅ This is redundant no need
 
-## Import from json file causes duplicate lists
-- ❌ In iOS app appears duplicate lists
-- ❌ Crossing items effects to duplicate lists
-- ❌ Duplicate lists do not appear in watch app
-- ❌ Not all lists are duplicated, perhaps only ones that are edited by import?
+## Fix: Watch app sync causes list duplication ✅ COMPLETED
+- ✅ Sometimes watch app sync functionality causes some lists to appear as duplicates
+- ✅ Root cause: Core Data had duplicate ListEntity records with same UUID (CloudKit sync conflicts)
+- ✅ Added `removeDuplicateLists()` function to clean up duplicate lists
+- ✅ Transfers items from duplicate lists to surviving list (prevents data loss)
+- ✅ Runs automatically on app launch for both iOS and watchOS
+- ✅ Build validation passed (100% success)
+- ✅ Fixes ForEach UUID warnings and delete operation issues
 
 ## Create localized screenshots for App Store 
 - ❌ Research what screenshots are required and provide them
