@@ -17,8 +17,19 @@ class SampleDataService {
         let quantity: Int?
     }
     
-    /// Available sample list templates
-    static let templates: [SampleListTemplate] = [
+    /// Available sample list templates (localized based on current language)
+    static var templates: [SampleListTemplate] {
+        let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
+        
+        if currentLanguage == "fi" {
+            return finnishTemplates
+        } else {
+            return englishTemplates
+        }
+    }
+    
+    /// English templates
+    private static let englishTemplates: [SampleListTemplate] = [
         SampleListTemplate(
             name: "Shopping List",
             icon: "cart",
@@ -60,6 +71,53 @@ class SampleDataService {
                 SampleItem(title: "Weather-appropriate Clothing", description: "Check forecast for destination", quantity: nil),
                 SampleItem(title: "Sunglasses & Sunscreen", description: "SPF 30+", quantity: nil),
                 SampleItem(title: "Book or E-reader", description: "For travel entertainment", quantity: 1)
+            ]
+        )
+    ]
+    
+    /// Finnish templates
+    private static let finnishTemplates: [SampleListTemplate] = [
+        SampleListTemplate(
+            name: "Ostoslista",
+            icon: "cart",
+            description: "Ruokakaupan ostokset",
+            sampleItems: [
+                SampleItem(title: "Maito", description: "Kevyt- tai täysmaito", quantity: 1),
+                SampleItem(title: "Leipä", description: "Täysjyväleipä", quantity: 1),
+                SampleItem(title: "Kananmunat", description: "Vapaan kanan munia", quantity: 12),
+                SampleItem(title: "Omenat", description: "Tuoreet kotimaiset", quantity: 6),
+                SampleItem(title: "Kahvi", description: "Keskipaahto", quantity: 1),
+                SampleItem(title: "Voi", description: "Suomalainen", quantity: 1),
+                SampleItem(title: "Broilerin rintafile", description: "Luomu, luuton", quantity: 2),
+                SampleItem(title: "Oliiviöljy", description: "Extra virgin", quantity: 1)
+            ]
+        ),
+        SampleListTemplate(
+            name: "Tehtävälista",
+            icon: "checkmark.circle",
+            description: "Päivän askareet",
+            sampleItems: [
+                SampleItem(title: "Tarkista viikkosuunnitelma", description: "Käy läpi neljännesvuoden tavoitteet", quantity: nil),
+                SampleItem(title: "Vastaa sähköposteihin", description: "Tyhjennä postilaatikko ennen puoltapäivää", quantity: nil),
+                SampleItem(title: "Soita hammaslääkärille", description: "Varaa puolen vuoden tarkastusaika", quantity: nil),
+                SampleItem(title: "Päivitä projektin dokumentaatio", description: "Lisää uudet ominaisuudet README-tiedostoon", quantity: nil),
+                SampleItem(title: "Suunnittele viikonloppuaktiviteetit", description: "Etsi retkikohteita tai museoita", quantity: nil),
+                SampleItem(title: "Tilaa syntymäpäivälahja", description: "Äidin syntymäpäivä ensi kuussa", quantity: nil)
+            ]
+        ),
+        SampleListTemplate(
+            name: "Matkalista",
+            icon: "suitcase",
+            description: "Matkan välttämättömyydet",
+            sampleItems: [
+                SampleItem(title: "Passi ja matkadokumentit", description: "Tarkista voimassaoloajat", quantity: nil),
+                SampleItem(title: "Puhelinlaturi", description: "USB-C tai Lightning", quantity: 1),
+                SampleItem(title: "Hygieniatuotteet", description: "Hammasharja, -tahna, shampoo", quantity: nil),
+                SampleItem(title: "Lääkkeet", description: "Reseptilääkkeet ja särkylääkkeet", quantity: nil),
+                SampleItem(title: "Mukavat kengät", description: "Kävelyyn ja tutustumiseen", quantity: 2),
+                SampleItem(title: "Sään mukaiset vaatteet", description: "Tarkista kohteen sääennuste", quantity: nil),
+                SampleItem(title: "Aurinkolasit ja -voide", description: "SPF 30+", quantity: nil),
+                SampleItem(title: "Kirja tai e-lukija", description: "Viihdettä matkalle", quantity: 1)
             ]
         )
     ]

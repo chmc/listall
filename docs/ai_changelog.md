@@ -1,5 +1,74 @@
 # AI Changelog
 
+## 2025-10-28 - Localized Sample List Templates ✅ COMPLETED
+
+### Summary
+Implemented language-specific sample list templates so that Finnish users see Finnish examples and English users see English examples. The sample lists (Shopping List, To-Do List, Packing List) now automatically display in the user's selected language.
+
+### The Problem
+- Sample list templates were hardcoded in English
+- Finnish users saw English examples even when the app was in Finnish
+- This created a confusing onboarding experience for non-English users
+
+### Implementation Details
+
+#### 1. SampleDataService Localization
+Modified `SampleDataService.swift` to provide language-specific templates:
+
+**Changes Made**:
+- Changed `templates` from a static constant to a computed property
+- Added logic to return different templates based on `LocalizationManager.shared.currentLanguage`
+- Created separate `englishTemplates` and `finnishTemplates` arrays
+
+**English Templates**:
+- Shopping List: "Milk", "Bread", "Eggs", "Apples", "Coffee", "Butter", "Chicken Breast", "Olive Oil"
+- To-Do List: "Review weekly goals", "Respond to emails", "Call dentist", "Update project documentation", "Plan weekend activities", "Order birthday gift"
+- Packing List: "Passport & Travel Documents", "Phone Charger", "Toiletries", "Medications", "Comfortable Shoes", "Weather-appropriate Clothing", "Sunglasses & Sunscreen", "Book or E-reader"
+
+**Finnish Templates**:
+- Ostoslista: "Maito", "Leipä", "Kananmunat", "Omenat", "Kahvi", "Voi", "Broilerin rintafile", "Oliiviöljy"
+- Tehtävälista: "Tarkista viikkosuunnitelma", "Vastaa sähköposteihin", "Soita hammaslääkärille", "Päivitä projektin dokumentaatio", "Suunnittele viikonloppuaktiviteetit", "Tilaa syntymäpäivälahja"
+- Matkalista: "Passi ja matkadokumentit", "Puhelinlaturi", "Hygieniatuotteet", "Lääkkeet", "Mukavat kengät", "Sään mukaiset vaatteet", "Aurinkolasit ja -voide", "Kirja tai e-lukija"
+
+#### 2. Test Updates
+Updated `EmptyStateTests.swift` to be language-agnostic:
+
+**Key Changes**:
+- Added tests that explicitly switch language to test both English and Finnish templates
+- Changed icon-based lookups instead of name-based lookups where language-agnostic behavior needed
+- Added `testFinnishTemplatesHaveCorrectLocalizedContent()` to verify Finnish translations
+- Added `testEnglishTemplatesHaveCorrectLocalizedContent()` to verify English content
+- Modified `testShoppingListHasMilkOrMaitoAsFirstItem()` to accept either "Milk" or "Maito"
+- All tests properly restore original language after testing
+
+#### 3. User Experience Improvement
+**Benefits**:
+- ✅ Finnish users now see relevant Finnish examples
+- ✅ English users continue to see English examples
+- ✅ Seamless language switching - templates update automatically
+- ✅ Better onboarding experience for non-English speakers
+- ✅ Maintains all template functionality (icons, descriptions, item counts)
+
+### Testing Results
+- ✅ All 24 EmptyStateTests passing (100% success rate)
+- ✅ All unit tests passing (TEST SUCCEEDED)
+- ✅ Finnish templates validated: "Ostoslista", "Tehtävälista", "Matkalista"
+- ✅ English templates validated: "Shopping List", "To-Do List", "Packing List"
+- ✅ Language switching tested successfully
+
+### Files Modified
+1. `ListAll/ListAll/Services/SampleDataService.swift` - Added localized templates
+2. `ListAll/ListAllTests/EmptyStateTests.swift` - Updated tests for language support
+3. `docs/todo.md` - Marked task complete
+
+### Technical Notes
+- Templates are generated at runtime based on `LocalizationManager.shared.currentLanguage`
+- No localization strings file needed since templates are hardcoded per language
+- Design supports easy addition of more languages in the future
+- Icon mapping remains consistent across languages for visual continuity
+
+---
+
 ## 2025-10-26 - watchOS App Localization Runtime Fix ✅ CRITICAL FIX COMPLETED
 
 ### Summary

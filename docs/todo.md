@@ -979,6 +979,14 @@
   - 1 deprecated NavigationLink API (still functional, planned for future refactor)
 - ✅ All unit tests passing (100% success rate)
 
+## Update example lists to follow selected language ✅ COMPLETED
+- ✅ Finnish language should have finnish examples
+- ✅ Lists and items should be in selected language
+- ✅ English language uses English examples
+- ✅ All template names, descriptions, and items are fully localized
+- ✅ Tests updated to support both English and Finnish templates
+- ✅ All tests passing (100% success rate)
+
 ### Future Work (Optional)
 - Update all remaining UI views to use NSLocalizedString()
 - Add localization support to watchOS app
