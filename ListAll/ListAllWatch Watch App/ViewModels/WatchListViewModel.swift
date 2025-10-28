@@ -94,19 +94,12 @@ class WatchListViewModel: ObservableObject {
             errorMessage = nil
         }
         
-        do {
-            // Reload data from Core Data
-            dataManager.loadData()
-            
-            await MainActor.run {
-                loadItems()
-                isLoading = false
-            }
-        } catch {
-            await MainActor.run {
-                errorMessage = "Failed to load items: \(error.localizedDescription)"
-                isLoading = false
-            }
+        // Reload data from Core Data
+        dataManager.loadData()
+        
+        await MainActor.run {
+            loadItems()
+            isLoading = false
         }
     }
     

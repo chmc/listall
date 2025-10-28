@@ -98,7 +98,7 @@ class CloudKitService: ObservableObject {
     // MARK: - Sync Operations
     
     func sync() async {
-        guard let container = container else {
+        guard container != nil else {
             await MainActor.run {
                 self.syncError = "CloudKit not configured"
                 self.syncStatus = .offline
@@ -121,25 +121,21 @@ class CloudKitService: ObservableObject {
             syncProgress = 0.0
         }
         
-        do {
-            // Check for remote changes first
-            await checkForRemoteChanges()
-            
-            // Trigger Core Data to sync with CloudKit
-            coreDataManager.persistentContainer.persistentStoreCoordinator.performAndWait {
-                // This triggers the CloudKit sync
-            }
-            
-            await MainActor.run {
-                self.isSyncing = false
-                self.lastSyncDate = Date()
-                self.syncError = nil
-                self.syncStatus = .available
-                self.syncProgress = 1.0
-                self.retryCount = 0
-            }
-        } catch {
-            await handleSyncError(error)
+        // Check for remote changes first
+        await checkForRemoteChanges()
+        
+        // Trigger Core Data to sync with CloudKit
+        coreDataManager.persistentContainer.persistentStoreCoordinator.performAndWait {
+            // This triggers the CloudKit sync
+        }
+        
+        await MainActor.run {
+            self.isSyncing = false
+            self.lastSyncDate = Date()
+            self.syncError = nil
+            self.syncStatus = .available
+            self.syncProgress = 1.0
+            self.retryCount = 0
         }
     }
     
@@ -343,8 +339,9 @@ class CloudKitService: ObservableObject {
     
     func startPeriodicSync() {
         // Start periodic sync every 30 seconds when available
-        Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
-            Task {
+        Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
                 if self.syncStatus == .available && !self.isSyncing {
                     await self.sync()
                 }

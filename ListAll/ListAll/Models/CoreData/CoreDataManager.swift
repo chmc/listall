@@ -839,7 +839,7 @@ class DataManager: ObservableObject {
             
             // Find and remove duplicates
             var duplicatesRemoved = 0
-            for (id, lists) in listsById {
+            for (_, lists) in listsById {
                 if lists.count > 1 {
                     // Sort by modifiedAt, keep most recent
                     let sorted = lists.sorted { ($0.modifiedAt ?? Date.distantPast) > ($1.modifiedAt ?? Date.distantPast) }
@@ -907,7 +907,7 @@ class DataManager: ObservableObject {
             
             // Find and remove duplicates
             var duplicatesRemoved = 0
-            for (id, items) in itemsById {
+            for (_, items) in itemsById {
                 if items.count > 1 {
                     // Sort by modifiedAt, keep most recent
                     let sorted = items.sorted { ($0.modifiedAt ?? Date.distantPast) > ($1.modifiedAt ?? Date.distantPast) }

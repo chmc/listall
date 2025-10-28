@@ -186,19 +186,23 @@ class SyncConflictManager: ObservableObject {
         let context = CoreDataManager.shared.viewContext
         let entities = ["ListEntity", "ItemEntity", "ItemImageEntity", "UserDataEntity"]
         
-        var foundConflicts: [NSManagedObject] = []
-        
-        for entityName in entities {
-            let request = NSFetchRequest<NSManagedObject>(entityName: entityName)
-            request.predicate = NSPredicate(format: "ckServerChangeToken != nil")
+        let foundConflicts: [NSManagedObject] = await Task.detached { @Sendable in
+            var conflicts: [NSManagedObject] = []
             
-            do {
-                let objects = try context.fetch(request)
-                foundConflicts.append(contentsOf: objects)
-            } catch {
-                print("Failed to check for conflicts in \(entityName): \(error)")
+            for entityName in entities {
+                let request = NSFetchRequest<NSManagedObject>(entityName: entityName)
+                request.predicate = NSPredicate(format: "ckServerChangeToken != nil")
+                
+                do {
+                    let objects = try context.fetch(request)
+                    conflicts.append(contentsOf: objects)
+                } catch {
+                    print("Failed to check for conflicts in \(entityName): \(error)")
+                }
             }
-        }
+            
+            return conflicts
+        }.value
         
         await MainActor.run {
             self.conflicts = foundConflicts
@@ -210,11 +214,11 @@ class SyncConflictManager: ObservableObject {
     }
     
     func resolveConflict(with strategy: CloudKitService.ConflictResolutionStrategy) async {
-        guard let conflict = currentConflict else { return }
+        guard let conflict = await MainActor.run(body: { currentConflict }) else { return }
         
         await cloudKitService.resolveConflictWithStrategy(strategy, for: conflict)
         
-        await MainActor.run {
+        await MainActor.run { @Sendable in
             if let index = conflicts.firstIndex(of: conflict) {
                 conflicts.remove(at: index)
             }

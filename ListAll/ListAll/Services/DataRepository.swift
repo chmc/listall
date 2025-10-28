@@ -376,7 +376,7 @@ class DataRepository: ObservableObject {
                 return existingUser.toUserData()
             } else {
                 let newUser = UserData(userID: userID)
-                let userEntity = UserDataEntity.fromUserData(newUser, context: coreDataManager.viewContext)
+                _ = UserDataEntity.fromUserData(newUser, context: coreDataManager.viewContext)
                 coreDataManager.save()
                 return newUser
             }

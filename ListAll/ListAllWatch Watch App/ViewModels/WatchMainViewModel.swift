@@ -284,59 +284,48 @@ class WatchMainViewModel: ObservableObject {
             errorMessage = nil
         }
         
-        do {
-            // Wait for WatchConnectivity session to be ready
-            let watchConnectivity = WatchConnectivityService.shared
-            var waitCount = 0
-            while !watchConnectivity.isActivated && waitCount < 20 {
-                #if os(watchOS)
-                print("⏳ [watchOS] Waiting for WCSession to activate... (\(waitCount + 1)/20)")
-                #endif
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                waitCount += 1
-            }
-            
-            // Send our data to iPhone if session is ready
-            if watchConnectivity.isActivated {
-                #if os(watchOS)
-                print("📤 [watchOS] Sending \(dataManager.lists.count) lists to iPhone...")
-                #endif
-                watchConnectivity.sendListsData(dataManager.lists)
-            } else {
-                #if os(watchOS)
-                print("⚠️ [watchOS] WCSession not activated after waiting, skipping send")
-                #endif
-            }
-            
-            // Reload data from Core Data (in case iPhone sent us data)
+        // Wait for WatchConnectivity session to be ready
+        let watchConnectivity = WatchConnectivityService.shared
+        var waitCount = 0
+        while !watchConnectivity.isActivated && waitCount < 20 {
             #if os(watchOS)
-            print("🔄 [watchOS] Reloading data from DataManager...")
+            print("⏳ [watchOS] Waiting for WCSession to activate... (\(waitCount + 1)/20)")
             #endif
-            dataManager.loadData()
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            waitCount += 1
+        }
+        
+        // Send our data to iPhone if session is ready
+        if watchConnectivity.isActivated {
+            #if os(watchOS)
+            print("📤 [watchOS] Sending \(dataManager.lists.count) lists to iPhone...")
+            #endif
+            watchConnectivity.sendListsData(dataManager.lists)
+        } else {
+            #if os(watchOS)
+            print("⚠️ [watchOS] WCSession not activated after waiting, skipping send")
+            #endif
+        }
+        
+        // Reload data from Core Data (in case iPhone sent us data)
+        #if os(watchOS)
+        print("🔄 [watchOS] Reloading data from DataManager...")
+        #endif
+        dataManager.loadData()
+        
+        await MainActor.run {
+            loadLists()
+            #if os(watchOS)
+            print("🔄 [watchOS] Refresh/sync complete. Loaded \(lists.count) lists")
+            #endif
+            isLoading = false
             
-            await MainActor.run {
-                loadLists()
-                #if os(watchOS)
-                print("🔄 [watchOS] Refresh/sync complete. Loaded \(lists.count) lists")
-                #endif
-                isLoading = false
-                
-                // Hide sync indicator after brief delay
-                Task {
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                    await MainActor.run {
-                        isSyncingFromiOS = false
-                    }
+            // Hide sync indicator after brief delay
+            Task {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                await MainActor.run {
+                    isSyncingFromiOS = false
                 }
-            }
-        } catch {
-            await MainActor.run {
-                errorMessage = "Sync failed: \(error.localizedDescription)"
-                isLoading = false
-                isSyncingFromiOS = false
-                #if os(watchOS)
-                print("❌ [watchOS] Refresh failed: \(error)")
-                #endif
             }
         }
     }

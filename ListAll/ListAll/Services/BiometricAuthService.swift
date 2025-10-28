@@ -126,7 +126,13 @@ class BiometricAuthService: ObservableObject {
             return "Authentication context is invalid. Please try again."
         case .notInteractive:
             return "Authentication is not available right now."
-        @unknown default:
+        #if os(watchOS)
+        case .watchNotAvailable:
+            return "Apple Watch is not available for authentication."
+        #endif
+        case .biometryDisconnected:
+            return "Biometric authentication was disconnected."
+        default:
             return "An unknown error occurred. Please try again."
         }
     }

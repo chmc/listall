@@ -37,7 +37,7 @@ class ItemViewModel: ObservableObject {
     // MARK: - Item Management Operations
     
     func duplicateItem(in list: List) -> Item? {
-        guard let listId = item.listId else { return nil }
+        guard item.listId != nil else { return nil }
         
         let duplicatedItem = dataRepository.createItem(
             in: list,
