@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(UIKit) && !os(watchOS)
 import UIKit
+#elseif os(watchOS)
+import WatchKit
+#endif
 
 // MARK: - ItemImage Model
 struct ItemImage: Identifiable, Codable, Equatable, Hashable {
@@ -21,6 +25,7 @@ struct ItemImage: Identifiable, Codable, Equatable, Hashable {
 // MARK: - Convenience Methods
 extension ItemImage {
     
+    #if canImport(UIKit) && !os(watchOS)
     /// Returns the UIImage from the stored data
     var uiImage: UIImage? {
         guard let imageData = imageData else { return nil }
@@ -29,18 +34,31 @@ extension ItemImage {
     
     /// Sets the image data from a UIImage with industry-standard compression
     mutating func setImage(_ image: UIImage, quality: CGFloat = 0.75) {
-        #if os(iOS)
-        // Use ImageService for proper compression on iOS
-        if let data = ImageService.shared.processImageForStorage(image) {
-            self.imageData = data
-        }
-        #else
-        // Fallback compression for watchOS
+        // Basic JPEG compression for cross-platform compatibility
         if let data = image.jpegData(compressionQuality: quality) {
             self.imageData = data
         }
-        #endif
     }
+    
+    /// Compresses the image data to reduce size using industry standards
+    mutating func compressImage(maxSize: Int = 512 * 1024) { // 512KB - industry standard
+        guard let imageData = imageData,
+              let image = UIImage(data: imageData) else { return }
+        
+        // Progressive compression
+        var compressionQuality: CGFloat = 0.75
+        var compressedData = image.jpegData(compressionQuality: compressionQuality)
+        
+        while let data = compressedData, data.count > maxSize && compressionQuality > 0.1 {
+            compressionQuality -= 0.1
+            compressedData = image.jpegData(compressionQuality: compressionQuality)
+        }
+        
+        if let finalData = compressedData {
+            self.imageData = finalData
+        }
+    }
+    #endif
     
     /// Returns true if the image has data
     var hasImageData: Bool {
@@ -67,31 +85,5 @@ extension ItemImage {
     /// Validates the image data
     func validate() -> Bool {
         return hasImageData
-    }
-    
-    /// Compresses the image data to reduce size using industry standards
-    mutating func compressImage(maxSize: Int = 512 * 1024) { // 512KB - industry standard
-        guard let imageData = imageData,
-              let image = UIImage(data: imageData) else { return }
-        
-        #if os(iOS)
-        // Use ImageService for proper compression on iOS
-        if let compressedData = ImageService.shared.compressImageData(imageData, maxSize: maxSize) {
-            self.imageData = compressedData
-        }
-        #else
-        // Fallback compression for watchOS
-        var compressionQuality: CGFloat = 0.75
-        var compressedData = image.jpegData(compressionQuality: compressionQuality)
-        
-        while let data = compressedData, data.count > maxSize && compressionQuality > 0.1 {
-            compressionQuality -= 0.1
-            compressedData = image.jpegData(compressionQuality: compressionQuality)
-        }
-        
-        if let finalData = compressedData {
-            self.imageData = finalData
-        }
-        #endif
     }
 }

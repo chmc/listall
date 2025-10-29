@@ -186,8 +186,9 @@ class SyncConflictManager: ObservableObject {
         let context = CoreDataManager.shared.viewContext
         let entities = ["ListEntity", "ItemEntity", "ItemImageEntity", "UserDataEntity"]
         
-        let foundConflicts: [NSManagedObject] = await Task.detached { @Sendable in
-            var conflicts: [NSManagedObject] = []
+        // Fetch object IDs (which are Sendable) instead of managed objects
+        let conflictObjectIDs: [NSManagedObjectID] = await context.perform {
+            var objectIDs: [NSManagedObjectID] = []
             
             for entityName in entities {
                 let request = NSFetchRequest<NSManagedObject>(entityName: entityName)
@@ -195,40 +196,41 @@ class SyncConflictManager: ObservableObject {
                 
                 do {
                     let objects = try context.fetch(request)
-                    conflicts.append(contentsOf: objects)
+                    objectIDs.append(contentsOf: objects.map { $0.objectID })
                 } catch {
                     print("Failed to check for conflicts in \(entityName): \(error)")
                 }
             }
             
-            return conflicts
-        }.value
+            return objectIDs
+        }
         
-        await MainActor.run {
-            self.conflicts = foundConflicts
-            if !foundConflicts.isEmpty {
-                self.currentConflict = foundConflicts.first
-                self.showingConflictResolution = true
-            }
+        // Fetch actual objects on main thread using the IDs
+        let foundConflicts: [NSManagedObject] = conflictObjectIDs.compactMap { objectID in
+            try? context.existingObject(with: objectID)
+        }
+        
+        self.conflicts = foundConflicts
+        if !foundConflicts.isEmpty {
+            self.currentConflict = foundConflicts.first
+            self.showingConflictResolution = true
         }
     }
     
     func resolveConflict(with strategy: CloudKitService.ConflictResolutionStrategy) async {
-        guard let conflict = await MainActor.run(body: { currentConflict }) else { return }
+        guard let conflict = currentConflict else { return }
         
         await cloudKitService.resolveConflictWithStrategy(strategy, for: conflict)
         
-        await MainActor.run { @Sendable in
-            if let index = conflicts.firstIndex(of: conflict) {
-                conflicts.remove(at: index)
-            }
-            
-            if conflicts.isEmpty {
-                showingConflictResolution = false
-                currentConflict = nil
-            } else {
-                currentConflict = conflicts.first
-            }
+        if let index = conflicts.firstIndex(of: conflict) {
+            conflicts.remove(at: index)
+        }
+        
+        if conflicts.isEmpty {
+            showingConflictResolution = false
+            currentConflict = nil
+        } else {
+            currentConflict = conflicts.first
         }
     }
 }

@@ -229,13 +229,6 @@ struct ExportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ExportViewModel()
     
-    // MARK: - App Version Helpers
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"
-    }
-    private var appBuild: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "-"
-    }
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
