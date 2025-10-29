@@ -296,8 +296,8 @@ class MainViewModel: ObservableObject {
             // Load archived lists
             archivedLists = dataManager.loadArchivedLists()
         } else {
-            // Get active lists from DataManager
-            lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+            // Get active lists from DataManager (already sorted by orderNumber in loadData)
+            lists = dataManager.lists
             
             #if os(iOS)
             print("📊 [iOS] Loaded \(lists.count) lists with \(lists.reduce(0) { $0 + $1.items.count }) total items")
@@ -521,6 +521,11 @@ class MainViewModel: ObservableObject {
         
         // Batch update all lists at once - saves to Core Data and syncs DataManager
         dataManager.updateListsOrder(lists)
+        
+        // CRITICAL FIX: Reload from DataManager to ensure UI and data layer are in sync
+        // After updateListsOrder(), DataManager.lists contains the properly ordered array
+        // We must use this as the source of truth to ensure the UI reflects the correct order
+        lists = dataManager.lists
         
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)

@@ -553,6 +553,9 @@ class DataManager: ObservableObject {
         // Save once after all updates
         saveData()
         
+        // CRITICAL: Ensure Core Data has processed all changes before continuing
+        context.processPendingChanges()
+        
         // Update local array to match
         lists = newOrder
     }

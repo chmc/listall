@@ -993,6 +993,9 @@
 
 ## Remove build number from settings ✅ COMPLETED
 
+## Fix: Lists sorting does not work ✅ COMPLETED
+- ✅ Moved list now stays in correct place after drag-and-drop reordering
+
 ###########################################################
 
 ## 
