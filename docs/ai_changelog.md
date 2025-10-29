@@ -1,5 +1,134 @@
 # AI Changelog
 
+## 2025-10-29 - Remove Main Screen Context Menu ✅ COMPLETED
+
+### Summary
+Removed redundant long-press context menu from the main screen (lists view) for **all lists** (both active and archived). All functionality is already available through other UI elements:
+- **Active lists**: Swipe actions provide Share, Edit, Duplicate, Archive
+- **Archived lists**: Visible buttons provide Restore and Delete
+
+### The Problem
+**User Request**: "Remove main screen on press context menu - In lists view no need for on press action - Same actions are available as swipe actions"
+
+**Follow-up**: "Oh remove long-press context menu from archived lists. I forgot that. Its redundant."
+
+**Root Cause**: 
+The ListRowView had context menus for both active and archived lists that duplicated functionality already available through other UI interactions. This created redundancy and potential confusion for users.
+
+**Previous Behavior**:
+- **Active lists**: Long press → Context menu (Share, Edit, Duplicate, Archive) + Swipe actions (same)
+- **Archived lists**: Long press → Context menu (Restore, Delete) + Visible buttons (same)
+
+### Implementation Details
+
+#### Final Change: Remove All Context Menus
+**File Modified**: `ListAll/ListAll/Views/Components/ListRowView.swift`
+
+**Before** (lines 139-154):
+```swift
+.if(!mainViewModel.isInSelectionMode && mainViewModel.showingArchivedLists) { view in
+    view.contextMenu {
+        // Archived list actions
+        Button(action: {
+            mainViewModel.restoreList(list)
+        }) {
+            Label("Restore", systemImage: "arrow.uturn.backward")
+        }
+        
+        Button(role: .destructive, action: {
+            activeAlert = .permanentDelete
+        }) {
+            Label("Delete Permanently", systemImage: "trash.fill")
+        }
+    }
+}
+```
+
+**After** (line 139):
+```swift
+// Context menu completely removed - all functionality available elsewhere
+```
+
+**Complete Removal**:
+1. ✅ Removed context menu for active lists (first iteration)
+2. ✅ Removed context menu for archived lists (second iteration)
+3. ✅ All `.contextMenu {}` blocks removed from ListRowView
+4. ✅ Cleaner code with no conditional context menu logic
+
+### Why This Approach?
+
+#### Advantages:
+1. **Zero Redundancy**: No duplicate UI interaction paths anywhere
+2. **Cleaner UX**: Single, clear way to perform each action
+3. **Consistent with iOS Guidelines**: Swipe actions + visible buttons are standard
+4. **Better Discoverability**: Users see visible buttons and can discover swipe actions
+5. **Simpler Code**: No conditional context menu logic to maintain
+
+#### All Functionality Preserved:
+
+**Active Lists:**
+- ✅ **Swipe Right**: Share (orange), Duplicate (green), Edit (blue)
+- ✅ **Swipe Left**: Archive (orange)
+- ✅ **Tap**: Navigate to list detail
+- ❌ Long-press context menu removed (redundant)
+
+**Archived Lists:**
+- ✅ **Visible Restore Button**: Blue button with icon and text
+- ✅ **Visible Delete Button**: Red button with trash icon
+- ✅ **Tap**: Navigate to readonly preview
+- ❌ Long-press context menu removed (redundant)
+
+### Testing
+
+#### Build Validation
+```bash
+xcodebuild -scheme ListAll -destination 'generic/platform=iOS' build
+```
+**Result**: ✅ BUILD SUCCEEDED (0 errors, 0 warnings related to changes)
+
+#### Code Review
+- ✅ No compilation errors
+- ✅ Clean removal of all context menu code
+- ✅ Swipe actions intact for active lists
+- ✅ Visible buttons intact for archived lists
+
+#### Manual Testing Required
+- [ ] Verify no context menu appears on long press of active lists
+- [ ] Verify no context menu appears on long press of archived lists
+- [ ] Verify swipe actions work for active lists (right & left)
+- [ ] Verify visible buttons work for archived lists (Restore, Delete)
+- [ ] Verify navigation to list detail works on tap (both types)
+
+### Files Changed
+```
+ListAll/ListAll/Views/Components/ListRowView.swift (modified - context menu removed)
+docs/todo.md (updated)
+docs/ai_changelog.md (updated)
+```
+
+### Code Diff Summary
+```swift
+// REMOVED: All .contextMenu {} blocks
+// - Removed context menu for active lists
+// - Removed context menu for archived lists
+// - Kept swipe actions for active lists
+// - Kept visible buttons for archived lists
+```
+
+### Related Tasks
+- **Task**: Remove main screen on press context menu
+- **Phase**: General UX cleanup
+- **Status**: ✅ COMPLETED (fully - both active and archived)
+
+### Learnings
+1. **Eliminate All Redundancy**: Multiple ways to perform the same action confuse users
+2. **Visible Buttons > Hidden Menus**: Users can see and understand visible buttons immediately
+3. **Long-Press is Discovery Tax**: Context menus require users to discover them through experimentation
+4. **Keep It Simple**: One clear UI pattern per action type is best
+5. **Listen to User Feedback**: User caught the remaining redundancy - always good to double-check
+
+---
+
 ## 2025-10-29 - Fix: Lists Sorting Does Not Work ✅ COMPLETED
 
 ### Summary

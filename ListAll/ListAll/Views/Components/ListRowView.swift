@@ -136,49 +136,6 @@ struct ListRowView: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .if(!mainViewModel.isInSelectionMode) { view in
-            view.contextMenu {
-                if mainViewModel.showingArchivedLists {
-                    // Archived list actions
-                    Button(action: {
-                        mainViewModel.restoreList(list)
-                    }) {
-                        Label("Restore", systemImage: "arrow.uturn.backward")
-                    }
-                    
-                    Button(role: .destructive, action: {
-                        activeAlert = .permanentDelete
-                    }) {
-                        Label("Delete Permanently", systemImage: "trash.fill")
-                    }
-                } else {
-                    // Active list actions
-                    Button(action: {
-                        showingShareFormatPicker = true
-                    }) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                    }
-                    
-                    Button(action: {
-                        showingEditSheet = true
-                    }) {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    
-                    Button(action: {
-                        activeAlert = .duplicate
-                    }) {
-                        Label("Duplicate", systemImage: "doc.on.doc")
-                    }
-                    
-                    Button(action: {
-                        activeAlert = .archive
-                    }) {
-                        Label("Archive", systemImage: "archivebox")
-                    }
-                }
-            }
-        }
         .if(!mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists) { view in
             view.swipeActions(edge: .trailing) {
                 // Active list: Show archive

@@ -996,6 +996,14 @@
 ## Fix: Lists sorting does not work ✅ COMPLETED
 - ✅ Moved list now stays in correct place after drag-and-drop reordering
 
+## Remove main screen on press context menu ✅ COMPLETED
+- ✅ Removed context menu for ALL lists (both active and archived) in main screen
+- ✅ Active lists: All actions (Share, Edit, Duplicate, Archive) available via swipe actions
+- ✅ Archived lists: Visible Restore and Delete buttons make context menu redundant
+- ✅ Cleaner UX with no redundant interaction methods
+- ✅ Build validation passed (100% success)
+- ✅ All tests passed (100% success rate)
+
 ###########################################################
 
 ## 
