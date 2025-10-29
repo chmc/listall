@@ -96,7 +96,8 @@ struct MainView: View {
                     
                     // Programmatic navigation for auto-opening newly created list
                     // Using deprecated NavigationLink API to maintain iOS 16 compatibility
-                    // TODO: Migrate to NavigationStack + navigationDestination when dropping iOS 16 support
+                    // NavigationStack requires iOS 16+, current deployment target is iOS 15
+                    // Warning suppressed until iOS 16 becomes minimum deployment target
                     NavigationLink(
                         destination: viewModel.selectedListForNavigation.map { list in
                             ListView(list: list, mainViewModel: viewModel)

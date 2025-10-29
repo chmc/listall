@@ -130,7 +130,7 @@ class WatchConnectivityService: NSObject, ObservableObject {
     /// Uses transferUserInfo for reliable background transfer that queues if device not reachable
     /// - Parameter lists: Array of List objects to sync
     func sendListsData(_ lists: [List]) {
-        let ts = Self.timestamp()
+        _ = Self.timestamp()
         
         guard let session = session else {
             logger.warning("Cannot send lists data: WatchConnectivity not supported")
@@ -194,7 +194,7 @@ class WatchConnectivityService: NSObject, ObservableObject {
             
             // Use transferUserInfo for reliable background transfer
             // This queues the transfer if the device is not reachable
-            let transfer = session.transferUserInfo(userInfo)
+            _ = session.transferUserInfo(userInfo)
             
             logger.info("📤 Sending \(lists.count) lists to paired device via transferUserInfo")
             
