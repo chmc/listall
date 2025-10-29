@@ -32,6 +32,10 @@ struct SettingsView: View {
         biometricService.biometricType()
     }
     
+    // MARK: - App Version Helper
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"
+    }
     var body: some View {
         NavigationView {
             SwiftUI.List {
@@ -169,19 +173,12 @@ struct SettingsView: View {
                 }
                 
                 Section("About") {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Build")
-                        Spacer()
-                        Text("1")
-                            .foregroundColor(.secondary)
-                    }
+                        HStack {
+                            Text("Version")
+                            Spacer()
+                            Text(appVersion)
+                                .foregroundColor(.secondary)
+                        }
                 }
             }
             .navigationTitle("Settings")
@@ -232,6 +229,13 @@ struct ExportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ExportViewModel()
     
+    // MARK: - App Version Helpers
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"
+    }
+    private var appBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "-"
+    }
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {

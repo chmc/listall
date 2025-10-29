@@ -991,6 +991,8 @@
 
 ## Remove iCloud sync setting ✅ COMPLETED
 
+## Remove build number from settings ✅ COMPLETED
+
 ###########################################################
 
 ## 
