@@ -319,7 +319,6 @@ class SharingService: ObservableObject {
             
             return fileURL
         } catch {
-            print("Failed to write temporary file: \(error)")
             return nil
         }
     }

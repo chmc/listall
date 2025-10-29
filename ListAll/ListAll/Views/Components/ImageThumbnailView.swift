@@ -574,7 +574,7 @@ extension Int: @retroactive Identifiable {
 #Preview("Image Thumbnail") {
     let sampleImage = ItemImage(imageData: UIImage(systemName: "photo")?.pngData())
     return ImageThumbnailView(itemImage: sampleImage) {
-        print("Delete tapped")
+        // Delete action
     }
 }
 

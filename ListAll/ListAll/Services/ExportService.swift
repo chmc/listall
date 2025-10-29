@@ -89,7 +89,6 @@ class ExportService: ObservableObject {
             
             return try encoder.encode(exportData)
         } catch {
-            print("Failed to export to JSON: \(error)")
             return nil
         }
     }

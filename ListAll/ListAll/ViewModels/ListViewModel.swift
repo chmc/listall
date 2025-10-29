@@ -78,17 +78,10 @@ class ListViewModel: ObservableObject {
     }
     
     @objc private func handleWatchSyncNotification(_ notification: Notification) {
-        #if os(iOS)
-        print("🔄 [iOS] ListViewModel: Received sync notification from Watch")
-        #endif
         refreshItemsFromWatch()
     }
     
     @objc private func handleWatchListsData(_ notification: Notification) {
-        #if os(iOS)
-        print("📥 [iOS] ListViewModel: Received lists data from Watch - refreshing current list")
-        #endif
-        
         // MainViewModel has already updated Core Data at this point
         // We just need to reload items for this list from the updated data
         refreshItemsFromWatch()
@@ -181,10 +174,6 @@ class ListViewModel: ObservableObject {
         
         // CRITICAL: Sync change to watchOS immediately
         // When user completes/uncompletes an item on iOS, watchOS needs to know about it
-        #if os(iOS)
-        print("✅ [iOS] Item toggled: \(item.title) (crossed out: \(!wasCompleted))")
-        print("📤 [iOS] Syncing change to watchOS...")
-        #endif
         
         // Send updated lists to watchOS via WatchConnectivity
         WatchConnectivityService.shared.sendListsData(dataManager.lists)

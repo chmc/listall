@@ -64,7 +64,7 @@ struct WatchFilterPicker: View {
         var body: some View {
             VStack {
                 WatchFilterPicker(selectedFilter: $filter) { newFilter in
-                    print("Filter changed to: \(newFilter)")
+                    // Filter changed
                 }
             }
         }

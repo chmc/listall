@@ -47,40 +47,23 @@ class LocalizationManager: ObservableObject {
         // Use shared UserDefaults for App Groups (iOS and watchOS)
         if let sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll") {
             self.userDefaults = sharedDefaults
-            #if DEBUG
-            print("🌍 [iOS LocalizationManager] Using App Groups UserDefaults")
-            #endif
         } else {
             // Fallback to standard UserDefaults if App Groups not available
             self.userDefaults = .standard
-            #if DEBUG
-            print("⚠️ [iOS LocalizationManager] App Groups not available, using standard UserDefaults")
-            #endif
         }
         
         // Load saved language or use system language
         if let savedLanguageCode = userDefaults.string(forKey: userDefaultsKey),
            let savedLanguage = AppLanguage(rawValue: savedLanguageCode) {
             self.currentLanguage = savedLanguage
-            #if DEBUG
-            print("🌍 [iOS LocalizationManager] Loaded saved language: \(savedLanguage.rawValue)")
-            #endif
         } else {
             // Use system language if available, otherwise default to English
             let systemLanguageCode = Locale.current.language.languageCode?.identifier ?? "en"
             self.currentLanguage = AppLanguage(rawValue: systemLanguageCode) ?? .english
-            #if DEBUG
-            print("🌍 [iOS LocalizationManager] No saved language, using system: \(self.currentLanguage.rawValue)")
-            print("🌍 [iOS LocalizationManager] Now saving default language to App Groups...")
-            #endif
             
             // IMPORTANT: Save the default language to App Groups so watchOS can see it
             userDefaults.set(self.currentLanguage.rawValue, forKey: userDefaultsKey)
             userDefaults.synchronize()
-            
-            #if DEBUG
-            print("🌍 [iOS LocalizationManager] Saved default language '\(self.currentLanguage.rawValue)' to App Groups")
-            #endif
         }
         
         // Apply the language on initialization
@@ -100,24 +83,9 @@ class LocalizationManager: ObservableObject {
     
     /// Change the app language
     func setLanguage(_ language: AppLanguage) {
-        #if DEBUG
-        print("🌍 [iOS LocalizationManager] setLanguage() called with: \(language.rawValue)")
-        print("🌍 [iOS LocalizationManager] UserDefaults suite: \(userDefaults.dictionaryRepresentation().keys.contains("AppLanguage") ? "AppLanguage exists" : "AppLanguage does NOT exist")")
-        #endif
-        
         currentLanguage = language
         userDefaults.set(language.rawValue, forKey: userDefaultsKey)
         userDefaults.synchronize() // Force write to disk immediately
-        
-        #if DEBUG
-        print("🌍 [iOS LocalizationManager] Saved '\(language.rawValue)' to key '\(userDefaultsKey)'")
-        // Verify it was saved
-        if let saved = userDefaults.string(forKey: userDefaultsKey) {
-            print("🌍 [iOS LocalizationManager] Verification: Read back '\(saved)' from UserDefaults")
-        } else {
-            print("❌ [iOS LocalizationManager] ERROR: Could not read back saved language!")
-        }
-        #endif
         
         // Apply the language
         applyLanguage(language)
@@ -135,10 +103,6 @@ class LocalizationManager: ObservableObject {
     /// Send language preference to watchOS via WatchConnectivity
     private func sendLanguageToWatch(_ language: AppLanguage) {
         WatchConnectivityService.shared.sendLanguagePreference(language.rawValue)
-        
-        #if DEBUG
-        print("🌍 [iOS LocalizationManager] Requested language sync to watch: \(language.rawValue)")
-        #endif
     }
     #endif
     

@@ -236,7 +236,7 @@ struct SuggestionRowView: View {
     
     return VStack {
         SuggestionListView(suggestions: sampleSuggestions) { suggestion in
-            print("Tapped: \(suggestion.title)")
+            // Handle suggestion tap
         }
         .padding()
         

@@ -108,6 +108,6 @@ struct WatchErrorView: View {
 
 #Preview("Error") {
     WatchErrorView(message: "Failed to load lists") {
-        print("Retry tapped")
+        // Retry action
     }
 }

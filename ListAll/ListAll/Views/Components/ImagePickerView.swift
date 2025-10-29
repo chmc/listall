@@ -91,8 +91,7 @@ struct ImagePickerView: UIViewControllerRepresentable {
             if provider.canLoadObject(ofClass: UIImage.self) {
                 provider.loadObject(ofClass: UIImage.self) { [weak self] image, error in
                     DispatchQueue.main.async {
-                        if let error = error {
-                            print("Error loading image: \(error.localizedDescription)")
+                        if error != nil {
                             return
                         }
                         self?.parent.selectedImage = image as? UIImage

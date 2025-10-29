@@ -91,7 +91,6 @@ class DataMigrationService {
     func migrateSchemaIfNeeded() async throws {
         // This would handle Core Data model version migrations
         // For now, we're using a simple model without versioning
-        print("Schema migration not needed - using simple model")
     }
     
     // MARK: - Data Cleanup

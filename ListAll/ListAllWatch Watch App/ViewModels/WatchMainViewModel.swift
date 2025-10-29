@@ -24,24 +24,14 @@ class WatchMainViewModel: ObservableObject {
         loadLists()
         
         // 2. Clean up duplicates (modifies Core Data)
-        #if os(watchOS)
-        print("🧹 [watchOS] Checking for duplicate lists and items on launch...")
-        #endif
         dataManager.removeDuplicateLists()  // Remove duplicate lists first
         dataManager.removeDuplicateItems()  // Then remove duplicate items
         
         // 3. RELOAD lists after cleanup to get clean data
-        #if os(watchOS)
-        print("🔄 [watchOS] Reloading lists after cleanup...")
-        #endif
         loadLists()
         
         // 4. Auto-sync clean data to iPhone (after WatchConnectivity activates)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            #if os(watchOS)
-            print("🚀 [watchOS] Auto-sync on launch: Sending clean data to iPhone...")
-            print("📊 [watchOS] Sending \(self.lists.count) lists with \(self.lists.reduce(0) { $0 + $1.items.count }) total items")
-            #endif
             WatchConnectivityService.shared.sendListsData(self.dataManager.lists)
         }
     }
@@ -82,23 +72,13 @@ class WatchMainViewModel: ObservableObject {
     }
     
     @objc private func handleiOSSyncNotification(_ notification: Notification) {
-        #if os(watchOS)
-        print("🔄 [watchOS] WatchMainViewModel: Received sync notification from iOS")
-        #endif
         refreshFromiOS()
     }
     
     @objc private func handleiOSListsData(_ notification: Notification) {
-        #if os(watchOS)
-        print("📥 [watchOS] WatchMainViewModel: Received lists data from iOS")
-        #endif
-        
         guard let receivedLists = notification.userInfo?["lists"] as? [List] else {
-            print("❌ [watchOS] Failed to extract lists from notification")
             return
         }
-        
-        print("📥 [watchOS] Processing \(receivedLists.count) lists from iOS")
         
         // Show sync indicator
         isSyncingFromiOS = true
@@ -121,25 +101,15 @@ class WatchMainViewModel: ObservableObject {
         for receivedList in receivedLists {
             // Check if list already exists in local database
             if let existingList = dataManager.lists.first(where: { $0.id == receivedList.id }) {
-                #if os(watchOS)
-                print("🔄 [watchOS] Syncing existing list: \(receivedList.name) (\(receivedList.items.count) items from iOS)")
-                #endif
-                
                 // CRITICAL FIX: Always sync orderNumber regardless of modifiedAt timestamp
                 // List ordering is critical and should always be kept in sync
                 var needsOrderUpdate = false
                 if receivedList.orderNumber != existingList.orderNumber {
-                    #if os(watchOS)
-                    print("  🔄 [watchOS] Order number changed: \(existingList.orderNumber) → \(receivedList.orderNumber)")
-                    #endif
                     needsOrderUpdate = true
                 }
                 
                 // Update list metadata if received version is newer OR if order changed
                 if receivedList.modifiedAt > existingList.modifiedAt || needsOrderUpdate {
-                    #if os(watchOS)
-                    print("  ⬆️ [watchOS] List metadata is newer or order changed, updating")
-                    #endif
                     dataManager.updateList(receivedList)
                 }
                 
@@ -149,16 +119,10 @@ class WatchMainViewModel: ObservableObject {
                 updateItemsForList(receivedList, existingList: existingList)
             } else {
                 // Add new list
-                #if os(watchOS)
-                print("➕ [watchOS] Adding new list: \(receivedList.name) with \(receivedList.items.count) items")
-                #endif
                 dataManager.addList(receivedList)
                 
                 // Add all items for this new list
                 for item in receivedList.items {
-                    #if os(watchOS)
-                    print("  ➕ [watchOS] Adding item: \(item.title)")
-                    #endif
                     dataManager.addItem(item, to: receivedList.id)
                 }
             }
@@ -172,29 +136,12 @@ class WatchMainViewModel: ObservableObject {
             let listsToRemove = localActiveListIds.subtracting(receivedListIds)
             
             for listIdToRemove in listsToRemove {
-                #if os(watchOS)
-                print("🗑️ [watchOS] Removing deleted list")
-                #endif
                 dataManager.deleteList(withId: listIdToRemove)
             }
-        } else {
-            #if os(watchOS)
-            print("⚠️ [watchOS] Received empty sync - not deleting any lists")
-            #endif
         }
         
         // CRITICAL: Reload all data from Core Data ONCE after all changes
-        #if os(watchOS)
-        print("🔄 [watchOS] Reloading all data from Core Data after sync...")
-        #endif
         dataManager.loadData()
-        
-        #if os(watchOS)
-        let totalItems = receivedLists.reduce(0) { $0 + $1.items.count }
-        let actualItems = dataManager.lists.reduce(0) { $0 + $1.items.count }
-        print("✅ [watchOS] Core Data updated with \(receivedLists.count) lists and \(totalItems) items")
-        print("✅ [watchOS] DataManager now has \(actualItems) items loaded")
-        #endif
     }
     
     /// Updates items for an existing list (add new, update existing, remove deleted)
@@ -208,17 +155,11 @@ class WatchMainViewModel: ObservableObject {
                 // Update existing item if received version is newer
                 if let existingItem = existingList.items.first(where: { $0.id == receivedItem.id }) {
                     if receivedItem.modifiedAt > existingItem.modifiedAt {
-                        #if os(watchOS)
-                        print("  ⬆️ [watchOS] Updating item: \(receivedItem.title)")
-                        #endif
                         dataManager.updateItem(receivedItem)
                     }
                 }
             } else {
                 // Add new item
-                #if os(watchOS)
-                print("  ➕ [watchOS] Adding item: \(receivedItem.title)")
-                #endif
                 dataManager.addItem(receivedItem, to: receivedList.id)
             }
         }
@@ -226,9 +167,6 @@ class WatchMainViewModel: ObservableObject {
         // Remove items that no longer exist
         let itemsToRemove = existingItemIds.subtracting(receivedItemIds)
         for itemIdToRemove in itemsToRemove {
-            #if os(watchOS)
-            print("  🗑️ [watchOS] Removing deleted item")
-            #endif
             dataManager.deleteItem(withId: itemIdToRemove, from: receivedList.id)
         }
     }
@@ -256,28 +194,16 @@ class WatchMainViewModel: ObservableObject {
         // CRITICAL: Always reload from Core Data first to get latest data
         dataManager.loadData()
         
-        #if os(watchOS)
-        print("📊 [watchOS] DataManager has \(dataManager.lists.count) total lists")
-        #endif
-        
         // Get active lists from DataManager (sorted by order number)
         lists = dataManager.lists
             .filter { !$0.isArchived }
             .sorted { $0.orderNumber < $1.orderNumber }
-        
-        #if os(watchOS)
-        print("📊 [watchOS] Displaying \(lists.count) active lists with \(lists.reduce(0) { $0 + $1.items.count }) total items")
-        #endif
         
         isLoading = false
     }
     
     /// Refresh data manually (for pull-to-refresh and manual sync button)
     func refresh() async {
-        #if os(watchOS)
-        print("🔄 [watchOS] Manual refresh/sync triggered")
-        #endif
-        
         await MainActor.run {
             isLoading = true
             isSyncingFromiOS = true
@@ -288,36 +214,20 @@ class WatchMainViewModel: ObservableObject {
         let watchConnectivity = WatchConnectivityService.shared
         var waitCount = 0
         while !watchConnectivity.isActivated && waitCount < 20 {
-            #if os(watchOS)
-            print("⏳ [watchOS] Waiting for WCSession to activate... (\(waitCount + 1)/20)")
-            #endif
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             waitCount += 1
         }
         
         // Send our data to iPhone if session is ready
         if watchConnectivity.isActivated {
-            #if os(watchOS)
-            print("📤 [watchOS] Sending \(dataManager.lists.count) lists to iPhone...")
-            #endif
             watchConnectivity.sendListsData(dataManager.lists)
-        } else {
-            #if os(watchOS)
-            print("⚠️ [watchOS] WCSession not activated after waiting, skipping send")
-            #endif
         }
         
         // Reload data from Core Data (in case iPhone sent us data)
-        #if os(watchOS)
-        print("🔄 [watchOS] Reloading data from DataManager...")
-        #endif
         dataManager.loadData()
         
         await MainActor.run {
             loadLists()
-            #if os(watchOS)
-            print("🔄 [watchOS] Refresh/sync complete. Loaded \(lists.count) lists")
-            #endif
             isLoading = false
             
             // Hide sync indicator after brief delay

@@ -45,24 +45,14 @@ class MainViewModel: ObservableObject {
         loadLists()
         
         // 2. Clean up duplicates (modifies Core Data)
-        #if os(iOS)
-        print("🧹 [iOS] Checking for duplicate lists and items on launch...")
-        #endif
         dataManager.removeDuplicateLists()  // Remove duplicate lists first
         dataManager.removeDuplicateItems()  // Then remove duplicate items
         
         // 3. RELOAD lists after cleanup to get clean data
-        #if os(iOS)
-        print("🔄 [iOS] Reloading lists after cleanup...")
-        #endif
         loadLists()
         
         // 4. Auto-sync clean data to Watch (after WatchConnectivity activates)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            #if os(iOS)
-            print("🚀 [iOS] Auto-sync on launch: Sending clean data to Watch...")
-            print("📊 [iOS] Sending \(self.lists.count) lists with \(self.lists.reduce(0) { $0 + $1.items.count }) total items")
-            #endif
             WatchConnectivityService.shared.sendListsData(self.dataManager.lists)
         }
     }
@@ -93,23 +83,13 @@ class MainViewModel: ObservableObject {
     }
     
     @objc private func handleWatchSyncNotification(_ notification: Notification) {
-        #if os(iOS)
-        print("🔄 [iOS] MainViewModel: Received sync notification from Watch")
-        #endif
         refreshFromWatch()
     }
     
     @objc private func handleWatchListsData(_ notification: Notification) {
-        #if os(iOS)
-        print("📥 [iOS] MainViewModel: Received lists data from Watch")
-        #endif
-        
         guard let receivedLists = notification.userInfo?["lists"] as? [List] else {
-            print("❌ [iOS] Failed to extract lists from notification")
             return
         }
-        
-        print("📥 [iOS] Processing \(receivedLists.count) lists from Watch")
         
         // Show sync indicator
         isSyncingFromWatch = true
@@ -132,25 +112,15 @@ class MainViewModel: ObservableObject {
         for receivedList in receivedLists {
             // Check if list already exists in local database
             if let existingList = dataManager.lists.first(where: { $0.id == receivedList.id }) {
-                #if os(iOS)
-                print("🔄 [iOS] Syncing existing list: \(receivedList.name) (\(receivedList.items.count) items from Watch)")
-                #endif
-                
                 // CRITICAL FIX: Always sync orderNumber regardless of modifiedAt timestamp
                 // List ordering is critical and should always be kept in sync
                 var needsOrderUpdate = false
                 if receivedList.orderNumber != existingList.orderNumber {
-                    #if os(iOS)
-                    print("  🔄 [iOS] Order number changed: \(existingList.orderNumber) → \(receivedList.orderNumber)")
-                    #endif
                     needsOrderUpdate = true
                 }
                 
                 // Update list metadata if received version is newer OR if order changed
                 if receivedList.modifiedAt > existingList.modifiedAt || needsOrderUpdate {
-                    #if os(iOS)
-                    print("  ⬆️ [iOS] List metadata is newer or order changed, updating")
-                    #endif
                     dataManager.updateList(receivedList)
                 }
                 
@@ -160,16 +130,10 @@ class MainViewModel: ObservableObject {
                 updateItemsForList(receivedList, existingList: existingList)
             } else {
                 // Add new list
-                #if os(iOS)
-                print("➕ [iOS] Adding new list: \(receivedList.name) with \(receivedList.items.count) items")
-                #endif
                 dataManager.addList(receivedList)
                 
                 // Add all items for this new list
                 for item in receivedList.items {
-                    #if os(iOS)
-                    print("  ➕ [iOS] Adding item: \(item.title)")
-                    #endif
                     dataManager.addItem(item, to: receivedList.id)
                 }
             }
@@ -183,29 +147,12 @@ class MainViewModel: ObservableObject {
             let listsToRemove = localActiveListIds.subtracting(receivedListIds)
             
             for listIdToRemove in listsToRemove {
-                #if os(iOS)
-                print("🗑️ [iOS] Removing deleted list")
-                #endif
                 dataManager.deleteList(withId: listIdToRemove)
             }
-        } else {
-            #if os(iOS)
-            print("⚠️ [iOS] Received empty sync from Watch - not deleting any lists")
-            #endif
         }
         
         // CRITICAL: Reload all data from Core Data ONCE after all changes
-        #if os(iOS)
-        print("🔄 [iOS] Reloading all data from Core Data after sync...")
-        #endif
         dataManager.loadData()
-        
-        #if os(iOS)
-        let totalItems = receivedLists.reduce(0) { $0 + $1.items.count }
-        let actualItems = dataManager.lists.reduce(0) { $0 + $1.items.count }
-        print("✅ [iOS] Core Data updated with \(receivedLists.count) lists and \(totalItems) items")
-        print("✅ [iOS] DataManager now has \(actualItems) items loaded")
-        #endif
     }
     
     /// Updates items for an existing list (add new, update existing, remove deleted)
@@ -219,17 +166,11 @@ class MainViewModel: ObservableObject {
                 // Update existing item if received version is newer
                 if let existingItem = existingList.items.first(where: { $0.id == receivedItem.id }) {
                     if receivedItem.modifiedAt > existingItem.modifiedAt {
-                        #if os(iOS)
-                        print("  ⬆️ [iOS] Updating item: \(receivedItem.title)")
-                        #endif
                         dataManager.updateItem(receivedItem)
                     }
                 }
             } else {
                 // Add new item
-                #if os(iOS)
-                print("  ➕ [iOS] Adding item: \(receivedItem.title)")
-                #endif
                 dataManager.addItem(receivedItem, to: receivedList.id)
             }
         }
@@ -237,9 +178,6 @@ class MainViewModel: ObservableObject {
         // Remove items that no longer exist
         let itemsToRemove = existingItemIds.subtracting(receivedItemIds)
         for itemIdToRemove in itemsToRemove {
-            #if os(iOS)
-            print("  🗑️ [iOS] Removing deleted item")
-            #endif
             dataManager.deleteItem(withId: itemIdToRemove, from: receivedList.id)
         }
     }
@@ -261,10 +199,6 @@ class MainViewModel: ObservableObject {
     
     /// Manual sync - request data from Watch and send our data to Watch
     func manualSync() {
-        #if os(iOS)
-        print("🔄 [iOS] Manual sync triggered by user")
-        #endif
-        
         isSyncingFromWatch = true
         
         // Send our data to Watch
@@ -298,10 +232,6 @@ class MainViewModel: ObservableObject {
         } else {
             // Get active lists from DataManager (already sorted by orderNumber in loadData)
             lists = dataManager.lists
-            
-            #if os(iOS)
-            print("📊 [iOS] Loaded \(lists.count) lists with \(lists.reduce(0) { $0 + $1.items.count }) total items")
-            #endif
         }
         
         isLoading = false

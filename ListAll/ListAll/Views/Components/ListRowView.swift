@@ -264,7 +264,6 @@ struct ListRowView: View {
                         do {
                             try mainViewModel.duplicateList(list)
                         } catch {
-                            // Handle error (could add error alert here if needed)
                             print("Error duplicating list: \(error)")
                         }
                     },

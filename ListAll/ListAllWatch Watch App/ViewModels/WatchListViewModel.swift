@@ -53,9 +53,6 @@ class WatchListViewModel: ObservableObject {
     }
     
     @objc private func handleiOSSyncNotification(_ notification: Notification) {
-        #if os(watchOS)
-        print("🔄 [watchOS] WatchListViewModel: Received sync notification from iOS")
-        #endif
         refreshItemsFromiOS()
     }
     
@@ -110,10 +107,6 @@ class WatchListViewModel: ObservableObject {
         
         // CRITICAL: Sync change to iOS immediately
         // When user completes an item on watchOS, iOS needs to know about it
-        #if os(watchOS)
-        print("✅ [watchOS] Item toggled: \(item.title) (crossed out: \(item.isCrossedOut))")
-        print("📤 [watchOS] Syncing change to iOS...")
-        #endif
         
         // Send updated lists to iOS via WatchConnectivity
         WatchConnectivityService.shared.sendListsData(dataManager.lists)

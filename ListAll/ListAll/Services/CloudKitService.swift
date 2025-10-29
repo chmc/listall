@@ -214,17 +214,6 @@ class CloudKitService: ObservableObject {
             return
         }
         
-        switch event.type {
-        case .setup:
-            print("CloudKit setup completed")
-        case .import:
-            print("CloudKit import completed")
-        case .export:
-            print("CloudKit export completed")
-        @unknown default:
-            print("Unknown CloudKit event")
-        }
-        
         if let error = event.error {
             syncError = error.localizedDescription
             syncStatus = .error(error.localizedDescription)
@@ -236,15 +225,12 @@ class CloudKitService: ObservableObject {
     
     private func handleRemoteChange() {
         // Handle remote changes from CloudKit
-        print("Remote change detected, updating UI")
         // The Core Data stack will automatically merge changes
     }
     
     // MARK: - Conflict Resolution
     
     func resolveConflicts() async {
-        print("Resolving conflicts...")
-        
         // Get all entities with conflicts
         let context = coreDataManager.viewContext
         let entities = ["ListEntity", "ItemEntity", "ItemImageEntity", "UserDataEntity"]
@@ -259,7 +245,7 @@ class CloudKitService: ObservableObject {
                     await resolveConflictForObject(object)
                 }
             } catch {
-                print("Failed to fetch \(entityName) for conflict resolution: \(error)")
+                // Handle fetch error silently
             }
         }
     }
@@ -268,7 +254,6 @@ class CloudKitService: ObservableObject {
         // Implement specific conflict resolution logic
         // For now, we use the default Core Data merge policy
         // This can be enhanced to show user choice dialogs
-        print("Resolving conflict for \(object.entity.name ?? "Unknown")")
     }
     
     func resolveConflictWithStrategy(_ strategy: ConflictResolutionStrategy, for object: NSManagedObject) async {
@@ -290,17 +275,14 @@ class CloudKitService: ObservableObject {
     
     private func resolveWithLastWriteWins(_ object: NSManagedObject) async {
         // Implementation for last-write-wins strategy
-        print("Resolving with last-write-wins for \(object.entity.name ?? "Unknown")")
     }
     
     private func resolveWithServerWins(_ object: NSManagedObject) async {
         // Implementation for server-wins strategy
-        print("Resolving with server-wins for \(object.entity.name ?? "Unknown")")
     }
     
     private func resolveWithClientWins(_ object: NSManagedObject) async {
         // Implementation for client-wins strategy
-        print("Resolving with client-wins for \(object.entity.name ?? "Unknown")")
     }
     
     private func showUserChoiceDialog(for object: NSManagedObject) async {
@@ -325,13 +307,11 @@ class CloudKitService: ObservableObject {
     
     private func handleOfflineOperationError(_ error: Error) async {
         // Store failed operations for retry when online
-        print("Offline operation failed: \(error)")
         // This could be enhanced to store operations in a queue
     }
     
     func processPendingOperations() async {
         // Process any queued operations when back online
-        print("Processing pending operations...")
         // Implementation would process stored operations
     }
     

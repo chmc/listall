@@ -256,7 +256,6 @@ class ExportViewModel: ObservableObject {
             try data.write(to: fileURL)
             return fileURL
         } catch {
-            print("Error creating temporary file: \(error)")
             return nil
         }
     }
