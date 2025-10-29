@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tietosuojakäytäntö - ListAll</title>
+    <meta name="description" content="ListAllin tietosuojakäytäntö. Emme kerää henkilötietoja tai käytä analytiikkaa. Data pysyy laitteellasi ja synkronoidaan henkilökohtaiseen iCloud-tiliisi.">
+    <link rel="alternate" hreflang="en" href="index.html">
+    <link rel="alternate" hreflang="fi" href="index.fi.html">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f7; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .lang-switch { text-align: right; margin-bottom: 10px; }
+        .lang-switch a { color: #007aff; text-decoration: none; font-weight: 600; }
+        .lang-switch a:hover { text-decoration: underline; }
+        h1 { color: #1d1d1f; font-size: 2.5em; margin-bottom: 0.5em; font-weight: 700; }
+        h2 { color: #1d1d1f; font-size: 1.8em; margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; }
+        h3 { color: #1d1d1f; font-size: 1.3em; margin-top: 1.2em; margin-bottom: 0.4em; font-weight: 600; }
+        p { margin-bottom: 1em; color: #1d1d1f; }
+        ul, ol { margin-left: 20px; margin-bottom: 1em; }
+        li { margin-bottom: 0.5em; }
+        .highlight-box { background-color: #f0f8ff; border-left: 4px solid #007aff; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .summary-box { background-color: #e8f5e9; border: 2px solid #4caf50; padding: 20px; margin: 30px 0; border-radius: 8px; }
+        .summary-box ul { list-style: none; margin-left: 0; }
+        .summary-box li::before { content: "✅ "; margin-right: 5px; }
+        .meta-info { color: #666; font-size: 0.9em; margin-bottom: 2em; padding-bottom: 1em; border-bottom: 1px solid #e5e5e5; }
+        a { color: #007aff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .footer { margin-top: 3em; padding-top: 2em; border-top: 1px solid #e5e5e5; color: #666; font-size: 0.9em; }
+        strong { color: #1d1d1f; font-weight: 600; }
+        @media (max-width: 768px) { .container { padding: 20px; } h1 { font-size: 2em; } h2 { font-size: 1.5em; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-switch">
+            <a href="index.html" hreflang="en" rel="alternate">In English</a>
+        </div>
+
+        <h1>ListAllin tietosuojakäytäntö</h1>
+        
+        <div class="meta-info">
+            <p><strong>Voimaantulopäivä:</strong> 25. lokakuuta 2025<br>
+            <strong>Viimeksi päivitetty:</strong> 25. lokakuuta 2025</p>
+        </div>
+
+        <h2>Yleiskatsaus</h2>
+        <p>ListAll ("me", "meidän" tai "sovellus") on sitoutunut suojaamaan yksityisyyttäsi. Tämä tietosuojakäytäntö selittää, miten ListAll käsittelee tietojasi käyttäessäsi iOS- ja watchOS-sovelluksiamme.</p>
+
+        <h2>Tietosuojasitoumuksemme</h2>
+        
+        <div class="highlight-box">
+            <p><strong>ListAll on suunniteltu yksityisyys edellä:</strong></p>
+            <ul>
+                <li>Emme kerää henkilötietoja</li>
+                <li>Emme seuraa käyttöäsi tai käyttäytymistäsi</li>
+                <li>Emme käytä analytiikka- tai seurantapalveluja</li>
+                <li>Emme jaa tietojasi kolmansille osapuolille</li>
+                <li>Emme näytä mainoksia</li>
+                <li>Emme vaadi tilin luomista tai kirjautumista</li>
+            </ul>
+        </div>
+
+        <h2>Tietojen tallennus ja kerääminen</h2>
+
+        <h3>Mitä tietoja tallennetaan paikallisesti</h3>
+        <p>ListAll tallentaa seuraavat tiedot <strong>vain laitteellesi paikallisesti</strong>:</p>
+        <ol>
+            <li><strong>Listat:</strong> Listojesi nimet ja rakenne</li>
+            <li><strong>Kohteet:</strong> Otsikot, kuvaukset, määrät ja suoritus-/yliviivaustila</li>
+            <li><strong>Kuvat:</strong> Kohteisiin liittämäsi kuvat (tallennetaan sovelluksen paikalliseen tietokantaan)</li>
+            <li><strong>Käyttäjäasetukset:</strong> Sovellusasetukset, kuten Face ID -lukitus, teema</li>
+            <li><strong>Ehdotushistoria:</strong> Paikallinen historia luomistasi kohteista (käytetään älykkäisiin ehdotuksiin)</li>
+        </ol>
+
+        <p>Nämä tiedot tallennetaan:</p>
+        <ul>
+            <li>Laitteesi suojattuun tallennukseen (Core Data -tietokanta)</li>
+            <li>App Groups -konttiin (iPhonen ja Apple Watchin väliseen synkronointiin)</li>
+        </ul>
+
+        <h3>iCloud-synkronointi</h3>
+        <p>ListAll käyttää iCloudia tietojesi synkronoimiseen laitteidesi välillä:</p>
+        <ul>
+            <li>Listatiedot synkronoidaan <strong>henkilökohtaiseen iCloud-tiliisi</strong></li>
+            <li>Tiedot on salattu siirron aikana ja levossa Applen iCloud-suojauksella</li>
+            <li>Meillä ei ole pääsyä iCloud-tietoihisi</li>
+            <li>Vain sinä voit käyttää synkronoituja tietoja Apple ID:lläsi</li>
+            <li>Synkronointi toimii saumattomasti iPhonen ja Apple Watchin välillä</li>
+        </ul>
+        <p><strong>Huom.</strong> iCloud-synkronointi on sisäänrakennettu ominaisuus ja edellyttää iCloud-tiliä, jotta sovellus toimii oikein.</p>
+
+        <h2>Tietoja, joita emme kerää</h2>
+        <p>ListAll ei kerää, lähetä eikä pääse käsiksi seuraaviin tietoihin:</p>
+        <ul>
+            <li>Henkilötiedot (nimi, sähköposti, puhelinnumero)</li>
+            <li>Sijaintitiedot</li>
+            <li>Laitetunnisteet</li>
+            <li>Käyttöanalytiikka tai tilastot</li>
+            <li>Kaatumisraportit (ellei Apple erikseen pyydä ja lähetä niitä puolestasi)</li>
+            <li>Hakukyselyt tai selaushistoria</li>
+            <li>Yhteystiedot</li>
+            <li>Mitkään laitteeltasi poistuvat tiedot (poikkeuksena iCloud-synkronointi omaan iCloud-tiliisi)</li>
+        </ul>
+
+        <h2>Luvat ja miksi niitä tarvitaan</h2>
+
+        <h3>Kameran käyttöoikeus</h3>
+        <ul>
+            <li><strong>Tarkoitus:</strong> Mahdollistaa valokuvien ottamisen ja liittämisen kohteisiin</li>
+            <li><strong>Käyttö:</strong> Aktivoituu vain, kun napautat kamerakuvaketta</li>
+            <li><strong>Tallennus:</strong> Kuvat tallennetaan paikallisesti sovelluksen tietokantaan</li>
+            <li><strong>Ei käytetä:</strong> Kasvojentunnistukseen, sijainnin seurantaan tai muihin tarkoituksiin</li>
+        </ul>
+
+        <h3>Kuvat-kirjaston käyttö</h3>
+        <ul>
+            <li><strong>Tarkoitus:</strong> Mahdollistaa kuvien valitsemisen laitteesi kirjastosta</li>
+            <li><strong>Käyttö:</strong> Aktivoituu vain, kun avaat kuvavalitsimen</li>
+            <li><strong>Tallennus:</strong> Valitut kuvat kopioidaan sovelluksen tietokantaan</li>
+            <li><strong>Ei käytetä:</strong> Kirjastosi selaamiseen, kuvien analysointiin tai muihin tarkoituksiin</li>
+        </ul>
+
+        <h3>Face ID / Touch ID</h3>
+        <ul>
+            <li><strong>Tarkoitus:</strong> Valinnainen suojaustoiminto sovelluksen lukitsemiseen</li>
+            <li><strong>Käyttö:</strong> Käytetään vain paikalliseen todennukseen laitteellasi</li>
+            <li><strong>Tallennus:</strong> Biometrisia tietoja ei tallenneta eikä lähetetä</li>
+            <li><strong>Ei käytetä:</strong> Henkilöllisyyden tunnistamiseen tai pilvipalveluihin</li>
+        </ul>
+
+        <h3>iCloud</h3>
+        <ul>
+            <li><strong>Tarkoitus:</strong> Laitteiden välinen synkronointi (sisäänrakennettu ominaisuus)</li>
+            <li><strong>Käyttö:</strong> Synkronoi listasi henkilökohtaiseen iCloud-tiliisi</li>
+            <li><strong>Tallennus:</strong> Tiedot tallennetaan yksityiseen iCloud-konttiisi</li>
+            <li><strong>Ei käytetä:</strong> Tietojen jakamiseen meille tai kolmansille osapuolille</li>
+        </ul>
+
+        <h2>Tietoturva</h2>
+
+        <h3>Paikallinen tietoturva</h3>
+        <ul>
+            <li>Kaikki tiedot tallennetaan turvallisesti iOS:n sisäänrakennetun tietoturvan avulla</li>
+            <li>Voit halutessasi ottaa Face ID:n/Touch ID:n käyttöön sovelluslukitusta varten</li>
+            <li>Kuvat ja tiedot ovat sandboxattu sovelluksen sisällä</li>
+        </ul>
+
+        <h3>Pilvitietoturva</h3>
+        <ul>
+            <li>ListAll käyttää Applen iCloudia tietojen synkronointiin laitteidesi välillä</li>
+            <li>Apple suojaa tietosi teollisuuden standardien mukaisella salauksella</li>
+            <li>Tiedot on salattu sekä siirron aikana (TLS) että levossa (AES)</li>
+        </ul>
+
+        <h2>Tietojen jakaminen</h2>
+        <p><strong>ListAll ei jaa tietojasi kenellekään.</strong></p>
+
+        <h3>Entä listojen jakaminen?</h3>
+        <p>Kun käytät sovelluksen "Jaa"-toimintoa:</p>
+        <ul>
+            <li>Valitset itse, mitä listaa haluat viedä</li>
+            <li>Tiedot jaetaan iOS:n vakiojakotoiminnon kautta</li>
+            <li>Sinä päätät, kenelle jaat tiedot</li>
+            <li>Emme seuraa emmekä näe jaettuja tietoja</li>
+        </ul>
+
+        <h2>Lasten yksityisyys</h2>
+        <p>ListAll ei tietoisesti kerää tietoja lapsista. Sovellus:</p>
+        <ul>
+            <li>Ei vaadi iän varmistamista</li>
+            <li>Ei kerää henkilötietoja</li>
+            <li>On ikärajalla 4+ (sopii kaikenikäisille)</li>
+            <li>Ei sisällä sopimatonta sisältöä</li>
+        </ul>
+
+        <h2>Tietojen säilytys ja poistaminen</h2>
+
+        <h3>Kuinka kauan säilytämme tietoja</h3>
+        <p>Emme säilytä tietoja, koska emme kerää niitä. Kaikki tietosi pysyvät laitteellasi ja henkilökohtaisessa iCloud-tilissäsi.</p>
+
+        <h3>Näin poistat tietosi</h3>
+        <p><strong>Poistaaksesi kaikki sovelluksen tiedot:</strong></p>
+        <ol>
+            <li>Avaa Asetukset iPhonessa</li>
+            <li>Siirry kohtaan Yleiset → iPhonen tallennustila</li>
+            <li>Etsi ListAll</li>
+            <li>Napauta "Poista appi"</li>
+        </ol>
+
+        <p><strong>Poistaaksesi iCloud-tiedot:</strong></p>
+        <ol>
+            <li>Avaa Asetukset → [Oma nimi] → iCloud</li>
+            <li>Hallitse tallennustilaa → ListAll</li>
+            <li>Poista asiakirjat ja data</li>
+        </ol>
+
+        <h2>Kolmannen osapuolen palvelut</h2>
+        <p>ListAll ei käytä mitään kolmannen osapuolen palveluita, kuten:</p>
+        <ul>
+            <li>Ei analytiikkapalveluita (Google Analytics, Firebase jne.)</li>
+            <li>Ei mainosverkostoja</li>
+            <li>Ei kaatumisraportointia (paitsi Applen erikseen valittava järjestelmä)</li>
+            <li>Ei some-integraatioita</li>
+            <li>Ei taustapalvelimia tai API-rajapintoja</li>
+        </ul>
+
+        <h2>Muutokset tietosuojakäytäntöön</h2>
+        <p>Voimme päivittää tätä tietosuojakäytäntöä ajoittain. Ilmoitamme muutoksista:</p>
+        <ul>
+            <li>Päivittämällä "Viimeksi päivitetty" -päivämäärän tämän sivun yläosassa</li>
+            <li>Näyttämällä sovelluksen sisäisen ilmoituksen merkittävistä muutoksista</li>
+        </ul>
+
+        <h2>Oikeutesi</h2>
+        <p>Koska emme kerää tietojasi, hallitset kaikkea jo nyt:</p>
+        <ul>
+            <li><strong>Pääsy:</strong> Kaikki tietosi ovat laitteellasi ja käytettävissäsi milloin tahansa</li>
+            <li><strong>Korjaus:</strong> Voit muokata tietoja suoraan sovelluksessa</li>
+            <li><strong>Poisto:</strong> Voit poistaa yksittäisiä kohteita, listoja tai koko sovelluksen</li>
+            <li><strong>Siirrettävyys:</strong> Voit viedä tietosi milloin tahansa useissa muodoissa (JSON, CSV, teksti)</li>
+        </ul>
+
+        <h2>Kansainväliset käyttäjät</h2>
+        <p>ListAll on saatavilla maailmanlaajuisesti ja noudattaa:</p>
+        <ul>
+            <li>GDPR-asetusta (Euroopan unioni)</li>
+            <li>CCPA-lakia (Kalifornia)</li>
+            <li>Muita kansainvälisiä tietosuojasäädöksiä</li>
+        </ul>
+        <p>Koska emme kerää tietoja, noudattamisen taakka on minimaalinen. Tietosi pysyvät laitteellasi tai iCloudissasi (Apple käsittelee niitä omien käytäntöjensä mukaisesti).</p>
+
+        <div class="summary-box">
+            <h2>Yhteenveto</h2>
+            <p><strong>Ytimekkäästi:</strong></p>
+            <ul>
+                <li>Tietosi pysyvät laitteellasi</li>
+                <li>Emme näe listojasi tai kohteitasi</li>
+                <li>Ei seurantaa eikä analytiikkaa</li>
+                <li>Ei mainoksia eikä kolmansia osapuolia</li>
+                <li>iCloud-synkronointi pitää tiedot omassa iCloudissasi</li>
+                <li>Sinä hallitset kaikkea</li>
+            </ul>
+            <p><strong>Lyhyesti:</strong> Rakensimme ListAllin kunnioittamaan yksityisyyttäsi. Listasi ovat sinun ja vain sinun.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Yritystiedot:</strong><br>
+            ListAllin kehittäjä on Aleksi Sutela.</p>
+            
+            <p><strong>Sovellettava laki:</strong><br>
+            Tätä tietosuojakäytäntöä sovelletaan Suomen lain mukaan.</p>
+            
+            <p><strong>Viimeksi päivitetty:</strong> 25. lokakuuta 2025</p>
+        </div>
+    </div>
+</body>
+</html>

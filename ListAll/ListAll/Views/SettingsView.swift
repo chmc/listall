@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var enableCloudSync = false
     @State private var showingExportSheet = false
     @State private var showingImportSheet = false
     @State private var showingResetTooltipsAlert = false
@@ -157,12 +156,6 @@ struct SettingsView: View {
                             }
                         }
                     }
-                }
-                
-                Section("Sync") {
-                    Toggle("iCloud Sync", isOn: $enableCloudSync)
-                        .disabled(true)
-                        .opacity(0.5)
                 }
                 
                 Section("Data") {

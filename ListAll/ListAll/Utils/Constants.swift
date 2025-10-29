@@ -23,7 +23,6 @@ struct Constants {
     // MARK: - User Defaults Keys
     struct UserDefaultsKeys {
         static let showCrossedOutItems = "showCrossedOutItems"
-        static let enableCloudSync = "enableCloudSync"
         static let lastSyncDate = "lastSyncDate"
         static let addButtonPosition = "addButtonPosition"
         static let requiresBiometricAuth = "requiresBiometricAuth"

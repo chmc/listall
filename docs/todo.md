@@ -987,11 +987,9 @@
 - ✅ Tests updated to support both English and Finnish templates
 - ✅ All tests passing (100% success rate)
 
-### Future Work (Optional)
-- Update all remaining UI views to use NSLocalizedString()
-- Add localization support to watchOS app
-- Add additional languages (Swedish, German, etc.)
-- Create localized screenshots for App Store
+## Add privacy policy ✅ COMPLETED
+
+## Remove iCloud sync setting ✅ COMPLETED
 
 ###########################################################
 
