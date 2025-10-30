@@ -44,17 +44,6 @@ class CoreDataManager: ObservableObject {
             #endif
             
             storeDescription.url = storeURL
-            #if os(watchOS)
-            print("✅ [watchOS] Core Data: Using App Groups container at \(storeURL.path)")
-            #else
-            print("✅ [iOS] Core Data: Using App Groups container at \(storeURL.path)")
-            #endif
-        } else {
-            #if os(watchOS)
-            print("⚠️ [watchOS] Core Data: Warning - App Groups container not available, using default location")
-            #else
-            print("⚠️ [iOS] Core Data: Warning - App Groups container not available, using default location")
-            #endif
         }
         
         // Enable automatic migration
@@ -70,15 +59,8 @@ class CoreDataManager: ObservableObject {
         
         container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
-                #if os(watchOS)
-                print("❌ [watchOS] Core Data error: \(error), \(error.userInfo)")
-                #else
-                print("❌ [iOS] Core Data error: \(error), \(error.userInfo)")
-                #endif
-                
                 // If migration fails, try to delete and recreate the store
                 if error.code == 134110 { // Migration error
-                    print("Migration failed, attempting to delete and recreate store...")
                     self?.deleteAndRecreateStore(container: container, storeDescription: storeDescription)
                 } else {
                     fatalError("Unresolved error \(error), \(error.userInfo)")
@@ -104,23 +86,11 @@ class CoreDataManager: ObservableObject {
     
     private init() {
         // Initialize Core Data stack
-        #if os(watchOS)
-        print("🔵 [watchOS] CoreDataManager initializing...")
-        #else
-        print("🔵 [iOS] CoreDataManager initializing...")
-        #endif
-        
         // Force load of persistent container
         _ = persistentContainer
         
         // Setup remote change notification observer
         setupRemoteChangeNotifications()
-        
-        #if os(watchOS)
-        print("🔵 [watchOS] CoreDataManager initialized successfully")
-        #else
-        print("🔵 [iOS] CoreDataManager initialized successfully")
-        #endif
     }
     
     deinit {
@@ -139,20 +109,9 @@ class CoreDataManager: ObservableObject {
             name: .NSPersistentStoreRemoteChange,
             object: persistentContainer.persistentStoreCoordinator
         )
-        
-        #if os(watchOS)
-        print("✅ [watchOS] Remote change notifications enabled")
-        #else
-        print("✅ [iOS] Remote change notifications enabled")
-        #endif
     }
     
     @objc private func handlePersistentStoreRemoteChange(_ notification: Notification) {
-        #if os(watchOS)
-        print("📡 [watchOS] Remote change detected from iOS app")
-        #else
-        print("📡 [iOS] Remote change detected from watchOS app")
-        #endif
         
         // Ensure we're on the main thread for UI safety
         guard Thread.isMainThread else {
@@ -170,12 +129,6 @@ class CoreDataManager: ObservableObject {
     }
     
     private func processRemoteChange() {
-        #if os(watchOS)
-        print("🔄 [watchOS] Processing remote change - refreshing view context")
-        #else
-        print("🔄 [iOS] Processing remote change - refreshing view context")
-        #endif
-        
         // Refresh view context to pull in changes from other processes
         viewContext.perform {
             self.viewContext.refreshAllObjects()
@@ -186,12 +139,6 @@ class CoreDataManager: ObservableObject {
             name: .coreDataRemoteChange,
             object: nil
         )
-        
-        #if os(watchOS)
-        print("✅ [watchOS] Remote change processed successfully")
-        #else
-        print("✅ [iOS] Remote change processed successfully")
-        #endif
     }
     
     // MARK: - Core Data Operations
@@ -239,13 +186,11 @@ class CoreDataManager: ObservableObject {
         
         // Check if App Groups store already exists
         if fileManager.fileExists(atPath: newStoreURL.path) {
-            print("✅ [iOS] App Groups store already exists, no migration needed")
             return
         }
         
         // Check for old store in app's Documents directory
         guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            print("ℹ️ [iOS] No Documents directory found")
             return
         }
         
@@ -253,11 +198,8 @@ class CoreDataManager: ObservableObject {
         
         // If old store doesn't exist, nothing to migrate
         guard fileManager.fileExists(atPath: oldStoreURL.path) else {
-            print("ℹ️ [iOS] No old store found at \(oldStoreURL.path), no migration needed")
             return
         }
-        
-        print("🔄 [iOS] Found old Core Data store, migrating to App Groups...")
         
         do {
             // Create App Groups directory if it doesn't exist
@@ -268,41 +210,32 @@ class CoreDataManager: ObservableObject {
             
             // Copy the main database file
             try fileManager.copyItem(at: oldStoreURL, to: newStoreURL)
-            print("✅ [iOS] Copied main database file")
             
             // Copy associated files (WAL and SHM) if they exist
             let walOldURL = documentsURL.appendingPathComponent("ListAll.sqlite-wal")
             let walNewURL = newStoreURL.deletingLastPathComponent().appendingPathComponent("ListAll.sqlite-wal")
             if fileManager.fileExists(atPath: walOldURL.path) {
                 try? fileManager.copyItem(at: walOldURL, to: walNewURL)
-                print("✅ [iOS] Copied WAL file")
             }
             
             let shmOldURL = documentsURL.appendingPathComponent("ListAll.sqlite-shm")
             let shmNewURL = newStoreURL.deletingLastPathComponent().appendingPathComponent("ListAll.sqlite-shm")
             if fileManager.fileExists(atPath: shmOldURL.path) {
                 try? fileManager.copyItem(at: shmOldURL, to: shmNewURL)
-                print("✅ [iOS] Copied SHM file")
             }
-            
-            print("✅ [iOS] Successfully migrated Core Data to App Groups!")
-            print("📁 [iOS] New location: \(newStoreURL.path)")
             
             // Delete old store files to prevent confusion
             try? fileManager.removeItem(at: oldStoreURL)
             try? fileManager.removeItem(at: walOldURL)
             try? fileManager.removeItem(at: shmOldURL)
-            print("🗑️ [iOS] Deleted old store files")
             
         } catch {
             print("❌ [iOS] Failed to migrate store to App Groups: \(error)")
-            print("⚠️ [iOS] Will use empty App Groups store - please export and reimport your data")
         }
     }
     
     private func deleteAndRecreateStore(container: NSPersistentContainer, storeDescription: NSPersistentStoreDescription) {
         guard let storeURL = storeDescription.url else {
-            print("No store URL available")
             return
         }
         
@@ -318,20 +251,17 @@ class CoreDataManager: ObservableObject {
             for file in storeFiles {
                 if storeFileExtensions.contains(file.pathExtension) {
                     try fileManager.removeItem(at: file)
-                    print("Deleted store file: \(file.lastPathComponent)")
                 }
             }
             
             // Reload the store
             try container.persistentStoreCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
-            print("Successfully recreated store")
             
         } catch {
             print("Failed to delete and recreate store: \(error)")
             // If we still can't create the store, use in-memory store as fallback
             do {
                 try container.persistentStoreCoordinator.addPersistentStore(ofType: NSInMemoryStoreType, configurationName: nil, at: nil, options: nil)
-                print("Using in-memory store as fallback")
             } catch {
                 fatalError("Failed to create any persistent store: \(error)")
             }
@@ -421,12 +351,6 @@ class DataManager: ObservableObject {
     // MARK: - Remote Change Handling
     
     @objc private func handleRemoteChange(_ notification: Notification) {
-        #if os(watchOS)
-        print("🔄 [watchOS] DataManager: Reloading data due to remote change from iOS")
-        #else
-        print("🔄 [iOS] DataManager: Reloading data due to remote change from watchOS")
-        #endif
-        
         // Reload data from Core Data to reflect changes made by other process
         loadData()
     }
@@ -442,41 +366,10 @@ class DataManager: ObservableObject {
         // CRITICAL: Eagerly fetch items relationship to avoid empty items arrays
         request.relationshipKeyPathsForPrefetching = ["items"]
         
-        #if os(watchOS)
-        print("💾 [watchOS] DataManager: Fetching lists from Core Data...")
-        #endif
-        
         do {
             let listEntities = try coreDataManager.viewContext.fetch(request)
             
-            #if DEBUG
-            // Log what Core Data actually fetched
-            print("💾 [DataManager] Fetched \(listEntities.count) ListEntity objects from Core Data")
-            for listEntity in listEntities {
-                let itemCount = listEntity.items?.count ?? 0
-                print("💾   - '\(listEntity.name ?? "Unknown")': Has \(itemCount) items in Core Data")
-            }
-            #endif
-            
             lists = listEntities.map { $0.toList() }
-            
-            #if os(watchOS)
-            print("💾 [watchOS] DataManager: Fetched \(listEntities.count) lists from Core Data")
-            if !listEntities.isEmpty {
-                print("💾 [watchOS] DataManager: List names: \(listEntities.compactMap { $0.name }.joined(separator: ", "))")
-                // Log items count for debugging
-                let totalItems = lists.reduce(0) { $0 + $1.items.count }
-                print("💾 [watchOS] DataManager: Total items across all lists: \(totalItems)")
-            }
-            #elseif os(iOS)
-            print("💾 [iOS] DataManager: Fetched \(listEntities.count) lists from Core Data")
-            if !listEntities.isEmpty {
-                // Log per-list item counts
-                for list in lists {
-                    print("💾 [iOS]   - '\(list.name)': \(list.items.count) items")
-                }
-            }
-            #endif
         } catch {
             print("❌ Failed to fetch lists: \(error)")
             // Fallback to sample data
@@ -662,11 +555,6 @@ class DataManager: ObservableObject {
             let existingItems = try context.fetch(itemCheck)
             if let existingItem = existingItems.first {
                 // Item already exists, update it instead
-                #if os(watchOS)
-                print("  ⚠️ [watchOS] Item already exists, updating: \(item.title)")
-                #else
-                print("  ⚠️ [iOS] Item already exists, updating: \(item.title)")
-                #endif
                 existingItem.title = item.title
                 existingItem.itemDescription = item.itemDescription
                 existingItem.quantity = Int32(item.quantity)
@@ -860,29 +748,12 @@ class DataManager: ObservableObject {
                         context.delete(duplicate)
                         duplicatesRemoved += 1
                     }
-                    
-                    #if os(iOS)
-                    print("🧹 [iOS] Removed \(toRemove.count) duplicate(s) of list: \(toKeep.name ?? "Unknown")")
-                    #elseif os(watchOS)
-                    print("🧹 [watchOS] Removed \(toRemove.count) duplicate(s) of list: \(toKeep.name ?? "Unknown")")
-                    #endif
                 }
             }
             
             if duplicatesRemoved > 0 {
-                #if os(iOS)
-                print("🧹 [iOS] Total duplicate lists removed: \(duplicatesRemoved)")
-                #elseif os(watchOS)
-                print("🧹 [watchOS] Total duplicate lists removed: \(duplicatesRemoved)")
-                #endif
                 saveData()
                 loadData() // Reload to reflect changes
-            } else {
-                #if os(iOS)
-                print("✅ [iOS] No duplicate lists found in Core Data")
-                #elseif os(watchOS)
-                print("✅ [watchOS] No duplicate lists found in Core Data")
-                #endif
             }
         } catch {
             print("❌ Failed to check for duplicate lists: \(error)")
@@ -921,29 +792,12 @@ class DataManager: ObservableObject {
                         context.delete(duplicate)
                         duplicatesRemoved += 1
                     }
-                    
-                    #if os(iOS)
-                    print("🧹 [iOS] Removed \(toRemove.count) duplicate(s) of item: \(toKeep.title ?? "Unknown")")
-                    #elseif os(watchOS)
-                    print("🧹 [watchOS] Removed \(toRemove.count) duplicate(s) of item: \(toKeep.title ?? "Unknown")")
-                    #endif
                 }
             }
             
             if duplicatesRemoved > 0 {
-                #if os(iOS)
-                print("🧹 [iOS] Total duplicates removed: \(duplicatesRemoved)")
-                #elseif os(watchOS)
-                print("🧹 [watchOS] Total duplicates removed: \(duplicatesRemoved)")
-                #endif
                 saveData()
                 loadData() // Reload to reflect changes
-            } else {
-                #if os(iOS)
-                print("✅ [iOS] No duplicate items found in Core Data")
-                #elseif os(watchOS)
-                print("✅ [watchOS] No duplicate items found in Core Data")
-                #endif
             }
         } catch {
             print("❌ Failed to check for duplicate items: \(error)")

@@ -24,18 +24,7 @@ extension ListEntity {
         do {
             let itemEntities = try context.fetch(itemRequest)
             list.items = itemEntities.map { $0.toItem() }
-            
-            // Log if relationship count differs from query count (CloudKit sync timing issue)
-            #if DEBUG
-            let relationshipCount = self.items?.count ?? 0
-            let queryCount = itemEntities.count
-            if relationshipCount != queryCount {
-                print("⚠️ List '\(self.name ?? "Unknown")': Relationship has \(relationshipCount) items, but query found \(queryCount) items")
-                print("   → This indicates CloudKit is still syncing or relationship is broken")
-            }
-            #endif
         } catch {
-            print("❌ Failed to fetch items for list '\(self.name ?? "Unknown")': \(error)")
             // Fallback to relationship if query fails
             let itemEntities = self.items?.allObjects as? [ItemEntity]
             list.items = itemEntities?.map { $0.toItem() }.sorted { $0.orderNumber < $1.orderNumber } ?? []

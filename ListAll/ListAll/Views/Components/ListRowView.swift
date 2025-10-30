@@ -221,7 +221,6 @@ struct ListRowView: View {
                         do {
                             try mainViewModel.duplicateList(list)
                         } catch {
-                            print("Error duplicating list: \(error)")
                         }
                     },
                     secondaryButton: .cancel()

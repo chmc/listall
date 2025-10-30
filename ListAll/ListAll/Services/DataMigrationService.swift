@@ -109,7 +109,6 @@ class DataMigrationService {
                     context.delete(item)
                 }
             } catch {
-                print("Failed to clean up orphaned items: \(error)")
             }
             
             // Clean up orphaned images
@@ -122,14 +121,12 @@ class DataMigrationService {
                     context.delete(image)
                 }
             } catch {
-                print("Failed to clean up orphaned images: \(error)")
             }
             
             // Save changes
             do {
                 try context.save()
             } catch {
-                print("Failed to save cleanup changes: \(error)")
             }
         }
     }
@@ -189,7 +186,6 @@ class DataMigrationService {
                 
                 return try JSONEncoder().encode(lists)
             } catch {
-                print("Failed to create backup: \(error)")
                 return nil
             }
         }

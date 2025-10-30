@@ -363,7 +363,6 @@ class DataRepository: ObservableObject {
             let results = try coreDataManager.viewContext.fetch(request)
             return results.first?.toUserData()
         } catch {
-            print("Failed to fetch user data: \(error)")
             return nil
         }
     }
@@ -383,7 +382,6 @@ class DataRepository: ObservableObject {
                 return newUser
             }
         } catch {
-            print("Failed to create/update user: \(error)")
             return UserData(userID: userID)
         }
     }
@@ -401,7 +399,6 @@ class DataRepository: ObservableObject {
                 coreDataManager.save()
             }
         } catch {
-            print("Failed to update user preferences: \(error)")
         }
     }
     
@@ -462,7 +459,6 @@ class DataRepository: ObservableObject {
             let listEntities = try coreDataManager.viewContext.fetch(request)
             return listEntities.map { $0.toList() }
         } catch {
-            print("Failed to search lists: \(error)")
             return []
         }
     }
@@ -476,7 +472,6 @@ class DataRepository: ObservableObject {
             let itemEntities = try coreDataManager.viewContext.fetch(request)
             return itemEntities.map { $0.toItem() }
         } catch {
-            print("Failed to search items: \(error)")
             return []
         }
     }

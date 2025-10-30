@@ -198,7 +198,6 @@ class SyncConflictManager: ObservableObject {
                     let objects = try context.fetch(request)
                     objectIDs.append(contentsOf: objects.map { $0.objectID })
                 } catch {
-                    print("Failed to check for conflicts in \(entityName): \(error)")
                 }
             }
             
