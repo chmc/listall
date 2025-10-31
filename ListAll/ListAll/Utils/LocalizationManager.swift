@@ -52,14 +52,13 @@ class LocalizationManager: ObservableObject {
             self.userDefaults = .standard
         }
         
-        // Load saved language or use system language
+        // Load saved language or default to English
         if let savedLanguageCode = userDefaults.string(forKey: userDefaultsKey),
            let savedLanguage = AppLanguage(rawValue: savedLanguageCode) {
             self.currentLanguage = savedLanguage
         } else {
-            // Use system language if available, otherwise default to English
-            let systemLanguageCode = Locale.current.language.languageCode?.identifier ?? "en"
-            self.currentLanguage = AppLanguage(rawValue: systemLanguageCode) ?? .english
+            // Default to English (not system language)
+            self.currentLanguage = .english
             
             // IMPORTANT: Save the default language to App Groups so watchOS can see it
             userDefaults.set(self.currentLanguage.rawValue, forKey: userDefaultsKey)

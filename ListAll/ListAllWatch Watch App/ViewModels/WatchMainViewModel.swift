@@ -191,6 +191,14 @@ class WatchMainViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        // Check if screenshot mode is enabled
+        if WatchScreenshotConfiguration.shared.isScreenshotModeEnabled {
+            // Use pre-defined sample data for screenshots
+            lists = WatchScreenshotConfiguration.shared.getScreenshotLists()
+            isLoading = false
+            return
+        }
+        
         // CRITICAL: Always reload from Core Data first to get latest data
         dataManager.loadData()
         

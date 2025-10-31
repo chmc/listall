@@ -28,11 +28,12 @@ struct ListAllWatch_Watch_AppApp: App {
             languageCode = UserDefaults.standard.string(forKey: "AppLanguage")
         }
         
-        // Set AppleLanguages if we have a language code
-        if let languageCode = languageCode {
-            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
-            UserDefaults.standard.synchronize()
-        }
+        // Default to English if no language code found
+        let finalLanguageCode = languageCode ?? "en"
+        
+        // Set AppleLanguages
+        UserDefaults.standard.set([finalLanguageCode], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
     }
     
     var body: some Scene {
@@ -95,8 +96,13 @@ class WatchLocalizationManager: ObservableObject {
             UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
             UserDefaults.standard.synchronize()
         } else {
-            // Fallback to system locale
-            self.currentLocale = Locale.current
+            // Default to English (not system locale)
+            self.currentLanguageCode = "en"
+            self.currentLocale = Locale(identifier: "en")
+            
+            // Set English as default
+            UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
         }
     }
     

@@ -76,6 +76,14 @@ class WatchListViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        // Check if screenshot mode is enabled
+        if WatchScreenshotConfiguration.shared.isScreenshotModeEnabled {
+            // Use items from the list directly (already populated in screenshot mode)
+            items = list.items
+            isLoading = false
+            return
+        }
+        
         // Get items from DataManager
         // IMPORTANT: Preserve order from sync (matches iOS display order)
         // Don't sort here - items are already in correct order from iOS
