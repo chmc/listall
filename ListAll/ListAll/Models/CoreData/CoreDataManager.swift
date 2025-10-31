@@ -589,9 +589,25 @@ class DataManager: ObservableObject {
                 itemEntity.list = listEntity
                 
                 // Create image entities from the item's images
+                // CRITICAL FIX: Check for duplicate image IDs to prevent Core Data conflicts
                 for itemImage in item.images {
-                    let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
-                    imageEntity.item = itemEntity
+                    // Check if image entity with this ID already exists
+                    let imageCheck: NSFetchRequest<ItemImageEntity> = ItemImageEntity.fetchRequest()
+                    imageCheck.predicate = NSPredicate(format: "id == %@", itemImage.id as CVarArg)
+                    
+                    let existingImages = try context.fetch(imageCheck)
+                    if let existingImage = existingImages.first {
+                        // Image ID already exists - create a new one with a different ID
+                        // This can happen if the same item is added to multiple lists
+                        var newImageData = itemImage
+                        newImageData.id = UUID() // Force new ID to avoid conflict
+                        let imageEntity = ItemImageEntity.fromItemImage(newImageData, context: context)
+                        imageEntity.item = itemEntity
+                    } else {
+                        // Normal case - create image entity with original ID
+                        let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
+                        imageEntity.item = itemEntity
+                    }
                 }
                 
                 saveData()

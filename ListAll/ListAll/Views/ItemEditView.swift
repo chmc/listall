@@ -344,22 +344,25 @@ struct ItemEditView: View {
     }
     
     private func applySuggestion(_ suggestion: ItemSuggestion) {
-        // Apply ALL details from the suggestion (title, description, quantity, images)
-        viewModel.applySuggestion(suggestion)
-        
-        // Update local quantity to reflect the suggested value
-        localQuantity = suggestion.quantity
-        
-        // Hide suggestions after applying
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showingSuggestions = false
-            showAllSuggestions = false // Reset to collapsed state
-        }
-        suggestionService.clearSuggestions()
-        
-        // Focus on description field to let user review/edit the applied suggestion
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // User can tap to edit any field they want to modify
+        // Ensure we're on the main thread for UI updates
+        Task { @MainActor in
+            // Apply ALL details from the suggestion (title, description, quantity, images)
+            viewModel.applySuggestion(suggestion)
+            
+            // Update local quantity to reflect the suggested value
+            localQuantity = suggestion.quantity
+            
+            // Hide suggestions after applying
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = false
+                showAllSuggestions = false // Reset to collapsed state
+            }
+            suggestionService.clearSuggestions()
+            
+            // Focus on description field to let user review/edit the applied suggestion
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // User can tap to edit any field they want to modify
+            }
         }
     }
     
@@ -399,7 +402,7 @@ class ItemEditViewModel: ObservableObject {
     
     private let list: List
     private let editingItem: Item?
-    private let dataRepository = DataRepository()
+    private let dataRepository: DataRepository
     private var originalItem: Item?
     
     // Track suggested item for duplicate detection
@@ -462,10 +465,11 @@ class ItemEditViewModel: ObservableObject {
                quantity != original.quantity
     }
     
-    init(list: List, item: Item? = nil) {
+    init(list: List, item: Item? = nil, dataRepository: DataRepository = DataRepository()) {
         self.list = list
         self.editingItem = item
         self.originalItem = item
+        self.dataRepository = dataRepository
     }
     
     func setupForEditing() {
@@ -479,6 +483,7 @@ class ItemEditViewModel: ObservableObject {
     }
     
     // Apply suggestion from SuggestionService
+    @MainActor
     func applySuggestion(_ suggestion: ItemSuggestion) {
         // Get the full item from repository
         suggestedItem = dataRepository.getItem(by: suggestion.id)
@@ -493,7 +498,19 @@ class ItemEditViewModel: ObservableObject {
         title = suggestion.title
         description = suggestion.description ?? ""
         quantity = suggestion.quantity
-        images = suggestion.images
+        
+        // Deep copy images to avoid Core Data conflicts
+        // Create new ItemImage instances with new IDs to prevent crashes
+        // when user modifies suggested item and creates new item
+        images = suggestion.images.map { image in
+            var newImage = ItemImage()
+            newImage.id = UUID() // New ID for the copy
+            newImage.imageData = image.imageData
+            newImage.orderNumber = image.orderNumber
+            newImage.createdAt = Date()
+            newImage.itemId = nil // Will be set when item is saved
+            return newImage
+        }
     }
     
     // Check if user made any changes from the suggested item
@@ -507,11 +524,20 @@ class ItemEditViewModel: ObservableObject {
         let descriptionChanged = description != (suggestedItemDescription ?? "")
         let quantityChanged = quantity != (suggestedItemQuantity ?? 1)
         
-        // Check if images changed
+        // Check if images changed - compare by count and data, not IDs
+        // (IDs are regenerated when copying images from suggestions)
         let imagesChanged: Bool
         if let suggestedImages = suggestedItemImages {
-            imagesChanged = images.count != suggestedImages.count ||
-                           !images.elementsEqual(suggestedImages, by: { $0.id == $1.id })
+            if images.count != suggestedImages.count {
+                imagesChanged = true
+            } else {
+                // Compare image data arrays to detect actual content changes
+                imagesChanged = !images.enumerated().allSatisfy { index, currentImage in
+                    guard index < suggestedImages.count else { return false }
+                    let suggestedImage = suggestedImages[index]
+                    return currentImage.imageData == suggestedImage.imageData
+                }
+            }
         } else {
             imagesChanged = !images.isEmpty
         }
@@ -615,6 +641,10 @@ class ItemEditViewModel: ObservableObject {
                     itemForCurrentList.listId = list.id
                     itemForCurrentList.orderNumber = currentListItems.count
                     itemForCurrentList.updateModifiedDate()
+                    
+                    // CRITICAL FIX: Use the deep-copied images from the view model
+                    // to avoid Core Data conflicts with image IDs
+                    itemForCurrentList.images = images
                     
                     // Add to current list
                     dataRepository.addExistingItemToList(itemForCurrentList, listId: list.id)

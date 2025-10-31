@@ -125,7 +125,7 @@ class DataRepository: ObservableObject {
         let maxOrderNumber = destinationItems.map { $0.orderNumber }.max() ?? -1
         newItem.orderNumber = maxOrderNumber + 1
         
-        // Copy images with new IDs
+        // Copy images with new IDs - CRITICAL for avoiding Core Data conflicts
         newItem.images = item.images.map { image in
             var newImage = image
             newImage.id = UUID()

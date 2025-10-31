@@ -1014,6 +1014,12 @@
 - ✅ Build validation passed (0 warnings in these files)
 - ✅ All tests passed (100% success rate)
 
+## Fix: Adding existing item to list crashes ✅ COMPLETED
+- ✅ Fixed threading issue causing crash when selecting suggestions
+- ✅ Added @MainActor to applySuggestion method to ensure UI updates on main thread
+- ✅ Added defensive Core Data image ID conflict handling
+- ✅ Fixed deep-copy of images when adding existing items to new lists
+
 ###########################################################
 
 ## 

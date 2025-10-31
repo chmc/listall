@@ -893,6 +893,10 @@ class TestDataRepository: DataRepository {
         dataManager.updateItem(updatedItem)
     }
     
+    override func updateItem(_ item: Item) {
+        dataManager.updateItem(item)
+    }
+    
     override func toggleItemCrossedOut(_ item: Item) {
         var updatedItem = item
         updatedItem.toggleCrossedOut()
@@ -976,6 +980,32 @@ class TestDataRepository: DataRepository {
         }
         
         dataManager.addItem(copiedItem, to: destinationList.id)
+    }
+    
+    override func addExistingItemToList(_ item: Item, listId: UUID) {
+        // CRITICAL: Create a copy with new ID to avoid duplicate detection issues
+        var newItem = item
+        newItem.id = UUID()
+        newItem.listId = listId
+        newItem.createdAt = Date()
+        newItem.modifiedAt = Date()
+        newItem.isCrossedOut = false
+        
+        // Get the highest order number in destination list and add 1
+        let destinationItems = dataManager.getItems(forListId: listId)
+        let maxOrderNumber = destinationItems.map { $0.orderNumber }.max() ?? -1
+        newItem.orderNumber = maxOrderNumber + 1
+        
+        // Copy images with new IDs - CRITICAL for avoiding Core Data conflicts
+        newItem.images = item.images.map { image in
+            var newImage = image
+            newImage.id = UUID()
+            newImage.itemId = newItem.id
+            newImage.createdAt = Date()
+            return newImage
+        }
+        
+        dataManager.addItem(newItem, to: listId)
     }
     
     override func validateItem(_ item: Item) -> ValidationResult {
