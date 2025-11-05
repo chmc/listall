@@ -1,0 +1,14 @@
+# Fastlane Appfile
+# See: https://docs.fastlane.tools/advanced/#appfile
+
+# Primary app identifier (from Xcode project)
+app_identifier("io.github.chmc.ListAll")
+
+# Apple Developer Team ID (from project.pbxproj)
+team_id("M9BR5FY93A")
+
+# Optional: Apple ID (developer account email) — set later
+# apple_id("your-apple-id@example.com")
+
+# Optional: iTunes Connect (App Store Connect) team
+# itc_team_id("YOUR_ITC_TEAM_ID")

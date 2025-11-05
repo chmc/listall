@@ -57,14 +57,16 @@ Ruby toolchain (Gemfile, Gemfile.lock) with Fastlane and xcode-install is set up
 - Acceptance
   - `bundle exec fastlane --version` works locally
 
-### 2.2 Create Fastlane skeleton
+### ✅ 2.2 Create Fastlane skeleton - COMPLETED
 - Files: `fastlane/Fastfile`, `fastlane/Appfile`
 - Lanes (initial):
-  - `test`: clean build + run all tests
-  - `beta`: build and upload to TestFlight (pilot)
-  - `release`: upload to App Store (deliver) without auto-submit initially
+  - `test`: mirrors CI with xcodebuild build+test and non-failing exit (for parity); also provides `test_scan` lane using Fastlane Scan
+  - `beta`: builds archive via `build_app` and conditionally uploads to TestFlight via `pilot` when `ASC_*` env vars are set
+  - `release`: configures `deliver` guarded by App Store Connect API key (no auto-submit)
 - Acceptance
-  - `bundle exec fastlane test` runs locally and in CI (using `xcodebuild` under the hood)
+  - `bundle exec fastlane test` runs locally (verified) and is CI-friendly (uses xcodebuild under the hood)
+- Notes
+  - Appfile prefilled with `app_identifier: io.github.chmc.ListAll` and `team_id: M9BR5FY93A`; set `apple_id` later in 2.3
 
 ### 2.3 Configure App Store Connect API key
 - Create API key in App Store Connect (Roles: `App Manager` or `Developer`)

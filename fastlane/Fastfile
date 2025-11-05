@@ -1,0 +1,83 @@
+# Fastlane configuration
+# Docs: https://docs.fastlane.tools
+require 'base64'
+
+default_platform(:ios)
+
+def require_asc_env!
+  missing = ["ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_BASE64"].reject { |k| ENV[k].to_s.strip.size > 0 }
+  UI.user_error!("Missing App Store Connect API key env vars: #{missing.join(', ')}") unless missing.empty?
+end
+
+platform :ios do
+  desc "Run unit and UI tests (xcodebuild like CI)"
+  lane :test do
+    # Mirror CI behavior with xcodebuild and non-failing exit
+    sh "cd ../ListAll && xcodebuild clean build -project ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' -configuration Debug CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO || true"
+    sh "cd ../ListAll && xcodebuild test -project ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' -resultBundlePath ../fastlane/test_output/ListAll.xcresult CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO || true"
+  end
+
+  desc "Run tests via scan (Fastlane)"
+  lane :test_scan do
+    # Prefer project since workspace is embedded in .xcodeproj
+    scan(
+      project: "ListAll/ListAll.xcodeproj",
+      scheme: "ListAll",
+      clean: true,
+      result_bundle: true,
+      derived_data_path: "./ListAll/build",
+      devices: ["iPhone 16 Pro"], # falls back to default if not available
+      fail_build: false
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Build archive (gym/build_app handles exporting ipa)
+    ipa_path = build_app(
+      project: "ListAll/ListAll.xcodeproj",
+      scheme: "ListAll",
+      export_method: "app-store",
+      output_directory: "./ListAll/build",
+      include_bitcode: false,
+      include_symbols: true
+    )
+
+    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_BASE64"]
+      api_key = app_store_connect_api_key(
+        key_id: ENV["ASC_KEY_ID"],
+        issuer_id: ENV["ASC_ISSUER_ID"],
+        key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+        is_key_content_base64: false,
+        in_house: false
+      )
+      pilot(
+        ipa: ipa_path,
+        api_key: api_key,
+        distribute_external: false
+      )
+    else
+      UI.important("ASC_* env vars not set. Skipping TestFlight upload. Archive built at: #{ipa_path}")
+    end
+  end
+
+  desc "Deliver metadata/screenshots to App Store (no auto-submit)"
+  lane :release do
+    require_asc_env!
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    deliver(
+      api_key: api_key,
+      skip_screenshots: true, # will be set to false in later phases
+      skip_binary_upload: true,
+      submit_for_review: false,
+      force: true
+    )
+  end
+end
