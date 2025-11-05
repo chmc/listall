@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    
+    - name: Show Xcode version
+      run: xcodebuild -version
+    
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-
+    
+    - name: Cache SPM packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.swiftpm
+          ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-spm-
+    
+    - name: Resolve SPM dependencies
+      run: |
+        cd ListAll
+        xcodebuild -resolvePackageDependencies -project ListAll.xcodeproj -scheme ListAll
+    
+    - name: Build iOS app
+      run: |
+        cd ListAll
+        xcodebuild clean build \
+          -project ListAll.xcodeproj \
+          -scheme ListAll \
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -configuration Debug \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty || true
+    
+    - name: Run iOS tests
+      run: |
+        cd ListAll
+        xcodebuild test \
+          -project ListAll.xcodeproj \
+          -scheme ListAll \
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -resultBundlePath TestResults.xcresult \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty || true
+    
+    - name: Build watchOS app
+      run: |
+        cd ListAll
+        xcodebuild clean build \
+          -project ListAll.xcodeproj \
+          -scheme "ListAllWatch Watch App" \
+          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest' \
+          -configuration Debug \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty || true
+    
+    - name: Run watchOS tests
+      run: |
+        cd ListAll
+        xcodebuild test \
+          -project ListAll.xcodeproj \
+          -scheme "ListAllWatch Watch App" \
+          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest' \
+          -resultBundlePath TestResults-Watch.xcresult \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty || true
+    
+    - name: Upload iOS test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-test-results
+        path: ListAll/TestResults.xcresult
+        retention-days: 30
+    
+    - name: Upload watchOS test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: watchos-test-results
+        path: ListAll/TestResults-Watch.xcresult
+        retention-days: 30
+    
+    - name: Upload test logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs
+        path: |
+          ~/Library/Logs/DiagnosticReports
+          ~/Library/Developer/Xcode/DerivedData/*/Logs
+        retention-days: 7

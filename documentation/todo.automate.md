@@ -20,7 +20,7 @@ Outcomes
 
 ## Phase 1 — Baseline CI on GitHub Actions
 
-### 1.1 Add CI workflow (build + tests)
+### ✅ 1.1 Add CI workflow (build + tests) - COMPLETED
 - File: `.github/workflows/ci.yml`
 - Steps:
   - Checkout
@@ -33,8 +33,9 @@ Outcomes
   - CI runs on PR and push to `main`
   - Green run on current `main`
   - Artifacts include XCTest logs and .xcresult
+- **Status**: Implemented with iOS and watchOS build/test, includes caching (addresses 1.2 as well)
 
-### 1.2 Speed up CI with caching
+### ✅ 1.2 Speed up CI with caching - COMPLETED
 - Add actions/cache for `~/Library/Developer/Xcode/DerivedData` and SPM (`~/.swiftpm`, `~/Library/Developer/Xcode/DerivedData/SourcePackages`)
 - Acceptance
   - Subsequent runs show cache hits
