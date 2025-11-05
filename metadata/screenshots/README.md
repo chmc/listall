@@ -6,34 +6,33 @@ This directory should contain screenshots for all required device sizes.
 
 ### iPhone Screenshots (MANDATORY)
 
-#### iPhone 6.9" Display (iPhone 16 Pro Max)
-- Resolution: 1320x2868 pixels
-- Filename format: `iPhone_6.9_1.png`, `iPhone_6.9_2.png`, etc.
-- Required: 3-10 screenshots
+We will ship a single iPhone size to the App Store for simplicity.
 
-#### iPhone 6.7" Display (iPhone 15 Pro Max, 14 Pro Max)
-- Resolution: 1290x2796 pixels
-- Filename format: `iPhone_6.7_1.png`, `iPhone_6.7_2.png`, etc.
-- Required: 3-10 screenshots
-
-#### iPhone 6.5" Display (iPhone 11 Pro Max, XS Max)
+#### iPhone 6.5" Display (chosen)
 - Resolution: 1242x2688 pixels
 - Filename format: `iPhone_6.5_1.png`, `iPhone_6.5_2.png`, etc.
 - Required: 3-10 screenshots
+
+Notes
+- Apple also accepts 6.7". If you prefer the latest Max device, switch simulator and filename pattern to `iPhone_6.7_*`.
 
 #### iPhone 5.5" Display (iPhone 8 Plus)
 - Resolution: 1242x2208 pixels
 - Filename format: `iPhone_5.5_1.png`, `iPhone_5.5_2.png`, etc.
 - Required: 3-10 screenshots
 
-### iPad Screenshots (if supporting iPad)
+### iPad Screenshots (REQUIRED for iPad builds)
 
-#### iPad Pro 12.9" (6th Gen)
-- Resolution: 2048x2732 pixels
+#### iPad Pro 13" (M4)
+- Resolution: 2064x2752 pixels
+- Filename format: `iPad_13_1.png`, `iPad_13_2.png`, etc.
+- Required: Minimum 2 (recommend 3–5)
+
+#### Legacy alternative (if needed)
+- iPad Pro 12.9" (6th Gen): 2048x2732 pixels — accepted by App Store but 13" is preferred going forward.
 - Filename format: `iPad_12.9_1.png`, `iPad_12.9_2.png`, etc.
-- Required: 3-10 screenshots
 
-### Apple Watch Screenshots (MANDATORY - you have watchOS app)
+### Apple Watch Screenshots (MANDATORY - automated)
 
 #### Apple Watch Series 11 (46mm)
 - Filename format: `Watch_46mm_1.png`, `Watch_46mm_2.png`, etc.
@@ -48,6 +47,25 @@ This directory should contain screenshots for all required device sizes.
 - Required: 3-5 screenshots
 
 ## Suggested Screenshot Content
+
+## Framing (MANDATORY)
+- All screenshots must be framed with device bezels and optional titles/subtitles.
+- Recommended tool: Fastlane Frameit
+	- Configure `Framefile.json` with localized titles for EN and FI
+	- Use a consistent background and font (e.g., SF Pro)
+	- Output framed variants to `fastlane/screenshots/framed/`
+- App Store uploads should use the framed variants only.
+
+## Naming & Locale Structure
+- EN: Place under `en-US/` subfolder if using Fastlane conventions
+- FI: Place under `fi/` subfolder
+- Keep filenames short and stable (e.g., `iPhone_6.9_1.png`, `iPad_13_1.png`, `Watch_46mm_1.png`)
+
+## Automation Policy
+- All screenshots (iPhone, iPad, Watch) must be generated automatically via UITests.
+- iPhone: Use Fastlane Snapshot with `snapshot("...")` calls on a single size (6.5").
+- iPad: Include iPad Pro 13" (2064x2752) in the Snapshot run.
+- Watch: Use a test-driven flow and `xcrun simctl io <watch-udid> screenshot` calls during the test run.
 
 ### iPhone Screenshots (in order):
 1. **Main Lists View** - Show multiple lists with icons/emojis

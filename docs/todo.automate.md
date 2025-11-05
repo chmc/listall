@@ -1,0 +1,248 @@
+# Automation Roadmap (CI/CD, Screenshots, Releases)
+
+Purpose: Implement end-to-end automation for ListAll (iOS + watchOS) using GitHub Actions (free) and Fastlane. Tasks are atomic, ordered, and small enough to fit into an AI assistant context.
+
+Assumptions
+- Public GitHub repo: https://github.com/chmc/listall
+- Apple Developer Program active; App live (v1.0)
+- Localization: en (default) and fi
+- Xcode 16+, macOS runners (macos-14 or newer)
+- Prefer Xcode automatic signing for now (no certs in repo). We'll use App Store Connect API key for uploads.
+
+Outcomes
+- CI on every push/PR: build + unit/UI tests
+- Auto screenshots for EN + FI (fully automated, framed)
+  - Initial scope: iPhone 6.5" Pro, iPad Pro 13" (M4), and watchOS
+- TestFlight uploads on tag or manual dispatch
+- App Store submission lane that bundles metadata + screenshots
+
+---
+
+## Phase 1 — Baseline CI on GitHub Actions
+
+### 1.1 Add CI workflow (build + tests)
+- File: `.github/workflows/ci.yml`
+- Steps:
+  - Checkout
+  - Select Xcode version (e.g., 16.x)
+  - Cache DerivedData
+  - Resolve SPM
+  - Build and run tests for iOS (and any watch targets as needed)
+  - Upload test results as artifact
+- Acceptance
+  - CI runs on PR and push to `main`
+  - Green run on current `main`
+  - Artifacts include XCTest logs and .xcresult
+
+### 1.2 Speed up CI with caching
+- Add actions/cache for `~/Library/Developer/Xcode/DerivedData` and SPM (`~/.swiftpm`, `~/Library/Developer/Xcode/DerivedData/SourcePackages`)
+- Acceptance
+  - Subsequent runs show cache hits
+
+### 1.3 Surface status in README
+- Add CI badge to `README.md`
+- Acceptance
+  - Badge shows current CI state
+
+---
+
+## Phase 2 — Fastlane bootstrap
+
+### 2.1 Add Ruby toolchain
+- Files: `Gemfile`, `Gemfile.lock` (commit lockfile)
+- Gems: `fastlane`, `xcode-install` (optional)
+- Acceptance
+  - `bundle exec fastlane --version` works locally
+
+### 2.2 Create Fastlane skeleton
+- Files: `fastlane/Fastfile`, `fastlane/Appfile`
+- Lanes (initial):
+  - `test`: clean build + run all tests
+  - `beta`: build and upload to TestFlight (pilot)
+  - `release`: upload to App Store (deliver) without auto-submit initially
+- Acceptance
+  - `bundle exec fastlane test` runs locally and in CI (using `xcodebuild` under the hood)
+
+### 2.3 Configure App Store Connect API key
+- Create API key in App Store Connect (Roles: `App Manager` or `Developer`)
+- Store as GitHub Secrets (repository level):
+  - `ASC_KEY_ID`
+  - `ASC_ISSUER_ID`
+  - `ASC_KEY_BASE64` (contents of .p8 base64-encoded)
+- Update `Fastfile` to use `app_store_connect_api_key`
+- Acceptance
+  - `fastlane deliver` can auth non-interactively in CI (dry-run)
+
+### 2.4 Tie Fastlane into CI
+- Add new workflow `.github/workflows/release.yml` with manual dispatch and on tag (e.g., `v*`)
+- Jobs:
+  - `tests`: run `fastlane test`
+  - `beta`: run `fastlane beta` (on tag or manual)
+- Acceptance
+  - Manual `workflow_dispatch` works and uploads to TestFlight (once code signing is valid)
+
+---
+
+## Phase 3 — Deterministic UI + Screenshot Automation (iPhone 6.5" + iPad 13")
+
+### 3.1 Introduce deterministic UI test data
+- App: enable a launch argument/env (e.g., `UITESTS_SEED=1`) to inject sample lists/items to a clean store (no iCloud sync during UITests)
+- Wire in the app`s launch to check this flag and pre-populate consistent demo data
+- Acceptance
+  - Launching with the flag always shows the same demo lists/items
+
+### 3.2 Add Snapshot helpers to UITests
+- Add `SnapshotHelper.swift` (from Fastlane) to `ListAllUITests` target
+- Call `setupSnapshot(app)` before `app.launch()` and use `snapshot("01-...")`
+- Acceptance
+  - Local `fastlane snapshot` captures at least one screenshot
+
+### 3.3 Write screenshot tests (EN)
+- Tests to cover 6–8 iPhone scenes (proposed set below)
+- Ensure predictable waits (no `if exists` branching); use expectations
+- Acceptance
+  - All screenshots generate without flakiness on iPhone 6.5" and iPad 13" simulators
+
+### 3.4 Enable localization runs (EN + FI)
+- Configure `Snapfile` with `languages(["en-US","fi"])`
+- Use localized copy in UI so screenshots reflect language
+- Acceptance
+  - Two folders per language with consistent assets
+
+### 3.5 Devices: iPhone 6.5" + iPad 13" (REQUIRED)
+- Update Snapshot configuration to run on two devices:
+  - iPhone 6.5" Pro (e.g., iPhone 11 Pro Max simulator) — 1242x2688 output
+  - iPad Pro (13-inch) (M4) — 2064x2752 output
+- Acceptance
+  - Snapshot run produces EN+FI screenshots for both devices.
+
+### 3.6 Framing: add device frames and captions for ALL screenshots
+- Tooling: Fastlane Frameit.
+- Tasks
+  - Add Framefile.json with per-locale titles/subtitles and background.
+  - Pick readable font (e.g., SF Pro) and verify FI line breaks.
+  - Store framed outputs under `fastlane/screenshots/framed` (or `metadata/screenshots/framed`).
+  - Apply framing to iPhone, iPad, and Apple Watch screenshots.
+- Acceptance
+  - All screenshots used for App Store are framed variants.
+  - CI job verifies that only framed screenshots are uploaded.
+
+### 3.7 Wire screenshots into deliver (use framed)
+- Configure `fastlane deliver` to pick screenshots from `fastlane/screenshots` or `metadata/screenshots`
+- Ensure framed directory is the upload source, not raw captures
+- Add `--skip_screenshots false` and `--overwrite_screenshots`
+- Acceptance
+  - A dry-run shows screenshots detected per device + locale
+
+---
+
+## Phase 4 — Watch screenshots (fully automated)
+
+### 4.1 End-to-end automation via UITests + simctl
+- Add a watchOS UI test plan that drives the watch app (paired simulator) to key screens.
+- Build a small WatchSnapshot helper to:
+  - Detect paired watch simulator UDID
+  - Run `xcrun simctl io <watch-udid> screenshot <path>` at strategic points
+  - Name files with stable convention (e.g., `Watch_46mm_1.png`)
+- Target one size initially (e.g., Series 11 46mm). Add Ultra later if desired.
+- Acceptance
+  - `bundle exec fastlane snapshot` (or dedicated lane) generates 3–5 watch screenshots per locale without manual steps.
+
+### 4.2 Normalize and validate sizes
+- Use a small script (Ruby or Swift) to verify filename patterns + dimensions match App Store requirements
+- Acceptance
+  - CI job fails if sizes/patterns are wrong
+
+### 4.3 Optional framing with Frameit
+- If desired, add device frames/captions via `frameit`
+- Acceptance
+  - Framed variants are generated and stored separately
+
+---
+
+## Phase 5 — Release automation
+
+### 5.1 TestFlight lane finalized
+- `beta` lane: build with correct scheme/workspace, export method `app-store`, upload with `pilot`
+- Acceptance
+  - Build appears in TestFlight automatically
+
+### 5.2 App Store submission lane
+- `release` lane: `deliver` metadata + screenshots; optional `submit_for_review` with phased release toggled off
+- Acceptance
+  - Upload succeeds; manual review step handled in App Store Connect
+
+### 5.3 Git tag driven releases
+- On `v*` tag push, run `beta` automatically; `release` is manual
+- Acceptance
+  - Tagging `v1.1.0` triggers TestFlight build
+
+---
+
+## Phase 6 — Quality, docs, and guardrails
+
+### 6.1 Linting and SwiftFormat (optional)
+- Add `swift-format` or `swiftlint` to CI
+- Acceptance
+  - Lint job runs and reports issues
+
+### 6.2 Contributor docs
+- Update `README.md` with: how to run CI locally, how to generate screenshots, how to release
+- Acceptance
+  - Clear instructions for maintainers
+
+### 6.3 Monitoring flakiness
+- Persist UI test logs and attach to PRs
+- Acceptance
+  - Failures include actionable logs/screenshots
+
+---
+
+## Secrets & Access
+- GitHub Secrets required:
+  - `ASC_KEY_ID`
+  - `ASC_ISSUER_ID`
+  - `ASC_KEY_BASE64`
+- Optional (later):
+  - `SLACK_WEBHOOK_URL` for notifications
+
+## Proposed iOS/iPadOS Screenshot Set (EN, mirrored for FI)
+1. Lists Home — "Organize everything at a glance"
+2. Create List — "Create lists in seconds"
+3. List Detail — "Track active and completed items"
+4. Item with Images — "Add photos and notes to items"
+5. Search/Filter — "Find anything instantly"
+6. Sync/Cloud (if applicable) — "Your lists on all devices"
+7. Settings/Customization — "Tune ListAll to your flow"
+8. Share/Export (if applicable) — "Share lists with others"
+
+iPhone device size
+- We will ship a single iPhone size (6.5"). If you prefer the latest Max device, switch to 6.7" in config.
+
+iPad coverage (REQUIRED)
+- Capture at least 3 scenes specifically on iPad Pro 13" (M4) to showcase split UI and spacious layout.
+- Required resolution: 2064x2752.
+
+## Proposed watchOS Screenshot Set (automated)
+1. Watch Home — recent lists
+2. List Detail — items view
+3. Add/Complete item — quick interaction
+4. Complication — highlights on watch face (if supported)
+
+---
+
+## Try locally (reference)
+- Run tests
+  - `xcodebuild -project ListAll/ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test`
+- Fastlane (after Phase 2)
+  - `bundle exec fastlane test`
+  - `bundle exec fastlane snapshot`
+  - `bundle exec fastlane beta`
+
+Snapshot device hints (names may vary by Xcode version)
+- `iPhone 11 Pro Max` (6.5") or `iPhone XS Max` (6.5")
+- `iPad Pro (13-inch) (M4)` (2064x2752)
+
+Notes
+- We’ll adjust schemes/targets once Fastfile and project details are wired.
+- Watch screenshots are fully automated via test flow + simctl.
