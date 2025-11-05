@@ -1020,6 +1020,12 @@
 - ✅ Added defensive Core Data image ID conflict handling
 - ✅ Fixed deep-copy of images when adding existing items to new lists
 
+## Add GitHub page
+- ❌ App is open source: https://github.com/chmc/listall
+- ❌ Add complete web page for app that can be used in GitHub pages
+- ❌ Domain will be: https://listall.app/
+
+
 ###########################################################
 
 ## 
