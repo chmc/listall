@@ -14,7 +14,7 @@ This directory contains visual assets for the ListAll website at https://listall
   2. Navigate to Assets.xcassets
   3. Right-click AppIcon → Show in Finder
   4. Export 1024x1024 version
-  5. Copy to `docs/assets/app-icon.png`
+  5. Copy to `documentation/assets/app-icon.png`
 
 ### 2. Screenshots (`screenshots/*.png`)
 - **Recommended**: 5-8 screenshots
@@ -76,9 +76,9 @@ This directory contains visual assets for the ListAll website at https://listall
 cd /Users/aleksi/source/ListAllApp/ListAll
 
 # Find the 1024x1024 app icon in Assets
-# Copy to docs/assets/
+# Copy to documentation/assets/
 cp "ListAll/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" \
-   ../docs/assets/app-icon.png
+   ../documentation/assets/app-icon.png
 ```
 
 ### Step 2: Capture Screenshots
@@ -86,8 +86,8 @@ cp "ListAll/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" \
 # Launch iOS Simulator with your app
 # Take screenshots using Cmd+S
 # Screenshots saved to Desktop by default
-# Move to docs/assets/screenshots/
-mv ~/Desktop/Simulator*.png docs/assets/screenshots/
+# Move to documentation/assets/screenshots/
+mv ~/Desktop/Simulator*.png documentation/assets/screenshots/
 # Rename files appropriately
 ```
 
@@ -114,7 +114,7 @@ mv ~/Desktop/Simulator*.png docs/assets/screenshots/
 1. Go to https://favicon.io/favicon-converter/
 2. Upload `app-icon.png`
 3. Download generated favicon package
-4. Copy `favicon.ico` to `docs/assets/`
+4. Copy `favicon.ico` to `documentation/assets/`
 
 ## Asset Optimization
 
@@ -125,14 +125,14 @@ Before uploading, optimize images for web:
 brew install imagemagick
 
 # Optimize PNG files
-mogrify -strip -interlace Plane -quality 85 docs/assets/*.png
+mogrify -strip -interlace Plane -quality 85 documentation/assets/*.png
 
 # Optimize screenshots
 mogrify -strip -interlace Plane -quality 85 \
-        -resize 50% docs/assets/screenshots/*.png
+        -resize 50% documentation/assets/screenshots/*.png
 
 # Convert large PNGs to JPG if needed
-convert docs/assets/og-image.png -quality 85 docs/assets/og-image.jpg
+convert documentation/assets/og-image.png -quality 85 documentation/assets/og-image.jpg
 ```
 
 ## Integration with Website

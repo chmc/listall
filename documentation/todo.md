@@ -923,7 +923,7 @@
 - ✅ Testing strategies (simulator vs device) documented
 - ✅ Comprehensive implementation plan created
 - ✅ Tasks split into Phase 81+ with detailed breakdown
-- ✅ Research document created: `docs/research_watchos_complications.md`
+- ✅ Research document created: `documentation/research_watchos_complications.md`
 
 ## Localization support
 - ✅ Existing language is english
@@ -1139,7 +1139,7 @@
 
 ## Phase 82: watchOS - Documentation and Deployment
 **Goal**: Document watchOS app and prepare for release
-- ❌ Create watchOS-specific documentation in docs/watchos.md
+- ❌ Create watchOS-specific documentation in documentation/watchos.md
 - ❌ Document architecture decisions for watchOS
 - ❌ Document data synchronization approach
 - ❌ Add troubleshooting guide for sync issues
@@ -1151,7 +1151,7 @@
 - ❌ Prepare for App Store submission (iOS + watchOS bundle)
 
 ### Phase 82 Sub-tasks:
-- ❌ Create docs/watchos.md with architecture overview
+- ❌ Create documentation/watchos.md with architecture overview
 - ❌ Document shared code strategy
 - ❌ Document CloudKit sync implementation
 - ❌ Create troubleshooting guide for common issues
@@ -1541,7 +1541,7 @@
 **Note**: Device-to-device sync testing deferred until paid Apple Developer account available. All service logic tested and verified. App works perfectly with local storage + App Groups.
 
 ## Phase 68.11: Documentation & Cleanup (Apple Documentation Standards) ✅ COMPLETED
-- ✅ Update docs/architecture.md with watchOS target information
+- ✅ Update documentation/architecture.md with watchOS target information
 - ✅ Document shared files vs platform-specific files
 - ✅ Create architecture diagram showing iOS ↔ CloudKit ↔ watchOS
 - ✅ Document App Groups configuration in architecture.md
@@ -1720,14 +1720,14 @@ If Phase 68 fails critically:
 
 ## Phase 77: Sync Documentation
 **Goal**: Document the WatchConnectivity sync architecture and troubleshooting
-- ❌ Update docs/architecture.md with sync flow diagrams
+- ❌ Update documentation/architecture.md with sync flow diagrams
 - ❌ Document WatchConnectivity + App Groups architecture
 - ❌ Document how this works with future CloudKit
-- ❌ Create troubleshooting guide in docs/learnings.md
+- ❌ Create troubleshooting guide in documentation/learnings.md
 - ❌ Add "Sync not working" troubleshooting steps
 - ❌ Document sync timing expectations (< 1 second)
 - ❌ Document fallback behavior when not paired
-- ❌ Update docs/watchos.md with sync section
+- ❌ Update documentation/watchos.md with sync section
 - ❌ Update ai_changelog.md with Phase 77 completion
 
 ## Phase 78: watchOS UI - Item Filtering ✅ COMPLETED (2025-10-21)
@@ -1795,23 +1795,23 @@ If Phase 68 fails critically:
 - ⏭️ Test sync latency and performance (requires working sync)
 
 ### Phase 79 Research Documentation:
-- ✅ Created comprehensive situation report: `docs/APP_GROUPS_SYNC_ISSUE_REPORT.md` (25 pages)
+- ✅ Created comprehensive situation report: `documentation/APP_GROUPS_SYNC_ISSUE_REPORT.md` (25 pages)
   - Complete technical analysis
   - All attempted solutions documented (5+ fresh installs)
   - 8 research questions identified (all answered)
   - 5 testable hypotheses proposed (all validated)
   - Research priorities ordered by impact
-- ✅ Created quick reference: `docs/APP_GROUPS_ISSUE_SUMMARY.md`
+- ✅ Created quick reference: `documentation/APP_GROUPS_ISSUE_SUMMARY.md`
   - 2-page summary with solution paths
   - Key logs and evidence
   - Success criteria defined
-- ✅ Created research findings: `docs/RESEARCH_FINDINGS_APP_GROUPS.md` (30 pages)
+- ✅ Created research findings: `documentation/RESEARCH_FINDINGS_APP_GROUPS.md` (30 pages)
   - **Apple's official documentation quoted and verified**
   - Root cause explained: Separate devices since watchOS 2
   - Three solution paths analyzed (A, B, C)
   - Complete implementation guide with code examples
   - Recommendation: Path A (WatchConnectivity data transfer)
-- ✅ Updated research index: `docs/RESEARCH_INDEX.md`
+- ✅ Updated research index: `documentation/RESEARCH_INDEX.md`
   - Status changed to RESOLVED (solution identified)
   - Navigation guide for all research documents
 
@@ -1830,7 +1830,7 @@ If Phase 68 fails critically:
 **Goal**: Fix watchOS sync by transferring actual data via WatchConnectivity (Apple's recommended approach)
 **Status**: ✅ **COMPLETE** - All 8 tasks finished, builds succeed, 378 tests passing (100%)
 **Time**: Estimated 4-6 hours, Actual ~4 hours
-**Reference**: Implementation guide in `docs/RESEARCH_FINDINGS_APP_GROUPS.md`
+**Reference**: Implementation guide in `documentation/RESEARCH_FINDINGS_APP_GROUPS.md`
 
 ### What Needs to Change:
 **Current Behavior (Broken)**:
@@ -1888,9 +1888,9 @@ If Phase 68 fails critically:
   - ⏭️ Device testing: Deferred to Phase 79C (requires physical devices)
 
 - ✅ **Task 8**: Documentation and cleanup (30 min) - DONE
-  - ✅ Updated `docs/ai_changelog.md` with comprehensive Phase 79B entry
-  - ⏭️ `docs/architecture.md` deferred (future enhancement)
-  - ⏭️ `docs/watchos.md` deferred (future enhancement)
+  - ✅ Updated `documentation/ai_changelog.md` with comprehensive Phase 79B entry
+  - ⏭️ `documentation/architecture.md` deferred (future enhancement)
+  - ⏭️ `documentation/watchos.md` deferred (future enhancement)
   - ✅ Documented known limitations and next steps
 
 ### Success Criteria:

@@ -488,7 +488,7 @@ When releasing version 1.1 or later:
 **Good luck with your submission!**
 
 If you have questions, refer to:
-- `docs/appstore_submission_checklist.md` - Detailed technical checklist
+- `documentation/appstore_submission_checklist.md` - Detailed technical checklist
 - `PRIVACY.md` - Privacy policy
 - `metadata/app_info.txt` - All app metadata
 - `metadata/app_privacy_questionnaire.txt` - Privacy answers

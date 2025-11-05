@@ -300,7 +300,7 @@ Legend:
 ## Next Steps
 
 ### Immediate Actions (When Starting Development)
-1. **Review Plan** - Read docs/watchos.md for detailed architecture
+1. **Review Plan** - Read documentation/watchos.md for detailed architecture
 2. **Create Branch** - Create `feature/watchos-app` branch
 3. **Phase 68** - Start with creating watchOS target
 4. **Test Early** - Verify sync works in Phase 68 before UI work
@@ -315,7 +315,7 @@ Legend:
 ### During Development
 - [ ] Build and test after each phase
 - [ ] Keep iOS app working (don't break existing functionality)
-- [ ] Document any issues or learnings in docs/learnings.md
+- [ ] Document any issues or learnings in documentation/learnings.md
 - [ ] Update ai_changelog.md after each phase completion
 
 ### After Completion
@@ -327,10 +327,10 @@ Legend:
 ## Resources & References
 
 ### Documentation
-- **Detailed Architecture:** `docs/watchos.md`
-- **Task Breakdown:** `docs/todo.md` (Phases 68-75)
-- **Current Architecture:** `docs/architecture.md`
-- **Data Model:** `docs/datamodel.md`
+- **Detailed Architecture:** `documentation/watchos.md`
+- **Task Breakdown:** `documentation/todo.md` (Phases 68-75)
+- **Current Architecture:** `documentation/architecture.md`
+- **Data Model:** `documentation/datamodel.md`
 
 ### Apple Documentation
 - [watchOS App Programming Guide](https://developer.apple.com/watchos/)
@@ -365,10 +365,10 @@ Legend:
 ## Contact & Support
 
 For questions during development:
-- Review detailed docs in `docs/watchos.md`
-- Check task list in `docs/todo.md`
-- Document issues in `docs/learnings.md`
-- Update progress in `docs/ai_changelog.md`
+- Review detailed docs in `documentation/watchos.md`
+- Check task list in `documentation/todo.md`
+- Document issues in `documentation/learnings.md`
+- Update progress in `documentation/ai_changelog.md`
 
 ---
 

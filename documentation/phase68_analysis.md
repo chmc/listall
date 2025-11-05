@@ -251,19 +251,19 @@ The updated task in `todo.md` now includes:
 
 ### ✅ Next Steps
 
-1. **Review** updated Phase 68 in `docs/todo.md`
+1. **Review** updated Phase 68 in `documentation/todo.md`
 2. **Ensure** Apple Developer account has necessary capabilities
 3. **Begin** implementation following Part 1 (App Groups) first
 4. **Test** iOS with App Groups before adding watchOS target
 5. **Proceed** with Parts 2-11 sequentially
-6. **Document** any issues in `docs/learnings.md`
+6. **Document** any issues in `documentation/learnings.md`
 
 ---
 
 ## Files Modified
 
-- ✅ `docs/todo.md`: Updated Phase 68 with comprehensive 11-part breakdown
-- ✅ `docs/phase68_analysis.md`: This analysis report (NEW)
+- ✅ `documentation/todo.md`: Updated Phase 68 with comprehensive 11-part breakdown
+- ✅ `documentation/phase68_analysis.md`: This analysis report (NEW)
 
 ---
 
@@ -277,10 +277,10 @@ The updated task in `todo.md` now includes:
 - 📚 [CloudKit Quick Start](https://developer.apple.com/documentation/cloudkit)
 
 ### Project Documentation
-- `docs/watchos.md`: Detailed watchOS architecture
-- `docs/watchos_plan_summary.md`: High-level plan
-- `docs/architecture.md`: Current iOS architecture
-- `docs/datamodel.md`: Data model documentation
+- `documentation/watchos.md`: Detailed watchOS architecture
+- `documentation/watchos_plan_summary.md`: High-level plan
+- `documentation/architecture.md`: Current iOS architecture
+- `documentation/datamodel.md`: Data model documentation
 
 ---
 
@@ -296,7 +296,7 @@ The original Phase 68 task was a good starting point but **missing critical App 
 - **Documentation requirements** to capture learnings
 - **Rollback plan** for safety
 
-**Implementation can now proceed safely** with the updated task definition in `docs/todo.md`.
+**Implementation can now proceed safely** with the updated task definition in `documentation/todo.md`.
 
 ---
 

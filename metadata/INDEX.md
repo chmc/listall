@@ -278,8 +278,8 @@ Quick checklist of what you need:
 - [Privacy Guidelines](https://developer.apple.com/app-store/review/guidelines/#privacy)
 
 ### Project Documentation
-- `docs/appstore_submission_checklist.md` - Comprehensive technical checklist
-- `docs/appstore_quick_start.md` - Quick start guide
+- `documentation/appstore_submission_checklist.md` - Comprehensive technical checklist
+- `documentation/appstore_quick_start.md` - Quick start guide
 - `PRIVACY.md` - Full privacy policy
 
 ---

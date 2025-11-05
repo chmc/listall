@@ -471,7 +471,7 @@ For questions or issues with localization:
 2. Review `LocalizationManager.swift` implementation
 3. Examine `Localizable.xcstrings` structure
 4. See examples in `SettingsView.swift`
-5. Consult `docs/ai_changelog.md` for implementation details
+5. Consult `documentation/ai_changelog.md` for implementation details
 
 ---
 

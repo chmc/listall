@@ -76,4 +76,4 @@ cp Config.plist.template Config.plist
 
 ## For More Information
 
-See [watch_screenshot_mode.md](../../../docs/watch_screenshot_mode.md) for detailed documentation on screenshot mode.
+See [watch_screenshot_mode.md](../../../documentation/watch_screenshot_mode.md) for detailed documentation on screenshot mode.

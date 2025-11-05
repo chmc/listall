@@ -81,9 +81,9 @@ Users can change language in-app via **Settings → Language** without changing 
    - Added language change alert
 
 ### Documentation (3)
-1. `docs/todo.md` - Updated with completion status
-2. `docs/ai_changelog.md` - Comprehensive implementation log
-3. `docs/localization_guide.md` - Developer guide for localization
+1. `documentation/todo.md` - Updated with completion status
+2. `documentation/ai_changelog.md` - Comprehensive implementation log
+3. `documentation/localization_guide.md` - Developer guide for localization
 
 ## How to Use
 
@@ -108,7 +108,7 @@ Users can change language in-app via **Settings → Language** without changing 
 4. Test language selector
 5. Validate and submit
 
-**See:** `docs/localization_guide.md` for detailed instructions
+**See:** `documentation/localization_guide.md` for detailed instructions
 
 ## App Store Submission
 
@@ -201,9 +201,9 @@ Users can change language in-app via **Settings → Language** without changing 
 ## Resources
 
 **Documentation:**
-- `docs/localization_guide.md` - Complete developer guide
-- `docs/ai_changelog.md` - Implementation details (Oct 26, 2025 entry)
-- `docs/todo.md` - Task tracking
+- `documentation/localization_guide.md` - Complete developer guide
+- `documentation/ai_changelog.md` - Implementation details (Oct 26, 2025 entry)
+- `documentation/todo.md` - Task tracking
 
 **Code:**
 - `ListAll/ListAll/Utils/LocalizationManager.swift` - Core system
@@ -217,7 +217,7 @@ Users can change language in-app via **Settings → Language** without changing 
 ## Support
 
 For questions:
-1. Read `docs/localization_guide.md`
+1. Read `documentation/localization_guide.md`
 2. Check `LocalizationManager.swift` comments
 3. Review `Localizable.xcstrings` in Xcode
 4. See implementation examples in `SettingsView.swift`

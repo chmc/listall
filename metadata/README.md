@@ -247,7 +247,7 @@ cat metadata/en-US/privacy_policy_url.txt
 - **Submission Issues**: See `SUBMISSION_GUIDE.md`
 - **Screenshot Help**: See `en-US/screenshots/README.md`
 - **Privacy Questions**: See `app_privacy_questionnaire.txt`
-- **General Info**: See `../docs/appstore_submission_checklist.md`
+- **General Info**: See `../documentation/appstore_submission_checklist.md`
 
 ## Resources
 

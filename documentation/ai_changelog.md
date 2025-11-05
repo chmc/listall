@@ -310,7 +310,7 @@ Allow: /
 - `/pages/index.html` - Added 60+ SEO tags, Schema.org data, updated App Store links, keyword-optimized content
 - `/pages/privacy.html` - Added SEO meta tags, canonical URL, Open Graph tags
 - `/pages/support.html` - Added SEO meta tags, canonical URL, Open Graph tags
-- `/docs/todo.md` - Marked SEO task as complete
+- `/documentation/todo.md` - Marked SEO task as complete
 
 **Created**:
 - `/pages/sitemap.xml` - XML sitemap for search engines
@@ -392,7 +392,7 @@ Created a complete, production-ready website for ListAll at https://listall.app/
 #### Files Created
 
 **1. index.html** - Main Landing Page
-**Location**: `/docs/index.html`
+**Location**: `/documentation/index.html`
 
 **Features Implemented**:
 - Modern, responsive design with Apple-inspired aesthetics
@@ -422,7 +422,7 @@ Created a complete, production-ready website for ListAll at https://listall.app/
 ```
 
 **2. privacy.html** - Privacy Policy Page
-**Location**: `/docs/privacy.html`
+**Location**: `/documentation/privacy.html`
 
 **Content Includes**:
 - Complete privacy policy based on PRIVACY.md
@@ -438,7 +438,7 @@ Created a complete, production-ready website for ListAll at https://listall.app/
 - Contact information
 
 **3. support.html** - Support & FAQ Page
-**Location**: `/docs/support.html`
+**Location**: `/documentation/support.html`
 
 **Content Sections**:
 - Getting Started (create lists, add items, mark complete)
@@ -451,7 +451,7 @@ Created a complete, production-ready website for ListAll at https://listall.app/
 - Contact options (Email, GitHub Issues, Feature Requests)
 
 **4. 404.html** - Custom 404 Error Page
-**Location**: `/docs/404.html`
+**Location**: `/documentation/404.html`
 
 **Features**:
 - Clean, centered design
@@ -461,7 +461,7 @@ Created a complete, production-ready website for ListAll at https://listall.app/
 - Consistent branding
 
 **5. CNAME** - Custom Domain Configuration
-**Location**: `/docs/CNAME`
+**Location**: `/documentation/CNAME`
 
 **Content**:
 ```
@@ -471,7 +471,7 @@ listall.app
 This enables GitHub Pages to serve the site at the custom domain.
 
 **6. README_WEBSITE.md** - Website Documentation
-**Location**: `/docs/README_WEBSITE.md`
+**Location**: `/documentation/README_WEBSITE.md`
 
 **Documentation Includes**:
 - File structure overview
@@ -553,10 +553,10 @@ Then in GitHub Pages settings:
 
 To complete the website, add these assets to the repository:
 
-1. **App Icon** - `docs/assets/app-icon.png` (1024x1024)
-2. **Screenshots** - `docs/assets/screenshots/*.png`
-3. **OG Image** - `docs/assets/og-image.png` (1200x630)
-4. **Twitter Image** - `docs/assets/twitter-image.png` (1200x675)
+1. **App Icon** - `documentation/assets/app-icon.png` (1024x1024)
+2. **Screenshots** - `documentation/assets/screenshots/*.png`
+3. **OG Image** - `documentation/assets/og-image.png` (1200x630)
+4. **Twitter Image** - `documentation/assets/twitter-image.png` (1200x675)
 
 #### Local Development
 
@@ -609,21 +609,21 @@ Changes are automatically deployed within minutes of pushing to main branch.
 ### Files Changed
 
 **Created**:
-- `/docs/index.html` (512 lines) - Main landing page
-- `/docs/privacy.html` (324 lines) - Privacy policy
-- `/docs/support.html` (411 lines) - Support center
-- `/docs/404.html` (88 lines) - Error page
-- `/docs/CNAME` (1 line) - Custom domain
-- `/docs/README_WEBSITE.md` (162 lines) - Documentation
+- `/documentation/index.html` (512 lines) - Main landing page
+- `/documentation/privacy.html` (324 lines) - Privacy policy
+- `/documentation/support.html` (411 lines) - Support center
+- `/documentation/404.html` (88 lines) - Error page
+- `/documentation/CNAME` (1 line) - Custom domain
+- `/documentation/README_WEBSITE.md` (162 lines) - Documentation
 
 **Modified**:
-- `/docs/todo.md` - Marked task as complete with implementation notes
+- `/documentation/todo.md` - Marked task as complete with implementation notes
 
 ### Next Steps
 
 **Before Going Live**:
-1. [ ] Add app icon to `docs/assets/`
-2. [ ] Add screenshots to `docs/assets/screenshots/`
+1. [ ] Add app icon to `documentation/assets/`
+2. [ ] Add screenshots to `documentation/assets/screenshots/`
 3. [ ] Add OG/Twitter images for social sharing
 4. [ ] Enable GitHub Pages in repository settings
 5. [ ] Configure custom domain DNS records
@@ -766,8 +766,8 @@ xcodebuild -scheme ListAll -destination 'generic/platform=iOS' build
 ### Files Changed
 ```
 ListAll/ListAll/Views/Components/ListRowView.swift (modified - context menu removed)
-docs/todo.md (updated)
-docs/ai_changelog.md (updated)
+documentation/todo.md (updated)
+documentation/ai_changelog.md (updated)
 ```
 
 ### Code Diff Summary
@@ -923,8 +923,8 @@ This fix demonstrates the importance of:
 - `ListAll/ListAll/ViewModels/MainViewModel.swift` - Added `lists = dataManager.lists` after `updateListsOrder()`
 - `ListAll/ListAll/ViewModels/MainViewModel.swift` - Removed redundant sorting in `loadLists()`
 - `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Added `processPendingChanges()` in `updateListsOrder()`
-- `docs/todo.md` - Marked issue as completed
-- `docs/ai_changelog.md` - Added comprehensive fix documentation
+- `documentation/todo.md` - Marked issue as completed
+- `documentation/ai_changelog.md` - Added comprehensive fix documentation
 
 ### Related Issues
 - Similar to earlier "Fix: Lists view order does not work" issue
@@ -992,7 +992,7 @@ Updated `EmptyStateTests.swift` to be language-agnostic:
 ### Files Modified
 1. `ListAll/ListAll/Services/SampleDataService.swift` - Added localized templates
 2. `ListAll/ListAllTests/EmptyStateTests.swift` - Updated tests for language support
-3. `docs/todo.md` - Marked task complete
+3. `documentation/todo.md` - Marked task complete
 
 ### Technical Notes
 - Templates are generated at runtime based on `LocalizationManager.shared.currentLanguage`
@@ -1174,8 +1174,8 @@ struct ListAllWatch_Watch_AppApp: App {
 - ✅ Both platforms build successfully
 
 ### Documentation Updated
-- ✅ docs/todo.md: Updated "Localization support to watchOS app" section with technical details
-- ✅ docs/ai_changelog.md: Added comprehensive implementation documentation
+- ✅ documentation/todo.md: Updated "Localization support to watchOS app" section with technical details
+- ✅ documentation/ai_changelog.md: Added comprehensive implementation documentation
 
 ---
 
@@ -1909,12 +1909,12 @@ xcodebuild -project ListAll.xcodeproj -target ListAll build
 ### Documentation
 
 **Updated Documentation:**
-1. `docs/todo.md`
+1. `documentation/todo.md`
    - Marked localization tasks as complete
    - Added future work section
    - Listed completed deliverables
 
-2. `docs/ai_changelog.md`
+2. `documentation/ai_changelog.md`
    - This comprehensive changelog entry
    - Technical implementation details
    - Usage instructions
@@ -2620,8 +2620,8 @@ Created comprehensive documentation for preparing ListAll app for App Store subm
 - [ ] VoiceOver accessibility works
 
 ### Files Created
-- `docs/appstore_submission_checklist.md` (300+ lines, 10 sections)
-- `docs/appstore_quick_start.md` (200+ lines, quick reference)
+- `documentation/appstore_submission_checklist.md` (300+ lines, 10 sections)
+- `documentation/appstore_quick_start.md` (200+ lines, quick reference)
 
 ### Documentation Quality
 - ✅ Comprehensive coverage of all submission requirements
@@ -2758,8 +2758,8 @@ Completed comprehensive research and planning for implementing watchOS complicat
 - TestFlight beta testing
 
 ### Documentation Created
-- **Research Document**: `docs/research_watchos_complications.md` (comprehensive 12-section guide)
-- **Implementation Tasks**: Updated `docs/todo.md` with detailed Phase 81 tasks
+- **Research Document**: `documentation/research_watchos_complications.md` (comprehensive 12-section guide)
+- **Implementation Tasks**: Updated `documentation/todo.md` with detailed Phase 81 tasks
 - **Success Criteria**: Defined technical and UX metrics for validation
 
 ### Next Steps
@@ -3093,7 +3093,7 @@ Successfully implemented comprehensive polish and testing improvements for the w
 - **Resource Management**: Efficient resource usage for older Apple Watch models
 
 #### 8. Testing Documentation ✅
-- **Comprehensive Testing Guide**: Created detailed testing documentation (`docs/watchos_testing_guide.md`)
+- **Comprehensive Testing Guide**: Created detailed testing documentation (`documentation/watchos_testing_guide.md`)
 - **Test Categories**: Functional, performance, accessibility, device-specific testing
 - **Test Execution Plan**: 4-phase testing approach
 - **Device Coverage**: Testing on all Apple Watch screen sizes (38mm-49mm)
@@ -3106,7 +3106,7 @@ Successfully implemented comprehensive polish and testing improvements for the w
 - `ListAllWatch Watch App/Utils/WatchAnimationManager.swift` - Animation system
 - `ListAllWatch Watch App/Utils/WatchPerformanceManager.swift` - Performance optimization
 - `ListAllWatch Watch App/Views/Components/WatchLoadingView.swift` - Loading states
-- `docs/watchos_testing_guide.md` - Comprehensive testing documentation
+- `documentation/watchos_testing_guide.md` - Comprehensive testing documentation
 
 #### Files Modified:
 - `ListAllWatch Watch App/Views/Components/WatchItemRowView.swift` - Added haptic feedback and accessibility
@@ -3630,7 +3630,7 @@ Created comprehensive unit test suite (`CriticalBugFixTests.swift`) with **16 te
    - Validates edge cases
    - All tests pass ✅
 
-2. **NEW**: `docs/bugfix_test_summary.md`
+2. **NEW**: `documentation/bugfix_test_summary.md`
    - Complete documentation of test suite
    - Test methodology and patterns
    - Execution results
@@ -3947,7 +3947,7 @@ Tests data integrity during encoding/decoding and edge cases.
 
 - `ListAll/ListAllTests/SyncCommunicationTests.swift` - 10 tests for sync communication
 - `ListAll/ListAllTests/SyncDataIntegrityTests.swift` - 14 tests for data integrity
-- `docs/ai_changelog.md` - Documentation
+- `documentation/ai_changelog.md` - Documentation
 
 ### Next Steps
 
@@ -4079,7 +4079,7 @@ updateItemsForList(receivedList, existingList: existingList)  // ← Always call
 
 - `ListAll/ListAll/ViewModels/MainViewModel.swift` - Always sync items (iOS)
 - `ListAll/ListAllWatch Watch App/ViewModels/WatchMainViewModel.swift` - Always sync items (watchOS)
-- `docs/ai_changelog.md` - Documented fix
+- `documentation/ai_changelog.md` - Documented fix
 
 ### Testing Instructions
 
@@ -5206,7 +5206,7 @@ This is a project configuration issue unrelated to the sync fix. The sync code i
 - `ListAll/ListAll/Models/Item.swift` - Added `ItemSyncData` struct
 - `ListAll/ListAll/Services/WatchConnectivityService.swift` - Updated encoding/decoding
 - `ListAll/ListAllTests/WatchConnectivitySyncTests.swift` - Added 3 comprehensive tests
-- `docs/SYNC_FIX_IMAGE_DATA.md` - Complete fix documentation
+- `documentation/SYNC_FIX_IMAGE_DATA.md` - Complete fix documentation
 
 ### Next Steps
 
@@ -5543,9 +5543,9 @@ watchOS Data Change → DataRepository.sendListsData(allLists) → WatchConnecti
 ### Documentation Updates (Task 8)
 
 #### Files Updated:
-1. ✅ `docs/ai_changelog.md` - This entry (Phase 79B complete implementation)
-2. ⏭️ `docs/architecture.md` - Deferred (update sync flow diagrams)
-3. ⏭️ `docs/watchos.md` - Deferred (add data transfer section)
+1. ✅ `documentation/ai_changelog.md` - This entry (Phase 79B complete implementation)
+2. ⏭️ `documentation/architecture.md` - Deferred (update sync flow diagrams)
+3. ⏭️ `documentation/watchos.md` - Deferred (add data transfer section)
 
 ### Success Criteria - All Met ✅
 
@@ -5633,10 +5633,10 @@ None introduced. Code follows established patterns, includes comprehensive error
 
 ### Related Documentation
 
-- **Research**: `docs/RESEARCH_FINDINGS_APP_GROUPS.md` (30 pages of research findings)
-- **Summary**: `docs/APP_GROUPS_ISSUE_SUMMARY.md` (Quick reference)
-- **Original Report**: `docs/APP_GROUPS_SYNC_ISSUE_REPORT.md` (25 pages technical analysis)
-- **Navigation**: `docs/RESEARCH_INDEX.md` (Documentation index)
+- **Research**: `documentation/RESEARCH_FINDINGS_APP_GROUPS.md` (30 pages of research findings)
+- **Summary**: `documentation/APP_GROUPS_ISSUE_SUMMARY.md` (Quick reference)
+- **Original Report**: `documentation/APP_GROUPS_SYNC_ISSUE_REPORT.md` (25 pages technical analysis)
+- **Navigation**: `documentation/RESEARCH_INDEX.md` (Documentation index)
 
 ---
 
@@ -5935,8 +5935,8 @@ Requires physical devices with iCloud accounts:
 - TEST SUCCEEDED: All existing functionality preserved
 
 ### Documentation Updated
-- `docs/todo.md` - Phase 79 marked as COMPLETED with device testing items deferred
-- `docs/ai_changelog.md` - This comprehensive entry documenting CloudKit activation
+- `documentation/todo.md` - Phase 79 marked as COMPLETED with device testing items deferred
+- `documentation/ai_changelog.md` - This comprehensive entry documenting CloudKit activation
 
 ---
 
@@ -6398,8 +6398,8 @@ This provides manual sync fallback as specified in Phase 75 requirements. ✅
 5. **Naming Conventions**: Clear method names (refreshFromiOS vs refreshFromWatch) prevent confusion in shared codebase
 
 ### Documentation Updates Needed
-- ❌ Update `docs/architecture.md` with bidirectional sync flow (Phase 77)
-- ❌ Update `docs/watchos.md` with ViewModel sync details (Phase 77)
+- ❌ Update `documentation/architecture.md` with bidirectional sync flow (Phase 77)
+- ❌ Update `documentation/watchos.md` with ViewModel sync details (Phase 77)
 - ❌ Create troubleshooting guide for sync issues (Phase 77)
 
 ### Status
@@ -7778,8 +7778,8 @@ WatchListRowView (per list)
 7. **Debugging Multi-Platform Issues**: Always check the built app's Info.plist to verify actual values, not just build settings. The values in build settings may not appear in the final file if the wrong SDK is used.
 
 ### Documentation Updated
-- ✅ `docs/ai_changelog.md` - This comprehensive Phase 69 entry
-- ✅ `docs/todo.md` - Phase 69 tasks marked complete (to be updated)
+- ✅ `documentation/ai_changelog.md` - This comprehensive Phase 69 entry
+- ✅ `documentation/todo.md` - Phase 69 tasks marked complete (to be updated)
 
 ### Commit Recommendation
 ```bash
@@ -7809,7 +7809,7 @@ Completed comprehensive documentation of watchOS companion app architecture foll
 ### Changes Made
 
 #### 1. Comprehensive Architecture Documentation Update
-**File**: `docs/architecture.md` (enhanced from 170 to 580+ lines)
+**File**: `documentation/architecture.md` (enhanced from 170 to 580+ lines)
 
 **Major Additions**:
 
@@ -7942,10 +7942,10 @@ Build Status:
 #### 4. Documentation Cross-References
 
 **Updated Files**:
-1. ✅ `docs/architecture.md` - Comprehensive multi-platform architecture (580+ lines)
-2. ✅ `docs/ai_changelog.md` - This entry documenting Phase 68.11 completion
-3. ✅ `docs/learnings.md` - Already updated in Phase 68.10 (CloudKit testing strategy)
-4. ✅ `docs/todo.md` - Phase 68.11 tasks marked complete (next step)
+1. ✅ `documentation/architecture.md` - Comprehensive multi-platform architecture (580+ lines)
+2. ✅ `documentation/ai_changelog.md` - This entry documenting Phase 68.11 completion
+3. ✅ `documentation/learnings.md` - Already updated in Phase 68.10 (CloudKit testing strategy)
+4. ✅ `documentation/todo.md` - Phase 68.11 tasks marked complete (next step)
 
 **Documentation Coverage**:
 - Architecture: ✅ Complete (architecture.md, watchos.md, watchos_plan_summary.md)
@@ -8217,13 +8217,13 @@ the 'remote-notification' background mode in your info plist.
 - `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Added comments for CloudKit activation
 - `ListAll/ListAll/ListAll.entitlements` - CloudKit keys commented out
 - `ListAll/ListAllWatch Watch App/ListAllWatch Watch App.entitlements` - CloudKit keys commented out
-- `docs/learnings.md` - Added Phase 68.10 documentation (135 lines)
-- `docs/ai_changelog.md` - This entry
+- `documentation/learnings.md` - Added Phase 68.10 documentation (135 lines)
+- `documentation/ai_changelog.md` - This entry
 
 ### Next Steps
 
 **Phase 68.11**: Documentation & Cleanup (Apple Documentation Standards)
-- Update `docs/architecture.md` with watchOS information
+- Update `documentation/architecture.md` with watchOS information
 - Document shared files vs platform-specific files  
 - Create architecture diagram showing iOS ↔ CloudKit ↔ watchOS (when enabled)
 - Document App Groups configuration in architecture
@@ -8345,7 +8345,7 @@ struct ContentView: View {
 - **Lesson**: Always qualify ambiguous type names in Swift
 
 #### 3. Comprehensive Documentation
-**File Updated**: `docs/learnings.md`
+**File Updated**: `documentation/learnings.md`
 
 **New Section Added**: "App Groups Configuration for watchOS Data Sharing" (109 lines)
 
@@ -8439,8 +8439,8 @@ Foundation is solid for building the actual watchOS UI:
 ### Files Modified
 1. `ListAllTests/AppGroupsTests.swift` - **NEW** (323 lines, 5 tests)
 2. `ListAllWatch Watch App/ContentView.swift` - Restored to simple placeholder
-3. `docs/learnings.md` - Added App Groups configuration documentation (109 lines)
-4. `docs/ai_changelog.md` - This entry
+3. `documentation/learnings.md` - Added App Groups configuration documentation (109 lines)
+4. `documentation/ai_changelog.md` - This entry
 
 ### Success Metrics
 - ✅ **5 new automated tests created** (100% pass rate)
@@ -8614,8 +8614,8 @@ if let error = error as NSError? {
 
 ### Files Modified
 - `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Added debug logging
-- `docs/todo.md` - Updated Phase 68.8 status
-- `docs/ai_changelog.md` - Added Phase 68.8 entry
+- `documentation/todo.md` - Updated Phase 68.8 status
+- `documentation/ai_changelog.md` - Added Phase 68.8 entry
 
 ### Build Status
 - ✅ iOS app: BUILD SUCCEEDED
@@ -8744,8 +8744,8 @@ xcodebuild -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 17 P
 - `ListAll/ListAll.xcodeproj/project.pbxproj` (12 configuration sections updated)
 
 ### Documentation Updated
-- `docs/ai_changelog.md` (this entry)
-- `docs/todo.md` (marked Phase 68.7 as complete)
+- `documentation/ai_changelog.md` (this entry)
+- `documentation/todo.md` (marked Phase 68.7 as complete)
 
 ### Build Output
 - Build log: `/Users/aleksi/source/ListAllApp/build_output.txt`
@@ -8931,7 +8931,7 @@ xcodebuild -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 17' 
 3. `ListAll/ListAll/Services/DataMigrationService.swift` - Added `import Combine`
 4. `ListAll/ListAll/Utils/Helpers/ValidationHelper.swift` - Added platform guards
 5. `ListAll/ListAll.xcodeproj/project.pbxproj` - Added 5 files to watchOS target membership
-6. `docs/todo.md` - Marked Phase 68.5 as completed
+6. `documentation/todo.md` - Marked Phase 68.5 as completed
 
 ### Technical Details
 
@@ -9259,7 +9259,7 @@ iOS App → App Groups Container ← watchOS App
 - **`ListAll/ListAllUITests/ListAllUITests.swift`**:
   - Fixed flaky `testCreateListViewPresentation()` test
   - Added XCTSkip to maintain 100% pass rate
-- **`docs/todo.md`**:
+- **`documentation/todo.md`**:
   - Marked all Phase 68.1 tasks as completed
 
 ### Test Results Summary
@@ -9397,7 +9397,7 @@ Ready for:     Phase 68.1 (App Groups Configuration)
   - Added XCTSkip with clear explanation
   - Maintained test coverage through unit tests
 
-- **`docs/todo.md`**:
+- **`documentation/todo.md`**:
   - Marked all Phase 68.0 tasks as completed
   - Added completion notes and commit reference
 
@@ -9508,7 +9508,7 @@ func updateUIView(_ scrollView: UIScrollView, context: Context) {
 ### Key Learning
 **Critical Insight**: Modern iOS provides declarative APIs (AutoLayout with layout guides) that solve complex problems like scrollable zooming without any manual math. If you find yourself writing complex frame calculations or state management for UIScrollView zoom, you're doing it wrong - look for the declarative iOS API pattern.
 
-**Documentation**: Added comprehensive learning to `docs/learnings.md` including:
+**Documentation**: Added comprehensive learning to `documentation/learnings.md` including:
 - Complete code example of correct pattern
 - Detailed explanation of why it works
 - List of all failed approaches (what NOT to do)
@@ -9718,7 +9718,7 @@ Previously, swiping right-to-left on an item revealed three actions (Delete, Dup
 - ✅ **Linter**: No errors
 
 ### Related Requirements
-From `docs/todo.md`:
+From `documentation/todo.md`:
 - ✅ Swipe from right to left instantly deletes item (with full swipe)
 - ✅ No swipe from left to right (removed for simplicity)
 - ✅ Long press context menu removed (reserved for drag & drop)
@@ -12499,7 +12499,7 @@ Performed a holistic analysis covering:
 
 ### Document Structure
 
-Created comprehensive UX investigation document (`docs/ux_investigation.md`) with:
+Created comprehensive UX investigation document (`documentation/ux_investigation.md`) with:
 1. **Executive Summary** - Overall assessment and scores
 2. **Navigation Architecture** - Structure and patterns analysis
 3. **Screen-by-Screen Analysis** - Detailed review of all major screens
@@ -12596,7 +12596,7 @@ Created comprehensive UX investigation document (`docs/ux_investigation.md`) wit
 
 ### Files Created
 
-**`docs/ux_investigation.md`** (New file - 19 sections, ~1000 lines):
+**`documentation/ux_investigation.md`** (New file - 19 sections, ~1000 lines):
 - Comprehensive UX analysis report
 - Screen-by-screen detailed reviews
 - Prioritized recommendations with effort estimates
@@ -14113,7 +14113,7 @@ case .permanentDelete:
 - ✅ Permanent delete removes list and all associated data
 
 ### Todo List Updates
-Updated `docs/todo.md`:
+Updated `documentation/todo.md`:
 ```markdown
 ## Phase 59: Add ability to permanently delete archived lists ✅ COMPLETED
 - ✅ Add permanent delete functionality for archived lists
@@ -16889,12 +16889,12 @@ UI Tests: 12/12 passed
 ### Documentation Updates
 
 **Files Updated**:
-1. `docs/todo.md`:
+1. `documentation/todo.md`:
    - Marked Improvement 1 as completed
    - Updated test counts (204 total tests)
    - Added sharing test details
    
-2. `docs/ai_changelog.md`:
+2. `documentation/ai_changelog.md`:
    - Comprehensive implementation documentation
    - Technical decisions explained
    - Test coverage details
@@ -17103,7 +17103,7 @@ Phase 42 is complete with UI refinement. Ready to proceed with the next phase or
 
 ### Files Changed
 - `ListAll/ListAll/Views/ListView.swift` (lines 15-39, 118)
-- `docs/todo.md` (Phase 41 marked complete)
+- `documentation/todo.md` (Phase 41 marked complete)
 
 ### Validation Results
 - ✅ Build validation passed (100% success)
@@ -17238,7 +17238,7 @@ Phase 42 is complete with UI refinement. Ready to proceed with the next phase or
    - Line 24: Set padding to `.padding(.vertical, 8)` (8pt) for comfortable spacing
    - Line 58: Added `.padding(.horizontal, Theme.Spacing.md)` to maintain horizontal margins
 
-5. `/Users/aleksi/source/ListAllApp/docs/todo.md`
+5. `/Users/aleksi/source/ListAllApp/documentation/todo.md`
    - Marked Phase 39 as ✅ COMPLETED with implementation details
 
 ### Implementation Details
@@ -18190,8 +18190,8 @@ xcodebuild build -project ListAll/ListAll.xcodeproj -scheme ListAll
 ### Documentation
 
 **Updated Files**:
-- ✅ `docs/todo.md` - Marked Phase 34 as completed
-- ✅ `docs/ai_changelog.md` - This comprehensive entry
+- ✅ `documentation/todo.md` - Marked Phase 34 as completed
+- ✅ `documentation/ai_changelog.md` - This comprehensive entry
 
 **Related Phases**:
 - Phase 25-26: Export functionality (JSON, CSV, Plain Text)
@@ -19237,7 +19237,7 @@ Created a complete import system that allows users to restore data from JSON exp
 2. `/ListAll/ListAll/Services/DataRepository.swift` - Added import-specific methods for proper data handling
 3. `/ListAll/ListAllTests/TestHelpers.swift` - Enhanced TestDataRepository with import method overrides and clearAll() method
 4. `/ListAll/ListAllTests/ServicesTests.swift` - Added 12 comprehensive tests for Phase 27 features
-5. `/docs/todo.md` - Updated test counts and phase completion status
+5. `/documentation/todo.md` - Updated test counts and phase completion status
 
 **Key Features**:
 - **JSON Import**: Full support for importing data from JSON exports
@@ -21450,7 +21450,7 @@ ZStack {
    - Added `ImageThumbnailCard` component with loading states
    - Implemented comprehensive zoom, pan, and gesture handling
 
-2. **`docs/todo.md`**
+2. **`documentation/todo.md`**
    - Marked Phase 19 as completed with all sub-tasks
 
 ### Testing Results
@@ -21530,7 +21530,7 @@ INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs photo library acc
 
 ### Files Modified
 - `ListAll/ListAll.xcodeproj/project.pbxproj` - Added photo library usage description to build settings
-- `docs/todo.md` - Marked Phase 18 as completed
+- `documentation/todo.md` - Marked Phase 18 as completed
 
 ### Testing Results
 - **Build Status**: ✅ 100% successful compilation
@@ -23072,7 +23072,7 @@ Phase 7C is now complete. Ready for Phase 7D: Item Organization (sorting and fil
   - `ListAll/ListAllTests/UtilsTests.swift` - Removed deprecated calls (26 instances)
   - `ListAll/ListAllTests/ServicesTests.swift` - Removed deprecated calls (1 instance)  
   - `ListAll/ListAllTests/ViewModelsTests.swift` - Added @Suite(.serialized) for test isolation
-  - `docs/todo.md` - Updated test status documentation
+  - `documentation/todo.md` - Updated test status documentation
 - **Build Status**: ✅ Project builds successfully with no compilation errors
 - **Testing Results**: 🎉 **COMPLETE SUCCESS - 100% UNIT TEST PASS RATE (96/96 tests)**
   - ✅ **UtilsTests: 100% passing (26/26 tests)** - Complete success
@@ -23215,7 +23215,7 @@ Updated AI instructions to mandate that code must always build successfully.
   - After ANY code changes, run appropriate build command to verify compilation
   - If build fails, immediately use `<fix>` workflow to resolve errors
   - Never leave project in broken state
-  - Document persistent build issues in `docs/learnings.md`
+  - Document persistent build issues in `documentation/learnings.md`
 
 - **Updated Workflows** in `.cursor/workflows.mdc`:
   - Enhanced `<develop>` workflow with mandatory build validation step
