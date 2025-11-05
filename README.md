@@ -1,4 +1,5 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![CI](https://github.com/chmc/listall/actions/workflows/ci.yml/badge.svg)](https://github.com/chmc/listall/actions/workflows/ci.yml)
 
 TB
 

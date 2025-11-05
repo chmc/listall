@@ -40,10 +40,11 @@ Outcomes
 - Acceptance
   - Subsequent runs show cache hits
 
-### 1.3 Surface status in README
+### ✅ 1.3 Surface status in README - COMPLETED
 - Add CI badge to `README.md`
 - Acceptance
   - Badge shows current CI state
+- **Status**: CI badge added to README showing workflow status
 
 ---
 
