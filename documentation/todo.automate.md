@@ -50,7 +50,8 @@ Outcomes
 
 ## Phase 2 — Fastlane bootstrap
 
-### 2.1 Add Ruby toolchain
+### ✅ 2.1 Add Ruby toolchain - COMPLETED
+Ruby toolchain (Gemfile, Gemfile.lock) with Fastlane and xcode-install is set up. `bundle exec fastlane --version` works locally.
 - Files: `Gemfile`, `Gemfile.lock` (commit lockfile)
 - Gems: `fastlane`, `xcode-install` (optional)
 - Acceptance
