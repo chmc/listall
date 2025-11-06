@@ -109,10 +109,19 @@ jobs:
           fi
           echo "✅ Match secrets are configured"
 
+      - name: Setup keychain for code signing
+        run: |
+          # Create a temporary keychain
+          security create-keychain -p "" temp.keychain
+          security default-keychain -s temp.keychain
+          security unlock-keychain -p "" temp.keychain
+          security set-keychain-settings temp.keychain
+          echo "✅ Temporary keychain created and unlocked"
+
       - name: Sync signing with match (App Store)
         run: |
           echo "🔐 Syncing signing certificates from Match..."
-          bundle exec fastlane match appstore --readonly --verbose
+          bundle exec fastlane match appstore --readonly --verbose --keychain_name temp.keychain
 
       - name: Build and upload to TestFlight
         run: bundle exec fastlane beta
