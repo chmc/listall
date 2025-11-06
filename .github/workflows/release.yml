@@ -21,6 +21,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write  # Required to push commits and tags back to the repository
+
 jobs:
   tests:
     name: Fastlane Tests
@@ -84,6 +87,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper git operations
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub token for pushing
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
