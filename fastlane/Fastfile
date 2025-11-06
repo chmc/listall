@@ -54,7 +54,15 @@ platform :ios do
       export_method: "app-store",
       output_directory: "./ListAll/build",
       include_bitcode: false,
-      include_symbols: true
+      include_symbols: true,
+      codesigning_identity: "Apple Distribution: Aleksi Sutela (M9BR5FY93A)",
+      xcargs: "CODE_SIGN_STYLE=Manual",
+      export_options: {
+        provisioningProfiles: {
+          "io.github.chmc.ListAll" => "match AppStore io.github.chmc.ListAll",
+          "io.github.chmc.ListAll.watchkitapp" => "match AppStore io.github.chmc.ListAll.watchkitapp"
+        }
+      }
     )
 
     if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_BASE64"]
