@@ -125,7 +125,40 @@ CI usage
 **Status**: COMPLETED
 - ✅ Workflow added and configured
 - ✅ Ruby/Bundler compatibility resolved (Ruby 3.2 + Bundler 2.x)
-- ⏳ End-to-end upload depends on signing configuration on the runner (expected to be addressed in Phase 5)
+- ✅ Fastlane Match configured for code signing (certificate + provisioning profiles in private git repo)
+- ✅ Build and upload to TestFlight working end-to-end
+- ✅ Version numbering using `sed` to update all targets (main + watchOS)
+
+### 2.5 Implement industry-standard version numbering
+- Problem: Currently using hardcoded version (1.1) and `sed` command to update `MARKETING_VERSION` in project.pbxproj
+- Goal: Adopt semantic versioning (SemVer: MAJOR.MINOR.PATCH) with automated increments
+- Approach options:
+  1. **Git tag-based**: Extract version from git tags (e.g., `v1.2.0`), auto-increment patch for builds
+  2. **Config file**: Store version in dedicated file (e.g., `.version` or `fastlane/version.txt`), update via Fastlane
+  3. **Fastlane actions**: Use `increment_version_number` with `bump_type` parameter properly configured for all targets
+  4. **agvtool integration**: Configure project to work with Apple's agvtool for version management
+- Tasks:
+  - Research and decide on best approach for iOS/watchOS multi-target projects
+  - Implement version increment strategy that:
+    - Updates both main app and Watch app consistently
+    - Supports semantic versioning (major.minor.patch)
+    - Allows manual version bumps (major/minor) via workflow parameter
+    - Auto-increments patch version for TestFlight builds
+    - Works reliably with Xcode's `MARKETING_VERSION` build setting
+  - Update `Fastfile` `beta` lane to use new versioning approach
+  - Update GitHub workflow to accept version bump type as input (patch/minor/major)
+  - Add validation to ensure all targets have matching version numbers
+- Acceptance:
+  - `bundle exec fastlane beta bump_type:patch` increments version correctly (e.g., 1.1.0 → 1.1.1)
+  - Manual workflow dispatch allows choosing version bump type (patch/minor/major)
+  - Both main app and Watch app targets get identical version numbers
+  - Version increments are git-committed and tagged automatically
+  - CI logs clearly show which version is being built
+- Benefits:
+  - Eliminates hardcoded version numbers in Fastfile
+  - Enables proper release management with semantic versioning
+  - Makes version history trackable via git tags
+  - Industry-standard approach used by major iOS apps
 
 ---
 
