@@ -42,10 +42,14 @@ platform :ios do
     
     # Increment version number to 1.1 (from 1.0)
     # This is needed because 1.0 train is closed
-    increment_version_number(
-      version_number: "1.1",
-      xcodeproj: "ListAll/ListAll.xcodeproj"
-    )
+    # Update all targets to ensure Watch app also gets the version
+    ["ListAll", "ListAllWatch Watch App"].each do |target|
+      increment_version_number(
+        version_number: "1.1",
+        xcodeproj: "ListAll/ListAll.xcodeproj",
+        target: target
+      )
+    end
     
     # Increment build number automatically
     # In CI: use GitHub Actions run number, otherwise just increment by 1
