@@ -48,6 +48,23 @@ platform :ios do
       skip_set_partition_list: true  # Skip partition list in CI to avoid SecItemCopyMatching error
     )
     
+    # Update Xcode project to use the provisioning profiles from Match
+    update_project_provisioning(
+      xcodeproj: "ListAll/ListAll.xcodeproj",
+      profile: ENV["sigh_io.github.chmc.ListAll_appstore_profile-path"],
+      target_filter: "ListAll",
+      build_configuration: "Release",
+      code_signing_identity: "Apple Distribution: Aleksi Sutela (M9BR5FY93A)"
+    )
+    
+    update_project_provisioning(
+      xcodeproj: "ListAll/ListAll.xcodeproj",
+      profile: ENV["sigh_io.github.chmc.ListAll.watchkitapp_appstore_profile-path"],
+      target_filter: "ListAllWatch Watch App",
+      build_configuration: "Release",
+      code_signing_identity: "Apple Distribution: Aleksi Sutela (M9BR5FY93A)"
+    )
+    
     # Build archive (gym/build_app handles exporting ipa)
     ipa_path = build_app(
       project: "ListAll/ListAll.xcodeproj",
@@ -56,8 +73,6 @@ platform :ios do
       output_directory: "./ListAll/build",
       include_bitcode: false,
       include_symbols: true,
-      codesigning_identity: "Apple Distribution: Aleksi Sutela (M9BR5FY93A)",
-      xcargs: "CODE_SIGN_STYLE=Manual",
       export_options: {
         provisioningProfiles: {
           "io.github.chmc.ListAll" => "match AppStore io.github.chmc.ListAll",
