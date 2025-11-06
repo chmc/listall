@@ -108,6 +108,13 @@ jobs:
             exit 1
           fi
           echo "✅ Match secrets are configured"
+      
+      - name: Unlock keychain  
+        run: |
+          # Unlock the fastlane_tmp_keychain that setup_ci creates
+          security unlock-keychain -p "" ~/Library/Keychains/fastlane_tmp_keychain-db
+          # Set it to not lock
+          security set-keychain-settings ~/Library/Keychains/fastlane_tmp_keychain-db
 
       - name: Build and upload to TestFlight
         run: bundle exec fastlane beta
