@@ -1,4 +1,4 @@
-git_url("https://github.com/chmc/listall-signing-certs.git")
+git_url(ENV['MATCH_GIT_URL'] || "https://github.com/chmc/listall-signing-certs.git")
 
 storage_mode("git")
 

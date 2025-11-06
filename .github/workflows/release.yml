@@ -65,7 +65,6 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
       MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-      MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
       MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
     steps:
       - name: Checkout code
@@ -93,11 +92,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
-      - name: Prepare Match Git URL (HTTPS token)
-        if: env.MATCH_GIT_TOKEN
+      - name: Prepare Match Git URL with authentication
         run: |
-          echo "MATCH_GIT_URL=https://x-access-token:${{ env.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
-          echo "✅ Match Git URL prepared with token"
+          echo "MATCH_GIT_URL=https://x-access-token:${{ secrets.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+          echo "✅ Match Git URL prepared with token authentication"
 
       - name: Verify Match secrets
         run: |
@@ -105,23 +103,16 @@ jobs:
             echo "❌ MATCH_PASSWORD is not set!"
             exit 1
           fi
-          if [ -z "$MATCH_GIT_URL" ] && [ -z "$MATCH_GIT_TOKEN" ]; then
-            echo "❌ Neither MATCH_GIT_URL nor MATCH_GIT_TOKEN is set!"
+          if [ -z "$MATCH_GIT_TOKEN" ]; then
+            echo "❌ MATCH_GIT_TOKEN is not set!"
             exit 1
           fi
           echo "✅ Match secrets are configured"
-        env:
-          MATCH_PASSWORD: ${{ env.MATCH_PASSWORD }}
-          MATCH_GIT_URL: ${{ env.MATCH_GIT_URL }}
-          MATCH_GIT_TOKEN: ${{ env.MATCH_GIT_TOKEN }}
 
       - name: Sync signing with match (App Store)
         run: |
           echo "🔐 Syncing signing certificates from Match..."
           bundle exec fastlane match appstore --readonly --verbose
-        env:
-          MATCH_PASSWORD: ${{ env.MATCH_PASSWORD }}
-          MATCH_GIT_URL: ${{ env.MATCH_GIT_URL }}
 
       - name: Build and upload to TestFlight
         run: bundle exec fastlane beta
