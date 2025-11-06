@@ -33,6 +33,12 @@ platform :ios do
 
   desc "Build and upload to TestFlight"
   lane :beta do
+    # Setup CI environment (creates temporary keychain)
+    setup_ci if ENV['CI']
+    
+    # Sync code signing
+    match(type: 'appstore')
+    
     # Build archive (gym/build_app handles exporting ipa)
     ipa_path = build_app(
       project: "ListAll/ListAll.xcodeproj",
@@ -40,8 +46,7 @@ platform :ios do
       export_method: "app-store",
       output_directory: "./ListAll/build",
       include_bitcode: false,
-      include_symbols: true,
-      xcargs: "-allowProvisioningUpdates"
+      include_symbols: true
     )
 
     if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_BASE64"]
