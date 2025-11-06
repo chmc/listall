@@ -34,10 +34,18 @@ platform :ios do
   desc "Build and upload to TestFlight"
   lane :beta do
     # Setup CI environment (creates temporary keychain)
-    setup_ci if ENV['CI']
+    if ENV['CI']
+      setup_ci
+      # Set keychain password for Match to use when importing certs
+      ENV["KEYCHAIN_PASSWORD"] = ""  # setup_ci creates keychain with empty password
+    end
     
-    # Sync code signing
-    match(type: 'appstore')
+    # Sync code signing with verbose output
+    match(
+      type: 'appstore',
+      verbose: true,
+      keychain_password: ENV["KEYCHAIN_PASSWORD"] || ""
+    )
     
     # Build archive (gym/build_app handles exporting ipa)
     ipa_path = build_app(

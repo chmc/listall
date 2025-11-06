@@ -111,6 +111,13 @@ jobs:
 
       - name: Build and upload to TestFlight
         run: bundle exec fastlane beta
+        
+      - name: Debug - List identities in keychain
+        if: failure()
+        run: |
+          echo "🔍 Checking what's in the keychain..."
+          security find-identity -v -p codesigning
+          security find-identity -v -p codesigning ~/Library/Keychains/fastlane_tmp_keychain-db || true
 
       - name: Upload build artifacts
         if: always()
