@@ -40,6 +40,13 @@ platform :ios do
       ENV["KEYCHAIN_PASSWORD"] = ""  # setup_ci creates keychain with empty password
     end
     
+    # Increment version number to 1.1 (from 1.0)
+    # This is needed because 1.0 train is closed
+    increment_version_number(
+      version_number: "1.1",
+      xcodeproj: "ListAll/ListAll.xcodeproj"
+    )
+    
     # Increment build number automatically
     # In CI: use GitHub Actions run number, otherwise just increment by 1
     if ENV['GITHUB_RUN_NUMBER']
