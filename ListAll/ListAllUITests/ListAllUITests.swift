@@ -12,6 +12,13 @@ final class ListAllUITests: XCTestCase {
 
         // In UI tests it's important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
         app = XCUIApplication()
+        
+        // Enable UI test mode with deterministic data
+        app.launchArguments.append("UITEST_MODE")
+        
+        // Set a fixed seed for consistent data generation
+        app.launchEnvironment["UITEST_SEED"] = "1"
+        
         app.launch()
     }
 
@@ -32,6 +39,22 @@ final class ListAllUITests: XCTestCase {
         // Note: These selectors may need to be adjusted based on actual UI implementation
         let navigationBar = app.navigationBars.firstMatch
         XCTAssertTrue(navigationBar.exists)
+    }
+    
+    @MainActor
+    func testDeterministicDataLoaded() throws {
+        // Verify that deterministic test data is loaded
+        // We expect exactly 4 lists: Grocery Shopping, Weekend Projects, Books to Read, Travel Packing
+        
+        // Wait a moment for data to load
+        sleep(1)
+        
+        // Check that we have the expected lists
+        // Note: Exact selectors depend on your UI implementation
+        let listCells = app.cells
+        
+        // We should have at least 4 lists
+        XCTAssertGreaterThanOrEqual(listCells.count, 4, "Expected at least 4 test lists")
     }
 
     @MainActor

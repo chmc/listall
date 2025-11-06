@@ -165,11 +165,20 @@ CI usage
 
 ## Phase 3 — Deterministic UI + Screenshot Automation (iPhone 6.5" + iPad 13")
 
-### 3.1 Introduce deterministic UI test data
+### ✅ 3.1 Introduce deterministic UI test data - COMPLETED
 - App: enable a launch argument/env (e.g., `UITESTS_SEED=1`) to inject sample lists/items to a clean store (no iCloud sync during UITests)
-- Wire in the app`s launch to check this flag and pre-populate consistent demo data
+- Wire in the app's launch to check this flag and pre-populate consistent demo data
 - Acceptance
   - Launching with the flag always shows the same demo lists/items
+- **Status**: COMPLETED
+  - Created `UITestDataService.swift` with deterministic test data generation
+  - Modified `ListAllApp.swift` to detect `UITEST_MODE` launch argument
+  - Clears existing data and populates 4 test lists with varied items
+  - Disables iCloud sync during UI tests
+  - Supports both English and Finnish locales
+  - Updated `ListAllUITests.swift` to enable test mode
+  - Build verified successfully
+  - Documentation added in `documentation/deterministic_test_data.md`
 
 ### 3.2 Add Snapshot helpers to UITests
 - Add `SnapshotHelper.swift` (from Fastlane) to `ListAllUITests` target
