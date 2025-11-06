@@ -40,6 +40,19 @@ platform :ios do
       ENV["KEYCHAIN_PASSWORD"] = ""  # setup_ci creates keychain with empty password
     end
     
+    # Increment build number automatically
+    # In CI: use GitHub Actions run number, otherwise just increment by 1
+    if ENV['GITHUB_RUN_NUMBER']
+      increment_build_number(
+        build_number: ENV['GITHUB_RUN_NUMBER'],
+        xcodeproj: "ListAll/ListAll.xcodeproj"
+      )
+    else
+      increment_build_number(
+        xcodeproj: "ListAll/ListAll.xcodeproj"
+      )
+    end
+    
     # Sync code signing with verbose output
     match(
       type: 'appstore',
