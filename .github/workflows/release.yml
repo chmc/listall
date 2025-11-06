@@ -94,13 +94,31 @@ jobs:
             ${{ runner.os }}-spm-
 
       - name: Prepare Match Git URL (HTTPS token)
-        if: env.MATCH_GIT_TOKEN && (!env.MATCH_GIT_URL || !startsWith(env.MATCH_GIT_URL, 'http'))
+        if: env.MATCH_GIT_TOKEN
         run: |
           echo "MATCH_GIT_URL=https://x-access-token:${{ env.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+          echo "✅ Match Git URL prepared with token"
+
+      - name: Verify Match secrets
+        run: |
+          if [ -z "$MATCH_PASSWORD" ]; then
+            echo "❌ MATCH_PASSWORD is not set!"
+            exit 1
+          fi
+          if [ -z "$MATCH_GIT_URL" ] && [ -z "$MATCH_GIT_TOKEN" ]; then
+            echo "❌ Neither MATCH_GIT_URL nor MATCH_GIT_TOKEN is set!"
+            exit 1
+          fi
+          echo "✅ Match secrets are configured"
+        env:
+          MATCH_PASSWORD: ${{ env.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ env.MATCH_GIT_URL }}
+          MATCH_GIT_TOKEN: ${{ env.MATCH_GIT_TOKEN }}
 
       - name: Sync signing with match (App Store)
         run: |
-          bundle exec fastlane match appstore --readonly
+          echo "🔐 Syncing signing certificates from Match..."
+          bundle exec fastlane match appstore --readonly --verbose
         env:
           MATCH_PASSWORD: ${{ env.MATCH_PASSWORD }}
           MATCH_GIT_URL: ${{ env.MATCH_GIT_URL }}
