@@ -3,6 +3,41 @@
 
 TB
 
+## Quick Start
+
+### Version Management
+
+ListAll uses **semantic versioning** (MAJOR.MINOR.PATCH format, e.g., 1.2.3).
+
+**Check current version:**
+```bash
+bundle exec fastlane show_version
+```
+
+**Release to TestFlight:**
+```bash
+# Patch bump (bug fixes): 1.1.0 → 1.1.1
+bundle exec fastlane beta
+
+# Minor bump (new features): 1.1.0 → 1.2.0
+bundle exec fastlane beta bump_type:minor
+
+# Major bump (breaking changes): 1.1.0 → 2.0.0
+bundle exec fastlane beta bump_type:major
+```
+
+**Set version manually:**
+```bash
+bundle exec fastlane set_version version:1.2.0
+```
+
+**Release via GitHub Actions:**
+1. Go to **Actions** → **Release** workflow
+2. Click **"Run workflow"**
+3. Select version bump type: `patch`, `minor`, or `major`
+
+> 📚 Full documentation: [`documentation/version_management.md`](./documentation/version_management.md)
+
 ## Development Setup
 
 ### Local Testing with Fastlane
@@ -29,11 +64,25 @@ To test Fastlane lanes locally (beta uploads, App Store Connect authentication, 
 
 ### Available Fastlane Lanes
 
+#### Testing
 - `bundle exec fastlane test` — Run tests (mirrors CI)
 - `bundle exec fastlane test_scan` — Run tests via Fastlane Scan
-- `bundle exec fastlane asc_dry_run` — Verify App Store Connect authentication
+
+#### Version Management
+- `bundle exec fastlane show_version` — Display current version across all targets
+- `bundle exec fastlane set_version version:X.Y.Z` — Set version manually (e.g., `version:1.2.0`)
+- `bundle exec fastlane validate_versions` — Validate all targets have matching versions
+
+#### Build & Release
 - `bundle exec fastlane beta` — Build and upload to TestFlight (requires ASC API key)
+  - Add `bump_type:patch|minor|major` to increment version (default: patch)
+  - Add `skip_version_bump:true` to use current version without incrementing
 - `bundle exec fastlane release` — Deliver metadata to App Store (requires ASC API key)
+
+#### Authentication
+- `bundle exec fastlane asc_dry_run` — Verify App Store Connect authentication
+
+**Version Management:** ListAll uses semantic versioning (X.Y.Z). See [`documentation/version_management.md`](./documentation/version_management.md) for detailed information about version numbering, bumping strategies, and CI/CD integration.
 
 ## License
 ListAll is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).  

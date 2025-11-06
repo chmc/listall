@@ -1,6 +1,7 @@
 # Fastlane configuration
 # Docs: https://docs.fastlane.tools
 require 'base64'
+require_relative 'lib/version_helper'
 
 default_platform(:ios)
 
@@ -32,7 +33,10 @@ platform :ios do
   end
 
   desc "Build and upload to TestFlight"
-  lane :beta do
+  desc "Options:"
+  desc "  bump_type: 'patch' (default), 'minor', or 'major' - Type of version increment"
+  desc "  skip_version_bump: true to skip version increment (use current version)"
+  lane :beta do |options|
     # Setup CI environment (creates temporary keychain)
     if ENV['CI']
       setup_ci
@@ -40,21 +44,47 @@ platform :ios do
       ENV["KEYCHAIN_PASSWORD"] = ""  # setup_ci creates keychain with empty password
     end
     
-    # Increment version number to 1.1 (from 1.0)
-    # This is needed because 1.0 train is closed
-    # Manually update MARKETING_VERSION for all targets since increment_version_number doesn't update Watch app
-    sh("sed -i '' 's/MARKETING_VERSION = 1.0;/MARKETING_VERSION = 1.1;/g' ../ListAll/ListAll.xcodeproj/project.pbxproj")
+    xcodeproj_path = "ListAll/ListAll.xcodeproj"
+    
+    # Handle version numbering with semantic versioning
+    unless options[:skip_version_bump]
+      bump_type = options[:bump_type] || 'patch'
+      
+      # Read current version from file
+      current_version = VersionHelper.read_version
+      UI.message("📦 Current version: #{current_version}")
+      
+      # Increment version
+      new_version = VersionHelper.increment_version(current_version, bump_type)
+      UI.important("📦 Bumping version (#{bump_type}): #{current_version} → #{new_version}")
+      
+      # Update version in all targets
+      VersionHelper.update_xcodeproj_version(xcodeproj_path, new_version)
+      
+      # Save new version to file
+      VersionHelper.write_version(new_version)
+      
+      # Validate all targets have the same version
+      unless VersionHelper.validate_versions(xcodeproj_path)
+        UI.user_error!("Version validation failed. Please check that all targets have matching versions.")
+      end
+      
+      UI.success("✅ Version updated to #{new_version}")
+    else
+      current_version = VersionHelper.read_version
+      UI.message("⏭️  Skipping version bump, using current version: #{current_version}")
+    end
     
     # Increment build number automatically
     # In CI: use GitHub Actions run number, otherwise just increment by 1
     if ENV['GITHUB_RUN_NUMBER']
       increment_build_number(
         build_number: ENV['GITHUB_RUN_NUMBER'],
-        xcodeproj: "ListAll/ListAll.xcodeproj"
+        xcodeproj: xcodeproj_path
       )
     else
       increment_build_number(
-        xcodeproj: "ListAll/ListAll.xcodeproj"
+        xcodeproj: xcodeproj_path
       )
     end
     
@@ -92,7 +122,7 @@ platform :ios do
     
     # Build archive (gym/build_app handles exporting ipa)
     ipa_path = build_app(
-      project: "ListAll/ListAll.xcodeproj",
+      project: xcodeproj_path,
       scheme: "ListAll",
       export_method: "app-store",
       output_directory: "./ListAll/build",
@@ -165,5 +195,94 @@ platform :ios do
       run_precheck_before_submit: false,  # Precheck doesn't work with API keys
       force: true
     )
+  end
+
+  # Version management lanes
+  
+  desc "Show current version from all targets"
+  lane :show_version do
+    xcodeproj_path = "ListAll/ListAll.xcodeproj"
+    
+    UI.header("📦 Version Information")
+    
+    # Read from version file
+    file_version = VersionHelper.read_version
+    UI.message("Version file (.version): #{file_version}")
+    
+    # Read from git tag (if available)
+    git_version = VersionHelper.version_from_git_tag
+    UI.message("Latest git tag: #{git_version || 'none'}") if git_version
+    
+    # Read from Xcode project
+    UI.message("\nXcode Project Versions:")
+    targets = ['ListAll', 'ListAllWatch Watch App']
+    targets.each do |target|
+      begin
+        version = get_version_number(
+          xcodeproj: xcodeproj_path,
+          target: target
+        )
+        build = get_build_number(xcodeproj: xcodeproj_path)
+        UI.message("  #{target}: #{version} (#{build})")
+      rescue => e
+        UI.error("  #{target}: Error - #{e.message}")
+      end
+    end
+    
+    # Validate consistency
+    UI.message("\n")
+    if VersionHelper.validate_versions(xcodeproj_path)
+      UI.success("✅ All versions are consistent")
+    else
+      UI.error("❌ Version mismatch detected")
+    end
+  end
+  
+  desc "Manually set version number"
+  desc "Usage: fastlane set_version version:1.2.0"
+  lane :set_version do |options|
+    unless options[:version]
+      UI.user_error!("Please specify version with version:X.Y.Z")
+    end
+    
+    version = options[:version]
+    
+    # Validate semantic version format
+    unless version.match?(/^\d+\.\d+\.\d+$/)
+      UI.user_error!("Version must be in format X.Y.Z (e.g., 1.2.0)")
+    end
+    
+    xcodeproj_path = "ListAll/ListAll.xcodeproj"
+    
+    UI.important("📦 Setting version to: #{version}")
+    
+    # Update version in all targets
+    VersionHelper.update_xcodeproj_version(xcodeproj_path, version)
+    
+    # Save to version file
+    VersionHelper.write_version(version)
+    
+    # Validate
+    unless VersionHelper.validate_versions(xcodeproj_path)
+      UI.user_error!("Version validation failed")
+    end
+    
+    UI.success("✅ Version set to #{version}")
+    UI.message("💡 Don't forget to commit the changes and create a git tag:")
+    UI.message("   git add .version ListAll/ListAll.xcodeproj/project.pbxproj")
+    UI.message("   git commit -m 'Bump version to #{version}'")
+    UI.message("   git tag v#{version}")
+    UI.message("   git push origin main --tags")
+  end
+  
+  desc "Validate that all targets have matching versions"
+  lane :validate_versions do
+    xcodeproj_path = "ListAll/ListAll.xcodeproj"
+    
+    if VersionHelper.validate_versions(xcodeproj_path)
+      UI.success("✅ All versions are valid and consistent")
+    else
+      UI.user_error!("❌ Version validation failed")
+    end
   end
 end

@@ -39,6 +39,12 @@ Run tests via scan (Fastlane)
 
 Build and upload to TestFlight
 
+Options:
+
+  bump_type: 'patch' (default), 'minor', or 'major' - Type of version increment
+
+  skip_version_bump: true to skip version increment (use current version)
+
 ### ios release
 
 ```sh
@@ -54,6 +60,32 @@ Deliver metadata/screenshots to App Store (no auto-submit)
 ```
 
 Validate App Store Connect auth via API key (no uploads)
+
+### ios show_version
+
+```sh
+[bundle exec] fastlane ios show_version
+```
+
+Show current version from all targets
+
+### ios set_version
+
+```sh
+[bundle exec] fastlane ios set_version
+```
+
+Manually set version number
+
+Usage: fastlane set_version version:1.2.0
+
+### ios validate_versions
+
+```sh
+[bundle exec] fastlane ios validate_versions
+```
+
+Validate that all targets have matching versions
 
 ----
 

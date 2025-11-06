@@ -2,6 +2,21 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      skip_version_bump:
+        description: 'Skip version bump (use current version)'
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -99,18 +114,56 @@ jobs:
 
       - name: Verify Match secrets
         run: |
-          if [ -z "$MATCH_PASSWORD" ]; then
-            echo "❌ MATCH_PASSWORD is not set!"
+          if [ -z "${{ secrets.MATCH_PASSWORD }}" ]; then
+            echo "❌ MATCH_PASSWORD secret is not set"
             exit 1
           fi
-          if [ -z "$MATCH_GIT_TOKEN" ]; then
-            echo "❌ MATCH_GIT_TOKEN is not set!"
+          if [ -z "${{ secrets.MATCH_GIT_TOKEN }}" ]; then
+            echo "❌ MATCH_GIT_TOKEN secret is not set"
             exit 1
           fi
           echo "✅ Match secrets are configured"
 
+      - name: Show current version
+        run: bundle exec fastlane show_version
+
       - name: Build and upload to TestFlight
-        run: bundle exec fastlane beta
+        run: |
+          if [ "${{ github.event.inputs.skip_version_bump }}" = "true" ]; then
+            echo "📦 Skipping version bump as requested"
+            bundle exec fastlane beta skip_version_bump:true
+          elif [ -n "${{ github.event.inputs.bump_type }}" ]; then
+            echo "📦 Version bump type: ${{ github.event.inputs.bump_type }}"
+            bundle exec fastlane beta bump_type:${{ github.event.inputs.bump_type }}
+          else
+            echo "📦 Using default version bump (patch)"
+            bundle exec fastlane beta bump_type:patch
+          fi
+
+      - name: Show final version
+        if: always()
+        run: bundle exec fastlane show_version
+
+      - name: Commit version changes
+        if: success() && github.event.inputs.skip_version_bump != 'true'
+        run: |
+          # Configure git
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Get the new version
+          NEW_VERSION=$(cat .version)
+          
+          # Commit version file and project changes
+          git add .version ListAll/ListAll.xcodeproj/project.pbxproj
+          git commit -m "Bump version to ${NEW_VERSION}" || echo "No changes to commit"
+          
+          # Create and push tag
+          git tag "v${NEW_VERSION}" || echo "Tag already exists"
+          
+          # Push changes and tags
+          git push origin main || echo "Push failed, possibly no changes"
+          git push origin "v${NEW_VERSION}" || echo "Tag push failed"
         
       - name: Debug - List identities in keychain
         if: failure()

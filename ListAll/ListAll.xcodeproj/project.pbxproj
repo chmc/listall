@@ -101,16 +101,22 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		451D22502EA54063004688D4 /* ListAllWatch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "ListAllWatch Watch App";
 			sourceTree = "<group>";
 		};
 		451D225E2EA54064004688D4 /* ListAllWatch Watch AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "ListAllWatch Watch AppTests";
 			sourceTree = "<group>";
 		};
 		451D22682EA54064004688D4 /* ListAllWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "ListAllWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
@@ -124,11 +130,15 @@
 		};
 		F1E5F98C2E78695F0007B178 /* ListAllTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = ListAllTests;
 			sourceTree = "<group>";
 		};
 		F1E5F9962E78695F0007B178 /* ListAllUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = ListAllUITests;
 			sourceTree = "<group>";
 		};
@@ -225,8 +235,6 @@
 				451D22502EA54063004688D4 /* ListAllWatch Watch App */,
 			);
 			name = "ListAllWatch Watch App";
-			packageProductDependencies = (
-			);
 			productName = "ListAllWatch Watch App";
 			productReference = 451D224F2EA54063004688D4 /* ListAllWatch Watch App.app */;
 			productType = "com.apple.product-type.application";
@@ -248,8 +256,6 @@
 				451D225E2EA54064004688D4 /* ListAllWatch Watch AppTests */,
 			);
 			name = "ListAllWatch Watch AppTests";
-			packageProductDependencies = (
-			);
 			productName = "ListAllWatch Watch AppTests";
 			productReference = 451D225B2EA54064004688D4 /* ListAllWatch Watch AppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -271,8 +277,6 @@
 				451D22682EA54064004688D4 /* ListAllWatch Watch AppUITests */,
 			);
 			name = "ListAllWatch Watch AppUITests";
-			packageProductDependencies = (
-			);
 			productName = "ListAllWatch Watch AppUITests";
 			productReference = 451D22652EA54064004688D4 /* ListAllWatch Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -295,8 +299,6 @@
 				F1E5F97E2E78695B0007B178 /* ListAll */,
 			);
 			name = ListAll;
-			packageProductDependencies = (
-			);
 			productName = ListAll;
 			productReference = F1E5F97C2E78695B0007B178 /* ListAll.app */;
 			productType = "com.apple.product-type.application";
@@ -318,8 +320,6 @@
 				F1E5F98C2E78695F0007B178 /* ListAllTests */,
 			);
 			name = ListAllTests;
-			packageProductDependencies = (
-			);
 			productName = ListAllTests;
 			productReference = F1E5F9892E78695F0007B178 /* ListAllTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -341,8 +341,6 @@
 				F1E5F9962E78695F0007B178 /* ListAllUITests */,
 			);
 			name = ListAllUITests;
-			packageProductDependencies = (
-			);
 			productName = ListAllUITests;
 			productReference = F1E5F9932E78695F0007B178 /* ListAllUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -545,7 +543,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -582,7 +580,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -606,7 +604,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -629,7 +627,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -651,7 +649,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -673,7 +671,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -837,7 +835,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -872,7 +870,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -890,7 +888,7 @@
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -909,7 +907,7 @@
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -926,7 +924,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -943,7 +941,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
