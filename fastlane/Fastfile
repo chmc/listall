@@ -48,6 +48,13 @@ platform :ios do
       skip_set_partition_list: true  # Skip partition list in CI to avoid SecItemCopyMatching error
     )
     
+    # Disable automatic code signing for Release configuration
+    disable_automatic_code_signing(
+      path: "ListAll/ListAll.xcodeproj",
+      targets: ["ListAll", "ListAllWatch Watch App"],
+      code_sign_identity: "Apple Distribution: Aleksi Sutela (M9BR5FY93A)"
+    )
+    
     # Update Xcode project to use the provisioning profiles from Match
     update_project_provisioning(
       xcodeproj: "ListAll/ListAll.xcodeproj",
