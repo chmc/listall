@@ -56,7 +56,8 @@ platform :ios do
       output_directory: "./ListAll/build",
       include_bitcode: false,
       include_symbols: true,
-      xcargs: "-allowProvisioningUpdates",
+      codesigning_identity: "Apple Distribution: Aleksi Sutela (M9BR5FY93A)",
+      xcargs: "CODE_SIGN_STYLE=Manual",
       export_options: {
         provisioningProfiles: {
           "io.github.chmc.ListAll" => "match AppStore io.github.chmc.ListAll",
