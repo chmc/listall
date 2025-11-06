@@ -110,6 +110,21 @@ CI usage (GitHub Secrets)
 - Acceptance
   - Manual `workflow_dispatch` works and uploads to TestFlight (once code signing is valid)
 
+Implementation details (wired in repo)
+- Created `.github/workflows/release.yml`
+  - Triggers: `workflow_dispatch` and `push` on tags `v*`
+  - Runner: `macos-14`, Xcode 16.1 selected to match CI
+  - Job `tests`: sets up Ruby + Bundler cache and runs `bundle exec fastlane test`; uploads `fastlane/test_output` as artifact
+  - Job `beta`: depends on `tests`, exports App Store Connect secrets (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_BASE64`) to env and runs `bundle exec fastlane beta`; uploads any generated `.ipa/.xcarchive` artifacts from `ListAll/build`
+
+CI usage
+- Manually trigger “Release” workflow from GitHub Actions, or push a tag like `v1.1.0`
+- With valid signing on the runner, `beta` will upload to TestFlight via API key
+
+Status: IMPLEMENTED
+- ✅ Workflow added and configured
+- ⏳ End-to-end upload depends on signing configuration on the runner (expected to be addressed in Phase 5)
+
 ---
 
 ## Phase 3 — Deterministic UI + Screenshot Automation (iPhone 6.5" + iPad 13")
