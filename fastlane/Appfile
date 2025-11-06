@@ -8,7 +8,9 @@ app_identifier("io.github.chmc.ListAll")
 team_id("M9BR5FY93A")
 
 # Optional: Apple ID (developer account email) — set later
-# apple_id("your-apple-id@example.com")
+# You can set this via environment to avoid committing personal email
+# e.g. export APPLE_ID="your-apple-id@example.com"
+apple_id(ENV["APPLE_ID"]) if ENV["APPLE_ID"].to_s.strip != ""
 
 # Optional: iTunes Connect (App Store Connect) team
 # itc_team_id("YOUR_ITC_TEAM_ID")

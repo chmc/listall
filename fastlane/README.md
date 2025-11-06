@@ -47,6 +47,14 @@ Build and upload to TestFlight
 
 Deliver metadata/screenshots to App Store (no auto-submit)
 
+### ios asc_dry_run
+
+```sh
+[bundle exec] fastlane ios asc_dry_run
+```
+
+Validate App Store Connect auth via API key (no uploads)
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

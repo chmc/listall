@@ -80,4 +80,27 @@ platform :ios do
       force: true
     )
   end
+
+  desc "Validate App Store Connect auth via API key (no uploads)"
+  lane :asc_dry_run do
+    require_asc_env!
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    # This will authenticate and fetch app metadata without uploading anything
+    deliver(
+      api_key: api_key,
+      skip_screenshots: true,
+      skip_metadata: true,
+      skip_binary_upload: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false,  # Precheck doesn't work with API keys
+      force: true
+    )
+  end
 end

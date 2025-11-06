@@ -68,7 +68,7 @@ Ruby toolchain (Gemfile, Gemfile.lock) with Fastlane and xcode-install is set up
 - Notes
   - Appfile prefilled with `app_identifier: io.github.chmc.ListAll` and `team_id: M9BR5FY93A`; set `apple_id` later in 2.3
 
-### 2.3 Configure App Store Connect API key
+### ✅ 2.3 Configure App Store Connect API key - COMPLETED
 - Create API key in App Store Connect (Roles: `App Manager` or `Developer`)
 - Store as GitHub Secrets (repository level):
   - `ASC_KEY_ID`
@@ -77,6 +77,30 @@ Ruby toolchain (Gemfile, Gemfile.lock) with Fastlane and xcode-install is set up
 - Update `Fastfile` to use `app_store_connect_api_key`
 - Acceptance
   - `fastlane deliver` can auth non-interactively in CI (dry-run)
+
+Implementation details (wired in repo)
+- Fastlane now reads the API key from environment and authenticates automatically:
+  - `fastlane/Fastfile`: `beta` and `release` lanes use `app_store_connect_api_key` when `ASC_*` are present
+  - Added lane `asc_dry_run` to validate auth without uploading anything
+  - `fastlane/Appfile`: supports `apple_id` via environment (`APPLE_ID`) if you want to set it locally/CI without committing email
+
+Local setup (.env file approach)
+- Created `.env.template` (tracked in git) with placeholder values
+- Developers copy to `.env` (gitignored) and fill in actual credentials
+- Fastlane automatically loads `.env` files - no manual export needed
+- Test with: `bundle exec fastlane asc_dry_run`
+
+CI usage (GitHub Secrets)
+- Repository secrets configured:
+  - `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_BASE64` ✅
+- Workflows can call `bundle exec fastlane beta` (uploads if secrets exist) or `bundle exec fastlane asc_dry_run` to check auth
+
+**Status**: COMPLETED
+- ✅ API key created in App Store Connect
+- ✅ GitHub repository secrets configured
+- ✅ Local .env setup with template file
+- ✅ Fastlane authentication tested successfully (`asc_dry_run` passed)
+- ✅ Documentation added to README.md
 
 ### 2.4 Tie Fastlane into CI
 - Add new workflow `.github/workflows/release.yml` with manual dispatch and on tag (e.g., `v*`)
