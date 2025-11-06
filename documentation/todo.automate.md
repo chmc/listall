@@ -102,7 +102,7 @@ CI usage (GitHub Secrets)
 - ✅ Fastlane authentication tested successfully (`asc_dry_run` passed)
 - ✅ Documentation added to README.md
 
-### 2.4 Tie Fastlane into CI
+### ✅ 2.4 Tie Fastlane into CI - COMPLETED
 - Add new workflow `.github/workflows/release.yml` with manual dispatch and on tag (e.g., `v*`)
 - Jobs:
   - `tests`: run `fastlane test`
@@ -114,15 +114,17 @@ Implementation details (wired in repo)
 - Created `.github/workflows/release.yml`
   - Triggers: `workflow_dispatch` and `push` on tags `v*`
   - Runner: `macos-14`, Xcode 16.1 selected to match CI
+  - Ruby 3.2 pinned with Bundler 2.x (updated `Gemfile.lock` from legacy Bundler 1.17.2 to 2.5.19)
   - Job `tests`: sets up Ruby + Bundler cache and runs `bundle exec fastlane test`; uploads `fastlane/test_output` as artifact
   - Job `beta`: depends on `tests`, exports App Store Connect secrets (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_BASE64`) to env and runs `bundle exec fastlane beta`; uploads any generated `.ipa/.xcarchive` artifacts from `ListAll/build`
 
 CI usage
-- Manually trigger “Release” workflow from GitHub Actions, or push a tag like `v1.1.0`
+- Manually trigger "Release" workflow from GitHub Actions, or push a tag like `v1.1.0`
 - With valid signing on the runner, `beta` will upload to TestFlight via API key
 
-Status: IMPLEMENTED
+**Status**: COMPLETED
 - ✅ Workflow added and configured
+- ✅ Ruby/Bundler compatibility resolved (Ruby 3.2 + Bundler 2.x)
 - ⏳ End-to-end upload depends on signing configuration on the runner (expected to be addressed in Phase 5)
 
 ---

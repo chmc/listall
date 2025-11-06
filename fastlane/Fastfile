@@ -33,6 +33,12 @@ platform :ios do
 
   desc "Build and upload to TestFlight"
   lane :beta do
+    # Ensure signing certs and profiles are installed (CI uses --readonly)
+    begin
+      match(type: "appstore", readonly: true)
+    rescue => e
+      UI.important("match failed or not configured; proceeding if signing is already available. Error: #{e.message}")
+    end
     # Build archive (gym/build_app handles exporting ipa)
     ipa_path = build_app(
       project: "ListAll/ListAll.xcodeproj",

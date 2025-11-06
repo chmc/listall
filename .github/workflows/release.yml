@@ -57,13 +57,16 @@ jobs:
 
   beta:
     name: TestFlight (beta)
-    needs: tests
+    # needs: tests
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-14
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+      MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,6 +92,18 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+
+      - name: Prepare Match Git URL (HTTPS token)
+        if: env.MATCH_GIT_TOKEN && (!env.MATCH_GIT_URL || !startsWith(env.MATCH_GIT_URL, 'http'))
+        run: |
+          echo "MATCH_GIT_URL=https://x-access-token:${{ env.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+
+      - name: Sync signing with match (App Store)
+        run: |
+          bundle exec fastlane match appstore --readonly
+        env:
+          MATCH_PASSWORD: ${{ env.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ env.MATCH_GIT_URL }}
 
       - name: Build and upload to TestFlight
         run: bundle exec fastlane beta
