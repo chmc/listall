@@ -44,7 +44,8 @@ platform :ios do
     match(
       type: 'appstore',
       verbose: true,
-      keychain_password: ENV["KEYCHAIN_PASSWORD"] || ""
+      keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
+      skip_set_partition_list: true  # Skip partition list in CI to avoid SecItemCopyMatching error
     )
     
     # Build archive (gym/build_app handles exporting ipa)
