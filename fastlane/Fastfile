@@ -40,7 +40,8 @@ platform :ios do
       export_method: "app-store",
       output_directory: "./ListAll/build",
       include_bitcode: false,
-      include_symbols: true
+      include_symbols: true,
+      xcargs: "-allowProvisioningUpdates"
     )
 
     if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_BASE64"]
