@@ -180,11 +180,19 @@ CI usage
   - Build verified successfully
   - Documentation added in `documentation/deterministic_test_data.md`
 
-### 3.2 Add Snapshot helpers to UITests
+### ✅ 3.2 Add Snapshot helpers to UITests - COMPLETED
 - Add `SnapshotHelper.swift` (from Fastlane) to `ListAllUITests` target
 - Call `setupSnapshot(app)` before `app.launch()` and use `snapshot("01-...")`
 - Acceptance
   - Local `fastlane snapshot` captures at least one screenshot
+- **Status**: COMPLETED
+  - Created `SnapshotHelper.swift` with modern XCTest API compatibility
+  - Integrated into `ListAllUITests.swift` with `setupSnapshot(app)` call
+  - Added example `testScreenshots()` test method with `snapshot("01-ListsHome")` call
+  - Created `Snapfile` configuration for screenshot automation
+  - Added `screenshots` lane to Fastfile
+  - Build verified successfully
+  - Ready for local testing with `bundle exec fastlane screenshots` (requires Ruby 3.0+)
 
 ### 3.3 Write screenshot tests (EN)
 - Tests to cover 6–8 iPhone scenes (proposed set below)

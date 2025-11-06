@@ -1,0 +1,34 @@
+# Snapfile for Fastlane Snapshot automation
+# Captures automated screenshots for App Store submission
+
+# Path to Xcode project
+project "./ListAll/ListAll.xcodeproj"
+
+# List of simulators to use for screenshot generation
+# Note: Adjust device names based on available simulators
+devices([
+  "iPhone 17 Pro Max"  # 6.7" display (closest to App Store 6.5" requirement)
+])
+
+# List of languages to generate screenshots for
+languages([
+  "en-US"
+])
+
+# The name of the scheme which contains the UI Tests
+scheme("ListAll")
+
+# Where should the resulting screenshots be stored?
+output_directory("./fastlane/screenshots")
+
+# Clear previous screenshots before generating new ones
+clear_previous_screenshots(true)
+
+# Remove the '#' from the image filename
+override_status_bar(true)
+
+# Reinstall the app before each test run
+reinstall_app(true)
+
+# For more information about all available options run
+# fastlane action snapshot

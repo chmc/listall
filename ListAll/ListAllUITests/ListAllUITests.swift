@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class ListAllUITests: XCTestCase {
 
     var app: XCUIApplication!
@@ -12,6 +13,9 @@ final class ListAllUITests: XCTestCase {
 
         // In UI tests it's important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
         app = XCUIApplication()
+        
+    // Setup snapshot for Fastlane screenshot automation
+    setupSnapshot(app)
         
         // Enable UI test mode with deterministic data
         app.launchArguments.append("UITEST_MODE")
@@ -457,5 +461,22 @@ final class ListAllUITests: XCTestCase {
             // Mark as passed since the core functionality (URL wrapping) is working
             print("Context menu did not appear after multiple attempts - this may be a simulator timing issue")
         }
+    }
+    
+    // MARK: - Screenshot Tests
+    
+    @MainActor
+    func testScreenshots() throws {
+        // Test that captures screenshots for Fastlane snapshot automation
+        // This test demonstrates the snapshot() functionality
+        
+        // Capture the main lists view
+        snapshot("01-ListsHome")
+        
+        // Wait for any animations to complete
+        sleep(1)
+        
+        // Note: Additional screenshot tests will be added in Phase 3.3
+        // This basic test verifies that snapshot() integration is working
     }
 }

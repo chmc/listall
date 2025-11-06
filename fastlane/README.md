@@ -87,6 +87,16 @@ Usage: fastlane set_version version:1.2.0
 
 Validate that all targets have matching versions
 
+### ios screenshots
+
+```sh
+[bundle exec] fastlane ios screenshots
+```
+
+Generate screenshots for App Store
+
+Runs automated UI tests to capture screenshots for all configured devices and locales
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

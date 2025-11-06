@@ -285,4 +285,14 @@ platform :ios do
       UI.user_error!("❌ Version validation failed")
     end
   end
+  
+  desc "Generate screenshots for App Store"
+  desc "Runs automated UI tests to capture screenshots for all configured devices and locales"
+  lane :screenshots do
+    # Capture screenshots using the snapshot tool
+    snapshot
+    
+    UI.success("✅ Screenshots generated successfully")
+    UI.message("📁 Screenshots saved to: fastlane/screenshots")
+  end
 end
