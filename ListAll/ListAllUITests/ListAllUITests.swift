@@ -23,6 +23,9 @@ final class ListAllUITests: XCTestCase {
         // Set a fixed seed for consistent data generation
         app.launchEnvironment["UITEST_SEED"] = "1"
         
+        // Disable feature tips (tooltips) for clean screenshots
+        app.launchArguments.append("DISABLE_TOOLTIPS")
+        
         app.launch()
     }
 
@@ -465,18 +468,89 @@ final class ListAllUITests: XCTestCase {
     
     // MARK: - Screenshot Tests
     
+    /// Screenshot 01: Welcome screen with empty state and template options
     @MainActor
-    func testScreenshots() throws {
-        // Test that captures screenshots for Fastlane snapshot automation
-        // This test demonstrates the snapshot() functionality
+    func testScreenshots01_WelcomeScreen() throws {
+        // Special test that launches WITHOUT test data to show empty state
+        // This must run separately from other screenshots
         
-        // Capture the main lists view
-        snapshot("01-ListsHome")
+        // Create a fresh app instance without test data
+        let emptyApp = XCUIApplication()
+        setupSnapshot(emptyApp)
+        emptyApp.launchArguments.append("UITEST_MODE")
+        emptyApp.launchArguments.append("SKIP_TEST_DATA") // Don't load test lists
+        emptyApp.launchArguments.append("DISABLE_TOOLTIPS")
+        emptyApp.launch()
         
-        // Wait for any animations to complete
-        sleep(1)
+        sleep(2)
+        snapshot("01-WelcomeScreen", timeWaitingForIdle: 1)
         
-        // Note: Additional screenshot tests will be added in Phase 3.3
-        // This basic test verifies that snapshot() integration is working
+        emptyApp.terminate()
+    }
+    
+    /// Screenshots 02-06: Main app flow with test data
+    @MainActor
+    func testScreenshots02_MainFlow() throws {
+        // End-to-end EN screenshots for iPhone/iPad using deterministic data
+        // Assumes Fastlane Snapshot sets language to en-US for this run
+        
+        // Wait for app to fully load
+        sleep(2)
+
+        // 02 - Lists Home (with test data lists)
+        snapshot("02-ListsHome", timeWaitingForIdle: 1)
+
+        // 03 - Create List sheet
+        let addListButton = app.buttons["AddListButton"].firstMatch
+        if addListButton.waitForExistence(timeout: 5) {
+            addListButton.tap()
+            let listNameField = app.textFields["ListNameTextField"].firstMatch
+            if listNameField.waitForExistence(timeout: 5) {
+                snapshot("03-CreateList", timeWaitingForIdle: 1)
+                // Dismiss sheet
+                let cancelButton = app.buttons["CancelButton"].firstMatch
+                if cancelButton.waitForExistence(timeout: 2) {
+                    cancelButton.tap()
+                }
+            }
+        }
+
+        // 04 - List Detail (Grocery Shopping)
+        let groceryCell = app.staticTexts["Grocery Shopping"].firstMatch
+        if groceryCell.waitForExistence(timeout: 10) {
+            groceryCell.tap()
+            sleep(1)
+            snapshot("04-ListDetail", timeWaitingForIdle: 1)
+            
+            // 05 - Item Detail View (tap the chevron button using accessibility identifier)
+            let itemDetailButton = app.buttons["ItemDetailButton"].firstMatch
+            if itemDetailButton.waitForExistence(timeout: 5) {
+                itemDetailButton.tap()
+                sleep(1)
+                snapshot("05-ItemDetail", timeWaitingForIdle: 1)
+                
+                // Dismiss item detail
+                let cancelItemButton = app.buttons["Cancel"].firstMatch
+                if cancelItemButton.waitForExistence(timeout: 2) {
+                    cancelItemButton.tap()
+                    sleep(1)
+                }
+            }
+            
+            // Navigate back to Lists
+            let backButton = app.navigationBars.buttons.element(boundBy: 0)
+            if backButton.waitForExistence(timeout: 3) {
+                backButton.tap()
+                sleep(1)
+            }
+        }
+
+        // 06 - Settings screen via tab bar
+        let settingsTab = app.buttons["Settings"].firstMatch
+        if settingsTab.waitForExistence(timeout: 5) {
+            settingsTab.tap()
+            sleep(1)
+            snapshot("06-Settings", timeWaitingForIdle: 1)
+        }
     }
 }

@@ -132,6 +132,7 @@ struct ItemRowView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityIdentifier("ItemDetailButton")
             }
         }
         .padding(.vertical, 8)

@@ -29,11 +29,31 @@ struct ListAllApp: App {
         // Disable iCloud sync during UI tests to prevent interference
         UserDefaults.standard.set(false, forKey: "iCloudSyncEnabled")
         
+        // Disable tooltips if requested (for clean screenshots)
+        if ProcessInfo.processInfo.arguments.contains("DISABLE_TOOLTIPS") {
+            print("🧪 Disabling feature tips for UI tests")
+            // Mark all tooltips as already shown so they won't appear
+            let allTooltipKeys = [
+                "tooltip_add_list",
+                "tooltip_item_suggestions", 
+                "tooltip_search",
+                "tooltip_sort_filter",
+                "tooltip_swipe_actions",
+                "tooltip_archive"
+            ]
+            UserDefaults.standard.set(allTooltipKeys, forKey: "shownTooltips")
+        }
+        
         // Clear existing data to ensure clean state
         clearAllData()
         
-        // Populate with deterministic test data
-        populateTestData()
+        // Only populate test data if not skipped (for empty state screenshots)
+        if !ProcessInfo.processInfo.arguments.contains("SKIP_TEST_DATA") {
+            // Populate with deterministic test data
+            populateTestData()
+        } else {
+            print("🧪 Skipping test data population for empty state screenshot")
+        }
     }
     
     /// Clear all existing data from the data store

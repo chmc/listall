@@ -30,5 +30,9 @@ override_status_bar(true)
 # Reinstall the app before each test run
 reinstall_app(true)
 
+# Use pre-built app to save time (build separately with xcodebuild build-for-testing)
+test_without_building(true)
+derived_data_path("./ListAll/build")
+
 # For more information about all available options run
 # fastlane action snapshot
