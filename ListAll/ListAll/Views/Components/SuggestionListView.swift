@@ -209,19 +209,20 @@ struct SuggestionRowView: View {
     private func formatRelativeDate(_ date: Date) -> String {
         let now = Date()
         let daysSince = Int(now.timeIntervalSince(date) / 86400)
+        let language = LocalizationManager.shared.currentLanguage
         
         if daysSince == 0 {
-            return "Today"
+            return language == .finnish ? "Tänään" : "Today"
         } else if daysSince == 1 {
-            return "Yesterday"
+            return language == .finnish ? "Eilen" : "Yesterday"
         } else if daysSince < 7 {
-            return "\(daysSince)d ago"
+            return language == .finnish ? "\(daysSince) pv sitten" : "\(daysSince)d ago"
         } else if daysSince < 30 {
             let weeks = daysSince / 7
-            return "\(weeks)w ago"
+            return language == .finnish ? "\(weeks) vk sitten" : "\(weeks)w ago"
         } else {
             let months = daysSince / 30
-            return "\(months)mo ago"
+            return language == .finnish ? "\(months) kk sitten" : "\(months)mo ago"
         }
     }
 }

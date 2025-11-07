@@ -515,42 +515,87 @@ final class ListAllUITests: XCTestCase {
             }
         }
 
-        // 04 - List Detail (Grocery Shopping)
-        let groceryCell = app.staticTexts["Grocery Shopping"].firstMatch
-        if groceryCell.waitForExistence(timeout: 10) {
-            groceryCell.tap()
-            sleep(1)
-            snapshot("04-ListDetail", timeWaitingForIdle: 1)
-            
-            // 05 - Item Detail View (tap the chevron button using accessibility identifier)
-            let itemDetailButton = app.buttons["ItemDetailButton"].firstMatch
-            if itemDetailButton.waitForExistence(timeout: 5) {
-                itemDetailButton.tap()
+        // 04 - List Detail (first list in the test data - Grocery Shopping / Ruokaostokset)
+        // Instead of hardcoding list name, tap the first list cell
+        print("🔍 DEBUG: Looking for first list to open...")
+        
+        // Wait for lists to load, then tap the first one
+        sleep(1)
+        let listCells = app.cells
+        if listCells.count > 0 {
+            let firstList = listCells.element(boundBy: 0)
+            if firstList.waitForExistence(timeout: 10) {
+                print("🔍 DEBUG: Found first list, tapping...")
+                firstList.tap()
                 sleep(1)
-                snapshot("05-ItemDetail", timeWaitingForIdle: 1)
+                snapshot("04-ListDetail", timeWaitingForIdle: 1)
                 
-                // Dismiss item detail
-                let cancelItemButton = app.buttons["Cancel"].firstMatch
-                if cancelItemButton.waitForExistence(timeout: 2) {
-                    cancelItemButton.tap()
+                // 05 - Item Detail View (tap the chevron button using accessibility identifier)
+                let itemDetailButton = app.buttons["ItemDetailButton"].firstMatch
+                if itemDetailButton.waitForExistence(timeout: 5) {
+                    itemDetailButton.tap()
                     sleep(1)
+                    snapshot("05-ItemDetail", timeWaitingForIdle: 1)
+                    
+                    // Dismiss item detail
+                    let cancelItemButton = app.buttons["Cancel"].firstMatch
+                    if cancelItemButton.waitForExistence(timeout: 2) {
+                        cancelItemButton.tap()
+                        sleep(1)
+                    }
                 }
-            }
-            
-            // Navigate back to Lists
-            let backButton = app.navigationBars.buttons.element(boundBy: 0)
-            if backButton.waitForExistence(timeout: 3) {
-                backButton.tap()
+                
+                // Navigate back to main Lists view
+                // Try multiple methods to ensure we get back
                 sleep(1)
+                
+                // Method 1: Swipe back (most reliable for iOS)
+                app.swipeRight()
+                sleep(3)
+                
+                // Verify we're back - check for "AddListButton" which only exists on main view
+                let addButton = app.buttons["AddListButton"]
+                if !addButton.exists {
+                    // Method 2: Try back button if swipe didn't work
+                    if app.navigationBars.buttons.count > 0 {
+                        app.navigationBars.buttons.element(boundBy: 0).tap()
+                        sleep(3)
+                    }
+                }
+            } else {
+                print("⚠️ WARNING: First list cell not found")
             }
+        } else {
+            print("⚠️ WARNING: No list cells found")
         }
 
-        // 06 - Settings screen via tab bar
-        let settingsTab = app.buttons["Settings"].firstMatch
-        if settingsTab.waitForExistence(timeout: 5) {
-            settingsTab.tap()
+        // 06 - Settings screenshot  
+        // Must be on MainView for Settings button to be visible (it's in CustomBottomToolbar)
+        sleep(2)
+        
+        // Double-check we're on main screen by looking for AddListButton
+        let mainScreenAddButton = app.buttons["AddListButton"]
+        if !mainScreenAddButton.exists {
+            // We're not on main screen, try swiping back again
+            app.swipeRight()
+            sleep(3)
+        }
+        
+        // Now find Settings button using accessibility identifier
+        let settingsButton = app.buttons["SettingsButton"]
+        
+        // Simple wait loop - up to 10 seconds
+        var attempts = 0
+        while attempts < 10 && !settingsButton.isHittable {
             sleep(1)
-            snapshot("06-Settings", timeWaitingForIdle: 1)
+            attempts += 1
+        }
+        
+        // Tap if found and hittable
+        if settingsButton.isHittable {
+            settingsButton.tap()
+            sleep(2)
+            snapshot("06-Settings", timeWaitingForIdle: 2)
         }
     }
 }

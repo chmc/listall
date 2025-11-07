@@ -20,11 +20,19 @@ class UITestDataService {
     
     /// Generate deterministic test lists based on the current locale
     static func generateTestData() -> [List] {
+        // Debug: Check environment and language detection
+        print("🧪 UI Test Data Generation:")
+        print("🧪 FASTLANE_LANGUAGE = \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "not set")")
+        print("🧪 FASTLANE_SNAPSHOT = \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "not set")")
+        
         let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
+        print("🧪 LocalizationManager.currentLanguage = \(currentLanguage)")
         
         if currentLanguage == "fi" {
+            print("🧪 Generating FINNISH test data")
             return generateFinnishTestData()
         } else {
+            print("🧪 Generating ENGLISH test data")
             return generateEnglishTestData()
         }
     }

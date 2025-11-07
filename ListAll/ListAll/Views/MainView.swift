@@ -526,6 +526,7 @@ struct CustomBottomToolbar: View {
                 .padding(.vertical, 8)
             }
             .accessibilityLabel(String(localized: "Settings"))
+            .accessibilityIdentifier("SettingsButton")
         }
         .frame(height: 50)
         .padding(.bottom, 8)

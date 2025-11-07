@@ -11,8 +11,10 @@ devices([
 ])
 
 # List of languages to generate screenshots for
+# Screenshots will be generated for both English and Finnish
 languages([
-  "en-US"
+  "en-US",
+  "fi"
 ])
 
 # The name of the scheme which contains the UI Tests

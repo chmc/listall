@@ -21,9 +21,13 @@ class SampleDataService {
     static var templates: [SampleListTemplate] {
         let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
         
+        print("🧪 SampleDataService - currentLanguage: \(currentLanguage)")
+        
         if currentLanguage == "fi" {
+            print("🧪 Returning FINNISH templates")
             return finnishTemplates
         } else {
+            print("🧪 Returning ENGLISH templates")
             return englishTemplates
         }
     }

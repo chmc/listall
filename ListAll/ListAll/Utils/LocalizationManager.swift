@@ -52,6 +52,37 @@ class LocalizationManager: ObservableObject {
             self.userDefaults = .standard
         }
         
+        // For UI tests: Check if Fastlane Snapshot set a language via environment variable
+        // Also check AppleLanguages which is set by Fastlane for app localization
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            print("🧪 Fastlane language detected in environment: \(fastlaneLanguage)")
+            // Map FASTLANE_LANGUAGE codes to our AppLanguage enum
+            if fastlaneLanguage.hasPrefix("fi") {
+                self.currentLanguage = .finnish
+            } else {
+                self.currentLanguage = .english
+            }
+            // Apply the language immediately
+            applyLanguage(currentLanguage)
+            print("🧪 Set currentLanguage to: \(currentLanguage.rawValue)")
+            return
+        }
+        
+        // Check if AppleLanguages preference is set (used by Fastlane)
+        if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+           let firstLanguage = appleLanguages.first {
+            print("🧪 AppleLanguages detected: \(firstLanguage)")
+            if firstLanguage.hasPrefix("fi") {
+                self.currentLanguage = .finnish
+                print("🧪 Set currentLanguage to Finnish from AppleLanguages")
+                return
+            } else if firstLanguage.hasPrefix("en") {
+                self.currentLanguage = .english
+                print("🧪 Set currentLanguage to English from AppleLanguages")
+                return
+            }
+        }
+        
         // Load saved language or default to English
         if let savedLanguageCode = userDefaults.string(forKey: userDefaultsKey),
            let savedLanguage = AppLanguage(rawValue: savedLanguageCode) {
