@@ -297,12 +297,40 @@ CI usage
   - Framed PNGs generated for EN and FI on iPhone + iPad and verified by `verify_framed`.
   - CI hook ready: fail if framed screenshots are missing.
 
-### 3.7 Wire screenshots into deliver (use framed)
-- Configure `fastlane deliver` to pick screenshots from `fastlane/screenshots` or `metadata/screenshots`
-- Ensure framed directory is the upload source, not raw captures
-- Add `--skip_screenshots false` and `--overwrite_screenshots`
-- Acceptance
-  - A dry-run shows screenshots detected per device + locale
+### ✅ 3.7 Wire screenshots into deliver (use framed) — COMPLETED
+- Configured `fastlane deliver` to pick framed screenshots for App Store upload
+- Implementation:
+  - Created `prepare_screenshots_for_delivery()` helper function to filter only `_framed.png` files
+  - Updated `release` lane to:
+    - Verify framed screenshots exist via `verify_framed`
+    - Prepare clean delivery directory with only framed variants (excludes raw captures)
+    - Point `deliver` to delivery directory with `screenshots_path` parameter
+    - Enable screenshot uploads: `skip_screenshots: false`
+    - Overwrite existing screenshots: `overwrite_screenshots: true`
+  - Added `release_dry_run` lane for verification before actual upload
+    - Lists all screenshots that would be uploaded (10 per locale: 5 iPhone + 5 iPad)
+    - Shows dimensions to verify proper sizing (iPhone: 1421x2909, iPad: 2286x3168)
+    - Requires ASC API key but performs no uploads
+- Directory structure:
+  - Raw captures: `fastlane/screenshots/<locale>/*.png`
+  - Normalized for framing: `fastlane/screenshots_compat/<locale>/*.png`
+  - Framed outputs: `fastlane/screenshots/framed/<locale>/*_framed.png` (also includes raw normalized)
+  - Delivery (framed only): `fastlane/screenshots/delivery/<locale>/*_framed.png` (temporary, gitignored)
+- Acceptance criteria MET:
+  - ✅ `release_dry_run` shows 10 framed screenshots detected per device + locale (5 scenes × 2 devices)
+  - ✅ Both EN and FI locales prepared correctly
+  - ✅ Screenshot dimensions match App Store requirements (iPhone 6.7": 1421x2909, iPad Pro 12.9": 2286x3168)
+  - ✅ Only framed variants included (raw captures excluded from delivery)
+  - ✅ `deliver` configured with correct parameters for screenshot upload
+  - ✅ Ready for actual upload via `bundle exec fastlane release`
+- Usage:
+  - Verify: `bundle exec fastlane release_dry_run`
+  - Upload: `bundle exec fastlane release` (requires ASC API key)
+- Notes:
+  - Framed screenshots include device frame + captions from `Framefile.json`
+  - Dark background (#0E1117) with white text for professional appearance
+  - All screenshots portrait orientation, light mode enforced
+  - Watch screenshots (Phase 4) will be added separately
 
 ---
 

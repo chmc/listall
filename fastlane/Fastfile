@@ -1,6 +1,7 @@
 # Fastlane configuration
 # Docs: https://docs.fastlane.tools
 require 'base64'
+require 'fileutils'
 require_relative 'lib/version_helper'
 
 default_platform(:ios)
@@ -8,6 +9,27 @@ default_platform(:ios)
 def require_asc_env!
   missing = ["ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_BASE64"].reject { |k| ENV[k].to_s.strip.size > 0 }
   UI.user_error!("Missing App Store Connect API key env vars: #{missing.join(', ')}") unless missing.empty?
+end
+
+# Prepare screenshots for deliver by copying only framed versions to a clean directory
+def prepare_screenshots_for_delivery(framed_path)
+  delivery_path = File.expand_path("screenshots/delivery", __dir__)
+  FileUtils.rm_rf(delivery_path)
+  FileUtils.mkdir_p(delivery_path)
+  
+  locales = %w[en-US fi]
+  locales.each do |locale|
+    src_dir = File.join(framed_path, locale)
+    dst_dir = File.join(delivery_path, locale)
+    FileUtils.mkdir_p(dst_dir)
+    
+    # Copy only framed screenshots (exclude non-framed variants)
+    Dir.glob(File.join(src_dir, "*_framed.png")).each do |framed_file|
+      FileUtils.cp(framed_file, dst_dir)
+    end
+  end
+  
+  delivery_path
 end
 
 platform :ios do
@@ -165,13 +187,69 @@ platform :ios do
       in_house: false
     )
 
+    # Path to framed screenshots
+    framed_path = File.expand_path("screenshots/framed", __dir__)
+    
+    # Verify framed screenshots exist before attempting delivery
+    verify_framed
+    
+    # Prepare delivery directory with only framed screenshots
+    delivery_path = prepare_screenshots_for_delivery(framed_path)
+    
+    UI.message("📸 Using framed screenshots from: #{delivery_path}")
+
     deliver(
       api_key: api_key,
-      skip_screenshots: true, # will be set to false in later phases
+      screenshots_path: delivery_path,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
       skip_binary_upload: true,
       submit_for_review: false,
       force: true
     )
+  end
+
+  desc "Dry-run: Verify framed screenshots would be detected by deliver (no upload)"
+  lane :release_dry_run do
+    require_asc_env!
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    # Path to framed screenshots
+    framed_path = File.expand_path("screenshots/framed", __dir__)
+    
+    # Verify framed screenshots exist
+    verify_framed
+    
+    # Prepare delivery directory with only framed screenshots
+    delivery_path = prepare_screenshots_for_delivery(framed_path)
+    
+    UI.message("📸 Verifying screenshots prepared for delivery from: #{delivery_path}")
+    
+    # List what deliver would find
+    locales = %w[en-US fi]
+    locales.each do |locale|
+      locale_path = File.join(delivery_path, locale)
+      if Dir.exist?(locale_path)
+        screenshots = Dir.glob(File.join(locale_path, "*.png")).sort
+        UI.header("#{locale} (#{screenshots.count} screenshots)")
+        screenshots.each do |shot|
+          basename = File.basename(shot)
+          size = `identify -format '%wx%h' "#{shot}"`.strip rescue "unknown"
+          UI.message("  #{basename} (#{size})")
+        end
+      else
+        UI.error("Missing locale directory: #{locale_path}")
+      end
+    end
+    
+    UI.success("✅ Framed screenshots are ready for delivery")
+    UI.message("💡 Run 'bundle exec fastlane release' to upload to App Store Connect")
   end
 
   desc "Validate App Store Connect auth via API key (no uploads)"

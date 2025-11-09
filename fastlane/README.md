@@ -53,6 +53,14 @@ Options:
 
 Deliver metadata/screenshots to App Store (no auto-submit)
 
+### ios release_dry_run
+
+```sh
+[bundle exec] fastlane ios release_dry_run
+```
+
+Dry-run: Verify framed screenshots would be detected by deliver (no upload)
+
 ### ios asc_dry_run
 
 ```sh
