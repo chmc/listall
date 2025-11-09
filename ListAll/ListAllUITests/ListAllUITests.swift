@@ -12,20 +12,30 @@ final class ListAllUITests: XCTestCase {
         continueAfterFailure = false
 
         // In UI tests it's important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-        app = XCUIApplication()
+    app = XCUIApplication()
         
     // Setup snapshot for Fastlane screenshot automation
     setupSnapshot(app)
         
-        // Enable UI test mode with deterministic data
+    // Enable UI test mode with deterministic data
         app.launchArguments.append("UITEST_MODE")
         
-        // Set a fixed seed for consistent data generation
+    // Set a fixed seed for consistent data generation
         app.launchEnvironment["UITEST_SEED"] = "1"
+
+    // Lock orientation to portrait inside the app via AppDelegate
+    app.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
+        
+    // Force light appearance mode for screenshots at the app level
+    // Use our custom flag that the app reads to apply .preferredColorScheme(.light)
+    app.launchArguments.append("FORCE_LIGHT_MODE")
         
         // Disable feature tips (tooltips) for clean screenshots
         app.launchArguments.append("DISABLE_TOOLTIPS")
         
+        // Always start in portrait to keep screenshots consistent
+        ensurePortrait()
+
         app.launch()
     }
 
@@ -214,6 +224,9 @@ final class ListAllUITests: XCTestCase {
     @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
+        if ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES" {
+            throw XCTSkip("Skipping performance test during fastlane snapshot")
+        }
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             XCUIApplication().launch()
         }
@@ -222,6 +235,9 @@ final class ListAllUITests: XCTestCase {
     @MainActor
     func testScrollPerformance() throws {
         // Test scrolling performance
+        if ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES" {
+            throw XCTSkip("Skipping performance test during fastlane snapshot")
+        }
         let scrollView = app.scrollViews.firstMatch
         if scrollView.exists {
             measure(metrics: [XCTOSSignpostMetric.scrollDecelerationMetric]) {
@@ -475,47 +491,39 @@ final class ListAllUITests: XCTestCase {
         // This must run separately from other screenshots
         
         // Create a fresh app instance without test data
-        let emptyApp = XCUIApplication()
-        setupSnapshot(emptyApp)
+    let emptyApp = XCUIApplication()
+    setupSnapshot(emptyApp)
+    // Force portrait before launching (affects iPhone & iPad)
+    ensurePortrait()
         emptyApp.launchArguments.append("UITEST_MODE")
         emptyApp.launchArguments.append("SKIP_TEST_DATA") // Don't load test lists
+    // Force light mode for welcome screen
+    emptyApp.launchArguments.append("FORCE_LIGHT_MODE")
         emptyApp.launchArguments.append("DISABLE_TOOLTIPS")
         emptyApp.launch()
         
         sleep(2)
-        snapshot("01-WelcomeScreen", timeWaitingForIdle: 1)
+    snapshotPortrait("01-WelcomeScreen", wait: 1)
         
         emptyApp.terminate()
     }
     
-    /// Screenshots 02-06: Main app flow with test data
+    /// Screenshots 02-05: Main app flow with test data
     @MainActor
     func testScreenshots02_MainFlow() throws {
         // End-to-end EN screenshots for iPhone/iPad using deterministic data
         // Assumes Fastlane Snapshot sets language to en-US for this run
         
+    // Force portrait orientation for all devices
+    ensurePortrait()
+        
         // Wait for app to fully load
         sleep(2)
 
-        // 02 - Lists Home (with test data lists)
-        snapshot("02-ListsHome", timeWaitingForIdle: 1)
+    // 02 - Lists Home (with test data lists)
+    snapshotPortrait("02-ListsHome", wait: 1)
 
-        // 03 - Create List sheet
-        let addListButton = app.buttons["AddListButton"].firstMatch
-        if addListButton.waitForExistence(timeout: 5) {
-            addListButton.tap()
-            let listNameField = app.textFields["ListNameTextField"].firstMatch
-            if listNameField.waitForExistence(timeout: 5) {
-                snapshot("03-CreateList", timeWaitingForIdle: 1)
-                // Dismiss sheet
-                let cancelButton = app.buttons["CancelButton"].firstMatch
-                if cancelButton.waitForExistence(timeout: 2) {
-                    cancelButton.tap()
-                }
-            }
-        }
-
-        // 04 - List Detail (first list in the test data - Grocery Shopping / Ruokaostokset)
+        // 03 - List Detail (first list in the test data - Grocery Shopping / Ruokaostokset)
         // Instead of hardcoding list name, tap the first list cell
         print("🔍 DEBUG: Looking for first list to open...")
         
@@ -528,14 +536,14 @@ final class ListAllUITests: XCTestCase {
                 print("🔍 DEBUG: Found first list, tapping...")
                 firstList.tap()
                 sleep(1)
-                snapshot("04-ListDetail", timeWaitingForIdle: 1)
+                snapshotPortrait("03-ListDetail", wait: 1)
                 
-                // 05 - Item Detail View (tap the chevron button using accessibility identifier)
+                // 04 - Item Detail View (tap the chevron button using accessibility identifier)
                 let itemDetailButton = app.buttons["ItemDetailButton"].firstMatch
                 if itemDetailButton.waitForExistence(timeout: 5) {
                     itemDetailButton.tap()
                     sleep(1)
-                    snapshot("05-ItemDetail", timeWaitingForIdle: 1)
+                    snapshotPortrait("04-ItemDetail", wait: 1)
                     
                     // Dismiss item detail
                     let cancelItemButton = app.buttons["Cancel"].firstMatch
@@ -553,15 +561,8 @@ final class ListAllUITests: XCTestCase {
                 app.swipeRight()
                 sleep(3)
                 
-                // Verify we're back - check for "AddListButton" which only exists on main view
-                let addButton = app.buttons["AddListButton"]
-                if !addButton.exists {
-                    // Method 2: Try back button if swipe didn't work
-                    if app.navigationBars.buttons.count > 0 {
-                        app.navigationBars.buttons.element(boundBy: 0).tap()
-                        sleep(3)
-                    }
-                }
+                // Ensure we're back on the main lists screen
+                navigateToMainScreen()
             } else {
                 print("⚠️ WARNING: First list cell not found")
             }
@@ -569,33 +570,85 @@ final class ListAllUITests: XCTestCase {
             print("⚠️ WARNING: No list cells found")
         }
 
-        // 06 - Settings screenshot  
-        // Must be on MainView for Settings button to be visible (it's in CustomBottomToolbar)
-        sleep(2)
-        
-        // Double-check we're on main screen by looking for AddListButton
-        let mainScreenAddButton = app.buttons["AddListButton"]
-        if !mainScreenAddButton.exists {
-            // We're not on main screen, try swiping back again
-            app.swipeRight()
-            sleep(3)
-        }
-        
-        // Now find Settings button using accessibility identifier
-        let settingsButton = app.buttons["SettingsButton"]
-        
-        // Simple wait loop - up to 10 seconds
-        var attempts = 0
-        while attempts < 10 && !settingsButton.isHittable {
+    // 05 - Settings screenshot (deterministic relaunch)
+    // Instead of interacting with potentially flaky toolbar elements (especially on iPad Finnish locale),
+    // relaunch the app with a flag that auto-opens Settings.
+    sleep(1)
+    app.terminate()
+    let settingsApp = XCUIApplication()
+    setupSnapshot(settingsApp)
+    settingsApp.launchArguments.append("UITEST_MODE")
+    settingsApp.launchEnvironment["UITEST_SEED"] = "1"
+    settingsApp.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
+    // Force light mode for Settings screenshot
+    settingsApp.launchArguments.append("FORCE_LIGHT_MODE")
+    settingsApp.launchArguments.append("DISABLE_TOOLTIPS")
+    settingsApp.launchEnvironment["UITEST_OPEN_SETTINGS_ON_LAUNCH"] = "1"
+    ensurePortrait()
+    settingsApp.launch()
+    let settingsNavEnglish = settingsApp.navigationBars["Settings"].firstMatch
+    let settingsNavFinnish = settingsApp.navigationBars["Asetukset"].firstMatch
+    let appeared = settingsNavEnglish.waitForExistence(timeout: 8) || settingsNavFinnish.waitForExistence(timeout: 8)
+    if !appeared { print("⚠️ Settings screen did not appear via auto-launch flag") }
+    sleep(1)
+    snapshotPortrait("05-Settings", wait: 2)
+    settingsApp.terminate()
+    }
+}
+
+// MARK: - Helpers
+extension ListAllUITests {
+    /// Ensures device is in portrait orientation. Called before app.launch and before each screenshot flow.
+    func ensurePortrait() {
+        let device = XCUIDevice.shared
+        if device.orientation != .portrait {
+            device.orientation = .portrait
+            // Give the simulator a moment to settle
             sleep(1)
-            attempts += 1
         }
-        
-        // Tap if found and hittable
-        if settingsButton.isHittable {
-            settingsButton.tap()
-            sleep(2)
-            snapshot("06-Settings", timeWaitingForIdle: 2)
+    }
+
+    /// Navigate back to the main lists screen where `AddListButton` exists.
+    /// Tries swipe back and tapping the left-most nav bar button repeatedly.
+    func navigateToMainScreen(timeout: TimeInterval = 8) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if app.buttons["AddListButton"].exists { return }
+
+            // Try swipe back
+            app.swipeRight()
+            if app.buttons["AddListButton"].exists { return }
+
+            // Try tapping first nav bar button if present
+            let navButtons = app.navigationBars.buttons
+            if navButtons.count > 0 {
+                navButtons.element(boundBy: 0).tap()
+            }
+            if app.buttons["AddListButton"].exists { return }
+
+            sleep(1)
         }
+    }
+
+    /// Dismisses the on-screen keyboard if present to avoid covering toolbars/buttons
+    func dismissKeyboardIfPresent() {
+        if app.keyboards.count > 0 {
+            let hideKey = app.keyboards.buttons["Hide keyboard"].firstMatch
+            if hideKey.exists {
+                hideKey.tap()
+            } else {
+                // Try a generic swipe down gesture to dismiss
+                app.swipeDown()
+                sleep(1)
+            }
+        }
+    }
+
+    /// Wrapper that enforces portrait before taking a snapshot and waits briefly after.
+    func snapshotPortrait(_ name: String, wait: UInt = 1) {
+        ensurePortrait()
+        snapshot(name, timeWaitingForIdle: TimeInterval(wait))
+        // Give time for any potential rotation animations to settle
+        usleep(300_000)
     }
 }

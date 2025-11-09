@@ -301,6 +301,14 @@ struct MainView: View {
                     tooltipManager.showIfNeeded(.archiveFunctionality)
                 }
             }
+            #if DEBUG
+            // Deterministic auto-opening of Settings for UI screenshot tests
+            if ProcessInfo.processInfo.environment["UITEST_OPEN_SETTINGS_ON_LAUNCH"] == "1" {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showingSettings = true
+                }
+            }
+            #endif
         }
         .onChange(of: scenePhase) { newPhase in
             // Restore navigation when app becomes active

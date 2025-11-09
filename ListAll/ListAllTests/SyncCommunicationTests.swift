@@ -16,6 +16,14 @@ final class SyncCommunicationTests: XCTestCase {
     var dataManager: DataManager!
     var mainViewModel: MainViewModel!
     
+    override func setUpWithError() throws {
+        // During fastlane snapshot runs, skip these tests to avoid interfering with UI tests
+        // and to prevent simulator crash dialogs from background sync-related notifications.
+        if ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES" {
+            throw XCTSkip("Skipping SyncCommunicationTests during fastlane snapshot run")
+        }
+    }
+    
     override func setUp() {
         super.setUp()
         dataManager = DataManager.shared

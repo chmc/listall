@@ -3,7 +3,8 @@ import XCTest
 final class ListAllUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        // Always false to prevent 8x execution during snapshot runs
+        false
     }
 
     override func setUpWithError() throws {
@@ -12,11 +13,13 @@ final class ListAllUITestsLaunchTests: XCTestCase {
 
     @MainActor
     func testLaunch() throws {
+        // Skip during snapshot runs to avoid timeouts
+        if ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES" {
+            throw XCTSkip("Launch test disabled during fastlane snapshot")
+        }
+        
         let app = XCUIApplication()
         app.launch()
-
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"

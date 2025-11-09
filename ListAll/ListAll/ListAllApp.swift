@@ -1,8 +1,10 @@
 import SwiftUI
+import UIKit
 import CoreData
 
 @main
 struct ListAllApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let dataManager = DataManager.shared
     
     init() {
@@ -12,8 +14,11 @@ struct ListAllApp: App {
     
     var body: some Scene {
         WindowGroup {
+            // Root content view. Force light mode during UI tests when requested.
+            let forceLight = ProcessInfo.processInfo.arguments.contains("FORCE_LIGHT_MODE")
             ContentView()
                 .environmentObject(dataManager)
+                .preferredColorScheme(forceLight ? .light : nil)
         }
     }
     
@@ -92,5 +97,23 @@ struct ListAllApp: App {
         dataManager.loadData()
         
         print("🧪 Populated \(testLists.count) test lists with deterministic data")
+    }
+}
+
+// MARK: - AppDelegate for test-time orientation control
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        // During UI tests, lock to portrait to make screenshots consistent across devices
+        let env = ProcessInfo.processInfo.environment
+        if UITestDataService.isUITesting || env["UITEST_FORCE_PORTRAIT"] == "1" {
+            return .portrait
+        }
+
+        // Normal app behavior (support all orientations as configured by Info.plist)
+        #if targetEnvironment(macCatalyst)
+        return .all
+        #else
+        return .all
+        #endif
     }
 }

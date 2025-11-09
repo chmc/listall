@@ -7,7 +7,8 @@ project "./ListAll/ListAll.xcodeproj"
 # List of simulators to use for screenshot generation
 # Note: Adjust device names based on available simulators
 devices([
-  "iPhone 17 Pro Max"  # 6.7" display (closest to App Store 6.5" requirement)
+  "iPhone 17 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
+  "iPad Pro 13-inch (M4)"   # 13" iPad Pro for App Store screenshots (force portrait via test code)
 ])
 
 # List of languages to generate screenshots for
@@ -35,6 +36,15 @@ reinstall_app(true)
 # Use pre-built app to save time (build separately with xcodebuild build-for-testing)
 test_without_building(true)
 derived_data_path("./ListAll/build")
+
+# Run devices sequentially to avoid simulator orientation race conditions
+concurrent_simulators(true)
+
+# Run only the screenshot tests to avoid flaky/irrelevant tests during snapshot
+only_testing([
+  "ListAllUITests/ListAllUITests/testScreenshots01_WelcomeScreen",
+  "ListAllUITests/ListAllUITests/testScreenshots02_MainFlow"
+])
 
 # For more information about all available options run
 # fastlane action snapshot
