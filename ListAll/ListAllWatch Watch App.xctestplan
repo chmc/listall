@@ -1,0 +1,25 @@
+{
+  "configurations" : [
+    {
+      "id" : "4D49CF36-9ED8-4F85-A9F2-9CB652F6B3C6",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:ListAll.xcodeproj",
+        "identifier" : "451D22642EA54064004688D4",
+        "name" : "ListAllWatch Watch AppUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

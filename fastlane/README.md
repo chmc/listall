@@ -121,6 +121,24 @@ Generate and frame screenshots (snapshot + frameit)
 
 Verify framed screenshots exist for all locales
 
+### ios watch_screenshots
+
+```sh
+[bundle exec] fastlane ios watch_screenshots
+```
+
+Generate watchOS screenshots (fully automated via UITests + simctl)
+
+Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales
+
+### ios verify_watch_screenshots
+
+```sh
+[bundle exec] fastlane ios verify_watch_screenshots
+```
+
+Validate watch screenshot sizes and naming
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

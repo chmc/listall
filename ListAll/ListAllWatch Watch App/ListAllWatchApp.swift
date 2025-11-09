@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import CoreData
 
 @main
 struct ListAllWatch_Watch_AppApp: App {
@@ -12,10 +13,40 @@ struct ListAllWatch_Watch_AppApp: App {
         
         // Initialize Core Data on app launch
         _ = CoreDataManager.shared
+        
+        // Setup deterministic data for UI tests
+        setupUITestEnvironment()
     }
     
     /// Configure language BEFORE any views are loaded
     private static func configureLanguage() {
+        // Handle Fastlane language during UI tests - check both environment and launch arguments
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            let languageCode = String(fastlaneLanguage.prefix(2)) // Extract "en" from "en-US"
+            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+            print("🧪 Watch: Set language from FASTLANE_LANGUAGE environment: \(languageCode)")
+            return
+        }
+
+        // Check if Snapshot helper has set -AppleLanguages launch argument and persist it
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "-AppleLanguages"),
+           index + 1 < args.count {
+            var langArg = args[index + 1]
+            // langArg may be in the form "(fi)" or "(en)". Strip non-letters and lowercased
+            let parsed = langArg.lowercased().filter { $0.isLetter }
+            let languageCode = String(parsed.prefix(2))
+            if !languageCode.isEmpty {
+                UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+                UserDefaults.standard.synchronize()
+                print("🧪 Watch: Persisted AppleLanguages from launch arg: \(languageCode)")
+                return
+            } else {
+                print("🧪 Watch: -AppleLanguages provided but could not parse: \(langArg)")
+            }
+        }
+        
         // Try App Groups first
         var languageCode: String?
         
@@ -34,6 +65,61 @@ struct ListAllWatch_Watch_AppApp: App {
         // Set AppleLanguages
         UserDefaults.standard.set([finalLanguageCode], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
+    }
+    
+    /// Configure the watch app for UI testing with deterministic data
+    private func setupUITestEnvironment() {
+        // Check if running in UI test mode
+        guard WatchUITestDataService.isUITesting else {
+            return
+        }
+        
+        print("🧪 Watch UI Test mode detected - setting up deterministic test data")
+        
+        // Clear existing data to ensure clean state
+        clearAllData()
+        
+        // Populate with deterministic test data
+        populateTestData()
+    }
+    
+    /// Clear all existing data from the data store
+    private func clearAllData() {
+        let coreDataManager = CoreDataManager.shared
+        let context = coreDataManager.viewContext
+        
+        // Delete all existing lists (which will cascade delete items and images)
+        let listRequest: NSFetchRequest<NSFetchRequestResult> = ListEntity.fetchRequest()
+        let listDeleteRequest = NSBatchDeleteRequest(fetchRequest: listRequest)
+        
+        do {
+            try context.execute(listDeleteRequest)
+            try context.save()
+            print("🧪 Watch: Cleared existing data for UI tests")
+        } catch {
+            print("❌ Watch: Failed to clear data for UI tests: \(error)")
+        }
+    }
+    
+    /// Populate the data store with deterministic test data
+    private func populateTestData() {
+        let testLists = WatchUITestDataService.generateTestData()
+        let dataManager = DataManager.shared
+        
+        // Add each test list to the data manager
+        for list in testLists {
+            dataManager.addList(list)
+            
+            // Add items for each list
+            for item in list.items {
+                dataManager.addItem(item, to: list.id)
+            }
+        }
+        
+        // Force reload to ensure UI shows the test data
+        dataManager.loadData()
+        
+        print("🧪 Watch: Populated \(testLists.count) test lists with deterministic data")
     }
     
     var body: some Scene {
@@ -79,31 +165,37 @@ class WatchLocalizationManager: ObservableObject {
     private init() {
         // Use shared UserDefaults for App Groups
         self.sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll")
-        
-        // Load saved language from iOS app (try App Groups first, then standard UserDefaults)
-        var languageCode: String? = sharedDefaults?.string(forKey: userDefaultsKey)
-        
-        if languageCode == nil {
-            // App Groups might not work in dev mode, try standard UserDefaults as backup
-            languageCode = UserDefaults.standard.string(forKey: userDefaultsKey)
-        }
-        
-        if let languageCode = languageCode {
-            self.currentLanguageCode = languageCode
-            self.currentLocale = Locale(identifier: languageCode)
-            
-            // Set UserDefaults for NSLocalizedString to work
-            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
-            UserDefaults.standard.synchronize()
+
+        // Determine language from (priority): FASTLANE_LANGUAGE, AppleLanguages, AppLanguage (shared/standard), fallback 'en'
+        var selected: String?
+
+        if let fastlane = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"], !fastlane.isEmpty {
+            selected = String(fastlane.prefix(2)).lowercased()
+            print("🧪 WatchLocalizationManager: Using FASTLANE_LANGUAGE=\(selected!)")
+        } else if let appleLangs = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+                  let first = appleLangs.first, !first.isEmpty {
+            selected = String(first.prefix(2)).lowercased()
+            print("🧪 WatchLocalizationManager: Using AppleLanguages=\(selected!)")
         } else {
-            // Default to English (not system locale)
-            self.currentLanguageCode = "en"
-            self.currentLocale = Locale(identifier: "en")
-            
-            // Set English as default
-            UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
-            UserDefaults.standard.synchronize()
+            // Load saved language from iOS app (try App Groups first, then standard UserDefaults)
+            var languageCode: String? = sharedDefaults?.string(forKey: userDefaultsKey)
+            if languageCode == nil {
+                // App Groups might not work in dev mode, try standard UserDefaults as backup
+                languageCode = UserDefaults.standard.string(forKey: userDefaultsKey)
+            }
+            if let code = languageCode, !code.isEmpty {
+                selected = code
+                print("🧪 WatchLocalizationManager: Using saved AppLanguage=\(code)")
+            }
         }
+
+        let finalCode = (selected ?? "en").lowercased()
+        self.currentLanguageCode = finalCode
+        self.currentLocale = Locale(identifier: finalCode)
+
+        // Persist AppleLanguages consistently for NSLocalizedString bundle resolution
+        UserDefaults.standard.set([finalCode], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
     }
     
     /// Refresh language from shared UserDefaults (call when app becomes active)

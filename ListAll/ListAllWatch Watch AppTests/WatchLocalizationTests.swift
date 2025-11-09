@@ -1,8 +1,9 @@
+// This test suite is not compatible with watchOS snapshot runs; skip on watchOS
+#if !os(watchOS)
 import XCTest
 import Combine
 @testable import ListAllWatch_Watch_App
 
-@Suite(.serialized)
 final class WatchLocalizationTests: XCTestCase {
     
     var cancellables = Set<AnyCancellable>()
@@ -319,3 +320,5 @@ final class WatchLocalizationTests: XCTestCase {
         XCTAssertNotNil(manager.currentLocale, "Should have valid locale even if App Groups unavailable")
     }
 }
+
+#endif

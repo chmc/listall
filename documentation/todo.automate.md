@@ -336,15 +336,34 @@ CI usage
 
 ## Phase 4 — Watch screenshots (fully automated)
 
-### 4.1 End-to-end automation via UITests + simctl
-- Add a watchOS UI test plan that drives the watch app (paired simulator) to key screens.
-- Build a small WatchSnapshot helper to:
-  - Detect paired watch simulator UDID
-  - Run `xcrun simctl io <watch-udid> screenshot <path>` at strategic points
-  - Name files with stable convention (e.g., `Watch_46mm_1.png`)
-- Target one size initially (e.g., Series 11 46mm). Add Ultra later if desired.
-- Acceptance
-  - `bundle exec fastlane snapshot` (or dedicated lane) generates 3–5 watch screenshots per locale without manual steps.
+### ✅ 4.1 End-to-end automation via UITests + simctl - COMPLETED
+- Implementation:
+  - Created `ListAllWatch_Watch_AppUITests.swift` with `testWatchScreenshots()` driving 5 key watch screens
+  - Integrated Fastlane SnapshotHelper into watch UI tests via `setupSnapshot(app)` and `snapshot("name")`
+  - Created dedicated `watch_screenshots` lane in Fastfile targeting Apple Watch Series 11 (46mm)
+  - Generated test data via `WatchUITestDataService` with deterministic EN/FI content
+  - Fixed localization detection: watch app now checks both `FASTLANE_LANGUAGE` env and `-AppleLanguages` launch args
+  - Test data generation prioritizes: 1) FASTLANE_LANGUAGE env, 2) AppleLanguages UserDefaults, 3) LocalizationManager
+- Captured 5 scenes per locale (EN + FI):
+  1. `01_Watch_Lists_Home` - Main lists view
+  2. `02_Watch_List_Detail` - First list with items
+  3. `03_Watch_Item_Toggled` - Item completion toggled
+  4. `04_Watch_Second_List` - Different list content
+  5. `05_Watch_Filter_Menu` - Filter options view
+- Technical details:
+  - Index-based cell navigation (`app.cells.element(boundBy: 0/1)`) for reliability
+  - Explicit waits for unique UI elements (filter button) to ensure view transitions
+  - Back navigation fallbacks (nav bar back button or swipe right gesture)
+  - Timed sleeps for UI stabilization before captures
+  - Validation lane `verify_watch_screenshots` confirms 5 images per locale at 416x496 (46mm dimensions)
+- Acceptance criteria MET:
+  - ✅ `bundle exec fastlane ios watch_screenshots` generates 5 watch screenshots per locale (EN + FI) without manual steps
+  - ✅ Finnish screenshots show localized UI ("Listat" title) and Finnish test data (list names, item names, dates)
+  - ✅ English screenshots show English UI and content
+  - ✅ All tests pass with green checkmarks (💚)
+  - ✅ Validation lane confirms correct dimensions and file count
+  - ✅ HTML report generated at `fastlane/screenshots/watch/screenshots.html`
+- Status: Ready for Phase 4.2 (size normalization/validation) and 4.3 (optional framing)
 
 ### 4.2 Normalize and validate sizes
 - Use a small script (Ruby or Swift) to verify filename patterns + dimensions match App Store requirements

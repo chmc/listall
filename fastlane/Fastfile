@@ -2,6 +2,7 @@
 # Docs: https://docs.fastlane.tools
 require 'base64'
 require 'fileutils'
+require 'shellwords'
 require_relative 'lib/version_helper'
 
 default_platform(:ios)
@@ -472,6 +473,123 @@ platform :ios do
       UI.user_error!("Framed screenshot verification failed. Missing: \n- #{missing.join("\n- ")}")
     else
       UI.success("✅ All framed screenshots present for #{locales.join(', ')}")
+    end
+  end
+
+  desc "Generate watchOS screenshots (fully automated via UITests + simctl)"
+  desc "Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales"
+  lane :watch_screenshots do
+    UI.header("🍎⌚️ Generating watchOS Screenshots")
+    
+    # Use snapshot with watch-specific configuration
+    snapshot(
+      project: "./ListAll/ListAll.xcodeproj",
+      scheme: "ListAllWatch Watch App",
+      testplan: "ListAllWatch Watch App",
+      devices: ["Apple Watch Series 11 (46mm)"],
+      languages: ["en-US", "fi"],
+      output_directory: "./fastlane/screenshots/watch",
+      clear_previous_screenshots: true,
+      override_status_bar: true,
+      reinstall_app: true,
+      test_without_building: false,
+      concurrent_simulators: false,
+      skip_helper_version_check: true
+    )
+    
+    UI.success("🍎⌚️ Watch screenshots generation complete!")
+    UI.message("📁 Screenshots saved to: fastlane/screenshots/watch")
+    
+    # Copy naked watch screenshots to framed directory (no framing for watchOS - standard practice)
+    UI.header("� Copying watchOS screenshots to unified directory")
+    watch_src_root = File.expand_path("screenshots/watch", __dir__)
+    unified_framed_root = File.expand_path("screenshots/framed", __dir__)
+    locales = %w[en-US fi]
+
+    locales.each do |loc|
+      raw_dir = File.join(watch_src_root, loc)
+      next unless Dir.exist?(raw_dir)
+      framed_locale_dir = File.join(unified_framed_root, loc)
+      FileUtils.mkdir_p(framed_locale_dir)
+
+      # Copy watch screenshots as-is (naked, no frame) - this is standard for watchOS
+      Dir.glob(File.join(raw_dir, "Apple Watch Series 11 (46mm)-*.png")).each do |raw|
+        base = File.basename(raw)
+        target = File.join(framed_locale_dir, base)
+        FileUtils.cp(raw, target)
+      end
+    end
+
+    UI.success("✅ Watch screenshots copied to #{unified_framed_root} (naked/unframed)")
+  end
+
+  desc "Validate watch screenshot sizes and naming"
+  lane :verify_watch_screenshots do
+    locales = %w[en-US fi]
+    watch_output_dir = File.expand_path("screenshots/watch", __dir__)
+    expected_count = 5  # Expecting 5 screenshots per locale
+    
+    missing = []
+    
+    locales.each do |locale|
+      locale_dir = File.join(watch_output_dir, locale)
+      
+      unless Dir.exist?(locale_dir)
+        missing << "Directory missing: #{locale_dir}"
+        next
+      end
+      
+      screenshots = Dir.glob(File.join(locale_dir, "*.png")).sort
+      
+      if screenshots.count < expected_count
+        missing << "#{locale}: Expected #{expected_count} screenshots, found #{screenshots.count}"
+      end
+      
+      # Check each screenshot exists and has reasonable dimensions
+      screenshots.each do |shot|
+        basename = File.basename(shot)
+        
+        # Get image dimensions using ImageMagick
+        begin
+          dimensions = sh("identify -format '%wx%h' #{Shellwords.escape(shot)}").strip
+          width, height = dimensions.split('x').map(&:to_i)
+          
+          # Verify watch screenshot dimensions (typical: 368x448 for 46mm)
+          # Allow some variation for different watch sizes
+          if width < 300 || height < 400
+            missing << "#{locale}/#{basename}: Unexpected dimensions #{dimensions}"
+          end
+        rescue => e
+          missing << "#{locale}/#{basename}: Failed to read dimensions - #{e.message}"
+        end
+      end
+    end
+    
+    if missing.any?
+      UI.user_error!("Watch screenshot verification failed:\n- #{missing.join("\n- ")}")
+    else
+      UI.success("✅ All watch screenshots validated successfully")
+      # Additional check for framed variants if present
+      framed_root = File.expand_path("screenshots/framed/watch", __dir__)
+      if Dir.exist?(framed_root)
+        framed_missing = []
+        locales.each do |loc|
+          loc_dir = File.join(framed_root, loc)
+          unless Dir.exist?(loc_dir)
+            framed_missing << "Framed locale directory missing: #{loc_dir}"
+            next
+          end
+          shots = Dir.glob(File.join(loc_dir, "*_framed.png"))
+          if shots.count < expected_count
+            framed_missing << "#{loc}: Expected at least #{expected_count} framed screenshots, found #{shots.count}"
+          end
+        end
+        if framed_missing.any?
+          UI.message("⚠️ Watch framed screenshot issues:\n- #{framed_missing.join("\n- ")}")
+        else
+          UI.success("🖼  Watch framed screenshots validated")
+        end
+      end
     end
   end
 end

@@ -68,5 +68,61 @@
         "fi": "Vaalea teema, lajittelu ja paljon muuta"
       }
     }
+    ,
+    {
+      "filter": "01_Watch_Lists_Home",
+      "title": {
+        "en-US": "Lists on Your Wrist",
+        "fi": "Listat ranteessasi"
+      },
+      "subtitle": {
+        "en-US": "Quick access to everything",
+        "fi": "Nopea pääsy kaikkeen"
+      }
+    },
+    {
+      "filter": "02_Watch_List_Detail",
+      "title": {
+        "en-US": "Stay on top of items",
+        "fi": "Pidä kohteet hallussa"
+      },
+      "subtitle": {
+        "en-US": "Focused list details",
+        "fi": "Selkeä listanäkymä"
+      }
+    },
+    {
+      "filter": "03_Watch_Item_Toggled",
+      "title": {
+        "en-US": "Check off with a tap",
+        "fi": "Merkitse tehdyksi yhdellä napautuksella"
+      },
+      "subtitle": {
+        "en-US": "Fast, tactile feedback",
+        "fi": "Nopea, tuntopalaute"
+      }
+    },
+    {
+      "filter": "04_Watch_Second_List",
+      "title": {
+        "en-US": "Switch lists instantly",
+        "fi": "Vaihda listaa hetkessä"
+      },
+      "subtitle": {
+        "en-US": "All your lists, always with you",
+        "fi": "Kaikki listat aina mukanasi"
+      }
+    },
+    {
+      "filter": "05_Watch_Filter_Menu",
+      "title": {
+        "en-US": "Filter what you need",
+        "fi": "Suodata tarpeen mukaan"
+      },
+      "subtitle": {
+        "en-US": "Active, completed, and more",
+        "fi": "Aktiiviset, valmiit ja muut"
+      }
+    }
   ]
 }

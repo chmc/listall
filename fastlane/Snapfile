@@ -40,11 +40,8 @@ derived_data_path("./ListAll/build")
 # Run devices sequentially to avoid simulator orientation race conditions
 concurrent_simulators(true)
 
-# Run only the screenshot tests to avoid flaky/irrelevant tests during snapshot
-only_testing([
-  "ListAllUITests/ListAllUITests/testScreenshots01_WelcomeScreen",
-  "ListAllUITests/ListAllUITests/testScreenshots02_MainFlow"
-])
+# Note: Do NOT set `only_testing` here. Keep this Snapfile generic so
+# platform-specific lanes (iOS/watchOS) can pass their own test filters.
 
 # For more information about all available options run
 # fastlane action snapshot

@@ -1,0 +1,42 @@
+# Snapfile for watchOS screenshot automation
+# Captures automated screenshots for App Store submission
+
+# Path to Xcode project
+project "./ListAll/ListAll.xcodeproj"
+
+# Watch simulator to use
+devices([
+  "Apple Watch Series 11 (46mm)"
+])
+
+# List of languages to generate screenshots for
+languages([
+  "en-US",
+  "fi"
+])
+
+# The name of the scheme which contains the watchOS UI Tests
+scheme("ListAllWatch Watch App")
+
+# Where should the resulting screenshots be stored?
+output_directory("./fastlane/screenshots/watch")
+
+# Clear previous screenshots before generating new ones
+clear_previous_screenshots(true)
+
+# Override status bar
+override_status_bar(true)
+
+# Reinstall the app before each test run
+reinstall_app(true)
+
+# Use pre-built app to save time
+test_without_building(false)
+
+# Run only the screenshot tests
+only_testing([
+  "ListAllWatch_Watch_AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"
+])
+
+# Run devices concurrently for speed
+concurrent_simulators(false)
