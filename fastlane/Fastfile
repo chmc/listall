@@ -295,4 +295,105 @@ platform :ios do
     UI.success("✅ Screenshots generated successfully")
     UI.message("📁 Screenshots saved to: fastlane/screenshots")
   end
+
+  desc "Generate and frame screenshots (snapshot + frameit)"
+  lane :screenshots_framed do
+    # 1. Raw screenshots
+    snapshot
+
+    # 2. Normalize new device sizes to Frameit-supported canvases
+    UI.header("Normalizing screenshot sizes for Frameit compatibility")
+    compat_root = File.expand_path("screenshots_compat", __dir__)
+    sh "rm -rf #{compat_root}"
+    locales = %w[en-US fi]
+    require 'fileutils'
+    require 'shellwords'
+    FileUtils.mkdir_p(compat_root)
+    UI.message("Compat root: #{compat_root}")
+    locales.each do |loc|
+      src = File.expand_path(File.join("screenshots", loc), __dir__)
+      dst = File.join(compat_root, loc)
+      FileUtils.mkdir_p(dst)
+      Dir.glob(File.join(src, "*.png")).each do |png|
+        # Skip obvious non-screenshot assets like icons
+        basename = File.basename(png)
+        # Only process our 5 numbered screenshots
+        next unless basename =~ /-(01|02|03|04|05)-/
+
+        # Detect size
+        size = sh("identify -format '%w %h' #{Shellwords.escape(png)}").strip.split.map(&:to_i) rescue []
+        target_w = target_h = nil
+        if size == [1320, 2868]
+          target_w, target_h = [1290, 2796]       # iPhone 6.7" classic
+        elsif size == [2064, 2752]
+          target_w, target_h = [2048, 2732]       # iPad Pro 12.9"
+        else
+          # Pass-through if already supported sizes
+          target_w, target_h = size
+        end
+
+        out = File.join(dst, basename)
+        if target_w && target_h && size != [0,0]
+          if [target_w, target_h] == size
+            FileUtils.cp(png, out)
+          else
+            UI.message("Resizing #{basename} #{size.inspect} -> [#{target_w}, #{target_h}]")
+            sh "magick convert #{Shellwords.escape(png)} -resize #{target_w}x#{target_h}! #{Shellwords.escape(out)}"
+          end
+        end
+      end
+    end
+
+    UI.header("Framing screenshots with Frameit")
+    # 3. Frame them into a separate 'framed' directory to keep raw images
+    # Frameit uses ENV['SNAPSHOT_SCREENSHOTS_PATH'] by default; override by temporarily moving/pointing path
+    ENV['SNAPSHOT_SCREENSHOTS_PATH'] = compat_root
+    ENV['FRAMEIT_CONFIG_PATH'] = File.expand_path('Framefile.json', __dir__)
+    frameit(
+      path: compat_root,
+      white: true
+    )
+
+    # Move framed output to dedicated directory preserving locale structure
+    framed_root = File.expand_path(File.join('screenshots','framed'), __dir__)
+    FileUtils.rm_rf(framed_root)
+    FileUtils.mkdir_p(framed_root)
+    Dir.glob(File.join(compat_root,'*.png')) # ignore top-level stray pngs
+    Dir.glob(File.join(compat_root,'*')).select { |d| File.directory?(d) }.each do |locdir|
+      loc = File.basename(locdir)
+      target_loc = File.join(framed_root, loc)
+      FileUtils.mkdir_p(target_loc)
+      Dir.glob(File.join(locdir,'*.png')).each do |png|
+        FileUtils.cp(png, target_loc)
+      end
+    end
+
+    UI.success("🖼  Framed screenshots generated at #{framed_root}")
+  end
+
+  desc "Verify framed screenshots exist for all locales"
+  lane :verify_framed do
+    locales = %w[en-US fi]
+    prefixes = %w[01-WelcomeScreen 02-ListsHome 03-ListDetail 04-ItemDetail 05-Settings]
+    missing = []
+    locales.each do |loc|
+      base = File.expand_path(File.join('screenshots','framed', loc), __dir__)
+      unless Dir.exist?(base)
+        missing << "Directory missing: #{base}"
+        next
+      end
+      prefixes.each do |p|
+        # Require framed variant specifically
+        glob = Dir.glob(File.join(base, "*-", "#{p}_framed.png")) + Dir.glob(File.join(base, "*#{p}*_framed.png"))
+        if glob.empty?
+          missing << "#{loc}: #{p}*_framed.png"
+        end
+      end
+    end
+    if missing.any?
+      UI.user_error!("Framed screenshot verification failed. Missing: \n- #{missing.join("\n- ")}")
+    else
+      UI.success("✅ All framed screenshots present for #{locales.join(', ')}")
+    end
+  end
 end

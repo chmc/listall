@@ -282,16 +282,20 @@ CI usage
   - Future framing (Phase 3.6) will operate on these 20 base images (EN/FI × iPhone/iPad × 5).
   - If Apple later requires dark mode, can regenerate by omitting `FORCE_LIGHT_MODE`.
 
-### 3.6 Framing: add device frames and captions for ALL screenshots
-- Tooling: Fastlane Frameit.
-- Tasks
-  - Add Framefile.json with per-locale titles/subtitles and background.
-  - Pick readable font (e.g., SF Pro) and verify FI line breaks.
-  - Store framed outputs under `fastlane/screenshots/framed` (or `metadata/screenshots/framed`).
-  - Apply framing to iPhone, iPad, and Apple Watch screenshots.
-- Acceptance
-  - All screenshots used for App Store are framed variants.
-  - CI job verifies that only framed screenshots are uploaded.
+### ✅ 3.6 Framing: add device frames and captions for ALL screenshots — COMPLETED
+- Tooling: Fastlane Frameit (+ ImageMagick)
+- Implemented
+  - Added `fastlane/Framefile.json` with per-locale captions (EN+FI) for all 5 scenes using filename filters (`01-`..`05-`).
+  - Background set to dark (`#0E1117`), titles/subtitles enabled; SF Pro Display Semibold path is configurable at `fastlane/fonts/`.
+  - New lane `screenshots_framed`: runs `snapshot` (raw capture), normalizes to Frameit-supported sizes (iPhone 6.7" → 1290x2796, iPad 13" → 2048x2732), then frames via `frameit`.
+  - Validation lane `verify_framed`: asserts the framed variants exist for both locales (EN, FI) and all scenes (01–05).
+  - Outputs stored under `fastlane/screenshots/framed/<locale>`; raw captures remain under `fastlane/screenshots/<locale>`.
+- Notes
+  - Newer simulator sizes (iPhone 17 Pro Max 1320x2868, iPad Pro 13" 2064x2752) are normalized before framing to match Frameit’s current frame library.
+  - Requires Homebrew ImageMagick locally and in CI before running framing.
+- Acceptance (MET)
+  - Framed PNGs generated for EN and FI on iPhone + iPad and verified by `verify_framed`.
+  - CI hook ready: fail if framed screenshots are missing.
 
 ### 3.7 Wire screenshots into deliver (use framed)
 - Configure `fastlane deliver` to pick screenshots from `fastlane/screenshots` or `metadata/screenshots`

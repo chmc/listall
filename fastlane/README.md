@@ -97,6 +97,22 @@ Generate screenshots for App Store
 
 Runs automated UI tests to capture screenshots for all configured devices and locales
 
+### ios screenshots_framed
+
+```sh
+[bundle exec] fastlane ios screenshots_framed
+```
+
+Generate and frame screenshots (snapshot + frameit)
+
+### ios verify_framed
+
+```sh
+[bundle exec] fastlane ios verify_framed
+```
+
+Verify framed screenshots exist for all locales
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
