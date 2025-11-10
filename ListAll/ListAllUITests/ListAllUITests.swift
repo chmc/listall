@@ -14,6 +14,20 @@ final class ListAllUITests: XCTestCase {
         // In UI tests it's important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     app = XCUIApplication()
         
+        // Handle system alerts (notifications, privacy prompts) on fresh simulators
+        // Critical for CI where simulator is erased before each run
+        addUIInterruptionMonitor(withDescription: "System Alerts") { alert in
+            let allowedButtons = ["Allow", "OK", "Continue", "Don't Allow", "Not Now"]
+            for label in allowedButtons {
+                let button = alert.buttons[label]
+                if button.exists {
+                    button.tap()
+                    return true
+                }
+            }
+            return false
+        }
+        
     // Setup snapshot for Fastlane screenshot automation
     setupSnapshot(app)
         
@@ -37,6 +51,10 @@ final class ListAllUITests: XCTestCase {
         ensurePortrait()
 
         app.launch()
+        
+        // Trigger interruption monitor to handle any system alerts
+        // This must happen after launch() to activate the monitor
+        app.tap()
     }
 
     override func tearDownWithError() throws {
