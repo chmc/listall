@@ -5,9 +5,10 @@
 project "./ListAll/ListAll.xcodeproj"
 
 # List of simulators to use for screenshot generation
-# Note: Adjust device names based on available simulators
+# Note: Using iPhone 15 Pro Max (available in Xcode 16.1 on GitHub Actions)
+# iPhone 15 Pro Max is 6.7" which is acceptable for App Store 6.5" slot
 devices([
-  "iPhone 17 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
+  "iPhone 15 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
   "iPad Pro 13-inch (M4)"   # 13" iPad Pro for App Store screenshots (force portrait via test code)
 ])
 

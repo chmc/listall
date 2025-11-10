@@ -254,7 +254,7 @@ CI usage
 
 ### ✅ 3.5 Devices: iPhone 6.5" + iPad 13" (REQUIRED) — COMPLETED
 - Scope implemented:
-  - Devices: iPhone 17 Pro Max (6.7" used as 6.5" class) and iPad Pro 13-inch (M4)
+  - Devices: iPhone 15 Pro Max (6.7" used as 6.5" class) and iPad Pro 13-inch (M4)
   - Locales: en-US and fi (4 locale/device combinations)
   - Screenshots reduced to 5 (Create List removed) per device & locale: 01-WelcomeScreen, 02-ListsHome, 03-ListDetail, 04-ItemDetail, 05-Settings
   - All captured in PORTRAIT orientation only (orientation locked via `UITEST_FORCE_PORTRAIT` + AppDelegate)
@@ -267,7 +267,7 @@ CI usage
   - Deterministic data via `UITEST_MODE` + `UITEST_SEED=1` and optional `SKIP_TEST_DATA` for empty state (Welcome screen)
 - Acceptance Criteria MET:
   - ✅ EN+FI screenshots produced for both iPhone and iPad (20 total PNGs)
-  - ✅ Portrait orientation consistent (iPhone 1320x2868, iPad 2064x2752)
+  - ✅ Portrait orientation consistent (iPhone 1290x2796, iPad 2064x2752)
   - ✅ Create List modal removed; numbering contiguous 01–05
   - ✅ No failing tests ("Test execute Succeeded")
   - ✅ Missing Finnish iPad Settings issue resolved
@@ -278,9 +278,10 @@ CI usage
   - `ListAll/ListAll/ListAllApp.swift`: deterministic data + `.preferredColorScheme(.light)` when `FORCE_LIGHT_MODE`
   - `MainView.swift`: Settings auto-open using `UITEST_OPEN_SETTINGS_ON_LAUNCH`
 - Notes:
-  - Using iPhone 17 Pro Max simulator is acceptable for 6.5" App Store slot; Apple allows newer Max size interchangeably.
-  - Future framing (Phase 3.6) will operate on these 20 base images (EN/FI × iPhone/iPad × 5).
-  - If Apple later requires dark mode, can regenerate by omitting `FORCE_LIGHT_MODE`.
+  - Using iPhone 15 Pro Max simulator (available in Xcode 16.1, compatible with GitHub Actions runners)
+  - iPhone 15 Pro Max is 6.7" which is acceptable for App Store 6.5" slot; Apple allows newer Max size interchangeably
+  - Future framing (Phase 3.6) will operate on these 20 base images (EN/FI × iPhone/iPad × 5)
+  - If Apple later requires dark mode, can regenerate by omitting `FORCE_LIGHT_MODE`
 
 ### ✅ 3.6 Framing: add device frames and captions for ALL screenshots — COMPLETED
 - Tooling: Fastlane Frameit (+ ImageMagick)
@@ -291,7 +292,7 @@ CI usage
   - Validation lane `verify_framed`: asserts the framed variants exist for both locales (EN, FI) and all scenes (01–05).
   - Outputs stored under `fastlane/screenshots/framed/<locale>`; raw captures remain under `fastlane/screenshots/<locale>`.
 - Notes
-  - Newer simulator sizes (iPhone 17 Pro Max 1320x2868, iPad Pro 13" 2064x2752) are normalized before framing to match Frameit’s current frame library.
+  - Simulator sizes (iPhone 15 Pro Max 1290x2796, iPad Pro 13" 2064x2752) are normalized before framing to match Frameit's current frame library.
   - Requires Homebrew ImageMagick locally and in CI before running framing.
 - Acceptance (MET)
   - Framed PNGs generated for EN and FI on iPhone + iPad and verified by `verify_framed`.
@@ -340,7 +341,7 @@ CI usage
 - Implementation:
   - Created `ListAllWatch_Watch_AppUITests.swift` with `testWatchScreenshots()` driving 5 key watch screens
   - Integrated Fastlane SnapshotHelper into watch UI tests via `setupSnapshot(app)` and `snapshot("name")`
-  - Created dedicated `watch_screenshots` lane in Fastfile targeting Apple Watch Series 11 (46mm)
+  - Created dedicated `watch_screenshots` lane in Fastfile targeting Apple Watch Series 10 (46mm)
   - Generated test data via `WatchUITestDataService` with deterministic EN/FI content
   - Fixed localization detection: watch app now checks both `FASTLANE_LANGUAGE` env and `-AppleLanguages` launch args
   - Test data generation prioritizes: 1) FASTLANE_LANGUAGE env, 2) AppleLanguages UserDefaults, 3) LocalizationManager
@@ -351,6 +352,7 @@ CI usage
   4. `04_Watch_Second_List` - Different list content
   5. `05_Watch_Filter_Menu` - Filter options view
 - Technical details:
+  - Uses Apple Watch Series 10 (46mm) simulator (available in Xcode 16.1, compatible with GitHub Actions runners)
   - Index-based cell navigation (`app.cells.element(boundBy: 0/1)`) for reliability
   - Explicit waits for unique UI elements (filter button) to ensure view transitions
   - Back navigation fallbacks (nav bar back button or swipe right gesture)

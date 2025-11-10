@@ -5,8 +5,9 @@
 project "./ListAll/ListAll.xcodeproj"
 
 # Watch simulator to use
+# Note: Using Apple Watch Series 10 (46mm) - available in Xcode 16.1
 devices([
-  "Apple Watch Series 11 (46mm)"
+  "Apple Watch Series 10 (46mm)"
 ])
 
 # List of languages to generate screenshots for
