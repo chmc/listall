@@ -417,10 +417,21 @@ CI usage
 
 ## Phase 5 — Release automation
 
-### 5.1 TestFlight lane finalized
+### ✅ 5.1 TestFlight lane finalized - COMPLETED
 - `beta` lane: build with correct scheme/workspace, export method `app-store`, upload with `pilot`
 - Acceptance
   - Build appears in TestFlight automatically
+- **Status**: COMPLETED
+  - ✅ Beta lane builds with correct scheme (`ListAll`) and project path
+  - ✅ Uses `app-store` export method with manual signing
+  - ✅ Uploads to TestFlight via `pilot` with App Store Connect API key
+  - ✅ Build successfully appeared in TestFlight (version 1.1.2, build 26)
+  - ✅ Version numbering integrated (semantic versioning with bump_type parameter)
+  - ✅ Build number auto-incremented
+  - ✅ Fastlane Match for code signing (certificates + provisioning profiles)
+  - ✅ Distributes to internal testers automatically
+  - ✅ CI-ready with GitHub Actions integration via `.github/workflows/release.yml`
+  - ✅ Local testing confirmed: `bundle exec fastlane beta` completes successfully
 
 ### 5.2 App Store submission lane
 - `release` lane: `deliver` metadata + screenshots; optional `submit_for_review` with phased release toggled off
