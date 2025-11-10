@@ -5,11 +5,11 @@
 project "./ListAll/ListAll.xcodeproj"
 
 # List of simulators to use for screenshot generation
-# Note: Using iPhone 15 Pro Max (available in Xcode 16.1 on GitHub Actions)
+# Using iOS 17.5 (available on macos-14 with Xcode 16.1)
 # iPhone 15 Pro Max is 6.7" which is acceptable for App Store 6.5" slot
 devices([
-  "iPhone 15 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
-  "iPad Pro 13-inch (M4)"   # 13" iPad Pro for App Store screenshots (force portrait via test code)
+  "iPhone 15 Pro Max (17.5)",      # 6.7" display (closest to App Store 6.5" requirement)
+  "iPad Pro 13-inch (M4) (17.5)"   # 13" iPad Pro for App Store screenshots
 ])
 
 # List of languages to generate screenshots for
@@ -27,6 +27,10 @@ output_directory("./fastlane/screenshots")
 
 # Clear previous screenshots before generating new ones
 clear_previous_screenshots(true)
+
+# Erase simulators before running (built-in fastlane option)
+# More reliable than manual xcrun simctl erase in CI
+erase_simulator(true)
 
 # Remove the '#' from the image filename
 override_status_bar(true)
