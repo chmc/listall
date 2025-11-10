@@ -114,7 +114,7 @@
         <div class="nav-container">
             <a href="#" class="logo">
                 <img src="assets/appicon.png" alt="ListAll App Icon" />
-                ListAll
+                <span class="logo-text" data-text="ListAll">ListAll</span>
             </a>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
@@ -128,6 +128,23 @@
 
     <!-- Hero Section -->
     <header class="hero">
+        <div class="hero-particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+        <div class="hero-gradient-orb orb-1"></div>
+        <div class="hero-gradient-orb orb-2"></div>
+        <div class="hero-gradient-orb orb-3"></div>
         <div class="hero-background-text">
             <div class="repeating-text-wrapper">
                 <span class="repeating-text">LISTALL</span>
@@ -667,19 +684,23 @@
             }
         });
 
-        // Smooth reveal for sections
+        // Smooth reveal for sections (but don't interfere with animated elements)
         const sectionObserver = new IntersectionObserver(function(entries) {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.style.opacity = '1';
+                    entry.target.style.visibility = 'visible';
                 }
             });
         }, { threshold: 0.1 });
 
         document.querySelectorAll('section').forEach(section => {
-            section.style.opacity = '0';
-            section.style.transition = 'opacity 1s ease-out';
-            sectionObserver.observe(section);
+            // Only set initial opacity if section doesn't have animated children
+            if (!section.querySelector('.hero-content, .feature-item, .platform-item')) {
+                section.style.opacity = '0';
+                section.style.transition = 'opacity 1s ease-out';
+                sectionObserver.observe(section);
+            }
         });
 
         // 3D tilt effect for feature cards - mouse following parallax
