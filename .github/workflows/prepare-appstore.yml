@@ -53,6 +53,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
+      - name: Build app for testing (required before screenshots)
+        run: |
+          cd ListAll
+          xcodebuild build-for-testing \
+            -project ListAll.xcodeproj \
+            -scheme ListAll \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro Max' \
+            -derivedDataPath build \
+            -quiet
+
       - name: Generate iPhone and iPad screenshots (framed)
         run: bundle exec fastlane ios screenshots_framed
 
