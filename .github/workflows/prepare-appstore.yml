@@ -1,0 +1,138 @@
+name: Prepare App Store Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version for this release (e.g., 1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  generate-screenshots:
+    name: Generate Screenshots
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install ImageMagick (required for Frameit)
+        run: brew install imagemagick
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-derived-data-screenshots-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-data-
+
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.swiftpm
+            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Generate iPhone and iPad screenshots (framed)
+        run: bundle exec fastlane ios screenshots_framed
+
+      - name: Generate Watch screenshots
+        run: bundle exec fastlane ios watch_screenshots
+
+      - name: Validate all delivery screenshots
+        run: bundle exec fastlane ios validate_delivery_screenshots
+
+      - name: Upload iPhone/iPad screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-iphone-ipad
+          path: fastlane/screenshots/framed/
+          retention-days: 30
+
+      - name: Upload Watch screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-watch
+          path: fastlane/screenshots/watch_normalized/
+          retention-days: 30
+
+      - name: Upload HTML reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-reports
+          path: |
+            fastlane/screenshots/screenshots.html
+            fastlane/screenshots/watch/screenshots.html
+          retention-days: 30
+
+  upload-to-appstore:
+    name: Upload Metadata & Screenshots
+    needs: generate-screenshots
+    runs-on: macos-14
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Download iPhone/iPad screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-iphone-ipad
+          path: fastlane/screenshots/framed/
+
+      - name: Download Watch screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-watch
+          path: fastlane/screenshots/watch_normalized/
+
+      - name: Validate screenshots before upload
+        run: bundle exec fastlane ios validate_delivery_screenshots
+
+      - name: Upload metadata and screenshots to App Store Connect
+        run: bundle exec fastlane release
+
+      - name: Summary
+        run: |
+          echo "## 🎉 App Store Preparation Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Screenshots Generated & Uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ iPhone (EN + FI): 10 framed screenshots" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ iPad (EN + FI): 10 framed screenshots" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Watch (EN + FI): 10 naked screenshots" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Create a new version: **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "3. Select the TestFlight build you want to release" >> $GITHUB_STEP_SUMMARY
+          echo "4. Review the uploaded screenshots and metadata" >> $GITHUB_STEP_SUMMARY
+          echo "5. Submit for review" >> $GITHUB_STEP_SUMMARY

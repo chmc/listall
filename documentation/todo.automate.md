@@ -496,6 +496,32 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
   - ✅ Manual workflow_dispatch also available for ad-hoc releases
   - ✅ Release (App Store submission) remains manual via `bundle exec fastlane release`
 
+### ✅ 5.4 App Store preparation workflow - COMPLETED
+- Automated screenshot generation and App Store Connect upload in CI
+- File: `.github/workflows/prepare-appstore.yml`
+- Workflow features:
+  - Manual trigger with version input parameter
+  - Job 1: Generate all screenshots (iPhone, iPad, Watch) with framing
+  - Job 2: Upload metadata + screenshots to App Store Connect
+  - Artifacts: Screenshots and HTML reports available for 30 days
+  - Post-upload summary with next steps
+- Acceptance
+  - Screenshots generated in CI (10-15 minutes)
+  - Metadata and screenshots uploaded to App Store Connect
+  - Manual version creation and review submission in App Store Connect web UI
+- **Status**: COMPLETED
+  - ✅ Workflow created with manual dispatch trigger
+  - ✅ Screenshot generation automated (iPhone/iPad framed + Watch naked)
+  - ✅ Screenshot validation integrated
+  - ✅ Upload to App Store Connect via `fastlane release`
+  - ✅ Artifacts preserved for review
+  - ✅ Clear next-steps summary in workflow output
+- Usage:
+  - Go to Actions → "Prepare App Store Release" → Run workflow
+  - Enter target version (e.g., 1.2.0)
+  - Wait for completion (~15 minutes)
+  - Follow next-steps summary to create version and submit in App Store Connect
+
 ---
 
 ## Phase 6 — Quality, docs, and guardrails
