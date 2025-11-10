@@ -55,6 +55,10 @@
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://developer.apple.com">
+    
     <!-- Schema.org Structured Data for SEO -->
     <script type="application/ld+json">
     {
@@ -124,13 +128,51 @@
 
     <!-- Hero Section -->
     <header class="hero">
+        <div class="hero-background-text">
+            <div class="repeating-text-wrapper">
+                <span class="repeating-text">LISTALL</span>
+                <span class="repeating-text">LISTALL</span>
+                <span class="repeating-text">LISTALL</span>
+                <span class="repeating-text">LISTALL</span>
+                <span class="repeating-text">LISTALL</span>
+                <span class="repeating-text">LISTALL</span>
+            </div>
+        </div>
         <div class="hero-content">
-            <h1>Free List Manager for iPhone & Apple Watch</h1>
-            <p>Smart list management app with AI-powered suggestions, photo attachments, and real-time sync. Perfect for shopping lists, to-dos, task management, and more. Privacy-first with no ads.</p>
+            <div class="hero-badge">Free iOS App</div>
+            <h1 class="hero-title">
+                <span class="title-line">Smart List</span>
+                <span class="title-line">Management</span>
+                <span class="title-line highlight">For Everyone</span>
+            </h1>
+            <p class="hero-description">AI-powered suggestions, photo attachments, and real-time sync. Perfect for shopping lists, to-dos, and task management. Privacy-first with no ads.</p>
             <div class="hero-buttons">
-                <a href="https://apps.apple.com/us/app/listall-app/id6754509743" class="btn-primary" rel="noopener noreferrer" target="_blank">Download Free on App Store</a>
+                <a href="https://apps.apple.com/us/app/listall-app/id6754509743" class="btn-primary" rel="noopener noreferrer" target="_blank">
+                    <span>Download Free</span>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
                 <a href="https://github.com/chmc/listall" class="btn-secondary" rel="noopener noreferrer" target="_blank">View Source Code</a>
             </div>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Free</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Ads</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Privacy</div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-scroll-indicator">
+            <div class="scroll-line"></div>
+            <span>Scroll</span>
         </div>
     </header>
 
@@ -140,59 +182,85 @@
             <h2 class="section-title">Powerful List Management Features</h2>
             <p class="section-subtitle">Everything you need to organize your life - shopping lists, to-dos, task tracking, and more</p>
             
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">✨</div>
-                    <h3>Smart Suggestions</h3>
-                    <p>AI-powered item recommendations based on your previous entries. Save time with intelligent autocomplete.</p>
+            <div class="features-layout">
+                <!-- Large Featured Items -->
+                <div class="feature-item feature-large">
+                    <div class="feature-number">01</div>
+                    <div class="feature-content">
+                        <div class="feature-icon-large">✨</div>
+                        <h3>Smart Suggestions</h3>
+                        <p>AI-powered item recommendations based on your previous entries. Save time with intelligent autocomplete that learns from your habits.</p>
+                    </div>
+                    <div class="feature-accent"></div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">☁️</div>
-                    <h3>iCloud Sync</h3>
-                    <p>Seamlessly sync your lists across all your Apple devices. Your data stays in your personal iCloud.</p>
+                <div class="feature-item feature-medium">
+                    <div class="feature-number">02</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">☁️</div>
+                        <h3>iCloud Sync</h3>
+                        <p>Seamlessly sync your lists across all your Apple devices.</p>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">📷</div>
-                    <h3>Rich Media</h3>
-                    <p>Add photos to items directly from your camera or photo library. Visual references for better organization.</p>
+                <div class="feature-item feature-medium">
+                    <div class="feature-number">03</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">📷</div>
+                        <h3>Rich Media</h3>
+                        <p>Add photos to items directly from your camera or photo library.</p>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Privacy First</h3>
-                    <p>Your data never leaves your devices. No tracking, no analytics, no third-party services. Complete privacy.</p>
+                <div class="feature-item feature-large feature-reverse">
+                    <div class="feature-number">04</div>
+                    <div class="feature-content">
+                        <div class="feature-icon-large">🔒</div>
+                        <h3>Privacy First</h3>
+                        <p>Your data never leaves your devices. No tracking, no analytics, no third-party services. Complete privacy guaranteed.</p>
+                    </div>
+                    <div class="feature-accent"></div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">⌚</div>
-                    <h3>Apple Watch App</h3>
-                    <p>Access your lists on your wrist. Complete items on the go with automatic sync back to your iPhone.</p>
+                <div class="feature-item feature-small">
+                    <div class="feature-number">05</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">⌚</div>
+                        <h3>Apple Watch</h3>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">🎨</div>
-                    <h3>Beautiful Design</h3>
-                    <p>Native iOS design with smooth animations. Feels right at home on your Apple devices.</p>
+                <div class="feature-item feature-small">
+                    <div class="feature-number">06</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">🎨</div>
+                        <h3>Beautiful Design</h3>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
-                    <h3>Import & Export</h3>
-                    <p>Export your lists in JSON, CSV, or plain text. Import data from other apps easily.</p>
+                <div class="feature-item feature-medium">
+                    <div class="feature-number">07</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">🔄</div>
+                        <h3>Import & Export</h3>
+                        <p>Export your lists in JSON, CSV, or plain text formats.</p>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">🔍</div>
-                    <h3>Smart Search</h3>
-                    <p>Find any item instantly with powerful search. Filter and sort your lists however you like.</p>
+                <div class="feature-item feature-small">
+                    <div class="feature-number">08</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">🔍</div>
+                        <h3>Smart Search</h3>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <div class="feature-icon">📤</div>
-                    <h3>Easy Sharing</h3>
-                    <p>Share lists with friends and family in multiple formats. Collaborate without complexity.</p>
+                <div class="feature-item feature-small">
+                    <div class="feature-number">09</div>
+                    <div class="feature-content">
+                        <div class="feature-icon">📤</div>
+                        <h3>Easy Sharing</h3>
+                    </div>
                 </div>
             </div>
         </div>
@@ -201,29 +269,67 @@
     <!-- Platforms Section -->
     <section id="platforms" class="platforms">
         <div class="container">
-            <h2 class="section-title">Available on Your Devices</h2>
-            <p class="section-subtitle">Native apps designed specifically for each Apple platform</p>
+            <div class="platforms-header">
+                <h2 class="section-title">Available on Your Devices</h2>
+                <p class="section-subtitle">Native apps designed specifically for each Apple platform</p>
+            </div>
             
-            <div class="platforms-grid">
-                <div class="platform-card">
-                    <div class="platform-icon">📱</div>
-                    <h3>iPhone</h3>
-                    <p>Full-featured app with all capabilities</p>
-                    <span class="platform-status status-available">Available Now</span>
+            <div class="platforms-showcase">
+                <div class="platform-item platform-iphone">
+                    <div class="platform-visual">
+                        <div class="device-frame device-iphone">
+                            <div class="device-screen">
+                                <div class="device-content">📱</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="platform-info">
+                        <div class="platform-number">01</div>
+                        <h3 class="platform-title">iPhone</h3>
+                        <p class="platform-description">Full-featured app with all capabilities. Create, manage, and sync your lists seamlessly.</p>
+                        <div class="platform-badge">
+                            <span class="badge-dot"></span>
+                            <span>Available Now</span>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="platform-card">
-                    <div class="platform-icon">⌚</div>
-                    <h3>Apple Watch</h3>
-                    <p>Quick access to your lists on your wrist</p>
-                    <span class="platform-status status-available">Available Now</span>
+                <div class="platform-item platform-watch">
+                    <div class="platform-info">
+                        <div class="platform-number">02</div>
+                        <h3 class="platform-title">Apple Watch</h3>
+                        <p class="platform-description">Quick access to your lists on your wrist. Complete items on the go with automatic sync.</p>
+                        <div class="platform-badge">
+                            <span class="badge-dot"></span>
+                            <span>Available Now</span>
+                        </div>
+                    </div>
+                    <div class="platform-visual">
+                        <div class="device-frame device-watch">
+                            <div class="device-screen">
+                                <div class="device-content">⌚</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="platform-card">
-                    <div class="platform-icon">📲</div>
-                    <h3>iPad</h3>
-                    <p>Optimized for larger screen</p>
-                    <span class="platform-status status-available">Available Now</span>
+                <div class="platform-item platform-ipad">
+                    <div class="platform-visual">
+                        <div class="device-frame device-ipad">
+                            <div class="device-screen">
+                                <div class="device-content">📲</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="platform-info">
+                        <div class="platform-number">03</div>
+                        <h3 class="platform-title">iPad</h3>
+                        <p class="platform-description">Optimized for larger screen. Enhanced experience with more space for your lists.</p>
+                        <div class="platform-badge">
+                            <span class="badge-dot"></span>
+                            <span>Available Now</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -313,18 +419,92 @@
 
     <!-- Open Source Section -->
     <section id="open-source" class="open-source">
+        <div class="code-background">
+            <div class="code-line" data-line="1">// ListAll - Open Source List Manager</div>
+            <div class="code-line" data-line="2">const listAll = {</div>
+            <div class="code-line" data-line="3">  license: 'GPL-3.0',</div>
+            <div class="code-line" data-line="4">  repository: 'github.com/chmc/listall',</div>
+            <div class="code-line" data-line="5">  contributions: 'welcome',</div>
+            <div class="code-line" data-line="6">  transparency: true</div>
+            <div class="code-line" data-line="7">};</div>
+        </div>
+        
         <div class="container">
-            <h2 class="section-title">Open Source</h2>
-            <p class="section-subtitle">ListAll is open source and available on GitHub under GPL-3.0 license</p>
-            
-            <a href="https://github.com/chmc/listall" class="github-link">
-                <span class="github-icon">⚙️</span>
-                View Source Code on GitHub
-            </a>
-            
-            <p style="margin-top: 2rem; color: var(--text-light);">
-                Contributions welcome! Report issues, suggest features, or submit pull requests.
-            </p>
+            <div class="open-source-content">
+                <div class="open-source-header">
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <span class="terminal-btn terminal-btn-red"></span>
+                                <span class="terminal-btn terminal-btn-yellow"></span>
+                                <span class="terminal-btn terminal-btn-green"></span>
+                            </div>
+                            <span class="terminal-title">~/listall</span>
+                        </div>
+                        <div class="terminal-body">
+                            <div class="terminal-line">
+                                <span class="terminal-prompt">$</span>
+                                <span class="terminal-command">git clone https://github.com/chmc/listall</span>
+                            </div>
+                            <div class="terminal-line terminal-output">
+                                <span class="terminal-text">Cloning into 'listall'...</span>
+                            </div>
+                            <div class="terminal-line terminal-output">
+                                <span class="terminal-text">✓ Repository cloned successfully</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-prompt">$</span>
+                                <span class="terminal-cursor">_</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="open-source-info">
+                    <h2 class="open-source-title">
+                        <span class="code-bracket">&lt;</span>Open Source<span class="code-bracket">/&gt;</span>
+                    </h2>
+                    <p class="open-source-description">
+                        ListAll is completely open source and available on GitHub under GPL-3.0 license. 
+                        View the code, contribute, or fork it for your own projects.
+                    </p>
+                    
+                    <div class="github-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">100%</div>
+                            <div class="stat-label">Open Source</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">GPL-3.0</div>
+                            <div class="stat-label">License</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">∞</div>
+                            <div class="stat-label">Contributions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="open-source-actions">
+                        <a href="https://github.com/chmc/listall" class="github-link-primary" rel="noopener noreferrer" target="_blank">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            <span>View on GitHub</span>
+                        </a>
+                        <a href="https://github.com/chmc/listall/issues" class="github-link-secondary" rel="noopener noreferrer" target="_blank">
+                            <span>Report Issue</span>
+                        </a>
+                        <a href="https://github.com/chmc/listall/pulls" class="github-link-secondary" rel="noopener noreferrer" target="_blank">
+                            <span>Contribute</span>
+                        </a>
+                    </div>
+                    
+                    <div class="open-source-footer">
+                        <p>Contributions welcome! Report issues, suggest features, or submit pull requests.</p>
+                        <p class="license-text">Licensed under <strong>GPL-3.0-or-later</strong></p>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -375,5 +555,222 @@
             </p>
         </div>
     </footer>
+
+    <!-- Smooth scroll and navigation enhancements -->
+    <script>
+        // Navbar scroll effect with smooth transitions
+        let lastScroll = 0;
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            const currentScroll = window.scrollY;
+            
+            if (currentScroll > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+            
+            lastScroll = currentScroll;
+        });
+
+        // Smooth scroll for anchor links with offset
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && href !== '') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        const offset = 80;
+                        const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
+                        window.scrollTo({
+                            top: targetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+
+        // Parallax effect for hero background text
+        window.addEventListener('scroll', function() {
+            const hero = document.querySelector('.hero');
+            const heroBackground = document.querySelector('.hero-background-text');
+            if (hero && heroBackground) {
+                const scrolled = window.pageYOffset;
+                const rate = scrolled * 0.3;
+                heroBackground.style.transform = `translateY(${rate}px)`;
+            }
+        });
+
+        // Intersection Observer for sophisticated fade-in animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    // Feature cards have their own CSS animations, so we just trigger them
+                    if (entry.target.classList.contains('feature-card')) {
+                        entry.target.style.animationPlayState = 'running';
+                    } else {
+                        setTimeout(() => {
+                            entry.target.style.opacity = '1';
+                            entry.target.style.transform = 'translateY(0)';
+                        }, index * 50);
+                    }
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe platform items and privacy items with staggered animations
+        document.querySelectorAll('.platform-item, .privacy-item').forEach((el, index) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
+            observer.observe(el);
+        });
+
+        // Feature items observer - triggers animations when items enter viewport
+        const featureObserver = new IntersectionObserver(function(entries) {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.classList.add('animate-in');
+                    }, index * 80);
+                    featureObserver.unobserve(entry.target);
+                }
+            });
+        }, { 
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+        
+        document.querySelectorAll('.feature-item').forEach((el) => {
+            featureObserver.observe(el);
+        });
+
+        // Hide scroll indicator when scrolled
+        window.addEventListener('scroll', function() {
+            const scrollIndicator = document.querySelector('.hero-scroll-indicator');
+            if (scrollIndicator) {
+                if (window.scrollY > 100) {
+                    scrollIndicator.style.opacity = '0';
+                    scrollIndicator.style.transform = 'translateX(-50%) translateY(20px)';
+                } else {
+                    scrollIndicator.style.opacity = '1';
+                    scrollIndicator.style.transform = 'translateX(-50%) translateY(0)';
+                }
+            }
+        });
+
+        // Smooth reveal for sections
+        const sectionObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transition = 'opacity 1s ease-out';
+            sectionObserver.observe(section);
+        });
+
+        // 3D tilt effect for feature cards - mouse following parallax
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mousemove', function(e) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = (y - centerY) / 10;
+                const rotateY = (centerX - x) / 10;
+                
+                // Apply 3D transform
+                card.style.transform = `translateY(-20px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+                
+                // Parallax effect for icon
+                const icon = card.querySelector('.feature-icon');
+                if (icon) {
+                    const iconX = (x - centerX) / 20;
+                    const iconY = (y - centerY) / 20;
+                    icon.style.transform = `translateZ(50px) translate(${iconX}px, ${iconY}px) scale(1.2) rotate(15deg)`;
+                }
+                
+                // Parallax for text
+                const title = card.querySelector('h3');
+                const text = card.querySelector('p');
+                if (title) {
+                    const titleX = (x - centerX) / 30;
+                    title.style.transform = `translateZ(40px) translateX(${titleX}px)`;
+                }
+                if (text) {
+                    const textX = (x - centerX) / 40;
+                    text.style.transform = `translateZ(30px) translateX(${textX}px)`;
+                }
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                // Reset transforms
+                this.style.transform = 'translateY(0) rotateX(0) rotateY(0) scale(1)';
+                const icon = this.querySelector('.feature-icon');
+                const title = this.querySelector('h3');
+                const text = this.querySelector('p');
+                
+                if (icon) icon.style.transform = '';
+                if (title) title.style.transform = '';
+                if (text) text.style.transform = '';
+            });
+        });
+
+        // Scroll-based parallax for feature cards (optimized with requestAnimationFrame)
+        const featureCards = document.querySelectorAll('.feature-card');
+        const featuresSection = document.querySelector('.features');
+        let ticking = false;
+        
+        function updateParallax() {
+            if (!featuresSection) return;
+            
+            const windowHeight = window.innerHeight;
+            
+            featureCards.forEach((card) => {
+                const cardRect = card.getBoundingClientRect();
+                const cardCenter = cardRect.top + cardRect.height / 2;
+                const viewportCenter = windowHeight / 2;
+                const distance = cardCenter - viewportCenter;
+                const maxDistance = windowHeight;
+                
+                // Only apply parallax if card is in viewport and not being hovered
+                if (cardRect.top < windowHeight && cardRect.bottom > 0 && !card.matches(':hover')) {
+                    const progress = Math.max(-1, Math.min(1, distance / maxDistance));
+                    const offset = progress * 20;
+                    const scale = 1 + Math.abs(progress) * 0.03;
+                    const rotation = progress * 2;
+                    
+                    card.style.transform = `translateY(${offset}px) rotateX(${rotation}deg) scale(${scale})`;
+                }
+            });
+            
+            ticking = false;
+        }
+        
+        if (featuresSection) {
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    window.requestAnimationFrame(updateParallax);
+                    ticking = true;
+                }
+            }, { passive: true });
+        }
+    </script>
 </body>
 </html>
