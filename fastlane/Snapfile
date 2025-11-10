@@ -34,15 +34,16 @@ override_status_bar(true)
 # Reinstall the app before each test run
 reinstall_app(true)
 
-# Use pre-built app to save time (build separately with xcodebuild build-for-testing)
-test_without_building(true)
-derived_data_path("./ListAll/build")
+# Let snapshot build the app (more reliable in CI)
+# Setting this to false means snapshot will build the app itself
+test_without_building(false)
 
-# Run devices sequentially to avoid simulator orientation race conditions
+# Run devices concurrently for faster execution
 concurrent_simulators(true)
 
-# Note: Do NOT set `only_testing` here. Keep this Snapfile generic so
-# platform-specific lanes (iOS/watchOS) can pass their own test filters.
+# Only run the UI test target for screenshot capture (skip unit tests)
+# This dramatically speeds up execution since unit tests already run in CI
+only_testing(["ListAllUITests"])
 
 # For more information about all available options run
 # fastlane action snapshot
