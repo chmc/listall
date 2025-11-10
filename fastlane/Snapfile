@@ -38,11 +38,13 @@ override_status_bar(true)
 # Reinstall the app before each test run
 reinstall_app(true)
 
-# BUILD OPTIMIZATION: Build once, then reuse for all device/language combinations
-# This prevents rebuilding 4x (2 devices × 2 languages), saving ~10+ minutes
-# First run does "build-for-testing", subsequent runs use pre-built bundles
-build_for_testing(true)
-test_without_building(true)
+# OPTIMIZATION: Try not erasing simulator between languages
+# With reinstall_app(true), app state is fresh anyway
+# This may save 2-3 minutes per device by reusing booted simulator
+erase_simulator(false)
+
+# Note: test_without_building and derived_data_path are set in Fastfile
+# to coordinate with the scan(build_for_testing) prebuild step
 
 # Disable code signing for simulator builds (not needed, prevents hangs)
 xcargs("CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")

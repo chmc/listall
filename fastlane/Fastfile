@@ -382,8 +382,33 @@ platform :ios do
     # Setup CI keychain if running in CI (prevents signing hangs)
     setup_ci if ENV['CI']
     
-    # 1. Raw screenshots
-    snapshot
+    # Shared derived data path for prebuild and snapshot
+    derived = "./fastlane/derivedDataSnapshot"
+    
+    # 0. ONE-TIME BUILD-FOR-TESTING
+    # Build once, then snapshot reuses these compiled products for all devices/languages
+    # This prevents rebuilding 4x (2 devices × 2 languages), saving 10-15 minutes
+    UI.header("Building app and UI tests once for all snapshot runs")
+    scan(
+      scheme: "ListAll",
+      project: "./ListAll/ListAll.xcodeproj",
+      devices: ["iPhone 15 Pro Max"],  # Any device; we only need to populate DerivedData
+      clean: true,
+      build_for_testing: true,
+      test_without_building: false,
+      # Skip both unit tests and UI tests in prebuild - only compile, don't run
+      skip_testing: ["ListAllTests", "ListAllUITests"],
+      derived_data_path: derived,
+      xcargs: "ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+    )
+    
+    # 1. Raw screenshots using pre-built products
+    # Snapfile contains device/language/test configs
+    snapshot(
+      derived_data_path: derived,
+      test_without_building: true,
+      result_bundle: true
+    )
 
     # 2. Normalize new device sizes to Frameit-supported canvases
     UI.header("Normalizing screenshot sizes for Frameit compatibility")

@@ -31,10 +31,8 @@ override_status_bar(true)
 # Reinstall the app before each test run
 reinstall_app(true)
 
-# BUILD OPTIMIZATION: Build once, then reuse for all language combinations
-# Prevents rebuilding for each language (en-US, fi), saving time
-build_for_testing(true)
-test_without_building(true)
+# OPTIMIZATION: Don't rebuild for each language (snapshot handles this internally)
+test_without_building(false)
 
 # Generate xcresult bundle for detailed diagnostics
 result_bundle(true)
