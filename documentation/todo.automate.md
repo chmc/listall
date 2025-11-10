@@ -484,10 +484,17 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
 - Acceptance
   - Upload succeeds; manual review step handled in App Store Connect
 
-### 5.3 Git tag driven releases
+### ✅ 5.3 Git tag driven releases - COMPLETED
 - On `v*` tag push, run `beta` automatically; `release` is manual
 - Acceptance
   - Tagging `v1.1.0` triggers TestFlight build
+- **Status**: COMPLETED
+  - ✅ GitHub Actions workflow `.github/workflows/release.yml` configured with `push: tags: - 'v*'` trigger
+  - ✅ Workflow automatically runs `tests` and `beta` jobs when a version tag is pushed
+  - ✅ Beta job uploads to TestFlight via `fastlane beta` with App Store Connect API key
+  - ✅ Version bumping integrated: workflow can bump patch/minor/major versions and create tags
+  - ✅ Manual workflow_dispatch also available for ad-hoc releases
+  - ✅ Release (App Store submission) remains manual via `bundle exec fastlane release`
 
 ---
 
