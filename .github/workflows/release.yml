@@ -25,57 +25,11 @@ permissions:
   contents: write  # Required to push commits and tags back to the repository
 
 jobs:
-  tests:
-    name: Fastlane Tests
-    runs-on: macos-14
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-
-      - name: Cache DerivedData
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-derived-data-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
-          restore-keys: |
-            ${{ runner.os }}-derived-data-
-
-      - name: Cache SPM packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.swiftpm
-            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            ${{ runner.os }}-spm-
-
-      - name: Run tests via Fastlane
-        run: bundle exec fastlane test
-
-      - name: Upload test results (xcresult)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fastlane-test-results
-          path: fastlane/test_output
-          retention-days: 14
-
+  # Tests removed - CI pipeline already validates every commit
+  # No need to re-run tests during release
+  
   beta:
     name: TestFlight (beta)
-    # needs: tests
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-14
     env:
