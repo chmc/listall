@@ -38,6 +38,9 @@ reinstall_app(true)
 # Setting this to false means snapshot will build the app itself
 test_without_building(false)
 
+# Disable code signing for simulator builds (not needed, prevents hangs)
+xcargs("CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")
+
 # Run devices sequentially to avoid signing deadlocks in CI
 # Concurrent mode causes keychain access conflicts during code signing
 concurrent_simulators(false)
