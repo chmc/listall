@@ -53,6 +53,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
+      - name: Reset simulators (prevent launch failures)
+        run: |
+          xcrun simctl shutdown all
+          xcrun simctl erase all
+
       - name: Generate iPhone and iPad screenshots (framed)
         run: bundle exec fastlane ios screenshots_framed
         env:
