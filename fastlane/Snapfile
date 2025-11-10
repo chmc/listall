@@ -53,6 +53,10 @@ concurrent_simulators(false)
 # Snapshot automatically retries on random failures
 number_of_retries(2)
 
+# Skip building/running the unit test target entirely
+# This prevents hanging at "Touching ListAllTests.xctest" phase
+skip_testing(["ListAllTests"])
+
 # Only run the specific screenshot test methods (not all UI tests)
 # This ensures fast, deterministic screenshot generation without running CRUD/smoke tests
 only_testing([
