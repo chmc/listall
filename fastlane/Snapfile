@@ -53,9 +53,12 @@ concurrent_simulators(false)
 # Snapshot automatically retries on random failures
 number_of_retries(2)
 
-# Only run the UI test target for screenshot capture (skip unit tests)
-# This dramatically speeds up execution since unit tests already run in CI
-only_testing(["ListAllUITests"])
+# Only run the specific screenshot test methods (not all UI tests)
+# This ensures fast, deterministic screenshot generation without running CRUD/smoke tests
+only_testing([
+  "ListAllUITests/testScreenshots01_WelcomeScreen",
+  "ListAllUITests/testScreenshots02_MainFlow"
+])
 
 # For more information about all available options run
 # fastlane action snapshot
