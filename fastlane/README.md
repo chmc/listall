@@ -137,7 +137,15 @@ Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales
 [bundle exec] fastlane ios verify_watch_screenshots
 ```
 
-Validate watch screenshot sizes and naming
+Validate watch screenshot sizes and naming (uses App Store Connect requirements)
+
+### ios validate_delivery_screenshots
+
+```sh
+[bundle exec] fastlane ios validate_delivery_screenshots
+```
+
+Validate all delivery-ready screenshots (framed iPhone/iPad + naked Watch)
 
 ----
 

@@ -4,6 +4,8 @@ require 'base64'
 require 'fileutils'
 require 'shellwords'
 require_relative 'lib/version_helper'
+require_relative 'lib/watch_screenshot_helper'
+require_relative 'lib/screenshot_helper'
 
 default_platform(:ios)
 
@@ -498,98 +500,170 @@ platform :ios do
     )
     
     UI.success("🍎⌚️ Watch screenshots generation complete!")
-    UI.message("📁 Screenshots saved to: fastlane/screenshots/watch")
+    UI.message("📁 Raw screenshots saved to: fastlane/screenshots/watch")
     
-    # Copy naked watch screenshots to framed directory (no framing for watchOS - standard practice)
-    UI.header("� Copying watchOS screenshots to unified directory")
-    watch_src_root = File.expand_path("screenshots/watch", __dir__)
+    # Normalize watch screenshots to App Store Connect required dimensions
+    UI.header("📐 Normalizing watchOS screenshots to App Store Connect dimensions")
+    watch_raw_dir = File.expand_path("screenshots/watch", __dir__)
+    watch_normalized_dir = File.expand_path("screenshots/watch_normalized", __dir__)
+    
+    begin
+      WatchScreenshotHelper.normalize_screenshots(
+        watch_raw_dir,
+        watch_normalized_dir,
+        target_size: :series7plus  # 396x484 - Apple Watch Series 7+ (45mm)
+      )
+    rescue => e
+      UI.user_error!("Failed to normalize watch screenshots: #{e.message}")
+    end
+    
+    # Copy normalized watch screenshots to framed directory (no framing for watchOS - standard practice)
+    UI.header("📂 Copying normalized watchOS screenshots to unified directory")
     unified_framed_root = File.expand_path("screenshots/framed", __dir__)
     locales = %w[en-US fi]
 
     locales.each do |loc|
-      raw_dir = File.join(watch_src_root, loc)
-      next unless Dir.exist?(raw_dir)
+      normalized_dir = File.join(watch_normalized_dir, loc)
+      next unless Dir.exist?(normalized_dir)
       framed_locale_dir = File.join(unified_framed_root, loc)
       FileUtils.mkdir_p(framed_locale_dir)
 
-      # Copy watch screenshots as-is (naked, no frame) - this is standard for watchOS
-      Dir.glob(File.join(raw_dir, "Apple Watch Series 11 (46mm)-*.png")).each do |raw|
-        base = File.basename(raw)
+      # Copy normalized watch screenshots as-is (naked, no frame) - this is standard for watchOS
+      Dir.glob(File.join(normalized_dir, "*.png")).each do |normalized|
+        base = File.basename(normalized)
         target = File.join(framed_locale_dir, base)
-        FileUtils.cp(raw, target)
+        FileUtils.cp(normalized, target)
       end
     end
 
-    UI.success("✅ Watch screenshots copied to #{unified_framed_root} (naked/unframed)")
+    UI.success("✅ Normalized watch screenshots copied to #{unified_framed_root} (396x484, unframed)")
   end
 
-  desc "Validate watch screenshot sizes and naming"
+  desc "Validate watch screenshot sizes and naming (uses App Store Connect requirements)"
   lane :verify_watch_screenshots do
+    UI.header("🔍 Validating watchOS Screenshots")
+    watch_normalized_dir = File.expand_path("screenshots/watch_normalized", __dir__)
+    
+    begin
+      WatchScreenshotHelper.validate_screenshots(
+        watch_normalized_dir,
+        expected_count: 5,
+        allowed_sizes: [:series7plus]  # Only accept 396x484 (45mm)
+      )
+      UI.success("✅ All watch screenshots validated successfully!")
+    rescue WatchScreenshotHelper::ValidationError => e
+      UI.user_error!("Watch screenshot validation failed: #{e.message}")
+    end
+  end
+
+  desc "Validate all delivery-ready screenshots (framed iPhone/iPad + naked Watch)"
+  lane :validate_delivery_screenshots do
+    UI.header("� Validating delivery-ready screenshots for App Store submission")
+    
     locales = %w[en-US fi]
-    watch_output_dir = File.expand_path("screenshots/watch", __dir__)
-    expected_count = 5  # Expecting 5 screenshots per locale
+    errors = []
+    warnings = []
     
-    missing = []
+    # Expected framed dimensions (Frameit output with device frames)
+    iphone_framed_size = { width: 1421, height: 2909, tolerance: 50 }
+    ipad_framed_size = { width: 2286, height: 3168, tolerance: 50 }
+    watch_size = { width: 396, height: 484, tolerance: 0 }  # Exact match required
     
+    # Check framed iPhone/iPad screenshots
+    framed_dir = File.expand_path("screenshots/framed", __dir__)
     locales.each do |locale|
-      locale_dir = File.join(watch_output_dir, locale)
-      
+      locale_dir = File.join(framed_dir, locale)
       unless Dir.exist?(locale_dir)
-        missing << "Directory missing: #{locale_dir}"
+        errors << "❌ Missing framed screenshots directory: #{locale_dir}"
         next
       end
       
-      screenshots = Dir.glob(File.join(locale_dir, "*.png")).sort
-      
-      if screenshots.count < expected_count
-        missing << "#{locale}: Expected #{expected_count} screenshots, found #{screenshots.count}"
+      # Check iPhone framed screenshots
+      iphone_framed = Dir.glob(File.join(locale_dir, "iPhone*_framed.png"))
+      if iphone_framed.count != 5
+        warnings << "⚠️  #{locale}: Expected 5 iPhone framed screenshots, found #{iphone_framed.count}"
       end
       
-      # Check each screenshot exists and has reasonable dimensions
-      screenshots.each do |shot|
-        basename = File.basename(shot)
-        
-        # Get image dimensions using ImageMagick
-        begin
-          dimensions = sh("identify -format '%wx%h' #{Shellwords.escape(shot)}").strip
-          width, height = dimensions.split('x').map(&:to_i)
-          
-          # Verify watch screenshot dimensions (typical: 368x448 for 46mm)
-          # Allow some variation for different watch sizes
-          if width < 300 || height < 400
-            missing << "#{locale}/#{basename}: Unexpected dimensions #{dimensions}"
-          end
-        rescue => e
-          missing << "#{locale}/#{basename}: Failed to read dimensions - #{e.message}"
+      iphone_framed.each do |shot|
+        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+        w, h = dims.split('x').map(&:to_i)
+        if (w - iphone_framed_size[:width]).abs > iphone_framed_size[:tolerance] ||
+           (h - iphone_framed_size[:height]).abs > iphone_framed_size[:tolerance]
+          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected ~#{iphone_framed_size[:width]}x#{iphone_framed_size[:height]})"
+        else
+          puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
+        end
+      end
+      
+      # Check iPad framed screenshots
+      ipad_framed = Dir.glob(File.join(locale_dir, "iPad*_framed.png"))
+      if ipad_framed.count != 5
+        warnings << "⚠️  #{locale}: Expected 5 iPad framed screenshots, found #{ipad_framed.count}"
+      end
+      
+      ipad_framed.each do |shot|
+        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+        w, h = dims.split('x').map(&:to_i)
+        if (w - ipad_framed_size[:width]).abs > ipad_framed_size[:tolerance] ||
+           (h - ipad_framed_size[:height]).abs > ipad_framed_size[:tolerance]
+          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected ~#{ipad_framed_size[:width]}x#{ipad_framed_size[:height]})"
+        else
+          puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
         end
       end
     end
     
-    if missing.any?
-      UI.user_error!("Watch screenshot verification failed:\n- #{missing.join("\n- ")}")
-    else
-      UI.success("✅ All watch screenshots validated successfully")
-      # Additional check for framed variants if present
-      framed_root = File.expand_path("screenshots/framed/watch", __dir__)
-      if Dir.exist?(framed_root)
-        framed_missing = []
-        locales.each do |loc|
-          loc_dir = File.join(framed_root, loc)
-          unless Dir.exist?(loc_dir)
-            framed_missing << "Framed locale directory missing: #{loc_dir}"
-            next
-          end
-          shots = Dir.glob(File.join(loc_dir, "*_framed.png"))
-          if shots.count < expected_count
-            framed_missing << "#{loc}: Expected at least #{expected_count} framed screenshots, found #{shots.count}"
-          end
+    # Check watch naked screenshots
+    watch_dir = File.expand_path("screenshots/watch_normalized", __dir__)
+    if Dir.exist?(watch_dir)
+      locales.each do |locale|
+        locale_dir = File.join(watch_dir, locale)
+        unless Dir.exist?(locale_dir)
+          errors << "❌ Missing watch screenshots directory: #{locale_dir}"
+          next
         end
-        if framed_missing.any?
-          UI.message("⚠️ Watch framed screenshot issues:\n- #{framed_missing.join("\n- ")}")
-        else
-          UI.success("🖼  Watch framed screenshots validated")
+        
+        watch_shots = Dir.glob(File.join(locale_dir, "*.png"))
+        if watch_shots.count != 5
+          warnings << "⚠️  #{locale}: Expected 5 watch screenshots, found #{watch_shots.count}"
+        end
+        
+        watch_shots.each do |shot|
+          dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+          w, h = dims.split('x').map(&:to_i)
+          if w != watch_size[:width] || h != watch_size[:height]
+            errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{watch_size[:width]}x#{watch_size[:height]})"
+          else
+            puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
+          end
         end
       end
+    else
+      warnings << "⚠️  Watch screenshots directory not found: #{watch_dir}"
+    end
+    
+    # Print summary
+    puts "\n" + "=" * 70
+    puts "Delivery Screenshot Validation Summary"
+    puts "=" * 70
+    
+    if warnings.any?
+      puts "\nWarnings:"
+      warnings.each { |w| puts w }
+    end
+    
+    if errors.any?
+      puts "\nErrors:"
+      errors.each { |e| puts e }
+      puts "\n❌ Validation FAILED: #{errors.count} error(s)"
+      UI.user_error!("Delivery screenshots validation failed")
+    else
+      puts "\n✅ All delivery screenshots are valid and ready for App Store submission!"
+      puts "\nReady for upload:"
+      puts "  • iPhone: 10 framed screenshots (~1421x2909)"
+      puts "  • iPad: 10 framed screenshots (~2286x3168)"
+      puts "  • Watch: 10 naked screenshots (396x484)"
+      puts "  • Total: 30 screenshots across EN + FI locales"
     end
   end
 end
