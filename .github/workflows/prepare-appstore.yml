@@ -55,6 +55,8 @@ jobs:
 
       - name: Generate iPhone and iPad screenshots (framed)
         run: bundle exec fastlane ios screenshots_framed
+        env:
+          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "30"
 
       - name: Generate Watch screenshots
         run: bundle exec fastlane ios watch_screenshots

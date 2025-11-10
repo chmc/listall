@@ -41,6 +41,10 @@ test_without_building(false)
 # Run devices concurrently for faster execution
 concurrent_simulators(true)
 
+# Increase retry count for CI stability (handles occasional segfaults)
+# Snapshot automatically retries on random failures
+number_of_retries(2)
+
 # Only run the UI test target for screenshot capture (skip unit tests)
 # This dramatically speeds up execution since unit tests already run in CI
 only_testing(["ListAllUITests"])
