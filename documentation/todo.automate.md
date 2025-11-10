@@ -433,8 +433,54 @@ CI usage
   - ✅ CI-ready with GitHub Actions integration via `.github/workflows/release.yml`
   - ✅ Local testing confirmed: `bundle exec fastlane beta` completes successfully
 
-### 5.2 App Store submission lane
-- `release` lane: `deliver` metadata + screenshots; optional `submit_for_review` with phased release toggled off
+
+### ✅ 5.2 App Store submission lane - COMPLETED
+
+**Purpose:**
+Automate App Store submission using Fastlane's `release` lane. This lane uploads all required metadata and framed screenshots to App Store Connect, but does not auto-submit for review (manual review step is handled in App Store Connect).
+
+**Implementation:**
+- The `release` lane is defined in `fastlane/Fastfile`.
+- It uses the `deliver` action with the following parameters:
+  - `api_key`: Uses App Store Connect API key from environment variables (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_BASE64`).
+  - `screenshots_path`: Points to a delivery directory containing only framed screenshots (prepared automatically).
+  - `skip_screenshots: false`: Ensures screenshots are uploaded.
+  - `overwrite_screenshots: true`: Replaces any existing screenshots in App Store Connect.
+  - `skip_binary_upload: true`: Only metadata/screenshots are uploaded (binary upload is handled separately).
+  - `submit_for_review: false`: Uploads but does not submit for review (manual step required).
+  - `force: true`: Forces upload even if warnings are present.
+- The lane verifies that all required screenshots are present and correctly sized before attempting upload.
+- A companion `release_dry_run` lane lists all screenshots that would be uploaded, with dimensions, for verification (no upload performed).
+- Metadata is sourced from `metadata/en-US/` and `metadata/fi/` directories, including:
+  - App description, keywords, subtitle, promotional text
+  - Release notes (updated for minor releases, not initial release)
+  - Privacy policy URL, support URL, marketing URL
+  - iCloud sync is described as a built-in feature (not optional)
+
+**Usage:**
+- To verify screenshots and metadata (dry run, no upload):
+  - `bundle exec fastlane release_dry_run`
+- To upload metadata and screenshots to App Store Connect (manual review step required):
+  - `bundle exec fastlane release`
+  - After upload, complete submission in App Store Connect web UI.
+
+**Acceptance Criteria:**
+- ✅ Upload of metadata and screenshots to App Store Connect succeeds without errors.
+- ✅ All required screenshots (framed for iPhone/iPad, naked for Watch) are included and validated.
+- ✅ Manual review step is performed in App Store Connect (not automated).
+- ✅ Metadata accurately reflects app features (iCloud sync as built-in, not optional).
+
+**References:**
+- See `fastlane/Fastfile` for lane implementation details.
+- See `fastlane/screenshots/framed/` and `fastlane/screenshots/delivery/` for screenshot preparation.
+- See `metadata/en-US/` and `metadata/fi/` for App Store metadata content.
+
+**Status**: COMPLETED
+- ✅ Release lane implemented with deliver
+- ✅ Metadata updated for both EN and FI locales
+- ✅ iCloud sync correctly described as built-in feature
+- ✅ Release notes updated for minor update (not initial release)
+- ✅ Documentation complete
 - Acceptance
   - Upload succeeds; manual review step handled in App Store Connect
 

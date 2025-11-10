@@ -27,8 +27,8 @@ APPLE WATCH -KUMPPANISOVELLUS
 YKSITYISYYS JA TURVALLISUUS
 • Valinnainen Face ID/Touch ID -suojaus
 • Biometrinen tunnistautuminen listojen yksityisyyden turvaamiseen
-• Turvallinen paikallinen tallennus valinnaisella iCloud-synkronoinnilla
-• Tietosi pysyvät ominasi - ei kolmannen osapuolen palvelimia
+• Turvallinen paikallinen tallennus sisäänrakennetulla iCloud-synkronoinnilla
+• Tietosi pysyvät ominasi – ei kolmannen osapuolen palvelimia
 
 TEHOKKAAT OMINAISUUDET
 • Hae kaikista listoista ja kohteista
@@ -40,9 +40,9 @@ TEHOKKAAT OMINAISUUDET
 • Jaa listoja muiden kanssa
 • Tuki tummalle tilalle
 
-SAUMATON SYNKRONOINTI (VALINNAINEN)
-• iCloud-synkronointi pitää tiedot synkronoituna laitteiden välillä
-• Toimii offline-tilassa - synkronoi kun yhdistetty
+SAUMATON SYNKRONOINTI
+• iCloud-synkronointi on aina päällä – tietosi pysyvät ajan tasalla kaikilla laitteilla
+• Toimii offline-tilassa – synkronoi automaattisesti kun yhdistetty
 • Automaattiset taustapäivitykset
 
 TÄYDELLINEN:

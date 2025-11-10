@@ -27,8 +27,8 @@ APPLE WATCH COMPANION
 PRIVACY & SECURITY
 • Optional Face ID/Touch ID protection
 • Biometric authentication to keep lists private
-• Secure local storage with optional iCloud sync
-• Your data stays yours - no third-party servers
+• Secure local storage with built-in iCloud sync
+• Your data stays yours – no third-party servers
 
 POWERFUL FEATURES
 • Search across all lists and items
@@ -40,9 +40,9 @@ POWERFUL FEATURES
 • Share lists with others
 • Dark mode support
 
-SEAMLESS SYNC (OPTIONAL)
-• iCloud sync keeps data in sync across devices
-• Works offline - syncs when connected
+SEAMLESS SYNC
+• iCloud sync is always on – your data stays up to date across all devices
+• Works offline – syncs automatically when connected
 • Automatic background updates
 
 PERFECT FOR:

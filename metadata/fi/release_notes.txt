@@ -1,17 +1,12 @@
-Tervetuloa ListAlliin!
+Kiitos kun käytät ListAllia!
 
-Tämä on sovelluksen ensimmäinen julkaisu, joka tarjoaa:
+Tämä päivitys sisältää pieniä korjauksia ja parannuksia sujuvampaan käyttökokemukseen.
 
-• Älykkäät listat tehtäviin, ostoksiin ja muuhun
-• Älykäs ehdotusjärjestelmä joka oppii käyttötavoistasi
-• Apple Watch -kumppanisovellus reaaliaikaisella synkronoinnilla
-• Liitä useita kuvia mihin tahansa kohteeseen
-• Biometrinen tunnistautuminen yksityisyyden suojaamiseksi
-• Vie ja tuo listoja (JSON, CSV, teksti)
-• Jaa listoja muiden kanssa
-• Arkistoi valmiit listat
-• Valinnainen iCloud-synkronointi
-• Täysin ilmainen, ei mainoksia eikä tilausmaksuja
+KOHOKOHDAT:
+
+• Pieniä virhekorjauksia ja suorituskyvyn parannuksia
+
+Jos pidät ListAllistä, harkitse arvostelun jättämistä. Kysymyksiä tai palautetta varten ota yhteyttä tukiosoitteen kautta.
 
 Nauti järjestyneemmästä elämästä ListAllin kanssa!
 
