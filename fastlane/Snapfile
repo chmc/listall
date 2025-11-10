@@ -38,8 +38,9 @@ reinstall_app(true)
 # Setting this to false means snapshot will build the app itself
 test_without_building(false)
 
-# Run devices concurrently for faster execution
-concurrent_simulators(true)
+# Run devices sequentially to avoid signing deadlocks in CI
+# Concurrent mode causes keychain access conflicts during code signing
+concurrent_simulators(false)
 
 # Increase retry count for CI stability (handles occasional segfaults)
 # Snapshot automatically retries on random failures
