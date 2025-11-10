@@ -31,8 +31,13 @@ override_status_bar(true)
 # Reinstall the app before each test run
 reinstall_app(true)
 
-# Use pre-built app to save time
-test_without_building(false)
+# BUILD OPTIMIZATION: Build once, then reuse for all language combinations
+# Prevents rebuilding for each language (en-US, fi), saving time
+build_for_testing(true)
+test_without_building(true)
+
+# Generate xcresult bundle for detailed diagnostics
+result_bundle(true)
 
 # Run only the screenshot tests
 only_testing([

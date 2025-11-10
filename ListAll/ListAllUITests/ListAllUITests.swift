@@ -12,7 +12,7 @@ final class ListAllUITests: XCTestCase {
         continueAfterFailure = false
 
         // In UI tests it's important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    app = XCUIApplication()
+        app = XCUIApplication()
         
         // Handle system alerts (notifications, privacy prompts) on fresh simulators
         // Critical for CI where simulator is erased before each run
@@ -28,33 +28,47 @@ final class ListAllUITests: XCTestCase {
             return false
         }
         
-    // Setup snapshot for Fastlane screenshot automation
-    setupSnapshot(app)
+        // Setup snapshot for Fastlane screenshot automation
+        setupSnapshot(app)
         
-    // Enable UI test mode with deterministic data
+        // OPTIMIZATION: Don't auto-launch in setUpWithError during FASTLANE_SNAPSHOT
+        // Let individual screenshot tests manage their own launch with specific arguments
+        // This avoids redundant launches and gives tests full control over app state
+        let isSnapshotMode = ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES"
+        
+        if !isSnapshotMode {
+            // Normal test mode: launch with standard test data
+            configureAppForNormalTests()
+            ensurePortrait()
+            app.launch()
+            app.tap() // Trigger interruption monitor
+        }
+        // If snapshot mode, tests will call launchAppForScreenshot(...) themselves
+    }
+    
+    // Helper: Configure app for normal (non-screenshot) tests
+    private func configureAppForNormalTests() {
         app.launchArguments.append("UITEST_MODE")
-        
-    // Set a fixed seed for consistent data generation
         app.launchEnvironment["UITEST_SEED"] = "1"
-
-    // Lock orientation to portrait inside the app via AppDelegate
-    app.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
-        
-    // Force light appearance mode for screenshots at the app level
-    // Use our custom flag that the app reads to apply .preferredColorScheme(.light)
-    app.launchArguments.append("FORCE_LIGHT_MODE")
-        
-        // Disable feature tips (tooltips) for clean screenshots
+        app.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
+        app.launchArguments.append("FORCE_LIGHT_MODE")
         app.launchArguments.append("DISABLE_TOOLTIPS")
-        
-        // Always start in portrait to keep screenshots consistent
+    }
+    
+    // Helper: Launch app specifically for screenshot with custom arguments
+    private func launchAppForScreenshot(skipTestData: Bool = false) {
+        app.launchArguments.append("UITEST_MODE")
+        if skipTestData {
+            app.launchArguments.append("SKIP_TEST_DATA")
+        } else {
+            app.launchEnvironment["UITEST_SEED"] = "1"
+        }
+        app.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
+        app.launchArguments.append("FORCE_LIGHT_MODE")
+        app.launchArguments.append("DISABLE_TOOLTIPS")
         ensurePortrait()
-
         app.launch()
-        
-        // Trigger interruption monitor to handle any system alerts
-        // This must happen after launch() to activate the monitor
-        app.tap()
+        app.tap() // Trigger interruption monitor
     }
 
     override func tearDownWithError() throws {
@@ -506,24 +520,13 @@ final class ListAllUITests: XCTestCase {
     @MainActor
     func testScreenshots01_WelcomeScreen() throws {
         // Special test that launches WITHOUT test data to show empty state
-        // This must run separately from other screenshots
-        
-        // Create a fresh app instance without test data
-    let emptyApp = XCUIApplication()
-    setupSnapshot(emptyApp)
-    // Force portrait before launching (affects iPhone & iPad)
-    ensurePortrait()
-        emptyApp.launchArguments.append("UITEST_MODE")
-        emptyApp.launchArguments.append("SKIP_TEST_DATA") // Don't load test lists
-    // Force light mode for welcome screen
-    emptyApp.launchArguments.append("FORCE_LIGHT_MODE")
-        emptyApp.launchArguments.append("DISABLE_TOOLTIPS")
-        emptyApp.launch()
+        // Uses the shared app instance to avoid redundant launch
+        launchAppForScreenshot(skipTestData: true)
         
         sleep(2)
-    snapshotPortrait("01-WelcomeScreen", wait: 1)
+        snapshotPortrait("01-WelcomeScreen", wait: 1)
         
-        emptyApp.terminate()
+        app.terminate()
     }
     
     /// Screenshots 02-05: Main app flow with test data
@@ -531,9 +534,7 @@ final class ListAllUITests: XCTestCase {
     func testScreenshots02_MainFlow() throws {
         // End-to-end EN screenshots for iPhone/iPad using deterministic data
         // Assumes Fastlane Snapshot sets language to en-US for this run
-        
-    // Force portrait orientation for all devices
-    ensurePortrait()
+        launchAppForScreenshot(skipTestData: false)
         
         // Wait for app to fully load
         sleep(2)

@@ -92,6 +92,17 @@ jobs:
             fastlane/screenshots/watch/screenshots.html
           retention-days: 30
 
+      - name: Upload xcresult and logs for diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-and-logs
+          path: |
+            ~/Library/Logs/snapshot
+            ~/Library/Logs/scan
+            **/Logs/Test/*.xcresult
+          retention-days: 7
+
   upload-to-appstore:
     name: Upload Metadata & Screenshots
     needs: generate-screenshots
