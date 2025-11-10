@@ -379,6 +379,9 @@ platform :ios do
 
   desc "Generate and frame screenshots (snapshot + frameit)"
   lane :screenshots_framed do
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+    
     # 1. Raw screenshots
     snapshot
 
