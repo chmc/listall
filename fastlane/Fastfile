@@ -477,6 +477,15 @@ platform :ios do
         # Set as environment variable so xcodebuild inherits it (snapshot doesn't support xcodebuild_command parameter)
         ENV['NSUnbufferedIO'] = 'YES'
         
+        # CRITICAL: Ensure SIMULATOR_HOST_HOME is set so SnapshotHelper can find the cache directory
+        # This is essential for screenshot saving in CI environments
+        unless ENV['SIMULATOR_HOST_HOME']
+          # Try to determine the correct home directory
+          simulator_home = ENV['HOME'] || Dir.home
+          ENV['SIMULATOR_HOST_HOME'] = simulator_home
+          UI.message("🔧 Set SIMULATOR_HOST_HOME=#{simulator_home} for SnapshotHelper")
+        end
+        
         snapshot(
           derived_data_path: derived,
           test_without_building: true,
@@ -494,12 +503,18 @@ platform :ios do
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
-        # CRITICAL FIX: When using test_without_building, Fastlane may not extract screenshots automatically
-        # Try multiple extraction methods to find screenshots (result bundle, simulator cache, etc.)
-        UI.message("🔍 Attempting manual screenshot extraction...")
+        # CRITICAL FIX: Fastlane's log parsing often fails in CI environments where NSLog isn't captured
+        # Manually extract screenshots from cache directory after tests complete
+        # This bypasses Fastlane's log parsing entirely and works reliably
+        UI.message("🔍 Attempting manual screenshot extraction from cache directories...")
         locale_dir = File.join(screenshots_dir, locale)
         FileUtils.mkdir_p(locale_dir) unless File.directory?(locale_dir)
         extracted_count = 0
+        
+        # CRITICAL: Fastlane Snapshot saves screenshots to cache directory, but may not extract them
+        # if log parsing fails. We need to manually find and copy them.
+        # Screenshots are saved as: <simulator-name>-<screenshot-name>.png
+        # e.g., "iPhone16ProMax-01-WelcomeScreen.png"
         
         # Method 1: Extract from result bundle (result_bundle is now enabled)
         # NOTE: Fastlane automatically extracts screenshots when result_bundle: true
@@ -631,27 +646,30 @@ platform :ios do
         # Method 2: Extract from simulator cache directory (SnapshotHelper saves here)
         # CRITICAL: Check multiple possible locations for cache directory
         # In CI, the simulator may run in a different context than the runner
+        # Based on research: SnapshotHelper saves to Library/Caches/tools.fastlane/screenshots
+        # relative to SIMULATOR_HOST_HOME, HOME, or simulator's data directory
         possible_cache_dirs = []
         
-        # Try SIMULATOR_HOST_HOME first (set by Fastfile)
+        # Try SIMULATOR_HOST_HOME first (set by Fastfile) - PRIMARY LOCATION
         if ENV['SIMULATOR_HOST_HOME']
           possible_cache_dirs << File.join(ENV['SIMULATOR_HOST_HOME'], "Library/Caches/tools.fastlane/screenshots")
         end
         
-        # Try HOME environment variable
+        # Try HOME environment variable - FALLBACK FOR CI
         if ENV['HOME']
           possible_cache_dirs << File.join(ENV['HOME'], "Library/Caches/tools.fastlane/screenshots")
         end
         
-        # Try runner's home directory (CI context)
+        # Try runner's home directory (CI context - GitHub Actions)
         if ENV['RUNNER_HOME']
           possible_cache_dirs << File.join(ENV['RUNNER_HOME'], "Library/Caches/tools.fastlane/screenshots")
         end
         
-        # Try current user's home
+        # Try current user's home - LOCAL DEVELOPMENT
         possible_cache_dirs << File.join(Dir.home, "Library/Caches/tools.fastlane/screenshots")
         
-        # Try simulator's actual home directory (extract from simulator info)
+        # Try simulator's actual data directory (extract from simulator info)
+        # Research shows: Simulator data is in ~/Library/Developer/CoreSimulator/Devices/<UUID>/data
         begin
           simulator_info = `xcrun simctl list devices --json 2>&1`
           if $?.success?
@@ -663,7 +681,11 @@ platform :ios do
               devices.each do |sim|
                 if sim['name'] == device || sim['name'].include?(device_name)
                   if sim['dataPath']
+                    # Simulator's data directory - screenshots might be in Library/Caches
                     possible_cache_dirs << File.join(sim['dataPath'], "Library/Caches/tools.fastlane/screenshots")
+                    # Also check simulator's home directory (if different from dataPath)
+                    sim_home = File.join(sim['dataPath'], "Library")
+                    possible_cache_dirs << File.join(sim_home, "Caches/tools.fastlane/screenshots")
                   end
                 end
               end
@@ -671,6 +693,33 @@ platform :ios do
           end
         rescue => e
           UI.message("   ⚠️  Could not extract simulator data path: #{e.message}")
+        end
+        
+        # Research-based additional locations:
+        # 1. Derived Data Attachments folder (xcodebuild may save screenshots here)
+        if derived && Dir.exist?(derived)
+          # Check for attachments in test logs
+          possible_cache_dirs << File.join(derived, "Logs/Test/Attachments")
+          # Check for screenshots in test output
+          possible_cache_dirs << File.join(derived, "Logs/Test/screenshots")
+        end
+        
+        # 2. Default Xcode Derived Data location
+        default_derived_data = File.expand_path("~/Library/Developer/Xcode/DerivedData")
+        if Dir.exist?(default_derived_data)
+          # Search in all project folders (pattern: ProjectName-RandomString)
+          Dir.glob(File.join(default_derived_data, "*/Logs/Test/Attachments")).each do |path|
+            possible_cache_dirs << path
+          end
+        end
+        
+        # 3. Simulator media directory (screenshots might be saved here)
+        simulator_media_base = File.expand_path("~/Library/Developer/CoreSimulator/Devices")
+        if Dir.exist?(simulator_media_base)
+          # Check all simulator devices for media/screenshots
+          Dir.glob(File.join(simulator_media_base, "*/data/Media/DCIM")).each do |path|
+            possible_cache_dirs << path
+          end
         end
         
         # Method 2a: Check for SnapshotHelper debug log file
@@ -776,33 +825,273 @@ platform :ios do
           UI.message("   Checking cache directory: #{cache_dir}")
           if Dir.exist?(cache_dir)
             found_cache = true
+            UI.message("   ✅ Cache directory exists: #{cache_dir}")
+            
+            # List all files in cache directory for debugging
+            all_files = Dir.entries(cache_dir).reject { |f| f.start_with?(".") }
+            if all_files.any?
+              UI.message("   Files in cache directory (#{all_files.count}): #{all_files.first(10).join(", ")}")
+            end
+            
             # Check for debug log in this directory too
             debug_log_in_dir = File.join(File.dirname(cache_dir), "snapshot_debug.log")
             if File.exist?(debug_log_in_dir)
               UI.message("   ✅ Found debug log in cache parent: #{debug_log_in_dir}")
+              debug_content = File.read(debug_log_in_dir)
+              snapshot_calls = debug_content.scan(/snapshot:/).count
+              UI.message("   📊 Debug log shows #{snapshot_calls} snapshot() calls")
             end
             
-            cache_screenshots = Dir.glob(File.join(cache_dir, "*.png"))
+            # Look for PNG files (case-insensitive, with various naming patterns)
+            cache_screenshots = Dir.glob(File.join(cache_dir, "*.{png,PNG}"))
+            # Also check for files that might have device name in them
+            device_sanitized = device.gsub(" ", "").gsub("-", "")
+            cache_screenshots += Dir.glob(File.join(cache_dir, "*#{device_sanitized}*.png"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "*iPhone*.png"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "*iPad*.png"))
+            cache_screenshots.uniq!
+            
             if cache_screenshots.any?
               UI.message("   ✅ Found #{cache_screenshots.count} screenshots in cache directory")
               cache_screenshots.each do |src|
                 basename = File.basename(src)
+                # Remove device prefix if present (e.g., "iPhone16ProMax-01-WelcomeScreen.png" -> "01-WelcomeScreen.png")
+                # Fastlane expects just the screenshot name
+                if basename.include?("-")
+                  # Try to extract just the screenshot name part
+                  parts = basename.split("-", 2)
+                  if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
+                    basename = parts[1] # Use just the screenshot name part
+                  end
+                end
                 dst = File.join(locale_dir, basename)
                 unless File.exist?(dst)
                   FileUtils.cp(src, dst)
                   extracted_count += 1
+                  UI.message("   ✅ Copied: #{basename}")
+                else
+                  UI.message("   ⏭️  Skipped (already exists): #{basename}")
                 end
               end
-              UI.message("   ✅ Copied #{cache_screenshots.count} screenshots from cache")
+              UI.message("   ✅ Copied #{extracted_count} screenshots from cache")
               break # Found screenshots, no need to check other directories
             else
-              UI.message("   Cache directory exists but no screenshots found")
+              UI.message("   ⚠️  Cache directory exists but no screenshots found")
+              # List what IS in the directory
+              if all_files.any?
+                UI.message("   Directory contents: #{all_files.join(", ")}")
+              end
             end
+          else
+            UI.message("   ⚠️  Cache directory does not exist: #{cache_dir}")
           end
         end
         
         unless found_cache
           UI.message("   ⚠️  No cache directories found in any expected location")
+        end
+        
+        # Method 4: Recursive search as last resort (if screenshots still not found)
+        if extracted_count == 0
+          UI.message("   🔍 Performing recursive search for screenshots...")
+          
+          # Define reasonable search roots (don't search entire filesystem)
+          search_roots = []
+          
+          # Search in home directory
+          if ENV['HOME']
+            search_roots << ENV['HOME']
+          end
+          search_roots << Dir.home
+          
+          # Search in derived data
+          if derived && Dir.exist?(derived)
+            search_roots << derived
+          end
+          
+          # Search in simulator directories
+          simulator_base = File.expand_path("~/Library/Developer/CoreSimulator/Devices")
+          if Dir.exist?(simulator_base)
+            search_roots << simulator_base
+          end
+          
+          # Search in workspace directory
+          workspace_root = File.expand_path(".")
+          search_roots << workspace_root
+          
+          # Research-based additional search locations:
+          # 1. Default Xcode Derived Data (if different from custom derived path)
+          default_derived_data = File.expand_path("~/Library/Developer/Xcode/DerivedData")
+          if Dir.exist?(default_derived_data) && default_derived_data != derived
+            search_roots << default_derived_data
+          end
+          
+          # 2. Xcode logs directory
+          xcode_logs = File.expand_path("~/Library/Logs")
+          if Dir.exist?(xcode_logs)
+            search_roots << xcode_logs
+          end
+          
+          # 3. Temporary directories (screenshots might be in temp locations)
+          if ENV['TMPDIR']
+            search_roots << ENV['TMPDIR']
+          end
+          if ENV['TMP']
+            search_roots << ENV['TMP']
+          end
+          
+          # 4. Fastlane screenshots output directory (might have been created elsewhere)
+          fastlane_screenshots_base = File.expand_path("./fastlane/screenshots")
+          if Dir.exist?(fastlane_screenshots_base)
+            search_roots << fastlane_screenshots_base
+          end
+          
+          search_roots.uniq!
+          
+          found_screenshots = []
+          search_roots.each do |root|
+            next unless Dir.exist?(root)
+            UI.message("   Searching in: #{root}")
+            
+            begin
+              # Recursively search for PNG files (limit depth to avoid performance issues)
+              # Look for files that might be screenshots (contain device names or screenshot names)
+              screenshot_patterns = [
+                "*iPhone*.png",
+                "*iPad*.png",
+                "*01-WelcomeScreen*.png",
+                "*02-ListsHome*.png",
+                "*03-ListDetail*.png",
+                "*04-ItemDetail*.png",
+                "*05-ItemEdit*.png"
+              ]
+              
+              # Search with depth limit (max 5 levels deep to avoid performance issues)
+              max_depth = 5
+              current_depth = 0
+              
+              # Use find command for better performance than Ruby's recursive glob
+              screenshot_patterns.each do |pattern|
+                # Use find command to search recursively
+                find_cmd = "find '#{root}' -maxdepth #{max_depth} -type f -iname '#{pattern}' 2>/dev/null | head -50"
+                found_files = `#{find_cmd}`.lines.map(&:chomp).reject(&:empty?)
+                
+                found_files.each do |file_path|
+                  # Skip if already found or in system directories
+                  next if file_path.include?("/System/") || file_path.include?("/Library/Caches/com.apple")
+                  next if found_screenshots.include?(file_path)
+                  
+                  # Check if file looks like a screenshot (reasonable size, PNG format)
+                  if File.exist?(file_path) && File.size(file_path) > 1000 # At least 1KB
+                    found_screenshots << file_path
+                    UI.message("     ✅ Found potential screenshot: #{file_path}")
+                  end
+                end
+              end
+              
+              # Also search for any PNG files in tools.fastlane directories
+              fastlane_cache_pattern = "**/tools.fastlane/**/*.png"
+              Dir.glob(File.join(root, fastlane_cache_pattern)).each do |file_path|
+                next if found_screenshots.include?(file_path)
+                if File.exist?(file_path) && File.size(file_path) > 1000
+                  found_screenshots << file_path
+                  UI.message("     ✅ Found screenshot in fastlane cache: #{file_path}")
+                end
+              end
+              
+            rescue => e
+              UI.message("     ⚠️  Error searching in #{root}: #{e.message}")
+            end
+          end
+          
+          # Copy found screenshots
+          if found_screenshots.any?
+            UI.message("   ✅ Found #{found_screenshots.count} potential screenshots via recursive search")
+            found_screenshots.each do |src|
+              begin
+                basename = File.basename(src)
+                # Try to extract screenshot name (remove device prefix if present)
+                if basename.include?("-")
+                  parts = basename.split("-", 2)
+                  if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
+                    basename = parts[1]
+                  end
+                end
+                dst = File.join(locale_dir, basename)
+                unless File.exist?(dst)
+                  FileUtils.cp(src, dst)
+                  extracted_count += 1
+                  UI.message("   ✅ Copied: #{basename} from #{File.dirname(src)}")
+                end
+              rescue => e
+                UI.message("   ⚠️  Error copying #{src}: #{e.message}")
+              end
+            end
+          else
+            UI.message("   ⚠️  No screenshots found via recursive search")
+          end
+        end
+        
+        # Method 5: Recursive search for debug logs
+        UI.message("   🔍 Performing recursive search for debug logs...")
+        log_search_roots = []
+        if ENV['HOME']
+          log_search_roots << ENV['HOME']
+        end
+        log_search_roots << Dir.home
+        if derived && Dir.exist?(derived)
+          log_search_roots << derived
+        end
+        
+        found_logs = []
+        log_search_roots.uniq.each do |root|
+          next unless Dir.exist?(root)
+          begin
+            # Search for snapshot_debug.log files
+            log_pattern = "**/snapshot_debug.log"
+            Dir.glob(File.join(root, log_pattern)).each do |log_path|
+              next if found_logs.include?(log_path)
+              if File.exist?(log_path)
+                found_logs << log_path
+                UI.message("   ✅ Found debug log: #{log_path}")
+                begin
+                  log_content = File.read(log_path)
+                  snapshot_calls = log_content.scan(/snapshot:/).count
+                  if snapshot_calls > 0
+                    UI.message("     📊 Contains #{snapshot_calls} snapshot() calls")
+                    # Show last few entries
+                    snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") }.last(5)
+                    snapshot_lines.each { |line| UI.message("       #{line.chomp}") }
+                  end
+                rescue => e
+                  UI.message("     ⚠️  Error reading log: #{e.message}")
+                end
+              end
+            end
+            
+            # Also search for xcodebuild log files
+            # Research shows logs are in: DerivedData/Logs/Test, ~/Library/Logs/snapshot, etc.
+            xcode_log_patterns = [
+              "**/snapshot/**/*.log",
+              "**/Logs/snapshot/*.log",
+              "**/Logs/Test/*.log",
+              "**/DerivedData/**/Logs/Test/*.log",
+              "**/DerivedData/**/Logs/**/*.txt",  # StandardOutputAndStandardError.txt
+              "**/xcresult/**/*.log",
+              "**/TestSummaries.plist"  # Test summaries may contain log references
+            ]
+            xcode_log_patterns.each do |pattern|
+              Dir.glob(File.join(root, pattern)).each do |log_path|
+                next if found_logs.include?(log_path) || File.size(log_path) > 10_000_000 # Skip huge logs (>10MB)
+                if File.exist?(log_path) && File.mtime(log_path) > Time.now - 3600 # Modified in last hour
+                  found_logs << log_path
+                  UI.message("   ✅ Found xcodebuild log: #{log_path} (#{File.size(log_path)} bytes)")
+                end
+              end
+            end
+          rescue => e
+            UI.message("   ⚠️  Error searching for logs in #{root}: #{e.message}")
+          end
         end
         
         # Method 3: Check for debug log file (verifies snapshot() is being called)
@@ -915,6 +1204,39 @@ platform :ios do
                 debug_lines = log_content.lines.select { |l| l.include?("DEBUG:") }.last(20)
                 UI.message("   Recent DEBUG messages:")
                 debug_lines.each { |line| UI.message("     #{line.chomp}") }
+              else
+                UI.message("   ⚠️  No DEBUG messages found in log either")
+              end
+              
+              # Check for any print statements from test code
+              if log_content.include?("🔍 DEBUG:")
+                test_debug_lines = log_content.lines.select { |l| l.include?("🔍 DEBUG:") }.last(20)
+                UI.message("   Test code DEBUG messages found:")
+                test_debug_lines.each { |line| UI.message("     #{line.chomp}") }
+              end
+              
+              # Check for setupSnapshot messages
+              if log_content.include?("setupSnapshot") || log_content.include?("Cache directory")
+                setup_lines = log_content.lines.select { |l| l.include?("setupSnapshot") || l.include?("Cache directory") || l.include?("Screenshots directory") }.last(10)
+                UI.message("   setupSnapshot() related messages:")
+                setup_lines.each { |line| UI.message("     #{line.chomp}") }
+              else
+                UI.message("   ⚠️  No setupSnapshot() messages found - this may indicate setupSnapshot() is not being called")
+              end
+              
+              # Check for errors or warnings from SnapshotHelper
+              if log_content.include?("⚠️") || log_content.include?("❌") || log_content.include?("ERROR:")
+                error_lines = log_content.lines.select { |l| l.include?("⚠️") || l.include?("❌") || l.include?("ERROR:") || l.include?("screenshotsDirectory is nil") || l.include?("XCUIApplication is not set") }.last(15)
+                UI.message("   SnapshotHelper errors/warnings found:")
+                error_lines.each { |line| UI.message("     #{line.chomp}") }
+              end
+              
+              # Show a sample of the log to understand what IS being captured
+              UI.message("   Sample of log content (last 30 lines):")
+              log_content.lines.last(30).each_with_index do |line, idx|
+                # Skip very long lines that are just noise
+                next if line.length > 500
+                UI.message("     [#{log_content.lines.count - 30 + idx}] #{line.chomp}")
               end
             end
           else
