@@ -28,22 +28,21 @@ final class ListAllUITests: XCTestCase {
             return false
         }
         
-        // Setup snapshot for Fastlane screenshot automation
-        setupSnapshot(app)
-        
         // OPTIMIZATION: Don't auto-launch in setUpWithError during FASTLANE_SNAPSHOT
         // Let individual screenshot tests manage their own launch with specific arguments
         // This avoids redundant launches and gives tests full control over app state
         let isSnapshotMode = ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES"
         
         if !isSnapshotMode {
-            // Normal test mode: launch with standard test data
+            // Normal test mode: setup snapshot and launch with standard test data
+            setupSnapshot(app)
             configureAppForNormalTests()
             ensurePortrait()
             app.launch()
             app.tap() // Trigger interruption monitor
         }
-        // If snapshot mode, tests will call launchAppForScreenshot(...) themselves
+        // If snapshot mode, setupSnapshot() will be called in launchAppForScreenshot()
+        // after setting launch arguments but before launching
     }
     
     // Helper: Configure app for normal (non-screenshot) tests
@@ -56,7 +55,9 @@ final class ListAllUITests: XCTestCase {
     }
     
     // Helper: Launch app specifically for screenshot with custom arguments
+    // CRITICAL: setupSnapshot() must be called AFTER setting launch arguments but BEFORE launching
     private func launchAppForScreenshot(skipTestData: Bool = false) {
+        // Set up launch arguments first
         app.launchArguments.append("UITEST_MODE")
         if skipTestData {
             app.launchArguments.append("SKIP_TEST_DATA")
@@ -66,6 +67,11 @@ final class ListAllUITests: XCTestCase {
         app.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
         app.launchArguments.append("FORCE_LIGHT_MODE")
         app.launchArguments.append("DISABLE_TOOLTIPS")
+        
+        // CRITICAL: setupSnapshot() must be called AFTER setting arguments but BEFORE launching
+        // This allows SnapshotHelper to read Fastlane's cache files and add snapshot-specific arguments
+        setupSnapshot(app)
+        
         ensurePortrait()
         app.launch()
         app.tap() // Trigger interruption monitor
@@ -595,7 +601,7 @@ final class ListAllUITests: XCTestCase {
     sleep(1)
     app.terminate()
     let settingsApp = XCUIApplication()
-    setupSnapshot(settingsApp)
+    // CRITICAL: Set launch arguments BEFORE calling setupSnapshot()
     settingsApp.launchArguments.append("UITEST_MODE")
     settingsApp.launchEnvironment["UITEST_SEED"] = "1"
     settingsApp.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
@@ -603,6 +609,8 @@ final class ListAllUITests: XCTestCase {
     settingsApp.launchArguments.append("FORCE_LIGHT_MODE")
     settingsApp.launchArguments.append("DISABLE_TOOLTIPS")
     settingsApp.launchEnvironment["UITEST_OPEN_SETTINGS_ON_LAUNCH"] = "1"
+    // CRITICAL: setupSnapshot() must be called AFTER setting arguments but BEFORE launching
+    setupSnapshot(settingsApp)
     ensurePortrait()
     settingsApp.launch()
     let settingsNavEnglish = settingsApp.navigationBars["Settings"].firstMatch

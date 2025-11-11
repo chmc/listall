@@ -143,11 +143,12 @@ open class Snapshot: NSObject {
     }
 
     open class func snapshot(_ name: String, timeWaitingForIdle timeout: TimeInterval = 20) {
+        // CRITICAL: Log immediately so Fastlane can detect snapshot calls even if later code fails
+        NSLog("snapshot: \(name)") // more information about this, check out https://docs.fastlane.tools/actions/snapshot/#how-does-it-work
+        
         if timeout > 0 {
             waitForLoadingIndicatorToDisappear(within: timeout)
         }
-
-        NSLog("snapshot: \(name)") // more information about this, check out https://docs.fastlane.tools/actions/snapshot/#how-does-it-work
 
         if Snapshot.waitForAnimations {
             sleep(1) // Waiting for the animation to be finished (kind of)
@@ -174,7 +175,40 @@ open class Snapshot: NSObject {
             let image = screenshot.image
             #endif
 
-            guard var simulator = ProcessInfo().environment["SIMULATOR_DEVICE_NAME"], let screenshotsDir = screenshotsDirectory else { return }
+            // CRITICAL FIX: SIMULATOR_DEVICE_NAME may not be set when using test_without_building
+            // Fall back to extracting device name from destination or using a default
+            guard let screenshotsDir = screenshotsDirectory else {
+                NSLog("⚠️ screenshotsDirectory is nil - cannot save screenshot")
+                return
+            }
+            
+            // Try to get simulator name from environment, or fall back to extracting from app
+            var simulator: String
+            if let envSimulator = ProcessInfo().environment["SIMULATOR_DEVICE_NAME"], !envSimulator.isEmpty {
+                simulator = envSimulator
+            } else {
+                // Fallback: Try to get device name from app's device info or use a default
+                // Fastlane snapshot should set this, but with test_without_building it may not
+                if let app = self.app {
+                    // Try to extract from destination environment variable
+                    if let destination = ProcessInfo().environment["XCODE_DESTINATION"],
+                       let nameMatch = destination.components(separatedBy: ",").first(where: { $0.contains("name=") }) {
+                        simulator = nameMatch.replacingOccurrences(of: "name=", with: "").trimmingCharacters(in: .whitespaces)
+                    } else {
+                        // Last resort: use a sanitized version based on screen size or default
+                        let screenSize = app.windows.firstMatch.frame.size
+                        if screenSize.width > 1000 {
+                            simulator = "iPadPro13inchM4" // Default for large iPad
+                        } else {
+                            simulator = "iPhone16ProMax" // Default for iPhone
+                        }
+                        NSLog("⚠️ SIMULATOR_DEVICE_NAME not set, using fallback: \(simulator)")
+                    }
+                } else {
+                    NSLog("⚠️ Cannot determine simulator name - app is nil")
+                    return
+                }
+            }
 
             do {
                 // The simulator name contains "Clone X of " inside the screenshot file when running parallelized UI Tests on concurrent devices
