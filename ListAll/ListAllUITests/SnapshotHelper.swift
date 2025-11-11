@@ -350,16 +350,59 @@ open class Snapshot: NSObject {
         #elseif arch(i386) || arch(x86_64) || arch(arm64)
             // CRITICAL FIX: Fastlane snapshot should set SIMULATOR_HOST_HOME, but with test_without_building it may not
             // Fall back to HOME environment variable or NSHomeDirectory() if SIMULATOR_HOST_HOME is not set
-            let simulatorHostHome = ProcessInfo().environment["SIMULATOR_HOST_HOME"] 
-                                    ?? ProcessInfo().environment["HOME"]
-                                    ?? NSHomeDirectory()
+            // Try multiple fallback strategies to ensure we always find a valid directory
+            var simulatorHostHome: String?
+            
+            // Strategy 1: Check SIMULATOR_HOST_HOME (set by Fastlane)
+            simulatorHostHome = ProcessInfo().environment["SIMULATOR_HOST_HOME"]
+            
+            // Strategy 2: Check HOME environment variable
+            if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
+                simulatorHostHome = ProcessInfo().environment["HOME"]
+            }
+            
+            // Strategy 3: Use NSHomeDirectory() (should always work in simulator)
+            if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
+                simulatorHostHome = NSHomeDirectory()
+            }
+            
+            // Strategy 4: Last resort - use /Users/runner (common CI path) or /tmp
+            if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
+                simulatorHostHome = "/Users/runner"
+                // Verify it exists, if not use /tmp
+                if !FileManager.default.fileExists(atPath: simulatorHostHome!) {
+                    simulatorHostHome = "/tmp"
+                }
+            }
+            
             NSLog("🔍 SIMULATOR_HOST_HOME: \(ProcessInfo().environment["SIMULATOR_HOST_HOME"] ?? "not set")")
             NSLog("🔍 HOME: \(ProcessInfo().environment["HOME"] ?? "not set")")
             NSLog("🔍 NSHomeDirectory(): \(NSHomeDirectory())")
-            NSLog("🔍 Using home directory: \(simulatorHostHome)")
-            let homeDir = URL(fileURLWithPath: simulatorHostHome)
+            NSLog("🔍 Using home directory: \(simulatorHostHome ?? "NIL - THIS SHOULD NEVER HAPPEN")")
+            
+            guard let home = simulatorHostHome, !home.isEmpty else {
+                // This should never happen with our fallbacks, but handle it gracefully
+                let fallback = "/tmp"
+                NSLog("⚠️ All home directory strategies failed, using fallback: \(fallback)")
+                return URL(fileURLWithPath: fallback).appendingPathComponent(cachePath)
+            }
+            
+            let homeDir = URL(fileURLWithPath: home)
             let cacheDir = homeDir.appendingPathComponent(cachePath)
             NSLog("🔍 Cache directory path: \(cacheDir.path)")
+            
+            // CRITICAL: Ensure the cache directory exists
+            let fileManager = FileManager.default
+            if !fileManager.fileExists(atPath: cacheDir.path) {
+                do {
+                    try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true, attributes: nil)
+                    NSLog("✅ Created cache directory: \(cacheDir.path)")
+                } catch {
+                    NSLog("⚠️ Failed to create cache directory: \(error.localizedDescription)")
+                    // Continue anyway - snapshot() will try to create the screenshots subdirectory
+                }
+            }
+            
             return cacheDir
         #else
             throw SnapshotError.cannotRunOnPhysicalDevice

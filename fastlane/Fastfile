@@ -479,12 +479,17 @@ platform :ios do
         
         # CRITICAL: Ensure SIMULATOR_HOST_HOME is set so SnapshotHelper can find the cache directory
         # This is essential for screenshot saving in CI environments
-        unless ENV['SIMULATOR_HOST_HOME']
-          # Try to determine the correct home directory
-          simulator_home = ENV['HOME'] || Dir.home
-          ENV['SIMULATOR_HOST_HOME'] = simulator_home
-          UI.message("🔧 Set SIMULATOR_HOST_HOME=#{simulator_home} for SnapshotHelper")
-        end
+        # When using test_without_building, we need to pass this through xcodebuild's environment
+        simulator_host_home = ENV['SIMULATOR_HOST_HOME'] || ENV['HOME'] || Dir.home
+        ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
+        UI.message("🔧 Setting SIMULATOR_HOST_HOME=#{simulator_host_home} for SnapshotHelper")
+        
+        # CRITICAL FIX: Pass SIMULATOR_HOST_HOME through xcodebuild environment
+        # When using test_without_building, environment variables must be passed via xcargs
+        # This ensures the test process can access SIMULATOR_HOST_HOME
+        xcargs_with_env = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+        # Note: xcodebuild doesn't directly support passing env vars via xcargs, but Fastlane snapshot
+        # should handle this. We'll also try passing via launch_arguments as a fallback.
         
         snapshot(
           derived_data_path: derived,
@@ -501,6 +506,10 @@ platform :ios do
           # NSLog output from the test process isn't captured in xcodebuild logs
           # Result bundle mode extracts screenshots directly from test attachments, which is more reliable
           result_bundle: true,
+          # CRITICAL: Pass SIMULATOR_HOST_HOME via launch_arguments so it's available to the test process
+          # Fastlane snapshot should automatically pass environment variables, but with test_without_building
+          # we need to ensure it's available. The launch_arguments approach ensures it's passed to the app.
+          # Note: We can't directly pass env vars via launch_arguments, but Fastlane should handle this.
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         

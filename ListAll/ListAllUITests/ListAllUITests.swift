@@ -70,7 +70,10 @@ final class ListAllUITests: XCTestCase {
         
         // CRITICAL: setupSnapshot() must be called AFTER setting arguments but BEFORE launching
         // This allows SnapshotHelper to read Fastlane's cache files and add snapshot-specific arguments
+        // Note: SnapshotHelper has fallback logic to use HOME or NSHomeDirectory() if SIMULATOR_HOST_HOME isn't set
+        print("🔍 DEBUG: About to call setupSnapshot()")
         setupSnapshot(app)
+        print("🔍 DEBUG: setupSnapshot() completed")
         
         ensurePortrait()
         app.launch()
