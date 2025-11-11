@@ -490,9 +490,9 @@ platform :ios do
           # CRITICAL FIX: Enable result_bundle for reliable screenshot extraction with test_without_building
           # Fastlane can extract screenshots from result bundle even when log parsing fails
           # Research confirms this is the recommended approach for CI environments
+          # NOTE: When result_bundle: true, Fastlane automatically adds -resultBundlePath to xcodebuild
+          # Do NOT add it manually via xcargs or it will be duplicated
           result_bundle: true,
-          # Use xcargs to specify custom result bundle path (result_bundle_path is not a valid snapshot parameter)
-          xcargs: "-resultBundlePath '#{result_bundle_path}'",
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
@@ -504,22 +504,28 @@ platform :ios do
         extracted_count = 0
         
         # Method 1: Extract from result bundle (result_bundle is now enabled)
-        # Use the result bundle path that was passed to snapshot()
-        if File.exist?(result_bundle_path)
-          UI.message("   Checking result bundle: #{result_bundle_path}")
+        # NOTE: Fastlane automatically extracts screenshots when result_bundle: true
+        # This manual extraction is a fallback. Fastlane uses its own default path,
+        # so this custom path may not exist. Fastlane's automatic extraction should work.
+        # Check Fastlane's default location first, then fall back to custom path
+        fastlane_default_path = File.join(screenshots_dir, locale, "ListAll.xcresult")
+        result_bundle_to_check = File.exist?(fastlane_default_path) ? fastlane_default_path : result_bundle_path
+        
+        if File.exist?(result_bundle_to_check)
+          UI.message("   Checking result bundle: #{result_bundle_to_check}")
           
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
           begin
-            xcresulttool_output = `xcrun xcresulttool get --path "#{result_bundle_path}" --format json 2>&1`
+            xcresulttool_output = `xcrun xcresulttool get --path "#{result_bundle_to_check}" --format json 2>&1`
             if $?.success?
               UI.message("   ✅ Result bundle is valid")
               
               # Extract all attachments using xcresulttool
-              attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_path}" 2>&1`
+              attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" 2>&1`
               if $?.success? && attachments_output.include?(".png")
                 UI.message("   Found PNG attachments in result bundle")
                 # List and extract attachments
-                `xcrun xcresulttool attachments --path "#{result_bundle_path}" --output-path "#{File.join(locale_dir, "attachments")}" 2>&1`
+                `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{File.join(locale_dir, "attachments")}" 2>&1`
                 if Dir.exist?(File.join(locale_dir, "attachments"))
                   Dir.glob(File.join(locale_dir, "attachments", "**", "*.png")).each do |src|
                     basename = File.basename(src)
@@ -536,7 +542,7 @@ platform :ios do
           end
           
           # Method 1b: Direct file system access (fallback)
-          attachments_dir = File.join(result_bundle_path, "Attachments")
+          attachments_dir = File.join(result_bundle_to_check, "Attachments")
           if Dir.exist?(attachments_dir)
             # Find all PNG attachments
             Dir.glob(File.join(attachments_dir, "**", "*.png")).each do |src|
@@ -548,7 +554,7 @@ platform :ios do
             UI.message("   Extracted #{extracted_count} screenshots from result bundle") if extracted_count > 0
           end
         else
-          UI.message("   ⚠️  Result bundle not found at: #{result_bundle_path}")
+          UI.message("   ⚠️  Result bundle not found at: #{result_bundle_to_check} (Fastlane should have extracted screenshots automatically)")
         end
         
         # Method 2: Extract from simulator cache directory (SnapshotHelper saves here)
