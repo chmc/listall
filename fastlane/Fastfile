@@ -531,37 +531,34 @@ platform :ios do
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
           begin
             # First, check if result bundle is valid
-            # Use --legacy flag for older xcresulttool API (required in newer Xcode versions)
-            # Note: The command structure is "get object --legacy" not "get --legacy"
-            xcresulttool_output = `xcrun xcresulttool get object --legacy --path "#{result_bundle_to_check}" --format json 2>&1`
+            # Try the modern API first (get test-results), fall back to deprecated get object if needed
+            xcresulttool_output = `xcrun xcresulttool get test-results --path "#{result_bundle_to_check}" --format json 2>&1`
+            if !$?.success?
+              # Fall back to deprecated get object API
+              xcresulttool_output = `xcrun xcresulttool get object --path "#{result_bundle_to_check}" --format json 2>&1`
+            end
             if $?.success?
               UI.message("   ✅ Result bundle is valid")
               
-              # List all attachments to see what's available
-              # Try both new and legacy API for attachments
-              attachments_list = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" 2>&1`
-              if !$?.success? || attachments_list.include?("deprecated") || attachments_list.include?("--legacy")
-                # Try with legacy flag
-                attachments_list = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" 2>&1`
-              end
-              UI.message("   Attachments list: #{attachments_list.chomp}")
+              # Extract attachments using the correct xcresulttool API
+              # The correct command is: xcrun xcresulttool export attachments
+              attachments_dir = File.join(locale_dir, "attachments")
+              FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
               
-              if attachments_list.include?(".png") || attachments_list.include?("PNG")
-                UI.message("   Found PNG attachments in result bundle")
-                # Extract all attachments to a temporary directory
-                attachments_dir = File.join(locale_dir, "attachments")
-                FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
-                
-                # Try extracting with new API first, fall back to legacy if needed
-                extract_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
-                if !$?.success? || extract_output.include?("deprecated") || extract_output.include?("--legacy")
-                  extract_output = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
-                end
-                UI.message("   Extract output: #{extract_output.chomp}") unless extract_output.empty?
-                
-                if Dir.exist?(attachments_dir)
-                  # Find all PNG files (case-insensitive)
-                  png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+              # Use the correct xcresulttool export attachments command
+              extract_output = `xcrun xcresulttool export attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+              UI.message("   Extract output: #{extract_output.chomp}") unless extract_output.empty?
+              
+              if $?.success?
+                UI.message("   ✅ Successfully exported attachments from result bundle")
+              else
+                UI.message("   ⚠️  Failed to export attachments: #{extract_output.chomp}")
+              end
+              
+              # Check if any PNG files were extracted
+              if Dir.exist?(attachments_dir)
+                png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+                if png_files.any?
                   UI.message("   Found #{png_files.count} PNG files in attachments directory")
                   
                   png_files.each do |src|
@@ -573,11 +570,10 @@ platform :ios do
                   end
                   FileUtils.rm_rf(attachments_dir)
                 else
-                  UI.message("   ⚠️  Attachments directory not created")
+                  UI.message("   ⚠️  No PNG files found in attachments directory")
                 end
               else
-                UI.message("   ⚠️  No PNG attachments found in result bundle")
-                UI.message("   Full attachments list: #{attachments_list}")
+                UI.message("   ⚠️  Attachments directory not created")
               end
             else
               UI.message("   ⚠️  Result bundle validation failed: #{xcresulttool_output.chomp}")

@@ -159,20 +159,32 @@ open class Snapshot: NSObject {
         NSLog("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
         print("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
         
-        // CRITICAL: Also write to a file for debugging when NSLog isn't captured
-        // This helps diagnose issues when using test_without_building
-        if let cacheDir = cacheDirectory {
-            let debugLogPath = cacheDir.appendingPathComponent("snapshot_debug.log")
-            let timestamp = Date().timeIntervalSince1970
-            let debugMessage = "[\(timestamp)] snapshot: \(name)\n"
-            if let data = debugMessage.data(using: .utf8) {
-                if let fileHandle = try? FileHandle(forWritingTo: debugLogPath) {
-                    fileHandle.seekToEndOfFile()
-                    fileHandle.write(data)
-                    fileHandle.closeFile()
-                } else {
-                    // File doesn't exist, create it
-                    try? data.write(to: debugLogPath)
+        // CRITICAL: Write to debug log file even if cacheDirectory is nil
+        // This helps diagnose issues when setupSnapshot() fails
+        let debugLogPaths = [
+            cacheDirectory?.appendingPathComponent("snapshot_debug.log"),
+            URL(fileURLWithPath: "/tmp/snapshot_debug.log"), // Fallback location
+            FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("snapshot_debug.log")
+        ].compactMap { $0 }
+        
+        let timestamp = Date().timeIntervalSince1970
+        let debugMessage = "[\(timestamp)] snapshot: \(name)\n"
+        if let data = debugMessage.data(using: .utf8) {
+            for debugLogPath in debugLogPaths {
+                do {
+                    if let fileHandle = try? FileHandle(forWritingTo: debugLogPath) {
+                        fileHandle.seekToEndOfFile()
+                        fileHandle.write(data)
+                        fileHandle.closeFile()
+                        break
+                    } else {
+                        // File doesn't exist, create it
+                        try? data.write(to: debugLogPath)
+                        break
+                    }
+                } catch {
+                    // Try next path
+                    continue
                 }
             }
         }
@@ -182,6 +194,11 @@ open class Snapshot: NSObject {
             let errorMsg = "XCUIApplication is not set. Please call setupSnapshot(app) before snapshot()."
             NSLog("❌ ERROR: \(errorMsg)")
             print("❌ ERROR: \(errorMsg)")
+            // Also write error to debug log
+            let errorData = "[\(Date().timeIntervalSince1970)] ERROR: \(errorMsg)\n".data(using: .utf8)
+            for debugLogPath in debugLogPaths {
+                try? errorData?.write(to: debugLogPath)
+            }
             return
         }
         
