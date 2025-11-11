@@ -1170,6 +1170,58 @@ platform :ios do
             end
           end
           
+          # Also check the xcresult bundle for test output and attachments
+          xcresult_path = File.join(derived, "Logs/Test", "Test-ListAll-*.xcresult")
+          xcresult_files = Dir.glob(xcresult_path).sort_by { |f| File.mtime(f) }.reverse
+          if xcresult_files.any?
+            latest_xcresult = xcresult_files.first
+            UI.message("   🔍 Checking xcresult bundle: #{latest_xcresult}")
+            # Try to extract test output from result bundle
+            begin
+              # Use xcresulttool to get test summaries (try both new and legacy API)
+              test_summary = `xcrun xcresulttool get --format json --path "#{latest_xcresult}" 2>&1`
+              if !$?.success? || test_summary.include?("deprecated") || test_summary.include?("--legacy")
+                test_summary = `xcrun xcresulttool get object --legacy --format json --path "#{latest_xcresult}" 2>&1`
+              end
+              
+              if $?.success?
+                require 'json'
+                summary_data = JSON.parse(test_summary)
+                UI.message("   ✅ xcresult bundle is valid")
+                
+                # Try to extract attachments (screenshots might be here)
+                attachments_dir = File.join(locale_dir, "xcresult_attachments")
+                FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
+                
+                attachments_output = `xcrun xcresulttool attachments --path "#{latest_xcresult}" --output-path "#{attachments_dir}" 2>&1`
+                if !$?.success? || attachments_output.include?("deprecated") || attachments_output.include?("--legacy")
+                  attachments_output = `xcrun xcresulttool attachments --legacy --path "#{latest_xcresult}" --output-path "#{attachments_dir}" 2>&1`
+                end
+                
+                if Dir.exist?(attachments_dir)
+                  png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+                  if png_files.any?
+                    UI.message("   ✅ Found #{png_files.count} PNG files in xcresult attachments")
+                    png_files.each do |src|
+                      basename = File.basename(src)
+                      dst = File.join(locale_dir, basename)
+                      unless File.exist?(dst)
+                        FileUtils.cp(src, dst)
+                        extracted_count += 1
+                        UI.message("   ✅ Extracted from xcresult: #{basename}")
+                      end
+                    end
+                  end
+                  FileUtils.rm_rf(attachments_dir)
+                end
+              else
+                UI.message("   ⚠️  xcresult bundle validation failed: #{test_summary.chomp}")
+              end
+            rescue => e
+              UI.message("   ⚠️  Error reading xcresult: #{e.message}")
+            end
+          end
+          
           if log_path && File.exist?(log_path)
             UI.error("   Checking log file: #{log_path}")
             log_content = File.read(log_path)
