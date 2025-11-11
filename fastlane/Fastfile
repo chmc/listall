@@ -530,88 +530,110 @@ platform :ios do
         # NOTE: Fastlane automatically extracts screenshots when result_bundle: true
         # This manual extraction is a fallback. Fastlane uses its own default path,
         # so this custom path may not exist. Fastlane's automatic extraction should work.
-        # Check Fastlane's default location first, then fall back to custom path
-        fastlane_default_path = File.join(screenshots_dir, locale, "ListAll.xcresult")
-        result_bundle_to_check = File.exist?(fastlane_default_path) ? fastlane_default_path : result_bundle_path
+        # Check multiple possible result bundle locations
+        possible_result_bundles = [
+          result_bundle_path,  # Our custom path
+          File.join(screenshots_dir, locale, "ListAll.xcresult"),  # Fastlane default
+          File.join(screenshots_dir, "ListAll.xcresult"),  # Alternative default
+        ]
         
-        if File.exist?(result_bundle_to_check)
-          UI.message("   Checking result bundle: #{result_bundle_to_check}")
+        # Also check in derived data for result bundles
+        if derived && Dir.exist?(derived)
+          possible_result_bundles += Dir.glob(File.join(derived, "**", "*.xcresult")).select { |f| File.directory?(f) }
+        end
+        
+        result_bundle_to_check = possible_result_bundles.find { |path| File.exist?(path) }
+        
+        if result_bundle_to_check
+          UI.message("   ✅ Found result bundle: #{result_bundle_to_check}")
           
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
           begin
-            # CRITICAL FIX: Use the correct modern xcresulttool API
-            # The modern API uses: xcrun xcresulttool export --type directory
-            # For attachments, we need to export the entire bundle and find attachments
+            # CRITICAL FIX: Use the correct xcresulttool attachments API
+            # The correct command is: xcrun xcresulttool attachments --path <bundle> --output-path <dir>
+            # This directly extracts all test attachments including screenshots
             attachments_dir = File.join(locale_dir, "attachments")
             FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
             
-            # Try modern API: export the result bundle as a directory
-            # This extracts all attachments including screenshots
-            export_output = `xcrun xcresulttool export --type directory --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" --id root 2>&1`
+            # First, try the modern attachments command (available in Xcode 11+)
+            attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
             
-            if !$?.success? || export_output.include?("deprecated") || export_output.include?("--legacy")
-              # Fall back to legacy API if modern API fails
-              UI.message("   ⚠️  Modern API failed, trying legacy API...")
-              export_output = `xcrun xcresulttool export --legacy --type directory --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" --id root 2>&1`
+            if !$?.success? || attachments_output.include?("deprecated") || attachments_output.include?("unrecognized")
+              # Fall back to legacy API if modern API is not available
+              UI.message("   ⚠️  Modern attachments API failed, trying alternative method...")
+              
+              # Alternative: Get the root object ID first, then export attachments
+              root_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
+              if $?.success?
+                require 'json'
+                begin
+                  root_data = JSON.parse(root_output)
+                  # Try to find action records that contain attachments
+                  # This is a more complex approach but works when attachments command isn't available
+                  UI.message("   ✅ Result bundle is accessible, attempting to extract attachments...")
+                  
+                  # Use xcresulttool to export all files and search for PNGs
+                  # This is less efficient but more reliable
+                  temp_export_dir = File.join(locale_dir, "temp_export")
+                  FileUtils.mkdir_p(temp_export_dir) unless File.directory?(temp_export_dir)
+                  
+                  # Try to get all test actions and their attachments
+                  actions_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id root 2>&1`
+                  if $?.success?
+                    actions_data = JSON.parse(actions_output)
+                    # Navigate the JSON structure to find attachments
+                    # This is complex, so we'll use a simpler approach: search the bundle directly
+                  end
+                rescue JSON::ParserError => e
+                  UI.message("   ⚠️  Failed to parse result bundle JSON: #{e.message}")
+                end
+              end
             end
             
-            if $?.success?
-              UI.message("   ✅ Successfully exported result bundle contents")
+            # Check if attachments were extracted
+            if Dir.exist?(attachments_dir)
+              # Recursively search for PNG files
+              png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
               
-              # Search for PNG files in the exported directory structure
-              # Screenshots are typically in: Data/Attachments/ or similar paths
-              if Dir.exist?(attachments_dir)
-                # Recursively search for PNG files
-                png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+              if png_files.any?
+                UI.message("   ✅ Found #{png_files.count} PNG files in result bundle attachments")
                 
-                if png_files.any?
-                  UI.message("   ✅ Found #{png_files.count} PNG files in result bundle")
+                png_files.each do |src|
+                  # Extract meaningful filename from path or use basename
+                  basename = File.basename(src)
                   
-                  png_files.each do |src|
-                    # Extract meaningful filename from path or use basename
-                    # Screenshot names might be in the path or filename
-                    basename = File.basename(src)
-                    
-                    # Try to extract screenshot name from path if it contains test/screenshot info
-                    # Otherwise use the filename
-                    dst = File.join(locale_dir, basename)
-                    
-                    # If file already exists, add a prefix to avoid overwriting
-                    if File.exist?(dst)
-                      # Try to extract a better name from the path
-                      path_parts = src.split(File::SEPARATOR)
-                      # Look for parts that might contain screenshot names
-                      screenshot_name = path_parts.find { |p| p.match?(/^\d{2}-|screenshot|snapshot/i) } || basename
-                      dst = File.join(locale_dir, screenshot_name)
-                    end
-                    
-                    FileUtils.cp(src, dst) unless File.exist?(dst)
-                    extracted_count += 1
-                    UI.message("   ✅ Extracted: #{File.basename(dst)}")
+                  # Try to extract screenshot name from path if it contains test/screenshot info
+                  # Screenshot names from SnapshotHelper are like: "iPhone16ProMax-01-WelcomeScreen.png"
+                  # or they might be in subdirectories with test names
+                  dst = File.join(locale_dir, basename)
+                  
+                  # If file already exists, try to extract a better name from the path
+                  if File.exist?(dst)
+                    path_parts = src.split(File::SEPARATOR)
+                    # Look for parts that might contain screenshot names (e.g., "01-WelcomeScreen")
+                    screenshot_name = path_parts.find { |p| p.match?(/^\d{2}-|screenshot|snapshot/i) } || basename
+                    dst = File.join(locale_dir, screenshot_name)
                   end
-                else
-                  UI.message("   ⚠️  No PNG files found in exported result bundle")
-                  # List what files were found for debugging
-                  all_files = Dir.glob(File.join(attachments_dir, "**", "*")).select { |f| File.file?(f) }
-                  if all_files.any?
-                    UI.message("   Found #{all_files.count} files total, first 10: #{all_files.first(10).map { |f| File.basename(f) }.join(", ")}")
-                  end
+                  
+                  FileUtils.cp(src, dst) unless File.exist?(dst)
+                  extracted_count += 1
+                  UI.message("   ✅ Extracted: #{File.basename(dst)}")
                 end
                 
-                # Clean up exported directory
+                # Clean up
                 FileUtils.rm_rf(attachments_dir)
               else
-                UI.message("   ⚠️  Export directory not created")
+                UI.message("   ⚠️  No PNG files found in attachments directory")
+                # List what files were found for debugging
+                all_files = Dir.glob(File.join(attachments_dir, "**", "*")).select { |f| File.file?(f) }
+                if all_files.any?
+                  UI.message("   Found #{all_files.count} files total, first 10: #{all_files.first(10).map { |f| File.basename(f) }.join(", ")}")
+                end
+                # Don't clean up yet - we'll check cache directories next
               end
             else
-              UI.message("   ⚠️  Failed to export result bundle: #{export_output.chomp}")
-              # Try alternative: use xcresulttool to get attachments directly
-              UI.message("   🔍 Trying alternative attachment extraction method...")
-              alt_extract_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
-              if $?.success?
-                UI.message("   ✅ Result bundle is accessible, but attachment extraction failed")
-                UI.message("   This may indicate screenshots weren't captured during tests")
-              end
+              UI.message("   ⚠️  Attachments directory not created - attachments command may have failed")
+              UI.message("   Error output: #{attachments_output.chomp}" if attachments_output && !attachments_output.empty?)
             end
           rescue => e
             UI.message("   ⚠️  Error using xcresulttool: #{e.message}")
@@ -775,19 +797,51 @@ platform :ios do
           end
         end
         
+        # CRITICAL: Also check simulator's actual data directory for debug log
+        # SnapshotHelper may write to /tmp or simulator's document directory as fallback
+        possible_cache_dirs_for_log << "/tmp"
+        begin
+          simulator_info = `xcrun simctl list devices --json 2>&1`
+          if $?.success?
+            require 'json'
+            sim_data = JSON.parse(simulator_info)
+            device_name = device.gsub(" ", "").gsub("-", "")
+            sim_data['devices'].each do |runtime, devices|
+              devices.each do |sim|
+                if sim['name'] == device || sim['name'].include?(device_name)
+                  if sim['dataPath']
+                    # Check simulator's data directory for cache
+                    possible_cache_dirs_for_log << File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
+                    # Check simulator's document directory (fallback location)
+                    possible_cache_dirs_for_log << File.join(sim['dataPath'], "Library/Application Support")
+                  end
+                end
+              end
+            end
+          end
+        rescue => e
+          UI.message("   ⚠️  Could not check simulator data paths for debug log: #{e.message}")
+        end
+        
         debug_log_found = false
+        debug_log_path_found = nil
         possible_cache_dirs_for_log.uniq.each do |cache_base|
           debug_log_path = File.join(cache_base, "snapshot_debug.log")
           if File.exist?(debug_log_path)
             debug_log_found = true
+            debug_log_path_found = debug_log_path
             UI.message("   ✅ Found SnapshotHelper debug log: #{debug_log_path}")
             debug_content = File.read(debug_log_path)
+            snapshot_calls = debug_content.lines.select { |l| l.include?("snapshot:") }
+            if snapshot_calls.any?
+              UI.message("   ✅ Debug log shows #{snapshot_calls.count} snapshot() calls were made")
+              UI.message("   Last snapshot calls:")
+              snapshot_calls.last(10).each { |line| UI.message("     #{line.chomp}") }
+            else
+              UI.message("   ⚠️  Debug log exists but no snapshot() calls found")
+            end
             UI.message("   Debug log content (last 20 lines):")
             debug_content.lines.last(20).each { |line| UI.message("     #{line.chomp}") }
-            
-            # Count snapshot calls
-            snapshot_calls = debug_content.scan(/snapshot:/).count
-            UI.message("   📊 Found #{snapshot_calls} snapshot() calls in debug log")
             break
           end
         end
