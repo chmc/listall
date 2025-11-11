@@ -58,18 +58,13 @@ jobs:
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
 
-      - name: Generate iPhone and iPad screenshots (framed)
-        run: bundle exec fastlane ios screenshots_framed
+      - name: Generate all App Store screenshots
+        run: bundle exec fastlane ios prepare_appstore
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "120"
 
-      - name: Generate Watch screenshots
-        run: bundle exec fastlane ios watch_screenshots
-
-      - name: Validate all delivery screenshots
-        run: bundle exec fastlane ios validate_delivery_screenshots
-
       - name: Upload iPhone/iPad screenshots artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-iphone-ipad
@@ -77,6 +72,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Watch screenshots artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-watch
@@ -84,6 +80,7 @@ jobs:
           retention-days: 30
 
       - name: Upload HTML reports
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: screenshot-reports

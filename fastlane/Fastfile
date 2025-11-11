@@ -377,6 +377,40 @@ platform :ios do
     UI.message("📁 Screenshots saved to: fastlane/screenshots")
   end
 
+  desc "Unified App Store screenshot generation pipeline"
+  desc "Generates all screenshots (iPhone, iPad, Watch) with validation and fail-fast checks"
+  desc "This is the main entry point for CI/CD pipelines"
+  lane :prepare_appstore do
+    UI.header("🚀 Starting App Store Screenshot Generation Pipeline")
+    
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+    
+    begin
+      # 1. Generate iPhone and iPad screenshots (with framing)
+      UI.header("Step 1/2: Generating iPhone and iPad screenshots")
+      screenshots_framed
+      
+      # 2. Generate Watch screenshots
+      UI.header("Step 2/2: Generating Watch screenshots")
+      watch_screenshots
+      
+      # 3. Final validation: ensure all expected screenshots exist
+      UI.header("Final Validation: Verifying all screenshots were generated")
+      validate_delivery_screenshots
+      
+      UI.success("🎉 App Store screenshot generation pipeline completed successfully!")
+      UI.message("📁 All screenshots ready in: fastlane/screenshots/framed/")
+      UI.message("   - iPhone/iPad: Framed screenshots")
+      UI.message("   - Watch: Normalized screenshots (unframed)")
+      
+    rescue => e
+      UI.error("❌ Pipeline failed: #{e.message}")
+      UI.error("Stack trace: #{e.backtrace.join("\n")}")
+      raise
+    end
+  end
+
   desc "Generate and frame screenshots (snapshot + frameit)"
   lane :screenshots_framed do
     # Setup CI keychain if running in CI (prevents signing hangs)
@@ -397,7 +431,7 @@ platform :ios do
       build_for_testing: true,
       # Note: build_for_testing and test_without_building are mutually exclusive
       # build_for_testing means: build only, don't run tests
-      skip_testing: ["ListAllTests", "ListAllUITests"],
+      # We need to build UI tests for snapshot, so don't use skip_testing here
       derived_data_path: derived,
       xcargs: "ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
     )
@@ -412,6 +446,14 @@ platform :ios do
       # result_bundle can be enabled for debugging but adds overhead
       # result_bundle: true
     )
+    
+    # 1.5. Fail-fast check: ensure raw screenshots exist before processing
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+    raw_shots = Dir.glob(File.join(screenshots_dir, "**/*.png"))
+    if raw_shots.empty?
+      UI.user_error!("🚨 iOS screenshot generation failed: No screenshots found in #{screenshots_dir}")
+    end
+    UI.success("✅ Found #{raw_shots.count} raw iOS screenshots")
 
     # 2. Normalize new device sizes to Frameit-supported canvases
     UI.header("Normalizing screenshot sizes for Frameit compatibility")
@@ -479,6 +521,13 @@ platform :ios do
         FileUtils.cp(png, target_loc)
       end
     end
+    
+    # 4. Fail-fast check: ensure framed screenshots exist
+    framed_shots = Dir.glob(File.join(framed_root, "**/*.png"))
+    if framed_shots.empty?
+      UI.user_error!("🚨 Framing failed: No framed screenshots found in #{framed_root}")
+    end
+    UI.success("✅ Found #{framed_shots.count} framed screenshots")
 
     UI.success("🖼  Framed screenshots generated at #{framed_root}")
   end
@@ -514,7 +563,33 @@ platform :ios do
   lane :watch_screenshots do
     UI.header("🍎⌚️ Generating watchOS Screenshots")
     
-    # Use snapshot with watch-specific configuration
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+    
+    # Shared derived data path for prebuild and snapshot
+    derived = "./fastlane/derivedDataWatch"
+    
+    # 0. ONE-TIME BUILD-FOR-TESTING
+    # Build once, then snapshot reuses these compiled products for all languages
+    # This prevents rebuilding 2x (2 languages), saving 5-8 minutes
+    UI.header("Building Watch app and UI tests once for all snapshot runs")
+    scan(
+      scheme: "ListAllWatch Watch App",
+      project: "./ListAll/ListAll.xcodeproj",
+      testplan: "ListAllWatch Watch App",
+      devices: ["Apple Watch Series 10 (46mm)"],  # Any device; we only need to populate DerivedData
+      clean: true,
+      build_for_testing: true,
+      # Note: build_for_testing and test_without_building are mutually exclusive
+      # build_for_testing means: build only, don't run tests
+      # We need to build UI tests for snapshot, so don't use skip_testing here
+      derived_data_path: derived,
+      xcargs: "ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+    )
+    
+    # 1. Raw screenshots using pre-built products
+    # Note: test_without_building reuses the build from scan above
+    UI.header("Running watch snapshot using pre-built tests")
     snapshot(
       project: "./ListAll/ListAll.xcodeproj",
       scheme: "ListAllWatch Watch App",
@@ -525,17 +600,26 @@ platform :ios do
       clear_previous_screenshots: true,
       override_status_bar: true,
       reinstall_app: true,
-      test_without_building: false,
+      test_without_building: true,  # Reuse pre-built products
+      derived_data_path: derived,
       concurrent_simulators: false,
-      skip_helper_version_check: true
+      skip_helper_version_check: true,
+      result_bundle: false  # Disable to allow Fastlane auto-extraction
     )
+    
+    # 2. Fail-fast check: ensure raw screenshots exist before processing
+    watch_raw_dir = File.expand_path("screenshots/watch", __dir__)
+    raw_shots = Dir.glob(File.join(watch_raw_dir, "**/*.png"))
+    if raw_shots.empty?
+      UI.user_error!("🚨 Watch screenshot generation failed: No screenshots found in #{watch_raw_dir}")
+    end
+    UI.success("✅ Found #{raw_shots.count} raw watch screenshots")
     
     UI.success("🍎⌚️ Watch screenshots generation complete!")
     UI.message("📁 Raw screenshots saved to: fastlane/screenshots/watch")
     
     # Normalize watch screenshots to App Store Connect required dimensions
     UI.header("📐 Normalizing watchOS screenshots to App Store Connect dimensions")
-    watch_raw_dir = File.expand_path("screenshots/watch", __dir__)
     watch_normalized_dir = File.expand_path("screenshots/watch_normalized", __dir__)
     
     begin
@@ -547,6 +631,13 @@ platform :ios do
     rescue => e
       UI.user_error!("Failed to normalize watch screenshots: #{e.message}")
     end
+    
+    # 3. Fail-fast check: ensure normalized screenshots exist
+    normalized_shots = Dir.glob(File.join(watch_normalized_dir, "**/*.png"))
+    if normalized_shots.empty?
+      UI.user_error!("🚨 Watch screenshot normalization failed: No normalized screenshots found in #{watch_normalized_dir}")
+    end
+    UI.success("✅ Found #{normalized_shots.count} normalized watch screenshots")
     
     # Copy normalized watch screenshots to framed directory (no framing for watchOS - standard practice)
     UI.header("📂 Copying normalized watchOS screenshots to unified directory")
