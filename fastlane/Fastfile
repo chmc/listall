@@ -427,7 +427,7 @@ platform :ios do
     scan(
       scheme: "ListAll",
       project: "./ListAll/ListAll.xcodeproj",
-      devices: ["iPhone 17 Pro Max"],  # Any device; we only need to populate DerivedData
+      devices: ["iPhone 16 Pro Max"],  # Any device; we only need to populate DerivedData
       clean: true,
       build_for_testing: true,
       # Note: build_for_testing and test_without_building are mutually exclusive
@@ -561,7 +561,7 @@ platform :ios do
   end
 
   desc "Generate watchOS screenshots (fully automated via UITests + simctl)"
-  desc "Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales"
+  desc "Captures screenshots from Apple Watch Series 10 (46mm) for EN and FI locales"
   lane :watch_screenshots do
     UI.header("🍎⌚️ Generating watchOS Screenshots")
     
@@ -577,8 +577,8 @@ platform :ios do
     # Fastlane snapshot will handle pairing automatically if devices are available,
     # but we ensure they exist and are ready
     UI.header("Preparing Watch and iPhone simulators for pairing")
-    watch_device = "Apple Watch Series 11 (46mm)"  # Updated to match CI available devices
-    iphone_device = "iPhone 17 Pro Max"  # Use same device as iOS screenshots for consistency
+    watch_device = "Apple Watch Series 10 (46mm)"  # Available in CI (Xcode 16.1)
+    iphone_device = "iPhone 16 Pro Max"  # Use same device as iOS screenshots for consistency
     
     # Ensure simulators exist and are available
     # Fastlane snapshot will automatically pair them when running Watch tests
