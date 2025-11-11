@@ -451,6 +451,13 @@ platform :ios do
     # This significantly speeds up failure detection - fail fast if simulators are slow
     ENV['SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT'] = '30'
     
+    # CRITICAL: Set SIMULATOR_HOST_HOME environment variable for SnapshotHelper
+    # SnapshotHelper requires this to find the cache directory where screenshots are saved
+    # Fastlane snapshot should set this automatically, but with test_without_building it may not work
+    simulator_host_home = ENV['HOME'] || Dir.home
+    ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
+    UI.message("🔧 Setting SIMULATOR_HOST_HOME=#{simulator_host_home} for SnapshotHelper")
+    
     devices.each_with_index do |device, device_idx|
       locales.each_with_index do |locale, locale_idx|
         is_first = device_idx == 0 && locale_idx == 0

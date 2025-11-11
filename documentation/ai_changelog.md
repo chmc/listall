@@ -54,10 +54,17 @@ Analyzed pipeline failure logs and implemented fast-fail optimizations to reduce
 
 **Root Cause Analysis**:
 - **PRIMARY ISSUE**: No `snapshot:` entries found in logs - `snapshot()` calls are NOT executing
-- Possible causes:
-  - `setupSnapshot()` not called before `app.launch()`
-  - `snapshot()` calls failing silently
-  - Tests crashing before reaching `snapshot()` calls
+- **ROOT CAUSE IDENTIFIED**: SnapshotHelper requires `SIMULATOR_HOST_HOME` environment variable to determine cache directory
+- When `SIMULATOR_HOST_HOME` is not set, `setupSnapshot()` throws an error that's caught and logged, but `cacheDirectory` remains nil
+- This causes `snapshot()` to fail silently because it can't save screenshots without a valid cache directory
+- Fastlane snapshot should set `SIMULATOR_HOST_HOME` automatically, but with `test_without_building: true` it may not be passed correctly to the test process
+
+**Fix Applied**:
+- Modified `SnapshotHelper.swift` to be more resilient:
+  - Falls back to `HOME` environment variable if `SIMULATOR_HOST_HOME` is not set
+  - Falls back to `NSHomeDirectory()` as last resort
+  - This ensures `setupSnapshot()` succeeds even if `SIMULATOR_HOST_HOME` is missing
+- Set `ENV['SIMULATOR_HOST_HOME']` in Fastfile to ensure it's available (though Fastlane should handle this)
 - With `result_bundle: false`, Fastlane can parse logs and extract screenshots automatically IF `snapshot()` is being called
 - Manual extraction provides fallback if automatic extraction fails
 
