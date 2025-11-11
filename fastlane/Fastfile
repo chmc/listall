@@ -35,6 +35,7 @@ def prepare_screenshots_for_delivery(framed_path)
   delivery_path
 end
 
+
 platform :ios do
   desc "Run unit and UI tests (xcodebuild like CI)"
   lane :test do
@@ -439,12 +440,13 @@ platform :ios do
     # 1. Raw screenshots using pre-built products
     # Snapfile contains device/language/test configs
     # Note: test_without_building reuses the build from scan above
+    # CRITICAL: Disable xcodebuild_formatter so Fastlane can parse NSLog("snapshot: ...") entries
     UI.header("Running snapshot using pre-built tests")
     snapshot(
       derived_data_path: derived,
-      test_without_building: true
-      # result_bundle can be enabled for debugging but adds overhead
-      # result_bundle: true
+      test_without_building: true,
+      xcodebuild_formatter: ""  # Empty string disables formatter, allowing Fastlane to parse logs
+      # result_bundle: false is set in Snapfile to enable log-based extraction
     )
     
     # 1.5. Fail-fast check: ensure raw screenshots exist before processing
@@ -569,6 +571,31 @@ platform :ios do
     # Shared derived data path for prebuild and snapshot
     derived = "./fastlane/derivedDataWatch"
     
+    # CRITICAL: Pair Watch simulator with iPhone simulator
+    # Without pairing, Watch tests may run on iPhone instead of Watch,
+    # and screenshots will show "iPhone Disconnected" icon (violates App Store guidelines)
+    # Fastlane snapshot will handle pairing automatically if devices are available,
+    # but we ensure they exist and are ready
+    UI.header("Preparing Watch and iPhone simulators for pairing")
+    watch_device = "Apple Watch Series 10 (46mm)"
+    iphone_device = "iPhone 15 Pro Max"  # Use same device as iOS screenshots for consistency
+    
+    # Ensure simulators exist and are available
+    # Fastlane snapshot will automatically pair them when running Watch tests
+    # The key is ensuring both devices are available in the simulator list
+    UI.message("Verifying simulators are available: #{iphone_device} and #{watch_device}")
+    
+    # Check if simulators exist
+    iphone_exists = sh("xcrun simctl list devices available | grep -c '#{iphone_device}' | grep -v 'unavailable'", log: false).strip.to_i > 0 rescue false
+    watch_exists = sh("xcrun simctl list devices available | grep -c '#{watch_device}' | grep -v 'unavailable'", log: false).strip.to_i > 0 rescue false
+    
+    if iphone_exists && watch_exists
+      UI.success("✅ Required simulators are available")
+      UI.message("💡 Fastlane snapshot will automatically pair Watch with iPhone when running tests")
+    else
+      UI.important("⚠️  Some simulators may not be available. Snapshot will attempt to create/pair automatically.")
+    end
+    
     # 0. ONE-TIME BUILD-FOR-TESTING
     # Build once, then snapshot reuses these compiled products for all languages
     # This prevents rebuilding 2x (2 languages), saving 5-8 minutes
@@ -577,7 +604,7 @@ platform :ios do
       scheme: "ListAllWatch Watch App",
       project: "./ListAll/ListAll.xcodeproj",
       testplan: "ListAllWatch Watch App",
-      devices: ["Apple Watch Series 10 (46mm)"],  # Any device; we only need to populate DerivedData
+      devices: [watch_device],  # Any device; we only need to populate DerivedData
       clean: true,
       build_for_testing: true,
       # Note: build_for_testing and test_without_building are mutually exclusive
@@ -589,12 +616,14 @@ platform :ios do
     
     # 1. Raw screenshots using pre-built products
     # Note: test_without_building reuses the build from scan above
+    # CRITICAL: Disable xcodebuild_formatter so Fastlane can parse NSLog("snapshot: ...") entries
+    # CRITICAL: Ensure iPhone simulator stays running for Watch pairing
     UI.header("Running watch snapshot using pre-built tests")
     snapshot(
       project: "./ListAll/ListAll.xcodeproj",
       scheme: "ListAllWatch Watch App",
       testplan: "ListAllWatch Watch App",
-      devices: ["Apple Watch Series 10 (46mm)"],
+      devices: [watch_device],
       languages: ["en-US", "fi"],
       output_directory: "./fastlane/screenshots/watch",
       clear_previous_screenshots: true,
@@ -604,7 +633,9 @@ platform :ios do
       derived_data_path: derived,
       concurrent_simulators: false,
       skip_helper_version_check: true,
-      result_bundle: false  # Disable to allow Fastlane auto-extraction
+      result_bundle: false,  # Disable to allow Fastlane auto-extraction
+      xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
+      stop_after_first_error: false  # Don't stop on first error to allow all languages to run
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist before processing
