@@ -633,7 +633,9 @@ platform :ios do
               end
             else
               UI.message("   ⚠️  Attachments directory not created - attachments command may have failed")
-              UI.message("   Error output: #{attachments_output.chomp}" if attachments_output && !attachments_output.empty?)
+              if attachments_output && !attachments_output.empty?
+                UI.message("   Error output: #{attachments_output.chomp}")
+              end
             end
           rescue => e
             UI.message("   ⚠️  Error using xcresulttool: #{e.message}")
