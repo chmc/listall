@@ -539,53 +539,79 @@ platform :ios do
           
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
           begin
-            # First, check if result bundle is valid
-            # Try the modern API first (get test-results), fall back to deprecated get object if needed
-            xcresulttool_output = `xcrun xcresulttool get test-results --path "#{result_bundle_to_check}" --format json 2>&1`
-            if !$?.success?
-              # Fall back to deprecated get object API
-              xcresulttool_output = `xcrun xcresulttool get object --path "#{result_bundle_to_check}" --format json 2>&1`
+            # CRITICAL FIX: Use the correct modern xcresulttool API
+            # The modern API uses: xcrun xcresulttool export --type directory
+            # For attachments, we need to export the entire bundle and find attachments
+            attachments_dir = File.join(locale_dir, "attachments")
+            FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
+            
+            # Try modern API: export the result bundle as a directory
+            # This extracts all attachments including screenshots
+            export_output = `xcrun xcresulttool export --type directory --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" --id root 2>&1`
+            
+            if !$?.success? || export_output.include?("deprecated") || export_output.include?("--legacy")
+              # Fall back to legacy API if modern API fails
+              UI.message("   ⚠️  Modern API failed, trying legacy API...")
+              export_output = `xcrun xcresulttool export --legacy --type directory --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" --id root 2>&1`
             end
+            
             if $?.success?
-              UI.message("   ✅ Result bundle is valid")
+              UI.message("   ✅ Successfully exported result bundle contents")
               
-              # Extract attachments using the correct xcresulttool API
-              # The correct command is: xcrun xcresulttool export attachments
-              attachments_dir = File.join(locale_dir, "attachments")
-              FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
-              
-              # Use the correct xcresulttool export attachments command
-              extract_output = `xcrun xcresulttool export attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
-              UI.message("   Extract output: #{extract_output.chomp}") unless extract_output.empty?
-              
-              if $?.success?
-                UI.message("   ✅ Successfully exported attachments from result bundle")
-              else
-                UI.message("   ⚠️  Failed to export attachments: #{extract_output.chomp}")
-              end
-              
-              # Check if any PNG files were extracted
+              # Search for PNG files in the exported directory structure
+              # Screenshots are typically in: Data/Attachments/ or similar paths
               if Dir.exist?(attachments_dir)
+                # Recursively search for PNG files
                 png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+                
                 if png_files.any?
-                  UI.message("   Found #{png_files.count} PNG files in attachments directory")
+                  UI.message("   ✅ Found #{png_files.count} PNG files in result bundle")
                   
                   png_files.each do |src|
+                    # Extract meaningful filename from path or use basename
+                    # Screenshot names might be in the path or filename
                     basename = File.basename(src)
+                    
+                    # Try to extract screenshot name from path if it contains test/screenshot info
+                    # Otherwise use the filename
                     dst = File.join(locale_dir, basename)
+                    
+                    # If file already exists, add a prefix to avoid overwriting
+                    if File.exist?(dst)
+                      # Try to extract a better name from the path
+                      path_parts = src.split(File::SEPARATOR)
+                      # Look for parts that might contain screenshot names
+                      screenshot_name = path_parts.find { |p| p.match?(/^\d{2}-|screenshot|snapshot/i) } || basename
+                      dst = File.join(locale_dir, screenshot_name)
+                    end
+                    
                     FileUtils.cp(src, dst) unless File.exist?(dst)
                     extracted_count += 1
-                    UI.message("   ✅ Extracted: #{basename}")
+                    UI.message("   ✅ Extracted: #{File.basename(dst)}")
                   end
-                  FileUtils.rm_rf(attachments_dir)
                 else
-                  UI.message("   ⚠️  No PNG files found in attachments directory")
+                  UI.message("   ⚠️  No PNG files found in exported result bundle")
+                  # List what files were found for debugging
+                  all_files = Dir.glob(File.join(attachments_dir, "**", "*")).select { |f| File.file?(f) }
+                  if all_files.any?
+                    UI.message("   Found #{all_files.count} files total, first 10: #{all_files.first(10).map { |f| File.basename(f) }.join(", ")}")
+                  end
                 end
+                
+                # Clean up exported directory
+                FileUtils.rm_rf(attachments_dir)
               else
-                UI.message("   ⚠️  Attachments directory not created")
+                UI.message("   ⚠️  Export directory not created")
               end
             else
-              UI.message("   ⚠️  Result bundle validation failed: #{xcresulttool_output.chomp}")
+              UI.message("   ⚠️  Failed to export result bundle: #{export_output.chomp}")
+              # Try alternative: use xcresulttool to get attachments directly
+              UI.message("   🔍 Trying alternative attachment extraction method...")
+              alt_extract_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
+              if $?.success?
+                UI.message("   ✅ Result bundle is accessible, but attachment extraction failed")
+                UI.message("   This may indicate screenshots weren't captured during tests")
+              end
             end
           rescue => e
             UI.message("   ⚠️  Error using xcresulttool: #{e.message}")

@@ -64,26 +64,58 @@ open class Snapshot: NSObject {
     static var currentLocale = ""
 
     open class func setupSnapshot(_ app: XCUIApplication, waitForAnimations: Bool = true) {
-        NSLog("🔧 setupSnapshot() called")
+        // CRITICAL: Use both NSLog and print to ensure visibility in logs
+        // NSLog may not be captured with test_without_building, but print should be
+        let setupMsg = "🔧 setupSnapshot() called"
+        NSLog(setupMsg)
+        print(setupMsg)
+        
         Snapshot.app = app
         Snapshot.waitForAnimations = waitForAnimations
 
         do {
             let cacheDir = try getCacheDirectory()
             Snapshot.cacheDirectory = cacheDir
-            NSLog("✅ Cache directory set to: \(cacheDir.path)")
+            let cacheMsg = "✅ Cache directory set to: \(cacheDir.path)"
+            NSLog(cacheMsg)
+            print(cacheMsg)
+            
             if let screenshotsDir = screenshotsDirectory {
-                NSLog("✅ Screenshots directory will be: \(screenshotsDir.path)")
+                let screenshotsMsg = "✅ Screenshots directory will be: \(screenshotsDir.path)"
+                NSLog(screenshotsMsg)
+                print(screenshotsMsg)
             } else {
-                NSLog("⚠️ screenshotsDirectory is nil after setting cacheDirectory")
+                let warningMsg = "⚠️ screenshotsDirectory is nil after setting cacheDirectory"
+                NSLog(warningMsg)
+                print(warningMsg)
             }
             setLanguage(app)
             setLocale(app)
             setLaunchArguments(app)
-            NSLog("✅ setupSnapshot() completed successfully")
+            let successMsg = "✅ setupSnapshot() completed successfully"
+            NSLog(successMsg)
+            print(successMsg)
         } catch let error {
-            NSLog("❌ setupSnapshot() failed: \(error.localizedDescription)")
-            NSLog("❌ Error details: \(error)")
+            let errorMsg = "❌ setupSnapshot() failed: \(error.localizedDescription)"
+            let errorDetails = "❌ Error details: \(error)"
+            NSLog(errorMsg)
+            NSLog(errorDetails)
+            print(errorMsg)
+            print(errorDetails)
+            // CRITICAL: Don't silently fail - ensure we still have a cache directory
+            // Try to use a fallback directory
+            let fallbackCache = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("fastlane_screenshots")
+            do {
+                try FileManager.default.createDirectory(at: fallbackCache, withIntermediateDirectories: true, attributes: nil)
+                Snapshot.cacheDirectory = fallbackCache
+                let fallbackMsg = "⚠️ Using fallback cache directory: \(fallbackCache.path)"
+                NSLog(fallbackMsg)
+                print(fallbackMsg)
+            } catch {
+                let fatalMsg = "❌ CRITICAL: Could not create fallback cache directory. Screenshots will not be saved."
+                NSLog(fatalMsg)
+                print(fatalMsg)
+            }
         }
     }
 
@@ -199,6 +231,11 @@ open class Snapshot: NSObject {
             for debugLogPath in debugLogPaths {
                 try? errorData?.write(to: debugLogPath)
             }
+            // CRITICAL: Log the error clearly but don't crash - let the test continue
+            // This helps diagnose issues where setupSnapshot() wasn't called
+            let fatalMsg = "❌ FATAL: snapshot('\(name)') called but setupSnapshot() was not called or failed. Screenshot will not be saved."
+            NSLog(fatalMsg)
+            print(fatalMsg)
             return
         }
         
