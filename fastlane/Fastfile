@@ -40,8 +40,8 @@ platform :ios do
   desc "Run unit and UI tests (xcodebuild like CI)"
   lane :test do
     # Mirror CI behavior with xcodebuild and non-failing exit
-    sh "cd ../ListAll && xcodebuild clean build -project ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' -configuration Debug CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO || true"
-    sh "cd ../ListAll && xcodebuild test -project ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' -resultBundlePath ../fastlane/test_output/ListAll.xcresult CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO || true"
+    sh "cd ../ListAll && xcodebuild clean build -project ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' -configuration Debug CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO || true"
+    sh "cd ../ListAll && xcodebuild test -project ListAll.xcodeproj -scheme ListAll -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' -resultBundlePath ../fastlane/test_output/ListAll.xcresult CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO || true"
   end
 
   desc "Run tests via scan (Fastlane)"
@@ -53,7 +53,7 @@ platform :ios do
       clean: true,
       result_bundle: true,
       derived_data_path: "./ListAll/build",
-      devices: ["iPhone 16 Pro"], # falls back to default if not available
+      devices: ["iPhone 17 Pro"], # falls back to default if not available
       fail_build: false
     )
   end
@@ -427,7 +427,7 @@ platform :ios do
     scan(
       scheme: "ListAll",
       project: "./ListAll/ListAll.xcodeproj",
-      devices: ["iPhone 15 Pro Max"],  # Any device; we only need to populate DerivedData
+      devices: ["iPhone 17 Pro Max"],  # Any device; we only need to populate DerivedData
       clean: true,
       build_for_testing: true,
       # Note: build_for_testing and test_without_building are mutually exclusive
@@ -561,7 +561,7 @@ platform :ios do
   end
 
   desc "Generate watchOS screenshots (fully automated via UITests + simctl)"
-  desc "Captures screenshots from Apple Watch Series 10 (46mm) for EN and FI locales"
+  desc "Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales"
   lane :watch_screenshots do
     UI.header("🍎⌚️ Generating watchOS Screenshots")
     
@@ -577,8 +577,8 @@ platform :ios do
     # Fastlane snapshot will handle pairing automatically if devices are available,
     # but we ensure they exist and are ready
     UI.header("Preparing Watch and iPhone simulators for pairing")
-    watch_device = "Apple Watch Series 10 (46mm)"
-    iphone_device = "iPhone 15 Pro Max"  # Use same device as iOS screenshots for consistency
+    watch_device = "Apple Watch Series 11 (46mm)"  # Updated to match CI available devices
+    iphone_device = "iPhone 17 Pro Max"  # Use same device as iOS screenshots for consistency
     
     # Ensure simulators exist and are available
     # Fastlane snapshot will automatically pair them when running Watch tests
