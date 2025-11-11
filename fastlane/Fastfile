@@ -474,7 +474,8 @@ platform :ios do
         # CRITICAL: Set NSUnbufferedIO=YES to ensure xcodebuild outputs logs in correct order
         # This is especially important in CI environments where log buffering can cause issues
         # Research shows this is essential for proper log capture with test_without_building
-        xcodebuild_command = "env NSUnbufferedIO=YES xcodebuild"
+        # Set as environment variable so xcodebuild inherits it (snapshot doesn't support xcodebuild_command parameter)
+        ENV['NSUnbufferedIO'] = 'YES'
         
         snapshot(
           derived_data_path: derived,
@@ -485,13 +486,13 @@ platform :ios do
           only_testing: ["ListAllUITests/testScreenshots01_WelcomeScreen", "ListAllUITests/testScreenshots02_MainFlow"],
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
-          xcodebuild_command: xcodebuild_command,  # Set NSUnbufferedIO for proper log capture
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
           # CRITICAL FIX: Enable result_bundle for reliable screenshot extraction with test_without_building
           # Fastlane can extract screenshots from result bundle even when log parsing fails
           # Research confirms this is the recommended approach for CI environments
           result_bundle: true,
-          result_bundle_path: result_bundle_path,
+          # Use xcargs to specify custom result bundle path (result_bundle_path is not a valid snapshot parameter)
+          xcargs: "-resultBundlePath '#{result_bundle_path}'",
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
