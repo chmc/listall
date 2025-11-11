@@ -96,8 +96,33 @@ final class ListAllUITests: XCTestCase {
         setupSnapshot(app)
         print("🔍 DEBUG: setupSnapshot() completed")
         
+        // CRITICAL: Verify setupSnapshot() actually worked
+        // Check if SnapshotHelper has a cache directory set
+        // We can't directly access Snapshot.cacheDirectory, but we can check if the cache files exist
+        let cacheBase = ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? NSHomeDirectory()
+        let cacheDir = (cacheBase as NSString).appendingPathComponent("Library/Caches/tools.fastlane")
+        let languageFile = (cacheDir as NSString).appendingPathComponent("language.txt")
+        if FileManager.default.fileExists(atPath: languageFile) {
+            print("✅ Verified: Cache directory files exist - setupSnapshot() succeeded")
+        } else {
+            print("⚠️ WARNING: Cache directory files not found - setupSnapshot() may have failed")
+            print("   Expected cache dir: \(cacheDir)")
+            print("   SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")")
+            print("   HOME: \(ProcessInfo.processInfo.environment["HOME"] ?? "NOT SET")")
+        }
+        
         ensurePortrait()
         app.launch()
+        
+        // CRITICAL: Verify app launched successfully
+        let launchTimeout: TimeInterval = 10
+        let appLaunched = app.wait(for: .runningForeground, timeout: launchTimeout)
+        if !appLaunched {
+            print("❌ ERROR: App did not launch successfully - state: \(app.state.rawValue)")
+        } else {
+            print("✅ Verified: App launched successfully")
+        }
+        
         app.tap() // Trigger interruption monitor
     }
 
@@ -558,8 +583,28 @@ final class ListAllUITests: XCTestCase {
         sleep(2)
         
         print("🔍 DEBUG: About to call snapshotPortrait('01-WelcomeScreen')")
+        
+        // CRITICAL: Verify app is running before taking screenshot
+        if app.state != .runningForeground {
+            print("⚠️ WARNING: App is not in foreground state: \(app.state.rawValue)")
+            // Try to wait for app to be ready
+            let appReady = app.wait(for: .runningForeground, timeout: 5)
+            if !appReady {
+                print("❌ ERROR: App did not become ready for screenshot")
+            }
+        }
+        
         snapshotPortrait("01-WelcomeScreen", wait: 1)
         print("🔍 DEBUG: snapshotPortrait('01-WelcomeScreen') completed")
+        
+        // CRITICAL: Verify screenshot was taken by checking if we can see the UI
+        // This helps diagnose if snapshot() is actually executing
+        let welcomeElements = app.staticTexts.matching(identifier: "Welcome")
+        if welcomeElements.count > 0 {
+            print("✅ Verified: Welcome screen elements are visible")
+        } else {
+            print("⚠️ WARNING: Welcome screen elements not found - screenshot may be of wrong screen")
+        }
         
         app.terminate()
         print("🔍 DEBUG: testScreenshots01_WelcomeScreen completed")

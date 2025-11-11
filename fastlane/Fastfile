@@ -608,9 +608,8 @@ platform :ios do
         # e.g., "iPhone16ProMax-01-WelcomeScreen.png"
         
         # Method 1: Extract from result bundle (result_bundle is now enabled)
-        # NOTE: Fastlane automatically extracts screenshots when result_bundle: true
-        # This manual extraction is a fallback. Fastlane uses its own default path,
-        # so this custom path may not exist. Fastlane's automatic extraction should work.
+        # CRITICAL FIX: Extract screenshots from xcresult bundle attachments
+        # XCTest attachments are the most reliable way to get screenshots when using test_without_building
         # Check multiple possible result bundle locations
         possible_result_bundles = [
           result_bundle_path,  # Our custom path
@@ -629,44 +628,60 @@ platform :ios do
           UI.message("   ✅ Found result bundle: #{result_bundle_to_check}")
           
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
+          # CRITICAL: This extracts XCTest attachments which we're now using as backup
           begin
-            # CRITICAL FIX: Use the correct xcresulttool attachments API
-            # The correct command is: xcrun xcresulttool attachments --path <bundle> --output-path <dir>
-            # This directly extracts all test attachments including screenshots
             attachments_dir = File.join(locale_dir, "attachments")
             FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
             
-            # First, try the modern attachments command (available in Xcode 11+)
-            attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+            # Try multiple xcresulttool command variations
+            attachments_output = nil
+            success = false
             
-            if !$?.success? || attachments_output.include?("deprecated") || attachments_output.include?("unrecognized")
-              # Fall back to legacy API if modern API is not available
-              UI.message("   ⚠️  Modern attachments API failed, trying alternative method...")
-              
-              # Alternative: Get the root object ID first, then export attachments
-              root_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
+            # Try 1: Modern API (Xcode 11+)
+            attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+            if $?.success? && !attachments_output.include?("deprecated") && !attachments_output.include?("unrecognized")
+              success = true
+              UI.message("   ✅ Modern attachments API succeeded")
+            else
+              # Try 2: Legacy API
+              UI.message("   ⚠️  Modern attachments API failed, trying legacy API...")
+              attachments_output = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
               if $?.success?
-                require 'json'
-                begin
-                  root_data = JSON.parse(root_output)
-                  # Try to find action records that contain attachments
-                  # This is a more complex approach but works when attachments command isn't available
-                  UI.message("   ✅ Result bundle is accessible, attempting to extract attachments...")
-                  
-                  # Use xcresulttool to export all files and search for PNGs
-                  # This is less efficient but more reliable
-                  temp_export_dir = File.join(locale_dir, "temp_export")
-                  FileUtils.mkdir_p(temp_export_dir) unless File.directory?(temp_export_dir)
-                  
-                  # Try to get all test actions and their attachments
-                  actions_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id root 2>&1`
-                  if $?.success?
-                    actions_data = JSON.parse(actions_output)
-                    # Navigate the JSON structure to find attachments
-                    # This is complex, so we'll use a simpler approach: search the bundle directly
+                success = true
+                UI.message("   ✅ Legacy attachments API succeeded")
+              end
+            end
+            
+            if !success
+              # Try 3: Direct file system search for PNG files in result bundle
+              UI.message("   ⚠️  xcresulttool attachments failed, searching result bundle file system for PNGs...")
+              
+              # CRITICAL: Search result bundle directory structure directly for PNG files
+              # XCTest attachments are stored in the bundle, we can find them by searching
+              if Dir.exist?(result_bundle_to_check)
+                # Search for PNG files recursively in result bundle
+                png_files_in_bundle = Dir.glob(File.join(result_bundle_to_check, "**", "*.{png,PNG}"))
+                if png_files_in_bundle.any?
+                  UI.message("   ✅ Found #{png_files_in_bundle.count} PNG files in result bundle!")
+                  png_files_in_bundle.each do |png_path|
+                    basename = File.basename(png_path)
+                    # Extract screenshot name from filename (remove device prefix if present)
+                    screenshot_name = basename
+                    if basename.include?("-")
+                      parts = basename.split("-", 2)
+                      if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
+                        screenshot_name = parts[1] # Use just the screenshot name part
+                      end
+                    end
+                    dst = File.join(locale_dir, screenshot_name)
+                    unless File.exist?(dst)
+                      FileUtils.cp(png_path, dst)
+                      extracted_count += 1
+                      UI.message("   ✅ Extracted screenshot from bundle: #{screenshot_name}")
+                    end
                   end
-                rescue JSON::ParserError => e
-                  UI.message("   ⚠️  Failed to parse result bundle JSON: #{e.message}")
+                else
+                  UI.message("   ⚠️  No PNG files found in result bundle file system")
                 end
               end
             end
@@ -868,8 +883,8 @@ platform :ios do
           end
         end
         
-        # Method 2a: Check for SnapshotHelper debug log file
-        # SnapshotHelper writes a debug log file to verify snapshot() calls
+        # Method 2a: Check for SnapshotHelper debug log file and marker files
+        # SnapshotHelper writes a debug log file and marker files to verify snapshot() calls
         # CRITICAL: Check ALL possible cache directories, including simulator-specific ones
         possible_cache_dirs_for_log = []
         if ENV['SIMULATOR_HOST_HOME']
@@ -879,6 +894,9 @@ platform :ios do
           possible_cache_dirs_for_log << File.join(ENV['HOME'], "Library/Caches/tools.fastlane")
         end
         possible_cache_dirs_for_log << File.join(Dir.home, "Library/Caches/tools.fastlane")
+        
+        # Also check /tmp for marker files (fallback location)
+        possible_cache_dirs_for_log << "/tmp"
         
         # Also check simulator-specific cache directories (extract base from possible_cache_dirs)
         possible_cache_dirs.each do |cache_dir|
@@ -917,7 +935,10 @@ platform :ios do
         
         debug_log_found = false
         debug_log_path_found = nil
+        marker_files_found = []
+        
         possible_cache_dirs_for_log.uniq.each do |cache_base|
+          # Check for debug log
           debug_log_path = File.join(cache_base, "snapshot_debug.log")
           if File.exist?(debug_log_path)
             debug_log_found = true
@@ -934,12 +955,28 @@ platform :ios do
             end
             UI.message("   Debug log content (last 20 lines):")
             debug_content.lines.last(20).each { |line| UI.message("     #{line.chomp}") }
-            break
+          end
+          
+          # CRITICAL: Check for marker files (more reliable than log parsing)
+          # Marker files are created immediately when snapshot() is called
+          marker_pattern = File.join(cache_base, "snapshot_marker_*.txt")
+          marker_files = Dir.glob(marker_pattern)
+          if marker_files.any?
+            marker_files_found += marker_files
+            UI.message("   ✅ Found #{marker_files.count} snapshot marker file(s) in #{cache_base}")
+            marker_files.each do |marker_file|
+              marker_content = File.read(marker_file)
+              UI.message("     📌 #{File.basename(marker_file)}: #{marker_content.chomp}")
+            end
           end
         end
         
-        unless debug_log_found
-          UI.message("   ⚠️  SnapshotHelper debug log not found - snapshot() may not be called")
+        unless debug_log_found && marker_files_found.any?
+          if !debug_log_found && marker_files_found.empty?
+            UI.message("   ⚠️  SnapshotHelper debug log and marker files not found - snapshot() may not be called")
+          elsif marker_files_found.any?
+            UI.message("   ✅ Marker files found - snapshot() IS being called (even if log not found)")
+          end
         end
         
         # Method 2b: Extract test activity logs from result bundle to check for NSLog output

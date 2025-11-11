@@ -70,6 +70,17 @@ open class Snapshot: NSObject {
         NSLog(setupMsg)
         print(setupMsg)
         
+        // CRITICAL DIAGNOSTICS: Log environment variables
+        let env = ProcessInfo.processInfo.environment
+        NSLog("🔍 DEBUG: SIMULATOR_HOST_HOME=\(env["SIMULATOR_HOST_HOME"] ?? "NOT SET")")
+        NSLog("🔍 DEBUG: SIMULATOR_DEVICE_NAME=\(env["SIMULATOR_DEVICE_NAME"] ?? "NOT SET")")
+        NSLog("🔍 DEBUG: HOME=\(env["HOME"] ?? "NOT SET")")
+        NSLog("🔍 DEBUG: NSHomeDirectory()=\(NSHomeDirectory())")
+        print("🔍 DEBUG: SIMULATOR_HOST_HOME=\(env["SIMULATOR_HOST_HOME"] ?? "NOT SET")")
+        print("🔍 DEBUG: SIMULATOR_DEVICE_NAME=\(env["SIMULATOR_DEVICE_NAME"] ?? "NOT SET")")
+        print("🔍 DEBUG: HOME=\(env["HOME"] ?? "NOT SET")")
+        print("🔍 DEBUG: NSHomeDirectory()=\(NSHomeDirectory())")
+        
         Snapshot.app = app
         Snapshot.waitForAnimations = waitForAnimations
 
@@ -80,10 +91,37 @@ open class Snapshot: NSObject {
             NSLog(cacheMsg)
             print(cacheMsg)
             
+            // CRITICAL: Verify cache directory is writable
+            let fileManager = FileManager.default
+            if !fileManager.fileExists(atPath: cacheDir.path) {
+                try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true, attributes: nil)
+                NSLog("✅ Created cache directory: \(cacheDir.path)")
+                print("✅ Created cache directory: \(cacheDir.path)")
+            }
+            
+            // Test write access
+            let testFile = cacheDir.appendingPathComponent(".test_write")
+            do {
+                try "test".write(to: testFile, atomically: true, encoding: .utf8)
+                try fileManager.removeItem(at: testFile)
+                NSLog("✅ Cache directory is writable")
+                print("✅ Cache directory is writable")
+            } catch {
+                NSLog("⚠️ Cache directory exists but may not be writable: \(error.localizedDescription)")
+                print("⚠️ Cache directory exists but may not be writable: \(error.localizedDescription)")
+            }
+            
             if let screenshotsDir = screenshotsDirectory {
                 let screenshotsMsg = "✅ Screenshots directory will be: \(screenshotsDir.path)"
                 NSLog(screenshotsMsg)
                 print(screenshotsMsg)
+                
+                // Ensure screenshots directory exists
+                if !fileManager.fileExists(atPath: screenshotsDir.path) {
+                    try fileManager.createDirectory(at: screenshotsDir, withIntermediateDirectories: true, attributes: nil)
+                    NSLog("✅ Created screenshots directory: \(screenshotsDir.path)")
+                    print("✅ Created screenshots directory: \(screenshotsDir.path)")
+                }
             } else {
                 let warningMsg = "⚠️ screenshotsDirectory is nil after setting cacheDirectory"
                 NSLog(warningMsg)
@@ -191,6 +229,22 @@ open class Snapshot: NSObject {
         NSLog("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
         print("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
         
+        // CRITICAL: Write marker file to verify snapshot() is being called
+        // This works even if NSLog/print output isn't captured
+        let markerPaths = [
+            cacheDirectory?.appendingPathComponent("snapshot_marker_\(name).txt"),
+            URL(fileURLWithPath: "/tmp/snapshot_marker_\(name).txt"),
+            FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("snapshot_marker_\(name).txt")
+        ].compactMap { $0 }
+        
+        let timestamp = Date().timeIntervalSince1970
+        let markerContent = "snapshot called: \(name) at \(timestamp)\n"
+        if let markerData = markerContent.data(using: .utf8) {
+            for markerPath in markerPaths {
+                try? markerData.write(to: markerPath)
+            }
+        }
+        
         // CRITICAL: Write to debug log file even if cacheDirectory is nil
         // This helps diagnose issues when setupSnapshot() fails
         let debugLogPaths = [
@@ -199,7 +253,6 @@ open class Snapshot: NSObject {
             FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("snapshot_debug.log")
         ].compactMap { $0 }
         
-        let timestamp = Date().timeIntervalSince1970
         let debugMessage = "[\(timestamp)] snapshot: \(name)\n"
         if let data = debugMessage.data(using: .utf8) {
             for debugLogPath in debugLogPaths {
@@ -275,8 +328,43 @@ open class Snapshot: NSObject {
 
             // CRITICAL FIX: SIMULATOR_DEVICE_NAME may not be set when using test_without_building
             // Fall back to extracting device name from destination or using a default
-            guard let screenshotsDir = screenshotsDirectory else {
-                NSLog("⚠️ screenshotsDirectory is nil - cannot save screenshot")
+            // CRITICAL: If screenshotsDirectory is nil, try to create it or use fallback location
+            var screenshotsDir: URL?
+            if let dir = screenshotsDirectory {
+                screenshotsDir = dir
+            } else {
+                // Fallback: Try to recreate cache directory
+                NSLog("⚠️ screenshotsDirectory is nil - attempting to recreate cache directory")
+                do {
+                    let fallbackCacheDir = try getCacheDirectory()
+                    screenshotsDir = fallbackCacheDir.appendingPathComponent("screenshots", isDirectory: true)
+                    Snapshot.cacheDirectory = fallbackCacheDir
+                    NSLog("✅ Recreated cache directory: \(fallbackCacheDir.path)")
+                } catch {
+                    // Last resort: Use /tmp or document directory
+                    let fallbackPaths = [
+                        URL(fileURLWithPath: "/tmp/fastlane_screenshots"),
+                        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("screenshots")
+                    ]
+                    for fallbackPath in fallbackPaths {
+                        if let path = fallbackPath {
+                            screenshotsDir = path
+                            NSLog("⚠️ Using fallback screenshots directory: \(path.path)")
+                            break
+                        }
+                    }
+                }
+            }
+            
+            guard let finalScreenshotsDir = screenshotsDir else {
+                // CRITICAL: Even if we can't save to file system, attach screenshot to test
+                // This ensures screenshots are captured in xcresult bundle
+                NSLog("❌ CRITICAL: Cannot determine screenshots directory - attaching screenshot to test")
+                let attachment = XCTAttachment(image: image)
+                attachment.name = name
+                attachment.lifetime = .keepAlways
+                XCTContext.current.add(attachment)
+                NSLog("✅ Screenshot attached to test: \(name)")
                 return
             }
             
@@ -335,10 +423,10 @@ open class Snapshot: NSObject {
             do {
                 // CRITICAL: Ensure the screenshots directory exists before writing
                 let fileManager = FileManager.default
-                if !fileManager.fileExists(atPath: screenshotsDir.path) {
-                    try fileManager.createDirectory(at: screenshotsDir, withIntermediateDirectories: true, attributes: nil)
-                    NSLog("✅ Created screenshots directory: \(screenshotsDir.path)")
-                    print("✅ Created screenshots directory: \(screenshotsDir.path)")
+                if !fileManager.fileExists(atPath: finalScreenshotsDir.path) {
+                    try fileManager.createDirectory(at: finalScreenshotsDir, withIntermediateDirectories: true, attributes: nil)
+                    NSLog("✅ Created screenshots directory: \(finalScreenshotsDir.path)")
+                    print("✅ Created screenshots directory: \(finalScreenshotsDir.path)")
                 }
                 
                 // The simulator name contains "Clone X of " inside the screenshot file when running parallelized UI Tests on concurrent devices
@@ -346,7 +434,7 @@ open class Snapshot: NSObject {
                 let range = NSRange(location: 0, length: simulator.count)
                 simulator = regex.stringByReplacingMatches(in: simulator, range: range, withTemplate: "")
 
-                let path = screenshotsDir.appendingPathComponent("\(simulator)-\(name).png")
+                let path = finalScreenshotsDir.appendingPathComponent("\(simulator)-\(name).png")
                 NSLog("🔍 DEBUG: Attempting to save screenshot to: \(path.path)")
                 print("🔍 DEBUG: Attempting to save screenshot to: \(path.path)")
                 
@@ -357,14 +445,31 @@ open class Snapshot: NSObject {
                 #endif
                 NSLog("✅ Saved screenshot: \(path.lastPathComponent)")
                 print("✅ Saved screenshot: \(path.lastPathComponent)")
+                
+                // CRITICAL FIX: Also attach screenshot to test as backup
+                // This ensures screenshots are captured in xcresult bundle even if file system save fails
+                let attachment = XCTAttachment(image: image)
+                attachment.name = "\(simulator)-\(name)"
+                attachment.lifetime = .keepAlways
+                XCTContext.current.add(attachment)
+                NSLog("✅ Screenshot also attached to test as backup")
+                
             } catch let error {
-                let errorMsg = "Problem writing screenshot: \(name) to \(screenshotsDir.path)/\(simulator)-\(name).png"
+                let errorMsg = "Problem writing screenshot: \(name) to \(finalScreenshotsDir.path)/\(simulator)-\(name).png"
                 NSLog("❌ \(errorMsg)")
                 print("❌ \(errorMsg)")
                 NSLog("❌ Error: \(error.localizedDescription)")
                 print("❌ Error: \(error.localizedDescription)")
                 NSLog("❌ Error details: \(error)")
                 print("❌ Error details: \(error)")
+                
+                // CRITICAL: Even if file save fails, attach screenshot to test
+                // This ensures we don't lose the screenshot completely
+                let attachment = XCTAttachment(image: image)
+                attachment.name = "\(simulator)-\(name)"
+                attachment.lifetime = .keepAlways
+                XCTContext.current.add(attachment)
+                NSLog("✅ Screenshot attached to test as fallback (file save failed)")
             }
         #endif
     }
