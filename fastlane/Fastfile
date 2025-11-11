@@ -484,10 +484,89 @@ platform :ios do
         ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
         UI.message("🔧 Setting SIMULATOR_HOST_HOME=#{simulator_host_home} for SnapshotHelper")
         
+        # CRITICAL FIX: Set SIMULATOR_DEVICE_NAME explicitly so SnapshotHelper can save screenshots with correct filename
+        # Fastlane snapshot normally sets this, but with test_without_building it may not work correctly
+        # Device name format: Remove spaces and special characters (e.g., "iPhone 16 Pro Max" -> "iPhone16ProMax")
+        device_name_sanitized = device.gsub(/[^a-zA-Z0-9]/, "")
+        ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
+        UI.message("🔧 Setting SIMULATOR_DEVICE_NAME=#{device_name_sanitized} for SnapshotHelper")
+        
         # CRITICAL: Fastlane snapshot should automatically pass environment variables to the test process
-        # We've set ENV['SIMULATOR_HOST_HOME'] above, which should be inherited by xcodebuild and the test process
+        # We've set ENV['SIMULATOR_HOST_HOME'] and ENV['SIMULATOR_DEVICE_NAME'] above, which should be inherited by xcodebuild and the test process
         # However, if this doesn't work, SnapshotHelper has fallback logic to use HOME or NSHomeDirectory()
         # Note: We can't use xcodebuild_command (not supported by snapshot action), so we rely on Fastlane's automatic passing
+        
+        # CRITICAL DIAGNOSTICS: Log environment variables before snapshot runs
+        UI.message("🔍 DIAGNOSTICS: Environment variables before snapshot:")
+        UI.message("   SIMULATOR_HOST_HOME=#{ENV['SIMULATOR_HOST_HOME']}")
+        UI.message("   SIMULATOR_DEVICE_NAME=#{ENV['SIMULATOR_DEVICE_NAME']}")
+        UI.message("   HOME=#{ENV['HOME']}")
+        UI.message("   FASTLANE_SNAPSHOT=#{ENV['FASTLANE_SNAPSHOT']}")
+        UI.message("   FASTLANE_LANGUAGE=#{ENV['FASTLANE_LANGUAGE']}")
+        
+        # CRITICAL: Verify cache directory exists and is writable
+        cache_dir_to_check = File.join(simulator_host_home, "Library/Caches/tools.fastlane")
+        screenshots_dir_to_check = File.join(cache_dir_to_check, "screenshots")
+        UI.message("🔍 DIAGNOSTICS: Cache directory verification:")
+        UI.message("   Cache dir: #{cache_dir_to_check}")
+        UI.message("   Cache dir exists: #{Dir.exist?(cache_dir_to_check)}")
+        UI.message("   Screenshots dir: #{screenshots_dir_to_check}")
+        UI.message("   Screenshots dir exists: #{Dir.exist?(screenshots_dir_to_check)}")
+        
+        # Ensure cache directory exists and is writable
+        begin
+          FileUtils.mkdir_p(screenshots_dir_to_check) unless Dir.exist?(screenshots_dir_to_check)
+          test_file = File.join(screenshots_dir_to_check, ".test_write")
+          File.write(test_file, "test")
+          File.delete(test_file)
+          UI.message("   ✅ Cache directory is writable")
+        rescue => e
+          UI.error("   ❌ Cache directory is NOT writable: #{e.message}")
+        end
+        
+        # CRITICAL FIX: Manually create Fastlane cache files that SnapshotHelper expects
+        # Fastlane snapshot normally creates these files, but with test_without_building it may not
+        # SnapshotHelper reads: language.txt, locale.txt, snapshot-launch_arguments.txt
+        UI.message("🔧 Creating Fastlane cache files for SnapshotHelper...")
+        begin
+          # Create language.txt (e.g., "en-US" -> "en")
+          language_code = locale.split("-").first
+          language_file = File.join(cache_dir_to_check, "language.txt")
+          File.write(language_file, language_code)
+          UI.message("   ✅ Created language.txt: #{language_code}")
+          
+          # Create locale.txt (e.g., "en-US")
+          locale_file = File.join(cache_dir_to_check, "locale.txt")
+          File.write(locale_file, locale)
+          UI.message("   ✅ Created locale.txt: #{locale}")
+          
+          # Create snapshot-launch_arguments.txt (can be empty, but file should exist)
+          launch_args_file = File.join(cache_dir_to_check, "snapshot-launch_arguments.txt")
+          File.write(launch_args_file, "") unless File.exist?(launch_args_file)
+          UI.message("   ✅ Created snapshot-launch_arguments.txt")
+          
+          # CRITICAL: Also create a file with SIMULATOR_DEVICE_NAME for SnapshotHelper to read
+          # This is a workaround since environment variables may not be passed correctly
+          device_name_file = File.join(cache_dir_to_check, "device_name.txt")
+          File.write(device_name_file, device_name_sanitized)
+          UI.message("   ✅ Created device_name.txt: #{device_name_sanitized}")
+          
+        rescue => e
+          UI.error("   ❌ Failed to create cache files: #{e.message}")
+        end
+        
+        # CRITICAL FIX: Try passing environment variables via xcargs
+        # xcargs allows passing build settings and environment variables to xcodebuild
+        # Format: ENV_VAR_NAME=value
+        xcargs_env = [
+          "SIMULATOR_HOST_HOME=#{simulator_host_home}",
+          "SIMULATOR_DEVICE_NAME=#{device_name_sanitized}",
+          "NSUnbufferedIO=YES"
+        ].join(" ")
+        
+        # Combine with existing xcargs from Snapfile (code signing settings)
+        existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+        combined_xcargs = "#{existing_xcargs} #{xcargs_env}"
         
         snapshot(
           derived_data_path: derived,
@@ -499,6 +578,9 @@ platform :ios do
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
+          # CRITICAL FIX: Pass environment variables via xcargs
+          # Note: xcargs may not work for environment variables, but it's worth trying
+          xcargs: combined_xcargs,
           # CRITICAL FIX: Enable result_bundle to extract screenshots from xcresult bundle
           # Log parsing mode (result_bundle: false) fails when using test_without_building because
           # NSLog output from the test process isn't captured in xcodebuild logs
@@ -506,6 +588,11 @@ platform :ios do
           result_bundle: true,
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
+        
+        # CRITICAL DIAGNOSTICS: Verify environment variables after snapshot (they should still be set)
+        UI.message("🔍 DIAGNOSTICS: Environment variables after snapshot:")
+        UI.message("   SIMULATOR_HOST_HOME=#{ENV['SIMULATOR_HOST_HOME']}")
+        UI.message("   SIMULATOR_DEVICE_NAME=#{ENV['SIMULATOR_DEVICE_NAME']}")
         
         # CRITICAL FIX: Fastlane's log parsing often fails in CI environments where NSLog isn't captured
         # Manually extract screenshots from cache directory after tests complete
@@ -700,8 +787,17 @@ platform :ios do
         # relative to SIMULATOR_HOST_HOME, HOME, or simulator's data directory
         possible_cache_dirs = []
         
-        # Try SIMULATOR_HOST_HOME first (set by Fastfile) - PRIMARY LOCATION
-        if ENV['SIMULATOR_HOST_HOME']
+        # CRITICAL: Use the same SIMULATOR_HOST_HOME that we set above (PRIMARY LOCATION)
+        # This ensures we're checking the exact location where SnapshotHelper will save screenshots
+        simulator_host_home_for_check = simulator_host_home || ENV['SIMULATOR_HOST_HOME'] || ENV['HOME'] || Dir.home
+        if simulator_host_home_for_check
+          primary_cache_dir = File.join(simulator_host_home_for_check, "Library/Caches/tools.fastlane/screenshots")
+          possible_cache_dirs << primary_cache_dir
+          UI.message("   🔍 Primary cache directory to check: #{primary_cache_dir}")
+        end
+        
+        # Also try ENV['SIMULATOR_HOST_HOME'] directly (in case it was set differently)
+        if ENV['SIMULATOR_HOST_HOME'] && ENV['SIMULATOR_HOST_HOME'] != simulator_host_home_for_check
           possible_cache_dirs << File.join(ENV['SIMULATOR_HOST_HOME'], "Library/Caches/tools.fastlane/screenshots")
         end
         
@@ -847,13 +943,20 @@ platform :ios do
         end
         
         # Method 2b: Extract test activity logs from result bundle to check for NSLog output
+        # CRITICAL DIAGNOSTICS: This helps verify if snapshot() is actually being called
         if File.exist?(result_bundle_to_check)
           begin
-            UI.message("   🔍 Extracting test activity logs from result bundle...")
+            UI.message("   🔍 DIAGNOSTICS: Extracting test activity logs from result bundle...")
+            UI.message("   Result bundle path: #{result_bundle_to_check}")
             
             # CRITICAL: Use xcresulttool to get test activity logs which contain NSLog/print output
             # First, get the root object to find test actions
+            # Try modern API first, then fall back to legacy
             root_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
+            if !$?.success? || root_output.include?("deprecated") || root_output.include?("--legacy")
+              UI.message("   ⚠️  Modern API failed, trying legacy API...")
+              root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
+            end
             if $?.success?
               require 'json'
               begin
@@ -893,15 +996,42 @@ platform :ios do
                                       end
                                       
                                       # Check for log messages in the activity (NSLog/print output)
+                                      # CRITICAL DIAGNOSTICS: Extract ALL log messages to verify test execution
                                       if activity['messages'] && activity['messages'].is_a?(Array)
                                         UI.message("   📝 Found #{activity['messages'].count} log messages in activity")
+                                        snapshot_related_messages = []
+                                        debug_messages = []
+                                        all_messages = []
+                                        
                                         activity['messages'].each do |message|
                                           if message['message'] && message['message']['values']
                                             message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
-                                            if message_text.include?('DEBUG') || message_text.include?('setupSnapshot') || message_text.include?('snapshot:')
-                                              UI.message("   🔍 LOG: #{message_text[0..200]}") # Show first 200 chars
+                                            all_messages << message_text
+                                            
+                                            # Categorize messages
+                                            if message_text.include?('snapshot:') || message_text.include?('Snapshot.snapshot')
+                                              snapshot_related_messages << message_text
+                                            elsif message_text.include?('DEBUG') || message_text.include?('setupSnapshot')
+                                              debug_messages << message_text
                                             end
                                           end
+                                        end
+                                        
+                                        # Report findings
+                                        if snapshot_related_messages.any?
+                                          UI.message("   ✅ Found #{snapshot_related_messages.count} snapshot-related messages:")
+                                          snapshot_related_messages.each { |msg| UI.message("     📸 #{msg[0..150]}") }
+                                        end
+                                        
+                                        if debug_messages.any?
+                                          UI.message("   🔍 Found #{debug_messages.count} debug messages:")
+                                          debug_messages.first(5).each { |msg| UI.message("     🔧 #{msg[0..150]}") }
+                                        end
+                                        
+                                        # Show sample of all messages if no snapshot messages found
+                                        if snapshot_related_messages.empty? && all_messages.any?
+                                          UI.message("   ⚠️  No snapshot-related messages found. Sample of messages:")
+                                          all_messages.first(10).each { |msg| UI.message("     📋 #{msg[0..100]}") }
                                         end
                                       end
                                       
@@ -972,6 +1102,26 @@ platform :ios do
                 top_level = Dir.entries(result_bundle_to_check).reject { |e| e.start_with?(".") }
                 UI.message("   Top-level contents: #{top_level.join(", ")}")
               end
+              
+              # CRITICAL DIAGNOSTICS: Try alternative method to extract test information
+              # Use xcresulttool to get test summaries directly
+              UI.message("   🔍 Trying alternative method: xcresulttool get --format json --id root...")
+              begin
+                alt_output = `xcrun xcresulttool get --format json --id root --path "#{result_bundle_to_check}" 2>&1`
+                if $?.success?
+                  require 'json'
+                  alt_data = JSON.parse(alt_output)
+                  UI.message("   ✅ Successfully parsed result bundle with alternative method")
+                  # Try to find test information
+                  if alt_data['actions']
+                    UI.message("   Found #{alt_data['actions'].count} action(s)")
+                  end
+                else
+                  UI.message("   ⚠️  Alternative method also failed: #{alt_output[0..200]}")
+                end
+              rescue => e
+                UI.message("   ⚠️  Error with alternative method: #{e.message}")
+              end
             end
           rescue => e
             UI.message("   ⚠️  Error extracting test logs: #{e.message}")
@@ -1003,10 +1153,14 @@ platform :ios do
             end
             
             # Look for PNG files (case-insensitive, with various naming patterns)
+            # CRITICAL: Use the same device name sanitization format as SnapshotHelper
+            # This matches what we set in ENV['SIMULATOR_DEVICE_NAME'] above
+            device_sanitized = device_name_sanitized || device.gsub(/[^a-zA-Z0-9]/, "")
             cache_screenshots = Dir.glob(File.join(cache_dir, "*.{png,PNG}"))
-            # Also check for files that might have device name in them
-            device_sanitized = device.gsub(" ", "").gsub("-", "")
-            cache_screenshots += Dir.glob(File.join(cache_dir, "*#{device_sanitized}*.png"))
+            # Also check for files that might have device name in them (exact match)
+            cache_screenshots += Dir.glob(File.join(cache_dir, "#{device_sanitized}-*.png"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "#{device_sanitized}-*.PNG"))
+            # Fallback: check for any device name pattern
             cache_screenshots += Dir.glob(File.join(cache_dir, "*iPhone*.png"))
             cache_screenshots += Dir.glob(File.join(cache_dir, "*iPad*.png"))
             cache_screenshots.uniq!
@@ -1290,16 +1444,73 @@ platform :ios do
           UI.message("   ⚠️  No screenshots found in result bundle or cache directory")
         end
         
+        # CRITICAL DIAGNOSTICS: Extract environment debug file from simulator
+        # The test writes environment variables to a file we can check
+        UI.message("🔍 DIAGNOSTICS: Checking for environment debug file from test process...")
+        begin
+          # Find simulator data directory
+          simulator_info = `xcrun simctl list devices --json 2>&1`
+          if $?.success?
+            require 'json'
+            sim_data = JSON.parse(simulator_info)
+            device_name_for_match = device.gsub(/[^a-zA-Z0-9]/, "")
+            sim_data['devices'].each do |runtime, devices|
+              devices.each do |sim|
+                if sim['name'] == device || sim['name'].gsub(/[^a-zA-Z0-9]/, "") == device_name_for_match
+                  if sim['dataPath']
+                    env_debug_path = File.join(sim['dataPath'], "Library", "Application Support", "test_env_debug.txt")
+                    if File.exist?(env_debug_path)
+                      UI.message("   ✅ Found environment debug file!")
+                      env_debug_content = File.read(env_debug_path)
+                      UI.message("   Environment variables seen by test process:")
+                      env_debug_content.lines.each { |line| UI.message("     #{line.chomp}") }
+                    else
+                      UI.message("   ⚠️  Environment debug file not found at: #{env_debug_path}")
+                    end
+                    break
+                  end
+                end
+              end
+            end
+          end
+        rescue => e
+          UI.message("   ⚠️  Could not check environment debug file: #{e.message}")
+        end
+        
+        # CRITICAL DIAGNOSTICS: Summary of findings
+        UI.header("📊 DIAGNOSTIC SUMMARY for #{device} (#{locale})")
+        UI.message("   Screenshots extracted: #{extracted_count}")
+        UI.message("   Debug log found: #{debug_log_found ? 'Yes' : 'No'}")
+        UI.message("   Result bundle exists: #{File.exist?(result_bundle_to_check) ? 'Yes' : 'No'}")
+        UI.message("   Cache directory checked: #{simulator_host_home_for_check}/Library/Caches/tools.fastlane/screenshots")
+        UI.message("   Expected screenshots: ~#{expected_per_combination}")
+        
+        if extracted_count == 0
+          UI.error("   ❌ NO SCREENSHOTS FOUND - Possible causes:")
+          UI.error("      1. snapshot() not being called in tests")
+          UI.error("      2. Environment variables not passed to test process")
+          UI.error("      3. Cache directory not accessible from test process")
+          UI.error("      4. Tests failing before reaching snapshot() calls")
+          UI.error("      5. Screenshots saved to unexpected location")
+        end
+        
         # Incremental verification: check screenshots immediately after this device/language
         UI.message("🔍 Verifying screenshots for #{device} (#{locale})...")
         locale_dir = File.join(screenshots_dir, locale)
         FileUtils.mkdir_p(locale_dir) unless File.directory?(locale_dir)
         
         # Check for screenshots (device name in filename might be sanitized)
+        # CRITICAL: Use the same device name sanitization format as SnapshotHelper
+        device_sanitized_for_check = device_name_sanitized || device.gsub(/[^a-zA-Z0-9]/, "")
         all_locale_shots = Dir.glob(File.join(locale_dir, "*.png"))
-        device_shots = all_locale_shots.select { |f| File.basename(f).include?(device.gsub(" ", "").gsub("-", "")) || 
-                                                      File.basename(f).include?("iPhone16ProMax") || 
-                                                      File.basename(f).include?("iPadPro13") }
+        device_shots = all_locale_shots.select { |f| 
+          basename = File.basename(f)
+          basename.include?(device_sanitized_for_check) || 
+          basename.include?(device.gsub(/[^a-zA-Z0-9]/, "")) ||
+          basename.include?("iPhone16ProMax") || 
+          basename.include?("iPadPro13inchM4") ||
+          basename.match?(/^\d{2}-/) # Screenshot names like "01-WelcomeScreen.png"
+        }
         
         if all_locale_shots.empty?
           UI.error("❌ No screenshots found for #{device} (#{locale})")

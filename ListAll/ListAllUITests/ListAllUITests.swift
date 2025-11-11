@@ -71,6 +71,27 @@ final class ListAllUITests: XCTestCase {
         // CRITICAL: setupSnapshot() must be called AFTER setting arguments but BEFORE launching
         // This allows SnapshotHelper to read Fastlane's cache files and add snapshot-specific arguments
         // Note: SnapshotHelper has fallback logic to use HOME or NSHomeDirectory() if SIMULATOR_HOST_HOME isn't set
+        
+        // CRITICAL DIAGNOSTICS: Write environment variables to a file for debugging
+        // This helps verify if environment variables are being passed to the test process
+        let env = ProcessInfo.processInfo.environment
+        let envDebugPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("test_env_debug.txt")
+        if let envDebugPath = envDebugPath {
+            var envDebugContent = "=== Environment Variables Debug ===\n"
+            envDebugContent += "SIMULATOR_HOST_HOME: \(env["SIMULATOR_HOST_HOME"] ?? "NOT SET")\n"
+            envDebugContent += "SIMULATOR_DEVICE_NAME: \(env["SIMULATOR_DEVICE_NAME"] ?? "NOT SET")\n"
+            envDebugContent += "HOME: \(env["HOME"] ?? "NOT SET")\n"
+            envDebugContent += "FASTLANE_SNAPSHOT: \(env["FASTLANE_SNAPSHOT"] ?? "NOT SET")\n"
+            envDebugContent += "FASTLANE_LANGUAGE: \(env["FASTLANE_LANGUAGE"] ?? "NOT SET")\n"
+            envDebugContent += "NSHomeDirectory(): \(NSHomeDirectory())\n"
+            do {
+                try envDebugContent.write(to: envDebugPath, atomically: true, encoding: .utf8)
+                print("✅ Wrote environment debug to: \(envDebugPath.path)")
+            } catch {
+                print("⚠️ Failed to write environment debug: \(error)")
+            }
+        }
+        
         print("🔍 DEBUG: About to call setupSnapshot()")
         setupSnapshot(app)
         print("🔍 DEBUG: setupSnapshot() completed")

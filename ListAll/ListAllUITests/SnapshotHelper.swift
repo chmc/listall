@@ -280,11 +280,34 @@ open class Snapshot: NSObject {
                 return
             }
             
-            // Try to get simulator name from environment, or fall back to extracting from app
+            // Try to get simulator name from environment, cache file, or fall back to extracting from app
             var simulator: String
             if let envSimulator = ProcessInfo().environment["SIMULATOR_DEVICE_NAME"], !envSimulator.isEmpty {
                 simulator = envSimulator
+                NSLog("✅ Using SIMULATOR_DEVICE_NAME from environment: \(simulator)")
+            } else if let cacheDirectory = self.cacheDirectory {
+                // CRITICAL FIX: Try reading from cache file (created by Fastfile)
+                // This works around the issue where environment variables aren't passed with test_without_building
+                let deviceNameFile = cacheDirectory.appendingPathComponent("device_name.txt")
+                do {
+                    let deviceNameFromFile = try String(contentsOf: deviceNameFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !deviceNameFromFile.isEmpty {
+                        simulator = deviceNameFromFile
+                        NSLog("✅ Using device name from cache file: \(simulator)")
+                    } else {
+                        throw NSError(domain: "SnapshotHelper", code: 1, userInfo: [NSLocalizedDescriptionKey: "Empty device name file"])
+                    }
+                } catch {
+                    NSLog("⚠️ Could not read device_name.txt from cache: \(error.localizedDescription)")
+                    // Fall through to other methods
+                    simulator = ""
+                }
             } else {
+                simulator = ""
+            }
+            
+            // If we still don't have a simulator name, try fallback methods
+            if simulator.isEmpty {
                 // Fallback: Try to get device name from app's device info or use a default
                 // Fastlane snapshot should set this, but with test_without_building it may not
                 if let app = self.app {
@@ -292,6 +315,7 @@ open class Snapshot: NSObject {
                     if let destination = ProcessInfo().environment["XCODE_DESTINATION"],
                        let nameMatch = destination.components(separatedBy: ",").first(where: { $0.contains("name=") }) {
                         simulator = nameMatch.replacingOccurrences(of: "name=", with: "").trimmingCharacters(in: .whitespaces)
+                        NSLog("✅ Using device name from XCODE_DESTINATION: \(simulator)")
                     } else {
                         // Last resort: use a sanitized version based on screen size or default
                         let screenSize = app.windows.firstMatch.frame.size
@@ -300,7 +324,7 @@ open class Snapshot: NSObject {
                         } else {
                             simulator = "iPhone16ProMax" // Default for iPhone
                         }
-                        NSLog("⚠️ SIMULATOR_DEVICE_NAME not set, using fallback: \(simulator)")
+                        NSLog("⚠️ SIMULATOR_DEVICE_NAME not set, using fallback based on screen size: \(simulator)")
                     }
                 } else {
                     NSLog("⚠️ Cannot determine simulator name - app is nil")
