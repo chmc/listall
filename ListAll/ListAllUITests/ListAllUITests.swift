@@ -527,12 +527,18 @@ final class ListAllUITests: XCTestCase {
     func testScreenshots01_WelcomeScreen() throws {
         // Special test that launches WITHOUT test data to show empty state
         // Uses the shared app instance to avoid redundant launch
+        print("🔍 DEBUG: testScreenshots01_WelcomeScreen starting")
         launchAppForScreenshot(skipTestData: true)
         
+        print("🔍 DEBUG: App launched, waiting 2 seconds")
         sleep(2)
+        
+        print("🔍 DEBUG: About to call snapshotPortrait('01-WelcomeScreen')")
         snapshotPortrait("01-WelcomeScreen", wait: 1)
+        print("🔍 DEBUG: snapshotPortrait('01-WelcomeScreen') completed")
         
         app.terminate()
+        print("🔍 DEBUG: testScreenshots01_WelcomeScreen completed")
     }
     
     /// Screenshots 02-05: Main app flow with test data
@@ -673,8 +679,11 @@ extension ListAllUITests {
 
     /// Wrapper that enforces portrait before taking a snapshot and waits briefly after.
     func snapshotPortrait(_ name: String, wait: UInt = 1) {
+        print("🔍 DEBUG: snapshotPortrait('\(name)') called")
         ensurePortrait()
+        print("🔍 DEBUG: Portrait ensured, calling snapshot('\(name)')")
         snapshot(name, timeWaitingForIdle: TimeInterval(wait))
+        print("🔍 DEBUG: snapshot('\(name)') returned")
         // Give time for any potential rotation animations to settle
         usleep(300_000)
     }

@@ -508,7 +508,10 @@ platform :ios do
         end
         
         # Method 2: Extract from simulator cache directory (SnapshotHelper saves here)
-        simulator_cache_dir = File.expand_path("~/Library/Caches/tools.fastlane/screenshots")
+        # Use SIMULATOR_HOST_HOME if set, otherwise fall back to HOME or ~
+        simulator_host_home = ENV['SIMULATOR_HOST_HOME'] || ENV['HOME'] || Dir.home
+        simulator_cache_dir = File.join(simulator_host_home, "Library/Caches/tools.fastlane/screenshots")
+        UI.message("   Checking cache directory: #{simulator_cache_dir}")
         if Dir.exist?(simulator_cache_dir)
           cache_screenshots = Dir.glob(File.join(simulator_cache_dir, "*.png"))
           if cache_screenshots.any?
@@ -522,7 +525,11 @@ platform :ios do
               end
             end
             UI.message("   Copied #{cache_screenshots.count} screenshots from cache") if cache_screenshots.any?
+          else
+            UI.message("   Cache directory exists but no screenshots found")
           end
+        else
+          UI.message("   Cache directory does not exist: #{simulator_cache_dir}")
         end
         
         if extracted_count > 0
@@ -560,10 +567,11 @@ platform :ios do
               UI.error("   ❌ Test methods NOT found in log - tests may not be running")
             end
             
-            if log_content.include?("snapshot:")
+            # Check for both "snapshot:" and debug messages
+            if log_content.include?("snapshot:") || log_content.include?("DEBUG: Snapshot.snapshot")
               UI.message("   ✅ Found 'snapshot:' entries in log - snapshot() is being called")
               # Show last snapshot entries
-              snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") }.last(10)
+              snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") || l.include?("DEBUG: Snapshot.snapshot") }.last(10)
               UI.message("   Last snapshot entries:")
               snapshot_lines.each { |line| UI.message("     #{line.chomp}") }
               UI.error("   ⚠️  Screenshots were generated but not extracted by Fastlane")
@@ -575,6 +583,14 @@ platform :ios do
               UI.error("      - setupSnapshot() not called before app.launch()")
               UI.error("      - snapshot() calls are failing silently")
               UI.error("      - Tests are crashing before reaching snapshot() calls")
+              UI.error("      - NSLog output not being captured in log file")
+              
+              # Check for debug messages that might indicate where the test is failing
+              if log_content.include?("DEBUG:")
+                debug_lines = log_content.lines.select { |l| l.include?("DEBUG:") }.last(20)
+                UI.message("   Recent DEBUG messages:")
+                debug_lines.each { |line| UI.message("     #{line.chomp}") }
+              end
             end
           else
             UI.error("   ⚠️  Log file not found at #{log_path}")

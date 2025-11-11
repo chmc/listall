@@ -152,7 +152,23 @@ open class Snapshot: NSObject {
 
     open class func snapshot(_ name: String, timeWaitingForIdle timeout: TimeInterval = 20) {
         // CRITICAL: Log immediately so Fastlane can detect snapshot calls even if later code fails
-        NSLog("snapshot: \(name)") // more information about this, check out https://docs.fastlane.tools/actions/snapshot/#how-does-it-work
+        // Use both NSLog and print to ensure visibility in logs
+        let logMessage = "snapshot: \(name)"
+        NSLog(logMessage) // more information about this, check out https://docs.fastlane.tools/actions/snapshot/#how-does-it-work
+        print(logMessage) // Also print to stdout for better log capture
+        NSLog("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
+        print("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
+        
+        // Verify setupSnapshot was called
+        if self.app == nil {
+            let errorMsg = "XCUIApplication is not set. Please call setupSnapshot(app) before snapshot()."
+            NSLog("❌ ERROR: \(errorMsg)")
+            print("❌ ERROR: \(errorMsg)")
+            return
+        }
+        
+        NSLog("🔍 DEBUG: Snapshot.app is set, app state: \(self.app?.state.rawValue ?? -1)")
+        print("🔍 DEBUG: Snapshot.app is set, app state: \(self.app?.state.rawValue ?? -1)")
         
         if timeout > 0 {
             waitForLoadingIndicatorToDisappear(within: timeout)
@@ -224,6 +240,7 @@ open class Snapshot: NSObject {
                 if !fileManager.fileExists(atPath: screenshotsDir.path) {
                     try fileManager.createDirectory(at: screenshotsDir, withIntermediateDirectories: true, attributes: nil)
                     NSLog("✅ Created screenshots directory: \(screenshotsDir.path)")
+                    print("✅ Created screenshots directory: \(screenshotsDir.path)")
                 }
                 
                 // The simulator name contains "Clone X of " inside the screenshot file when running parallelized UI Tests on concurrent devices
@@ -232,16 +249,24 @@ open class Snapshot: NSObject {
                 simulator = regex.stringByReplacingMatches(in: simulator, range: range, withTemplate: "")
 
                 let path = screenshotsDir.appendingPathComponent("\(simulator)-\(name).png")
+                NSLog("🔍 DEBUG: Attempting to save screenshot to: \(path.path)")
+                print("🔍 DEBUG: Attempting to save screenshot to: \(path.path)")
+                
                 #if swift(<5.0)
                     try UIImagePNGRepresentation(image)?.write(to: path, options: .atomic)
                 #else
                     try image.pngData()?.write(to: path, options: .atomic)
                 #endif
                 NSLog("✅ Saved screenshot: \(path.lastPathComponent)")
+                print("✅ Saved screenshot: \(path.lastPathComponent)")
             } catch let error {
-                NSLog("❌ Problem writing screenshot: \(name) to \(screenshotsDir.path)/\(simulator)-\(name).png")
+                let errorMsg = "Problem writing screenshot: \(name) to \(screenshotsDir.path)/\(simulator)-\(name).png"
+                NSLog("❌ \(errorMsg)")
+                print("❌ \(errorMsg)")
                 NSLog("❌ Error: \(error.localizedDescription)")
+                print("❌ Error: \(error.localizedDescription)")
                 NSLog("❌ Error details: \(error)")
+                print("❌ Error details: \(error)")
             }
         #endif
     }
