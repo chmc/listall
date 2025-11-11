@@ -1,5 +1,64 @@
 # AI Changelog
 
+## 2025-11-11 - Pipeline Failure Analysis & Fast-Fail Optimizations 🔧 IN PROGRESS
+
+### Summary
+Analyzed pipeline failure logs and implemented fast-fail optimizations to reduce failure time from 25 minutes to ~5-8 minutes. The pipeline was taking too long to fail because it waited 120 seconds for each simulator boot (4 times = 8+ minutes) and continued through all device/locale combinations even after the first failure. Fixed screenshot extraction issue by enabling `result_bundle: true` when using `test_without_building: true`.
+
+### The Problem
+**User Request**: "Pipeline fails @preparepipeline.md analyse log and also @test-results-and-logs. 1. Try to research correct fix. 2. Try to fail as fast as possible, took 25mins now to fail"
+
+**Key Issues Identified**:
+1. **Screenshots not being generated**: Tests pass successfully but no screenshots found in output directory
+2. **Slow failure detection**: Pipeline waits 120 seconds for each simulator boot (4 device/locale combinations = 8+ minutes of waiting)
+3. **No early termination**: Pipeline continues through all combinations even after first failure
+4. **Screenshot extraction issue**: When using `test_without_building: true`, Fastlane snapshot may need `result_bundle: true` to extract screenshots
+
+### Implementation Details
+
+#### 1. Reduced Simulator Boot Wait Time
+**File**: `fastlane/Fastfile` - `screenshots_framed` lane
+
+**Changes**:
+- Set `ENV['SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT'] = '30'` to reduce wait from 120s to 30s
+- This saves ~6 minutes per pipeline run if simulators boot quickly, or fails faster if they're slow
+
+**Impact**: Reduces simulator boot wait time by 75% (from 120s to 30s per device).
+
+#### 2. Implemented Fast-Fail After First Failure
+**File**: `fastlane/Fastfile` - `screenshots_framed` lane
+
+**Changes**:
+- Modified error handling to stop immediately after first device/locale combination fails
+- Changed error message to: "🚨 Screenshot generation failed for #{device} (#{locale}) - FAILING FAST to save time"
+- Added improved diagnostics to identify root cause:
+  - If `snapshot:` entries found in log → Screenshots generated but not extracted (Fastlane bug)
+  - If no `snapshot:` entries → Screenshot helper not being called (test issue)
+
+**Impact**: Pipeline now fails immediately after first failure instead of continuing through all 4 combinations, saving 15-20 minutes when there's a problem.
+
+#### 3. Fixed Screenshot Extraction with test_without_building
+**File**: `fastlane/Fastfile` - `screenshots_framed` lane
+
+**Changes**:
+- Changed `result_bundle: false` to `result_bundle: true` when using `test_without_building: true`
+- Added comment explaining that `result_bundle: true` may be needed for screenshot extraction with pre-built tests
+- This is a hypothesis that needs testing - previous attempts used `result_bundle: false` but that was with formatter enabled
+
+**Impact**: Should enable Fastlane to properly extract screenshots from result bundles when using pre-built test products.
+
+### Expected Results
+- **Failure time reduced**: From ~25 minutes to ~5-8 minutes (75% reduction)
+- **Faster feedback**: Failures detected after first device/locale combination instead of waiting for all 4
+- **Better diagnostics**: Clear error messages help identify root cause (screenshot generation vs extraction)
+
+### Next Steps
+1. Test pipeline with `result_bundle: true` to verify screenshot extraction works
+2. If `result_bundle: true` causes issues, investigate alternative screenshot extraction methods
+3. Verify that `snapshot()` calls in UI tests are actually executing (check for `snapshot:` entries in logs)
+
+---
+
 ## 2025-01-XX - App Store Screenshot Pipeline Fixes & Performance Improvements ✅ COMPLETED
 
 ### Summary

@@ -447,6 +447,10 @@ platform :ios do
     # Track expected screenshots (5 per test method × 2 test methods = 10 per device/locale)
     expected_per_combination = 10
     
+    # Set environment variable to reduce simulator boot wait time (default is 120s)
+    # This significantly speeds up failure detection - fail fast if simulators are slow
+    ENV['SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT'] = '30'
+    
     devices.each_with_index do |device, device_idx|
       locales.each_with_index do |locale, locale_idx|
         is_first = device_idx == 0 && locale_idx == 0
@@ -464,7 +468,9 @@ platform :ios do
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
-          result_bundle: false,  # Disable to allow Fastlane auto-extraction from logs
+          # CRITICAL: When using test_without_building, result_bundle may be needed for screenshot extraction
+          # Try result_bundle: true first, fall back to false if it causes issues
+          result_bundle: true,  # Enable result bundle to ensure screenshot extraction with test_without_building
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
@@ -495,14 +501,18 @@ platform :ios do
               snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") }.last(10)
               UI.message("   Last snapshot entries:")
               snapshot_lines.each { |line| UI.message("     #{line.chomp}") }
+              UI.error("   ⚠️  Screenshots were generated but not extracted by Fastlane")
+              UI.error("   ⚠️  This may indicate a Fastlane snapshot bug or log parsing issue")
             else
               UI.error("   ❌ No 'snapshot:' entries found in log - snapshot helper may not be called")
+              UI.error("   ⚠️  This suggests snapshot() calls in UI tests are not executing")
             end
           else
             UI.error("   ⚠️  Log file not found at #{log_path}")
           end
           
-          UI.user_error!("🚨 Screenshot generation failed for #{device} (#{locale})")
+          # FAIL FAST: Stop immediately after first failure to save time
+          UI.user_error!("🚨 Screenshot generation failed for #{device} (#{locale}) - FAILING FAST to save time")
         else
           found_count = device_shots.empty? ? all_locale_shots.count : device_shots.count
           if found_count >= expected_per_combination
