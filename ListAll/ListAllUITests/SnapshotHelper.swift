@@ -185,8 +185,10 @@ open class Snapshot: NSObject {
             return
         }
         
-        NSLog("🔍 DEBUG: Snapshot.app is set, app state: \(self.app?.state.rawValue ?? -1)")
-        print("🔍 DEBUG: Snapshot.app is set, app state: \(self.app?.state.rawValue ?? -1)")
+        // Since we've already checked that app is not nil above, we can safely unwrap
+        let appState = self.app?.state.rawValue ?? 0
+        NSLog("🔍 DEBUG: Snapshot.app is set, app state: \(appState)")
+        print("🔍 DEBUG: Snapshot.app is set, app state: \(appState)")
         
         if timeout > 0 {
             waitForLoadingIndicatorToDisappear(within: timeout)
