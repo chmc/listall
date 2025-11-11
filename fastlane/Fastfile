@@ -496,10 +496,11 @@ platform :ios do
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
-          # CRITICAL: Use log parsing mode (result_bundle: false) - this is the traditional, most reliable approach
-          # Fastlane Snapshot parses logs for "snapshot: <name>" entries and extracts screenshots from cache directory
-          # Result bundle mode has compatibility issues and doesn't work reliably with test_without_building
-          result_bundle: false,
+          # CRITICAL FIX: Enable result_bundle to extract screenshots from xcresult bundle
+          # Log parsing mode (result_bundle: false) fails when using test_without_building because
+          # NSLog output from the test process isn't captured in xcodebuild logs
+          # Result bundle mode extracts screenshots directly from test attachments, which is more reliable
+          result_bundle: true,
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
