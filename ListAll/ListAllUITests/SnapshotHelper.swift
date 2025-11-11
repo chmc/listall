@@ -257,6 +257,7 @@ open class Snapshot: NSObject {
         if let data = debugMessage.data(using: .utf8) {
             for debugLogPath in debugLogPaths {
                 do {
+                    // Try to open existing file for appending
                     if let fileHandle = try? FileHandle(forWritingTo: debugLogPath) {
                         fileHandle.seekToEndOfFile()
                         fileHandle.write(data)
@@ -264,11 +265,11 @@ open class Snapshot: NSObject {
                         break
                     } else {
                         // File doesn't exist, create it
-                        try? data.write(to: debugLogPath)
+                        try data.write(to: debugLogPath)
                         break
                     }
                 } catch {
-                    // Try next path
+                    // Try next path if this one fails
                     continue
                 }
             }
@@ -357,14 +358,15 @@ open class Snapshot: NSObject {
             }
             
             guard let finalScreenshotsDir = screenshotsDir else {
-                // CRITICAL: Even if we can't save to file system, attach screenshot to test
-                // This ensures screenshots are captured in xcresult bundle
-                NSLog("❌ CRITICAL: Cannot determine screenshots directory - attaching screenshot to test")
-                let attachment = XCTAttachment(image: image)
-                attachment.name = name
-                attachment.lifetime = .keepAlways
-                XCTContext.current.add(attachment)
-                NSLog("✅ Screenshot attached to test: \(name)")
+                // CRITICAL: Cannot determine screenshots directory - log error and return
+                // File system save is the primary method, so we can't proceed without a directory
+                let errorMsg = "❌ CRITICAL: Cannot determine screenshots directory - screenshot will not be saved"
+                NSLog(errorMsg)
+                print(errorMsg)
+                NSLog("   Cache directory: \(cacheDirectory?.path ?? "nil")")
+                print("   Cache directory: \(cacheDirectory?.path ?? "nil")")
+                NSLog("   SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")")
+                print("   SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")")
                 return
             }
             
@@ -446,14 +448,6 @@ open class Snapshot: NSObject {
                 NSLog("✅ Saved screenshot: \(path.lastPathComponent)")
                 print("✅ Saved screenshot: \(path.lastPathComponent)")
                 
-                // CRITICAL FIX: Also attach screenshot to test as backup
-                // This ensures screenshots are captured in xcresult bundle even if file system save fails
-                let attachment = XCTAttachment(image: image)
-                attachment.name = "\(simulator)-\(name)"
-                attachment.lifetime = .keepAlways
-                XCTContext.current.add(attachment)
-                NSLog("✅ Screenshot also attached to test as backup")
-                
             } catch let error {
                 let errorMsg = "Problem writing screenshot: \(name) to \(finalScreenshotsDir.path)/\(simulator)-\(name).png"
                 NSLog("❌ \(errorMsg)")
@@ -463,13 +457,10 @@ open class Snapshot: NSObject {
                 NSLog("❌ Error details: \(error)")
                 print("❌ Error details: \(error)")
                 
-                // CRITICAL: Even if file save fails, attach screenshot to test
-                // This ensures we don't lose the screenshot completely
-                let attachment = XCTAttachment(image: image)
-                attachment.name = "\(simulator)-\(name)"
-                attachment.lifetime = .keepAlways
-                XCTContext.current.add(attachment)
-                NSLog("✅ Screenshot attached to test as fallback (file save failed)")
+                // CRITICAL: File save failed - screenshot was not saved
+                // The error has been logged above for debugging
+                NSLog("⚠️ Screenshot could not be saved to file system")
+                print("⚠️ Screenshot could not be saved to file system")
             }
         #endif
     }
