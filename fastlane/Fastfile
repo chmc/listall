@@ -468,11 +468,61 @@ platform :ios do
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
-          # CRITICAL: When using test_without_building, result_bundle may be needed for screenshot extraction
-          # Try result_bundle: true first, fall back to false if it causes issues
-          result_bundle: true,  # Enable result bundle to ensure screenshot extraction with test_without_building
+          # CRITICAL: Use result_bundle: false to allow Fastlane to parse logs for "snapshot:" entries
+          # When result_bundle: true, Fastlane doesn't parse logs and may not extract screenshots automatically
+          # We'll manually extract from result bundle if needed, but log parsing is more reliable
+          result_bundle: false,  # Disable to allow Fastlane to parse logs and extract screenshots automatically
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
+        
+        # CRITICAL FIX: When using test_without_building, Fastlane may not extract screenshots automatically
+        # Try multiple extraction methods to find screenshots (result bundle, simulator cache, etc.)
+        UI.message("🔍 Attempting manual screenshot extraction...")
+        locale_dir = File.join(screenshots_dir, locale)
+        FileUtils.mkdir_p(locale_dir) unless File.directory?(locale_dir)
+        extracted_count = 0
+        
+        # Method 1: Extract from result bundle (when result_bundle: true)
+        result_bundle_path = File.join(screenshots_dir, "test_output", locale, "ListAll.xcresult")
+        if File.exist?(result_bundle_path)
+          UI.message("   Checking result bundle: #{result_bundle_path}")
+          # Extract screenshots from result bundle using xcresulttool
+          attachments_dir = File.join(result_bundle_path, "Attachments")
+          if Dir.exist?(attachments_dir)
+            # Find all PNG attachments
+            Dir.glob(File.join(attachments_dir, "**", "*.png")).each do |src|
+              basename = File.basename(src)
+              dst = File.join(locale_dir, basename)
+              FileUtils.cp(src, dst) unless File.exist?(dst)
+              extracted_count += 1
+            end
+            UI.message("   Extracted #{extracted_count} screenshots from result bundle") if extracted_count > 0
+          end
+        end
+        
+        # Method 2: Extract from simulator cache directory (SnapshotHelper saves here)
+        simulator_cache_dir = File.expand_path("~/Library/Caches/tools.fastlane/screenshots")
+        if Dir.exist?(simulator_cache_dir)
+          cache_screenshots = Dir.glob(File.join(simulator_cache_dir, "*.png"))
+          if cache_screenshots.any?
+            UI.message("   Found #{cache_screenshots.count} screenshots in cache directory")
+            cache_screenshots.each do |src|
+              basename = File.basename(src)
+              dst = File.join(locale_dir, basename)
+              unless File.exist?(dst)
+                FileUtils.cp(src, dst)
+                extracted_count += 1
+              end
+            end
+            UI.message("   Copied #{cache_screenshots.count} screenshots from cache") if cache_screenshots.any?
+          end
+        end
+        
+        if extracted_count > 0
+          UI.success("   ✅ Manually extracted #{extracted_count} screenshots")
+        else
+          UI.message("   ⚠️  No screenshots found in result bundle or cache directory")
+        end
         
         # Incremental verification: check screenshots immediately after this device/language
         UI.message("🔍 Verifying screenshots for #{device} (#{locale})...")
@@ -495,8 +545,16 @@ platform :ios do
           if File.exist?(log_path)
             UI.error("   Checking log file: #{log_path}")
             log_content = File.read(log_path)
+            
+            # Check if tests actually ran
+            if log_content.include?("testScreenshots01_WelcomeScreen") || log_content.include?("testScreenshots02_MainFlow")
+              UI.message("   ✅ Test methods found in log - tests are executing")
+            else
+              UI.error("   ❌ Test methods NOT found in log - tests may not be running")
+            end
+            
             if log_content.include?("snapshot:")
-              UI.message("   ✅ Found 'snapshot:' entries in log - Fastlane should have extracted screenshots")
+              UI.message("   ✅ Found 'snapshot:' entries in log - snapshot() is being called")
               # Show last snapshot entries
               snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") }.last(10)
               UI.message("   Last snapshot entries:")
@@ -504,8 +562,12 @@ platform :ios do
               UI.error("   ⚠️  Screenshots were generated but not extracted by Fastlane")
               UI.error("   ⚠️  This may indicate a Fastlane snapshot bug or log parsing issue")
             else
-              UI.error("   ❌ No 'snapshot:' entries found in log - snapshot helper may not be called")
-              UI.error("   ⚠️  This suggests snapshot() calls in UI tests are not executing")
+              UI.error("   ❌ No 'snapshot:' entries found in log")
+              UI.error("   ⚠️  This suggests snapshot() calls in UI tests are NOT executing")
+              UI.error("   ⚠️  Possible causes:")
+              UI.error("      - setupSnapshot() not called before app.launch()")
+              UI.error("      - snapshot() calls are failing silently")
+              UI.error("      - Tests are crashing before reaching snapshot() calls")
             end
           else
             UI.error("   ⚠️  Log file not found at #{log_path}")

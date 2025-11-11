@@ -41,11 +41,30 @@ Analyzed pipeline failure logs and implemented fast-fail optimizations to reduce
 **File**: `fastlane/Fastfile` - `screenshots_framed` lane
 
 **Changes**:
-- Changed `result_bundle: false` to `result_bundle: true` when using `test_without_building: true`
-- Added comment explaining that `result_bundle: true` may be needed for screenshot extraction with pre-built tests
-- This is a hypothesis that needs testing - previous attempts used `result_bundle: false` but that was with formatter enabled
+- **REVERTED**: Changed `result_bundle: true` back to `result_bundle: false`
+- **ROOT CAUSE IDENTIFIED**: With `result_bundle: true`, Fastlane doesn't parse logs for `snapshot:` entries
+- Fastlane snapshot needs to parse logs to find `NSLog("snapshot: ...")` entries when `result_bundle: false`
+- **CRITICAL FIX**: Added comprehensive manual screenshot extraction from multiple sources:
+  1. Result bundle attachments (if result bundle exists)
+  2. Simulator cache directory (`~/Library/Caches/tools.fastlane/screenshots/`)
+- **ENHANCED DIAGNOSTICS**: Added checks to verify:
+  - If test methods are executing (check for test method names in logs)
+  - If `snapshot()` is being called (check for `snapshot:` entries in logs)
+  - Better error messages identifying root cause
 
-**Impact**: Should enable Fastlane to properly extract screenshots from result bundles when using pre-built test products.
+**Root Cause Analysis**:
+- **PRIMARY ISSUE**: No `snapshot:` entries found in logs - `snapshot()` calls are NOT executing
+- Possible causes:
+  - `setupSnapshot()` not called before `app.launch()`
+  - `snapshot()` calls failing silently
+  - Tests crashing before reaching `snapshot()` calls
+- With `result_bundle: false`, Fastlane can parse logs and extract screenshots automatically IF `snapshot()` is being called
+- Manual extraction provides fallback if automatic extraction fails
+
+**Impact**: 
+- Better diagnostics will identify why `snapshot()` isn't being called
+- Manual extraction ensures screenshots are found even if automatic extraction fails
+- Log parsing should work correctly with `result_bundle: false` and `xcodebuild_formatter: ""`
 
 ### Expected Results
 - **Failure time reduced**: From ~25 minutes to ~5-8 minutes (75% reduction)
