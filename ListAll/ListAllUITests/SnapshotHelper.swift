@@ -159,6 +159,24 @@ open class Snapshot: NSObject {
         NSLog("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
         print("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
         
+        // CRITICAL: Also write to a file for debugging when NSLog isn't captured
+        // This helps diagnose issues when using test_without_building
+        if let cacheDir = cacheDirectory {
+            let debugLogPath = cacheDir.appendingPathComponent("snapshot_debug.log")
+            let timestamp = Date().timeIntervalSince1970
+            let debugMessage = "[\(timestamp)] snapshot: \(name)\n"
+            if let data = debugMessage.data(using: .utf8) {
+                if let fileHandle = try? FileHandle(forWritingTo: debugLogPath) {
+                    fileHandle.seekToEndOfFile()
+                    fileHandle.write(data)
+                    fileHandle.closeFile()
+                } else {
+                    // File doesn't exist, create it
+                    try? data.write(to: debugLogPath)
+                }
+            }
+        }
+        
         // Verify setupSnapshot was called
         if self.app == nil {
             let errorMsg = "XCUIApplication is not set. Please call setupSnapshot(app) before snapshot()."
