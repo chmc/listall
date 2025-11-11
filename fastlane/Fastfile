@@ -485,11 +485,10 @@ platform :ios do
         UI.message("🔧 Setting SIMULATOR_HOST_HOME=#{simulator_host_home} for SnapshotHelper")
         
         # CRITICAL FIX: Pass SIMULATOR_HOST_HOME through xcodebuild environment
-        # When using test_without_building, environment variables must be passed via xcargs
+        # When using test_without_building, environment variables must be passed via xcodebuild_command
+        # Fastlane snapshot uses xcodebuild_command to wrap xcodebuild, so we can inject env vars there
         # This ensures the test process can access SIMULATOR_HOST_HOME
-        xcargs_with_env = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
-        # Note: xcodebuild doesn't directly support passing env vars via xcargs, but Fastlane snapshot
-        # should handle this. We'll also try passing via launch_arguments as a fallback.
+        simulator_host_home_env = "SIMULATOR_HOST_HOME=#{simulator_host_home}"
         
         snapshot(
           derived_data_path: derived,
@@ -506,10 +505,9 @@ platform :ios do
           # NSLog output from the test process isn't captured in xcodebuild logs
           # Result bundle mode extracts screenshots directly from test attachments, which is more reliable
           result_bundle: true,
-          # CRITICAL: Pass SIMULATOR_HOST_HOME via launch_arguments so it's available to the test process
-          # Fastlane snapshot should automatically pass environment variables, but with test_without_building
-          # we need to ensure it's available. The launch_arguments approach ensures it's passed to the app.
-          # Note: We can't directly pass env vars via launch_arguments, but Fastlane should handle this.
+          # CRITICAL: Pass SIMULATOR_HOST_HOME via xcodebuild_command so it's available to the test process
+          # This ensures environment variables are passed to xcodebuild and inherited by the test process
+          xcodebuild_command: "env #{simulator_host_home_env} NSUnbufferedIO=YES xcodebuild",
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
@@ -852,58 +850,117 @@ platform :ios do
           UI.message("   ⚠️  SnapshotHelper debug log not found - snapshot() may not be called")
         end
         
-        # Method 2b: Extract test logs from result bundle to check for NSLog output
+        # Method 2b: Extract test activity logs from result bundle to check for NSLog output
         if File.exist?(result_bundle_to_check)
           begin
             UI.message("   🔍 Extracting test activity logs from result bundle...")
-            # Use xcresulttool to export activity logs which contain NSLog output
-            activity_logs_dir = File.join(locale_dir, "activity_logs")
-            FileUtils.mkdir_p(activity_logs_dir) unless File.directory?(activity_logs_dir)
             
-            # Export activity logs - try new API first, fall back to legacy
-            export_output = `xcrun xcresulttool export --type directory --path "#{result_bundle_to_check}" --output-path "#{activity_logs_dir}" --id root 2>&1`
-            if !$?.success? || export_output.include?("deprecated") || export_output.include?("--legacy")
-              # Try with legacy flag or alternative export method
-              export_output = `xcrun xcresulttool export --legacy --type directory --path "#{result_bundle_to_check}" --output-path "#{activity_logs_dir}" --id root 2>&1`
-            end
-            
-            # Try to find test logs in the exported directory
-            if Dir.exist?(activity_logs_dir)
-              # Look for log files
-              log_files = Dir.glob(File.join(activity_logs_dir, "**", "*.log"))
-              log_files += Dir.glob(File.join(activity_logs_dir, "**", "*.txt"))
-              
-              if log_files.any?
-                UI.message("   ✅ Found #{log_files.count} log files in result bundle")
-                # Check for snapshot: entries in logs
-                snapshot_found_in_logs = false
-                log_files.each do |log_file|
-                  begin
-                    log_content = File.read(log_file)
-                    if log_content.include?("snapshot:") || log_content.include?("DEBUG: Snapshot.snapshot")
-                      snapshot_found_in_logs = true
-                      UI.message("   ✅ Found 'snapshot:' entries in: #{File.basename(log_file)}")
-                      # Show last few snapshot entries
-                      snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") || l.include?("DEBUG: Snapshot") }.last(5)
-                      snapshot_lines.each { |line| UI.message("     #{line.chomp}") }
+            # CRITICAL: Use xcresulttool to get test activity logs which contain NSLog/print output
+            # First, get the root object to find test actions
+            root_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
+            if $?.success?
+              require 'json'
+              begin
+                root_data = JSON.parse(root_output)
+                
+                # Navigate the JSON to find test actions and their activity logs
+                # The structure is: root -> actions -> actionResult -> testsRef -> tests -> test -> activities
+                if root_data['actions'] && root_data['actions'].is_a?(Array)
+                  root_data['actions'].each do |action|
+                    if action['actionResult'] && action['actionResult']['testsRef']
+                      tests_id = action['actionResult']['testsRef']['id']
+                      
+                      # Get the tests object
+                      tests_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{tests_id}" 2>&1`
+                      if $?.success?
+                        tests_data = JSON.parse(tests_output)
+                        
+                        # Navigate to find test activities
+                        if tests_data['summaries'] && tests_data['summaries'].is_a?(Array)
+                          tests_data['summaries'].each do |summary|
+                            if summary['testRefs'] && summary['testRefs'].is_a?(Array)
+                              summary['testRefs'].each do |test_ref|
+                                test_id = test_ref['id']
+                                
+                                # Get the test object
+                                test_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{test_id}" 2>&1`
+                                if $?.success?
+                                  test_data = JSON.parse(test_output)
+                                  
+                                  # Check for activities with attachments or subactivities
+                                  if test_data['activities'] && test_data['activities'].is_a?(Array)
+                                    test_data['activities'].each do |activity|
+                                      # Check for attachments (screenshots)
+                                      if activity['attachments'] && activity['attachments'].is_a?(Array)
+                                        activity['attachments'].each do |attachment|
+                                          if attachment['filename'] && attachment['filename'].match?(/\.png$/i)
+                                            UI.message("   ✅ Found screenshot attachment: #{attachment['filename']}")
+                                            # Extract the attachment
+                                            if attachment['payloadRef'] && attachment['payloadRef']['id']
+                                              attachment_id = attachment['payloadRef']['id']
+                                              attachment_path = File.join(locale_dir, attachment['filename'])
+                                              extract_output = `xcrun xcresulttool export --type file --path "#{result_bundle_to_check}" --id "#{attachment_id}" --output-path "#{attachment_path}" 2>&1`
+                                              if $?.success? && File.exist?(attachment_path)
+                                                extracted_count += 1
+                                                UI.message("   ✅ Extracted screenshot: #{attachment['filename']}")
+                                              end
+                                            end
+                                          end
+                                        end
+                                      end
+                                      
+                                      # Check subactivities recursively
+                                      if activity['subactivities'] && activity['subactivities'].is_a?(Array)
+                                        activity['subactivities'].each do |subactivity|
+                                          if subactivity['attachments'] && subactivity['attachments'].is_a?(Array)
+                                            subactivity['attachments'].each do |attachment|
+                                              if attachment['filename'] && attachment['filename'].match?(/\.png$/i)
+                                                UI.message("   ✅ Found screenshot in subactivity: #{attachment['filename']}")
+                                                if attachment['payloadRef'] && attachment['payloadRef']['id']
+                                                  attachment_id = attachment['payloadRef']['id']
+                                                  attachment_path = File.join(locale_dir, attachment['filename'])
+                                                  extract_output = `xcrun xcresulttool export --type file --path "#{result_bundle_to_check}" --id "#{attachment_id}" --output-path "#{attachment_path}" 2>&1`
+                                                  if $?.success? && File.exist?(attachment_path)
+                                                    extracted_count += 1
+                                                    UI.message("   ✅ Extracted screenshot: #{attachment['filename']}")
+                                                  end
+                                                end
+                                              end
+                                            end
+                                          end
+                                        end
+                                      end
+                                    end
+                                  end
+                                end
+                              end
+                            end
+                          end
+                        end
+                      end
                     end
-                  rescue => e
-                    # Skip files that can't be read
                   end
                 end
-                
-                unless snapshot_found_in_logs
-                  UI.message("   ⚠️  No 'snapshot:' entries found in result bundle logs")
-                end
-              else
-                UI.message("   ⚠️  No log files found in result bundle export")
+              rescue JSON::ParserError => e
+                UI.message("   ⚠️  Failed to parse result bundle JSON: #{e.message}")
+                UI.message("   Root output: #{root_output[0..500]}") # Show first 500 chars for debugging
+              rescue => e
+                UI.message("   ⚠️  Error navigating result bundle structure: #{e.message}")
+                UI.message("   Backtrace: #{e.backtrace.first(3).join("\n")}")
               end
-              
-              # Clean up
-              FileUtils.rm_rf(activity_logs_dir)
+            else
+              UI.message("   ⚠️  Failed to get root object from result bundle")
+              UI.message("   Error output: #{root_output.chomp}")
+              # Try to get basic info about the result bundle
+              UI.message("   🔍 Attempting to list result bundle contents...")
+              if Dir.exist?(result_bundle_to_check)
+                top_level = Dir.entries(result_bundle_to_check).reject { |e| e.start_with?(".") }
+                UI.message("   Top-level contents: #{top_level.join(", ")}")
+              end
             end
           rescue => e
             UI.message("   ⚠️  Error extracting test logs: #{e.message}")
+            UI.message("   Backtrace: #{e.backtrace.first(3).join("\n")}")
           end
         end
         
