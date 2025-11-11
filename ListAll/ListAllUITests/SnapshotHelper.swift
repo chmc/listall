@@ -64,18 +64,26 @@ open class Snapshot: NSObject {
     static var currentLocale = ""
 
     open class func setupSnapshot(_ app: XCUIApplication, waitForAnimations: Bool = true) {
-
+        NSLog("🔧 setupSnapshot() called")
         Snapshot.app = app
         Snapshot.waitForAnimations = waitForAnimations
 
         do {
             let cacheDir = try getCacheDirectory()
             Snapshot.cacheDirectory = cacheDir
+            NSLog("✅ Cache directory set to: \(cacheDir.path)")
+            if let screenshotsDir = screenshotsDirectory {
+                NSLog("✅ Screenshots directory will be: \(screenshotsDir.path)")
+            } else {
+                NSLog("⚠️ screenshotsDirectory is nil after setting cacheDirectory")
+            }
             setLanguage(app)
             setLocale(app)
             setLaunchArguments(app)
+            NSLog("✅ setupSnapshot() completed successfully")
         } catch let error {
-            NSLog(error.localizedDescription)
+            NSLog("❌ setupSnapshot() failed: \(error.localizedDescription)")
+            NSLog("❌ Error details: \(error)")
         }
     }
 
@@ -211,6 +219,13 @@ open class Snapshot: NSObject {
             }
 
             do {
+                // CRITICAL: Ensure the screenshots directory exists before writing
+                let fileManager = FileManager.default
+                if !fileManager.fileExists(atPath: screenshotsDir.path) {
+                    try fileManager.createDirectory(at: screenshotsDir, withIntermediateDirectories: true, attributes: nil)
+                    NSLog("✅ Created screenshots directory: \(screenshotsDir.path)")
+                }
+                
                 // The simulator name contains "Clone X of " inside the screenshot file when running parallelized UI Tests on concurrent devices
                 let regex = try NSRegularExpression(pattern: "Clone [0-9]+ of ")
                 let range = NSRange(location: 0, length: simulator.count)
@@ -222,9 +237,11 @@ open class Snapshot: NSObject {
                 #else
                     try image.pngData()?.write(to: path, options: .atomic)
                 #endif
+                NSLog("✅ Saved screenshot: \(path.lastPathComponent)")
             } catch let error {
-                NSLog("Problem writing screenshot: \(name) to \(screenshotsDir)/\(simulator)-\(name).png")
-                NSLog(error.localizedDescription)
+                NSLog("❌ Problem writing screenshot: \(name) to \(screenshotsDir.path)/\(simulator)-\(name).png")
+                NSLog("❌ Error: \(error.localizedDescription)")
+                NSLog("❌ Error details: \(error)")
             }
         #endif
     }
@@ -274,8 +291,14 @@ open class Snapshot: NSObject {
             let simulatorHostHome = ProcessInfo().environment["SIMULATOR_HOST_HOME"] 
                                     ?? ProcessInfo().environment["HOME"]
                                     ?? NSHomeDirectory()
+            NSLog("🔍 SIMULATOR_HOST_HOME: \(ProcessInfo().environment["SIMULATOR_HOST_HOME"] ?? "not set")")
+            NSLog("🔍 HOME: \(ProcessInfo().environment["HOME"] ?? "not set")")
+            NSLog("🔍 NSHomeDirectory(): \(NSHomeDirectory())")
+            NSLog("🔍 Using home directory: \(simulatorHostHome)")
             let homeDir = URL(fileURLWithPath: simulatorHostHome)
-            return homeDir.appendingPathComponent(cachePath)
+            let cacheDir = homeDir.appendingPathComponent(cachePath)
+            NSLog("🔍 Cache directory path: \(cacheDir.path)")
+            return cacheDir
         #else
             throw SnapshotError.cannotRunOnPhysicalDevice
         #endif
