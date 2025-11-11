@@ -516,29 +516,50 @@ platform :ios do
           
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
           begin
+            # First, check if result bundle is valid
             xcresulttool_output = `xcrun xcresulttool get --path "#{result_bundle_to_check}" --format json 2>&1`
             if $?.success?
               UI.message("   ✅ Result bundle is valid")
               
-              # Extract all attachments using xcresulttool
-              attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" 2>&1`
-              if $?.success? && attachments_output.include?(".png")
+              # List all attachments to see what's available
+              attachments_list = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" 2>&1`
+              UI.message("   Attachments list: #{attachments_list.chomp}")
+              
+              if attachments_list.include?(".png") || attachments_list.include?("PNG")
                 UI.message("   Found PNG attachments in result bundle")
-                # List and extract attachments
-                `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{File.join(locale_dir, "attachments")}" 2>&1`
-                if Dir.exist?(File.join(locale_dir, "attachments"))
-                  Dir.glob(File.join(locale_dir, "attachments", "**", "*.png")).each do |src|
+                # Extract all attachments to a temporary directory
+                attachments_dir = File.join(locale_dir, "attachments")
+                FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
+                
+                extract_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+                UI.message("   Extract output: #{extract_output.chomp}") unless extract_output.empty?
+                
+                if Dir.exist?(attachments_dir)
+                  # Find all PNG files (case-insensitive)
+                  png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+                  UI.message("   Found #{png_files.count} PNG files in attachments directory")
+                  
+                  png_files.each do |src|
                     basename = File.basename(src)
                     dst = File.join(locale_dir, basename)
                     FileUtils.cp(src, dst) unless File.exist?(dst)
                     extracted_count += 1
+                    UI.message("   ✅ Extracted: #{basename}")
                   end
-                  FileUtils.rm_rf(File.join(locale_dir, "attachments"))
+                  FileUtils.rm_rf(attachments_dir)
+                else
+                  UI.message("   ⚠️  Attachments directory not created")
                 end
+              else
+                UI.message("   ⚠️  No PNG attachments found in result bundle")
+                UI.message("   Full attachments list: #{attachments_list}")
               end
+            else
+              UI.message("   ⚠️  Result bundle validation failed: #{xcresulttool_output.chomp}")
             end
           rescue => e
             UI.message("   ⚠️  Error using xcresulttool: #{e.message}")
+            UI.message("   Backtrace: #{e.backtrace.first(3).join("\n")}")
           end
           
           # Method 1b: Direct file system access (fallback)
@@ -602,12 +623,101 @@ platform :ios do
           UI.message("   ⚠️  Could not extract simulator data path: #{e.message}")
         end
         
+        # Method 2a: Check for SnapshotHelper debug log file
+        # SnapshotHelper writes a debug log file to verify snapshot() calls
+        possible_cache_dirs_for_log = []
+        if ENV['SIMULATOR_HOST_HOME']
+          possible_cache_dirs_for_log << File.join(ENV['SIMULATOR_HOST_HOME'], "Library/Caches/tools.fastlane")
+        end
+        if ENV['HOME']
+          possible_cache_dirs_for_log << File.join(ENV['HOME'], "Library/Caches/tools.fastlane")
+        end
+        possible_cache_dirs_for_log << File.join(Dir.home, "Library/Caches/tools.fastlane")
+        
+        debug_log_found = false
+        possible_cache_dirs_for_log.uniq.each do |cache_base|
+          debug_log_path = File.join(cache_base, "snapshot_debug.log")
+          if File.exist?(debug_log_path)
+            debug_log_found = true
+            UI.message("   ✅ Found SnapshotHelper debug log: #{debug_log_path}")
+            debug_content = File.read(debug_log_path)
+            UI.message("   Debug log content (last 20 lines):")
+            debug_content.lines.last(20).each { |line| UI.message("     #{line.chomp}") }
+            
+            # Count snapshot calls
+            snapshot_calls = debug_content.scan(/snapshot:/).count
+            UI.message("   📊 Found #{snapshot_calls} snapshot() calls in debug log")
+            break
+          end
+        end
+        
+        unless debug_log_found
+          UI.message("   ⚠️  SnapshotHelper debug log not found - snapshot() may not be called")
+        end
+        
+        # Method 2b: Extract test logs from result bundle to check for NSLog output
+        if File.exist?(result_bundle_to_check)
+          begin
+            UI.message("   🔍 Extracting test activity logs from result bundle...")
+            # Use xcresulttool to export activity logs which contain NSLog output
+            activity_logs_dir = File.join(locale_dir, "activity_logs")
+            FileUtils.mkdir_p(activity_logs_dir) unless File.directory?(activity_logs_dir)
+            
+            # Export activity logs
+            export_output = `xcrun xcresulttool export --type directory --path "#{result_bundle_to_check}" --output-path "#{activity_logs_dir}" --id root 2>&1`
+            
+            # Try to find test logs in the exported directory
+            if Dir.exist?(activity_logs_dir)
+              # Look for log files
+              log_files = Dir.glob(File.join(activity_logs_dir, "**", "*.log"))
+              log_files += Dir.glob(File.join(activity_logs_dir, "**", "*.txt"))
+              
+              if log_files.any?
+                UI.message("   ✅ Found #{log_files.count} log files in result bundle")
+                # Check for snapshot: entries in logs
+                snapshot_found_in_logs = false
+                log_files.each do |log_file|
+                  begin
+                    log_content = File.read(log_file)
+                    if log_content.include?("snapshot:") || log_content.include?("DEBUG: Snapshot.snapshot")
+                      snapshot_found_in_logs = true
+                      UI.message("   ✅ Found 'snapshot:' entries in: #{File.basename(log_file)}")
+                      # Show last few snapshot entries
+                      snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") || l.include?("DEBUG: Snapshot") }.last(5)
+                      snapshot_lines.each { |line| UI.message("     #{line.chomp}") }
+                    end
+                  rescue => e
+                    # Skip files that can't be read
+                  end
+                end
+                
+                unless snapshot_found_in_logs
+                  UI.message("   ⚠️  No 'snapshot:' entries found in result bundle logs")
+                end
+              else
+                UI.message("   ⚠️  No log files found in result bundle export")
+              end
+              
+              # Clean up
+              FileUtils.rm_rf(activity_logs_dir)
+            end
+          rescue => e
+            UI.message("   ⚠️  Error extracting test logs: #{e.message}")
+          end
+        end
+        
         # Check all possible cache directories
         found_cache = false
         possible_cache_dirs.uniq.each do |cache_dir|
           UI.message("   Checking cache directory: #{cache_dir}")
           if Dir.exist?(cache_dir)
             found_cache = true
+            # Check for debug log in this directory too
+            debug_log_in_dir = File.join(File.dirname(cache_dir), "snapshot_debug.log")
+            if File.exist?(debug_log_in_dir)
+              UI.message("   ✅ Found debug log in cache parent: #{debug_log_in_dir}")
+            end
+            
             cache_screenshots = Dir.glob(File.join(cache_dir, "*.png"))
             if cache_screenshots.any?
               UI.message("   ✅ Found #{cache_screenshots.count} screenshots in cache directory")
@@ -648,8 +758,21 @@ platform :ios do
           end
         end
         
+        # Method 3: Check if Fastlane already extracted screenshots automatically
+        # Fastlane should extract screenshots when result_bundle: true, but it might use a different location
+        fastlane_extracted_dir = File.join(screenshots_dir, locale)
+        if Dir.exist?(fastlane_extracted_dir)
+          fastlane_screenshots = Dir.glob(File.join(fastlane_extracted_dir, "*.png"))
+          if fastlane_screenshots.any?
+            UI.message("   ✅ Fastlane automatically extracted #{fastlane_screenshots.count} screenshots to: #{fastlane_extracted_dir}")
+            extracted_count += fastlane_screenshots.count
+          else
+            UI.message("   ⚠️  Fastlane output directory exists but no screenshots found")
+          end
+        end
+        
         if extracted_count > 0
-          UI.success("   ✅ Manually extracted #{extracted_count} screenshots")
+          UI.success("   ✅ Total extracted: #{extracted_count} screenshots")
         else
           UI.message("   ⚠️  No screenshots found in result bundle or cache directory")
         end
