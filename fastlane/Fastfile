@@ -484,11 +484,10 @@ platform :ios do
         ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
         UI.message("🔧 Setting SIMULATOR_HOST_HOME=#{simulator_host_home} for SnapshotHelper")
         
-        # CRITICAL FIX: Pass SIMULATOR_HOST_HOME through xcodebuild environment
-        # When using test_without_building, environment variables must be passed via xcodebuild_command
-        # Fastlane snapshot uses xcodebuild_command to wrap xcodebuild, so we can inject env vars there
-        # This ensures the test process can access SIMULATOR_HOST_HOME
-        simulator_host_home_env = "SIMULATOR_HOST_HOME=#{simulator_host_home}"
+        # CRITICAL: Fastlane snapshot should automatically pass environment variables to the test process
+        # We've set ENV['SIMULATOR_HOST_HOME'] above, which should be inherited by xcodebuild and the test process
+        # However, if this doesn't work, SnapshotHelper has fallback logic to use HOME or NSHomeDirectory()
+        # Note: We can't use xcodebuild_command (not supported by snapshot action), so we rely on Fastlane's automatic passing
         
         snapshot(
           derived_data_path: derived,
@@ -505,9 +504,6 @@ platform :ios do
           # NSLog output from the test process isn't captured in xcodebuild logs
           # Result bundle mode extracts screenshots directly from test attachments, which is more reliable
           result_bundle: true,
-          # CRITICAL: Pass SIMULATOR_HOST_HOME via xcodebuild_command so it's available to the test process
-          # This ensures environment variables are passed to xcodebuild and inherited by the test process
-          xcodebuild_command: "env #{simulator_host_home_env} NSUnbufferedIO=YES xcodebuild",
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
@@ -889,7 +885,26 @@ platform :ios do
                                   
                                   # Check for activities with attachments or subactivities
                                   if test_data['activities'] && test_data['activities'].is_a?(Array)
-                                    test_data['activities'].each do |activity|
+                                    UI.message("   🔍 Found #{test_data['activities'].count} activities for test")
+                                    test_data['activities'].each_with_index do |activity, activity_idx|
+                                      # CRITICAL: Extract and display activity logs to see what's happening
+                                      if activity['title']
+                                        UI.message("   📋 Activity #{activity_idx + 1}: #{activity['title']}")
+                                      end
+                                      
+                                      # Check for log messages in the activity (NSLog/print output)
+                                      if activity['messages'] && activity['messages'].is_a?(Array)
+                                        UI.message("   📝 Found #{activity['messages'].count} log messages in activity")
+                                        activity['messages'].each do |message|
+                                          if message['message'] && message['message']['values']
+                                            message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
+                                            if message_text.include?('DEBUG') || message_text.include?('setupSnapshot') || message_text.include?('snapshot:')
+                                              UI.message("   🔍 LOG: #{message_text[0..200]}") # Show first 200 chars
+                                            end
+                                          end
+                                        end
+                                      end
+                                      
                                       # Check for attachments (screenshots)
                                       if activity['attachments'] && activity['attachments'].is_a?(Array)
                                         activity['attachments'].each do |attachment|
