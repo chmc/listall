@@ -438,24 +438,95 @@ platform :ios do
     )
     
     # 1. Raw screenshots using pre-built products
-    # Snapfile contains device/language/test configs
-    # Note: test_without_building reuses the build from scan above
-    # CRITICAL: Disable xcodebuild_formatter so Fastlane can parse NSLog("snapshot: ...") entries
-    UI.header("Running snapshot using pre-built tests")
-    snapshot(
-      derived_data_path: derived,
-      test_without_building: true,
-      xcodebuild_formatter: ""  # Empty string disables formatter, allowing Fastlane to parse logs
-      # result_bundle: false is set in Snapfile to enable log-based extraction
-    )
-    
-    # 1.5. Fail-fast check: ensure raw screenshots exist before processing
+    # Run snapshot per device/language combination for incremental verification
+    # This provides immediate feedback instead of waiting 30+ minutes
     screenshots_dir = File.expand_path("screenshots", __dir__)
+    devices = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"]
+    locales = %w[en-US fi]
+    
+    # Track expected screenshots (5 per test method × 2 test methods = 10 per device/locale)
+    expected_per_combination = 10
+    
+    devices.each_with_index do |device, device_idx|
+      locales.each_with_index do |locale, locale_idx|
+        is_first = device_idx == 0 && locale_idx == 0
+        UI.header("📸 Generating screenshots for #{device} (#{locale})")
+        
+        # Run snapshot for this specific device/language combination
+        # Only clear screenshots on first run, then append
+        snapshot(
+          derived_data_path: derived,
+          test_without_building: true,
+          devices: [device],
+          languages: [locale],
+          clear_previous_screenshots: is_first,  # Only clear on first run
+          only_testing: ["ListAllUITests/testScreenshots01_WelcomeScreen", "ListAllUITests/testScreenshots02_MainFlow"],
+          skip_testing: ["ListAllTests"],
+          xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
+          buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
+          result_bundle: false,  # Disable to allow Fastlane auto-extraction from logs
+          # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
+        )
+        
+        # Incremental verification: check screenshots immediately after this device/language
+        UI.message("🔍 Verifying screenshots for #{device} (#{locale})...")
+        locale_dir = File.join(screenshots_dir, locale)
+        FileUtils.mkdir_p(locale_dir) unless File.directory?(locale_dir)
+        
+        # Check for screenshots (device name in filename might be sanitized)
+        all_locale_shots = Dir.glob(File.join(locale_dir, "*.png"))
+        device_shots = all_locale_shots.select { |f| File.basename(f).include?(device.gsub(" ", "").gsub("-", "")) || 
+                                                      File.basename(f).include?("iPhone16ProMax") || 
+                                                      File.basename(f).include?("iPadPro13") }
+        
+        if all_locale_shots.empty?
+          UI.error("❌ No screenshots found for #{device} (#{locale})")
+          UI.error("   Expected location: #{locale_dir}")
+          UI.error("   Expected count: ~#{expected_per_combination} screenshots")
+          
+          # Check log file for debugging
+          log_path = File.expand_path("~/Library/Logs/snapshot/ListAll-ListAll.log")
+          if File.exist?(log_path)
+            UI.error("   Checking log file: #{log_path}")
+            log_content = File.read(log_path)
+            if log_content.include?("snapshot:")
+              UI.message("   ✅ Found 'snapshot:' entries in log - Fastlane should have extracted screenshots")
+              # Show last snapshot entries
+              snapshot_lines = log_content.lines.select { |l| l.include?("snapshot:") }.last(10)
+              UI.message("   Last snapshot entries:")
+              snapshot_lines.each { |line| UI.message("     #{line.chomp}") }
+            else
+              UI.error("   ❌ No 'snapshot:' entries found in log - snapshot helper may not be called")
+            end
+          else
+            UI.error("   ⚠️  Log file not found at #{log_path}")
+          end
+          
+          UI.user_error!("🚨 Screenshot generation failed for #{device} (#{locale})")
+        else
+          found_count = device_shots.empty? ? all_locale_shots.count : device_shots.count
+          if found_count >= expected_per_combination
+            UI.success("✅ Generated #{found_count} screenshots for #{device} (#{locale})")
+          else
+            UI.message("⚠️  Found #{found_count} screenshots for #{device} (#{locale}) (expected ~#{expected_per_combination})")
+            UI.message("   Continuing... (may be partial set)")
+          end
+        end
+      end
+    end
+    
+    # Final verification: ensure all expected screenshots exist
+    UI.header("Final verification: Checking all screenshots")
     raw_shots = Dir.glob(File.join(screenshots_dir, "**/*.png"))
+    expected_total = devices.count * locales.count * expected_per_combination
     if raw_shots.empty?
       UI.user_error!("🚨 iOS screenshot generation failed: No screenshots found in #{screenshots_dir}")
+    elsif raw_shots.count < expected_total * 0.8  # Allow 20% tolerance
+      UI.message("⚠️  Found #{raw_shots.count} screenshots (expected ~#{expected_total})")
+      UI.message("   Continuing with available screenshots...")
+    else
+      UI.success("✅ Found #{raw_shots.count} total raw iOS screenshots (expected ~#{expected_total})")
     end
-    UI.success("✅ Found #{raw_shots.count} raw iOS screenshots")
 
     # 2. Normalize new device sizes to Frameit-supported canvases
     UI.header("Normalizing screenshot sizes for Frameit compatibility")
