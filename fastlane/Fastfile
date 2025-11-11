@@ -487,12 +487,10 @@ platform :ios do
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
-          # CRITICAL FIX: Enable result_bundle for reliable screenshot extraction with test_without_building
-          # Fastlane can extract screenshots from result bundle even when log parsing fails
-          # Research confirms this is the recommended approach for CI environments
-          # NOTE: When result_bundle: true, Fastlane automatically adds -resultBundlePath to xcodebuild
-          # Do NOT add it manually via xcargs or it will be duplicated
-          result_bundle: true,
+          # CRITICAL: Use log parsing mode (result_bundle: false) - this is the traditional, most reliable approach
+          # Fastlane Snapshot parses logs for "snapshot: <name>" entries and extracts screenshots from cache directory
+          # Result bundle mode has compatibility issues and doesn't work reliably with test_without_building
+          result_bundle: false,
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
@@ -517,12 +515,19 @@ platform :ios do
           # Method 1a: Use xcresulttool to extract attachments (most reliable)
           begin
             # First, check if result bundle is valid
-            xcresulttool_output = `xcrun xcresulttool get --path "#{result_bundle_to_check}" --format json 2>&1`
+            # Use --legacy flag for older xcresulttool API (required in newer Xcode versions)
+            # Note: The command structure is "get object --legacy" not "get --legacy"
+            xcresulttool_output = `xcrun xcresulttool get object --legacy --path "#{result_bundle_to_check}" --format json 2>&1`
             if $?.success?
               UI.message("   ✅ Result bundle is valid")
               
               # List all attachments to see what's available
+              # Try both new and legacy API for attachments
               attachments_list = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" 2>&1`
+              if !$?.success? || attachments_list.include?("deprecated") || attachments_list.include?("--legacy")
+                # Try with legacy flag
+                attachments_list = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" 2>&1`
+              end
               UI.message("   Attachments list: #{attachments_list.chomp}")
               
               if attachments_list.include?(".png") || attachments_list.include?("PNG")
@@ -531,7 +536,11 @@ platform :ios do
                 attachments_dir = File.join(locale_dir, "attachments")
                 FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
                 
+                # Try extracting with new API first, fall back to legacy if needed
                 extract_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+                if !$?.success? || extract_output.include?("deprecated") || extract_output.include?("--legacy")
+                  extract_output = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+                end
                 UI.message("   Extract output: #{extract_output.chomp}") unless extract_output.empty?
                 
                 if Dir.exist?(attachments_dir)
@@ -563,17 +572,58 @@ platform :ios do
           end
           
           # Method 1b: Direct file system access (fallback)
-          attachments_dir = File.join(result_bundle_to_check, "Attachments")
-          if Dir.exist?(attachments_dir)
-            # Find all PNG attachments
-            Dir.glob(File.join(attachments_dir, "**", "*.png")).each do |src|
-              basename = File.basename(src)
-              dst = File.join(locale_dir, basename)
-              FileUtils.cp(src, dst) unless File.exist?(dst)
-              extracted_count += 1
+          # Check multiple possible attachment locations in result bundle
+          possible_attachment_dirs = [
+            File.join(result_bundle_to_check, "Attachments"),
+            File.join(result_bundle_to_check, "Data", "Attachments"),
+            File.join(result_bundle_to_check, "TestSummaries.plist") # Sometimes attachments are referenced here
+          ]
+          
+          possible_attachment_dirs.each do |attachments_dir|
+            if Dir.exist?(attachments_dir)
+              UI.message("   Checking attachments directory: #{attachments_dir}")
+              # Find all PNG attachments (case-insensitive)
+              png_files = Dir.glob(File.join(attachments_dir, "**", "*.{png,PNG}"))
+              if png_files.any?
+                UI.message("   Found #{png_files.count} PNG files in #{attachments_dir}")
+                png_files.each do |src|
+                  basename = File.basename(src)
+                  dst = File.join(locale_dir, basename)
+                  FileUtils.cp(src, dst) unless File.exist?(dst)
+                  extracted_count += 1
+                  UI.message("   ✅ Extracted: #{basename}")
+                end
+              end
             end
-            UI.message("   Extracted #{extracted_count} screenshots from result bundle") if extracted_count > 0
           end
+          
+          # Also check if result bundle has a Data directory structure
+          data_dir = File.join(result_bundle_to_check, "Data")
+          if Dir.exist?(data_dir)
+            UI.message("   Exploring result bundle Data directory structure...")
+            # List top-level directories
+            Dir.entries(data_dir).each do |entry|
+              next if entry.start_with?(".")
+              entry_path = File.join(data_dir, entry)
+              if File.directory?(entry_path)
+                UI.message("     Found directory: #{entry}")
+                # Check for PNG files recursively
+                png_files = Dir.glob(File.join(entry_path, "**", "*.{png,PNG}"))
+                if png_files.any?
+                  UI.message("       Found #{png_files.count} PNG files in #{entry}")
+                  png_files.each do |src|
+                    basename = File.basename(src)
+                    dst = File.join(locale_dir, basename)
+                    FileUtils.cp(src, dst) unless File.exist?(dst)
+                    extracted_count += 1
+                    UI.message("       ✅ Extracted: #{basename}")
+                  end
+                end
+              end
+            end
+          end
+          
+          UI.message("   Extracted #{extracted_count} screenshots from result bundle (Method 1b)") if extracted_count > 0
         else
           UI.message("   ⚠️  Result bundle not found at: #{result_bundle_to_check} (Fastlane should have extracted screenshots automatically)")
         end
@@ -625,6 +675,7 @@ platform :ios do
         
         # Method 2a: Check for SnapshotHelper debug log file
         # SnapshotHelper writes a debug log file to verify snapshot() calls
+        # CRITICAL: Check ALL possible cache directories, including simulator-specific ones
         possible_cache_dirs_for_log = []
         if ENV['SIMULATOR_HOST_HOME']
           possible_cache_dirs_for_log << File.join(ENV['SIMULATOR_HOST_HOME'], "Library/Caches/tools.fastlane")
@@ -633,6 +684,15 @@ platform :ios do
           possible_cache_dirs_for_log << File.join(ENV['HOME'], "Library/Caches/tools.fastlane")
         end
         possible_cache_dirs_for_log << File.join(Dir.home, "Library/Caches/tools.fastlane")
+        
+        # Also check simulator-specific cache directories (extract base from possible_cache_dirs)
+        possible_cache_dirs.each do |cache_dir|
+          # Extract base cache directory (parent of "screenshots")
+          if cache_dir.include?("screenshots")
+            base_cache = File.dirname(cache_dir)
+            possible_cache_dirs_for_log << base_cache if base_cache
+          end
+        end
         
         debug_log_found = false
         possible_cache_dirs_for_log.uniq.each do |cache_base|
@@ -663,8 +723,12 @@ platform :ios do
             activity_logs_dir = File.join(locale_dir, "activity_logs")
             FileUtils.mkdir_p(activity_logs_dir) unless File.directory?(activity_logs_dir)
             
-            # Export activity logs
+            # Export activity logs - try new API first, fall back to legacy
             export_output = `xcrun xcresulttool export --type directory --path "#{result_bundle_to_check}" --output-path "#{activity_logs_dir}" --id root 2>&1`
+            if !$?.success? || export_output.include?("deprecated") || export_output.include?("--legacy")
+              # Try with legacy flag or alternative export method
+              export_output = `xcrun xcresulttool export --legacy --type directory --path "#{result_bundle_to_check}" --output-path "#{activity_logs_dir}" --id root 2>&1`
+            end
             
             # Try to find test logs in the exported directory
             if Dir.exist?(activity_logs_dir)
