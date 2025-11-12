@@ -1198,20 +1198,37 @@ platform :ios do
                 # Check if it's an ActionsInvocationRecord type
                 if root_data['_type'] && root_data['_type']['_name'] == 'ActionsInvocationRecord'
                   UI.message("   📋 Root object is ActionsInvocationRecord")
-                  # ActionsInvocationRecord has 'actions' array
-                  if root_data['actions'] && root_data['actions'].is_a?(Array)
-                    UI.message("   ✅ Found actions array in ActionsInvocationRecord")
+                  # ActionsInvocationRecord has 'actions' which can be a Hash with _values or an Array
+                  if root_data['actions']
+                    if root_data['actions'].is_a?(Hash) && root_data['actions']['_values']
+                      UI.message("   ✅ Found actions Hash with _values array")
+                      actions_array = root_data['actions']['_values']
+                    elsif root_data['actions'].is_a?(Array)
+                      UI.message("   ✅ Found actions array directly")
+                      actions_array = root_data['actions']
+                    else
+                      UI.message("   ⚠️  ActionsInvocationRecord has actions but structure is unexpected")
+                      UI.message("   🔍 Actions type: #{root_data['actions'].class}")
+                      if root_data['actions'].is_a?(Hash)
+                        UI.message("   🔍 Actions keys: #{root_data['actions'].keys.join(', ')}")
+                      end
+                      actions_array = nil
+                    end
                   else
-                    UI.message("   ⚠️  ActionsInvocationRecord has no actions array")
+                    UI.message("   ⚠️  ActionsInvocationRecord has no actions")
                     UI.message("   🔍 Available keys in root: #{root_data.keys.join(', ')}")
+                    actions_array = nil
                   end
+                else
+                  actions_array = nil
                 end
                 
                 # Navigate the JSON to find test actions and their activity logs
-                # The structure is: root -> actions -> actionResult -> testsRef -> tests -> test -> activities
-                if root_data['actions'] && root_data['actions'].is_a?(Array)
-                  UI.message("   📋 Found #{root_data['actions'].count} action(s) in result bundle")
-                  root_data['actions'].each_with_index do |action, action_idx|
+                # The structure is: root -> actions -> _values (array) -> actionResult -> testsRef -> tests -> test -> activities
+                # OR: root -> actions (array) -> actionResult -> testsRef -> tests -> test -> activities
+                if actions_array && actions_array.is_a?(Array)
+                  UI.message("   📋 Found #{actions_array.count} action(s) in result bundle")
+                  actions_array.each_with_index do |action, action_idx|
                     UI.message("   🔍 Processing action #{action_idx + 1}...")
                     if action['actionResult'] && action['actionResult']['testsRef']
                       tests_id = action['actionResult']['testsRef']['id']
@@ -1396,8 +1413,8 @@ platform :ios do
                   UI.message("   🔍 Attempting alternative navigation methods...")
                   
                   # Try modern API approach: use get test-results directly
-                  UI.message("   🔍 Trying modern API: get test-results...")
-                  modern_output = `xcrun xcresulttool get test-results --path "#{result_bundle_to_check}" --format json 2>&1`
+                  UI.message("   🔍 Trying modern API: get test-results summary...")
+                  modern_output = `xcrun xcresulttool get test-results summary --path "#{result_bundle_to_check}" --format json 2>&1`
                   if $?.success? && modern_output && !modern_output.empty?
                     UI.message("   ✅ Modern API succeeded!")
                     begin
