@@ -433,6 +433,8 @@ platform :ios do
       # Note: build_for_testing and test_without_building are mutually exclusive
       # build_for_testing means: build only, don't run tests
       # We need to build UI tests for snapshot, so don't use skip_testing here
+      # Skip unit tests to speed up build (we only need UI tests for screenshots)
+      skip_testing: ["ListAllTests"],
       derived_data_path: derived,
       xcargs: "ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
     )
@@ -465,9 +467,10 @@ platform :ios do
         
         # Run snapshot for this specific device/language combination
         # Only clear screenshots on first run, then append
-        # CRITICAL FIX: Enable result_bundle to get better debugging and screenshot extraction
-        # When using test_without_building, log parsing may not capture NSLog output properly
-        # result_bundle provides a reliable way to extract screenshots and debug test execution
+        # CRITICAL FIX: Use result_bundle: false to enable Fastlane log parsing for automatic screenshot extraction
+        # With xcodebuild_formatter: "" and NSUnbufferedIO=YES, log parsing works correctly with test_without_building
+        # Fastlane parses NSLog("snapshot: ...") entries from logs to automatically extract screenshots
+        # result_bundle_path is kept for fallback manual extraction if needed
         result_bundle_path = File.join(screenshots_dir, "test_output", locale, "ListAll.xcresult")
         FileUtils.mkdir_p(File.dirname(result_bundle_path)) unless File.directory?(File.dirname(result_bundle_path))
         
@@ -556,27 +559,17 @@ platform :ios do
         end
         
         # CRITICAL FIX: Set environment variables in Ruby ENV so they're available to test process
-        # These will be passed to xcodebuild which forwards them to the test process
+        # Fastlane snapshot automatically passes Ruby ENV variables to xcodebuild, which forwards them to the test process
+        # This is the correct way to pass environment variables (not via xcargs, which is for build settings only)
         ENV['FASTLANE_SNAPSHOT'] = 'YES'
         ENV['FASTLANE_LANGUAGE'] = locale
         ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
         ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
         ENV['NSUnbufferedIO'] = 'YES'
         
-        # CRITICAL FIX: Try passing environment variables via xcargs
-        # xcargs allows passing build settings and environment variables to xcodebuild
-        # Format: ENV_VAR_NAME=value
-        xcargs_env = [
-          "SIMULATOR_HOST_HOME=#{simulator_host_home}",
-          "SIMULATOR_DEVICE_NAME=#{device_name_sanitized}",
-          "FASTLANE_SNAPSHOT=YES",
-          "FASTLANE_LANGUAGE=#{locale}",
-          "NSUnbufferedIO=YES"
-        ].join(" ")
-        
-        # Combine with existing xcargs from Snapfile (code signing settings)
+        # Use xcargs only for build settings (code signing), not environment variables
+        # Environment variables are passed automatically via Ruby ENV above
         existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
-        combined_xcargs = "#{existing_xcargs} #{xcargs_env}"
         
         snapshot(
           derived_data_path: derived,
@@ -588,14 +581,12 @@ platform :ios do
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
-          # CRITICAL FIX: Pass environment variables via xcargs
-          # Note: xcargs may not work for environment variables, but it's worth trying
-          xcargs: combined_xcargs,
-          # CRITICAL FIX: Enable result_bundle to extract screenshots from xcresult bundle
-          # Log parsing mode (result_bundle: false) fails when using test_without_building because
-          # NSLog output from the test process isn't captured in xcodebuild logs
-          # Result bundle mode extracts screenshots directly from test attachments, which is more reliable
-          result_bundle: true,
+          xcargs: existing_xcargs,  # Only build settings, not environment variables
+          # CRITICAL FIX: Use result_bundle: false to enable Fastlane log parsing for automatic screenshot extraction
+          # With xcodebuild_formatter: "" and NSUnbufferedIO=YES, log parsing works correctly with test_without_building
+          # Fastlane parses NSLog("snapshot: ...") entries from logs to automatically extract screenshots
+          # Manual extraction code below provides fallback if automatic extraction fails
+          result_bundle: false,
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
         
@@ -617,10 +608,10 @@ platform :ios do
         # Screenshots are saved as: <simulator-name>-<screenshot-name>.png
         # e.g., "iPhone16ProMax-01-WelcomeScreen.png"
         
-        # Method 1: Extract from result bundle (result_bundle is now enabled)
-        # CRITICAL FIX: Extract screenshots from xcresult bundle attachments
-        # XCTest attachments are the most reliable way to get screenshots when using test_without_building
-        # Check multiple possible result bundle locations
+        # Method 1: Extract from result bundle (FALLBACK - only if Fastlane automatic extraction fails)
+        # With result_bundle: false, Fastlane should automatically extract screenshots via log parsing
+        # This manual extraction is a fallback in case automatic extraction doesn't work
+        # Check multiple possible result bundle locations (may exist even with result_bundle: false)
         possible_result_bundles = [
           result_bundle_path,  # Our custom path
           File.join(screenshots_dir, locale, "ListAll.xcresult"),  # Fastlane default
@@ -2220,7 +2211,7 @@ platform :ios do
         end
         
         # Method 3: Check if Fastlane already extracted screenshots automatically
-        # Fastlane should extract screenshots when result_bundle: true, but it might use a different location
+        # With result_bundle: false, Fastlane parses logs and extracts screenshots automatically to the locale directory
         fastlane_extracted_dir = File.join(screenshots_dir, locale)
         if Dir.exist?(fastlane_extracted_dir)
           fastlane_screenshots = Dir.glob(File.join(fastlane_extracted_dir, "*.png"))

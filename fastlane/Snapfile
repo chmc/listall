@@ -54,12 +54,12 @@ xcargs("CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")
 # Concurrent mode causes keychain access conflicts during code signing
 concurrent_simulators(false)
 
-# Enable result bundle to extract screenshots from xcresult bundle
-# CRITICAL FIX: Log parsing mode (result_bundle: false) fails when using test_without_building
-# because NSLog output from the test process isn't captured in xcodebuild logs
-# Result bundle mode extracts screenshots directly from test attachments, which is more reliable
-# Note: This can be overridden in Fastfile if needed
-result_bundle(true)
+# Use result_bundle: false to enable Fastlane log parsing for automatic screenshot extraction
+# With xcodebuild_formatter: "" and NSUnbufferedIO=YES, log parsing works correctly with test_without_building
+# Fastlane parses NSLog("snapshot: ...") entries from logs to automatically extract screenshots
+# NOTE: result_bundle is set to false in Fastfile to ensure log parsing works
+# Removing from Snapfile to avoid conflicts - Fastfile override will be used
+# result_bundle(false)  # Commented out - controlled by Fastfile
 
 # Increase retry count for CI stability (handles occasional segfaults)
 # Snapshot automatically retries on random failures
