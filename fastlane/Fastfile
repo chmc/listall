@@ -1228,9 +1228,61 @@ platform :ios do
                             test_status = test_node['testStatus'] || test_node['status'] || 'Unknown'
                             UI.message("      Test #{idx + 1}: #{test_name} - #{test_status}")
                             
+                            # Log all test node keys for debugging
+                            UI.message("         Test node keys: #{test_node.keys.join(', ')}")
+                            
                             # Check for activities (which contain logs and attachments)
                             if test_node['activities'] && test_node['activities'].is_a?(Array)
                               UI.message("         Has #{test_node['activities'].count} activity(ies)")
+                              test_node['activities'].each_with_index do |activity, act_idx|
+                                if activity.is_a?(Hash)
+                                  UI.message("         Activity #{act_idx + 1} keys: #{activity.keys.join(', ')}")
+                                  
+                                  # Check for attachments (screenshots)
+                                  if activity['attachments'] && activity['attachments'].is_a?(Array)
+                                    UI.message("         Found #{activity['attachments'].count} attachment(s) in activity #{act_idx + 1}")
+                                    activity['attachments'].each do |attachment|
+                                      if attachment.is_a?(Hash)
+                                        filename = attachment['filename'] || attachment['name'] || 'Unknown'
+                                        UI.message("           Attachment: #{filename}")
+                                        if attachment['payloadRef']
+                                          UI.message("             Payload ref: #{attachment['payloadRef']}")
+                                        end
+                                      end
+                                    end
+                                  end
+                                  
+                                  # Check for messages (logs)
+                                  if activity['messages'] && activity['messages'].is_a?(Array)
+                                    UI.message("         Found #{activity['messages'].count} message(s) in activity #{act_idx + 1}")
+                                    activity['messages'].each_with_index do |message, msg_idx|
+                                      if message.is_a?(Hash)
+                                        msg_text = message['message'] || message['text'] || message.to_s
+                                        UI.message("           Message #{msg_idx + 1}: #{msg_text[0..100]}")
+                                      end
+                                    end
+                                  end
+                                  
+                                  # Check for sub-activities (nested)
+                                  if activity['subActivities'] && activity['subActivities'].is_a?(Array)
+                                    UI.message("         Found #{activity['subActivities'].count} sub-activit(ies) in activity #{act_idx + 1}")
+                                    activity['subActivities'].each_with_index do |sub_activity, sub_idx|
+                                      if sub_activity.is_a?(Hash) && sub_activity['attachments'] && sub_activity['attachments'].is_a?(Array)
+                                        UI.message("           Sub-activity #{sub_idx + 1} has #{sub_activity['attachments'].count} attachment(s)")
+                                      end
+                                    end
+                                  end
+                                end
+                              end
+                            else
+                              UI.message("         No activities found in test node")
+                              # Try alternative paths - maybe activities are nested differently
+                              if test_node['testResult'] && test_node['testResult'].is_a?(Hash)
+                                UI.message("         Found testResult object")
+                                if test_node['testResult']['activities'] && test_node['testResult']['activities'].is_a?(Array)
+                                  UI.message("         Found activities in testResult: #{test_node['testResult']['activities'].count}")
+                                end
+                              end
                             end
                           end
                         end
