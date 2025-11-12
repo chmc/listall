@@ -1184,24 +1184,62 @@ platform :ios do
                 UI.message("   ✅ Modern API succeeded!")
                 UI.message("   📋 Modern API keys: #{modern_data.keys.join(', ')}")
                 
-                # Modern API structure should have testNodes or similar
-                if modern_data['testNodes'] || modern_data['tests'] || modern_data['testSummaries']
+                # Modern API summary structure has: testFailures, passedTests, failedTests, totalTestCount, etc.
+                # This is a summary, not individual test nodes. We need to use a different subcommand for individual tests.
+                if modern_data['totalTestCount'] || modern_data['testFailures'] || modern_data['passedTests']
                   modern_api_success = true
-                  UI.message("   ✅ Found test data in modern API format")
+                  UI.message("   ✅ Found test summary data in modern API format")
                   
-                  # Extract test information from modern API
-                  test_nodes = modern_data['testNodes'] || modern_data['tests'] || modern_data['testSummaries'] || []
-                  if test_nodes.is_a?(Array)
-                    UI.message("   📋 Found #{test_nodes.count} test node(s)")
-                    test_nodes.each_with_index do |test_node, idx|
-                      UI.message("   🔍 Test #{idx + 1}: #{test_node['name'] || test_node['identifier'] || 'Unknown'}")
-                      UI.message("      Status: #{test_node['testStatus'] || test_node['status'] || 'Unknown'}")
-                      
-                      # Check for activities or logs
-                      if test_node['activities'] || test_node['subtests']
-                        UI.message("      Has activities/subtests: Yes")
-                      end
+                  total_tests = modern_data['totalTestCount'] || 0
+                  passed = modern_data['passedTests'] || 0
+                  failed = modern_data['failedTests'] || 0
+                  skipped = modern_data['skippedTests'] || 0
+                  
+                  UI.message("   📊 Test Summary:")
+                  UI.message("      Total tests: #{total_tests}")
+                  UI.message("      Passed: #{passed}")
+                  UI.message("      Failed: #{failed}")
+                  UI.message("      Skipped: #{skipped}")
+                  
+                  # Check for test failures - these might have more details
+                  if modern_data['testFailures'] && modern_data['testFailures'].is_a?(Array)
+                    UI.message("   📋 Found #{modern_data['testFailures'].count} test failure(s)")
+                    modern_data['testFailures'].each_with_index do |failure, idx|
+                      UI.message("      Failure #{idx + 1}: #{failure['testCaseName'] || failure['testName'] || 'Unknown'}")
                     end
+                  end
+                  
+                  # Try to get individual test details using a different subcommand
+                  UI.message("   🔍 Attempting to get individual test details...")
+                  tests_output = `xcrun xcresulttool get test-results tests --path "#{result_bundle_to_check}" --format json 2>&1`
+                  if $?.success? && tests_output && !tests_output.empty?
+                    begin
+                      tests_data = JSON.parse(tests_output)
+                      UI.message("   ✅ Got individual test details!")
+                      UI.message("   📋 Test details keys: #{tests_data.keys.join(', ')}")
+                      
+                      # Look for test nodes or test list
+                      if tests_data['testNodes'] || tests_data['tests']
+                        test_nodes = tests_data['testNodes'] || tests_data['tests'] || []
+                        if test_nodes.is_a?(Array)
+                          UI.message("   📋 Found #{test_nodes.count} individual test(s)")
+                          test_nodes.each_with_index do |test_node, idx|
+                            test_name = test_node['name'] || test_node['identifier'] || test_node['testCaseName'] || 'Unknown'
+                            test_status = test_node['testStatus'] || test_node['status'] || 'Unknown'
+                            UI.message("      Test #{idx + 1}: #{test_name} - #{test_status}")
+                            
+                            # Check for activities (which contain logs and attachments)
+                            if test_node['activities'] && test_node['activities'].is_a?(Array)
+                              UI.message("         Has #{test_node['activities'].count} activity(ies)")
+                            end
+                          end
+                        end
+                      end
+                    rescue JSON::ParserError => e
+                      UI.message("   ⚠️  Failed to parse test details JSON: #{e.message}")
+                    end
+                  else
+                    UI.message("   ⚠️  Could not get individual test details: #{tests_output[0..200]}")
                   end
                 end
               rescue JSON::ParserError => e
