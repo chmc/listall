@@ -651,17 +651,55 @@ platform :ios do
                 UI.message("   ✅ Attachment manifest created - checking contents...")
                 begin
                   require 'json'
-                  manifest_data = JSON.parse(File.read(manifest_path))
-                  if manifest_data['attachments'] && manifest_data['attachments'].is_a?(Array)
-                    UI.message("   📋 Manifest shows #{manifest_data['attachments'].count} attachment(s)")
-                    manifest_data['attachments'].each do |att|
-                      UI.message("     - #{att['filename'] || 'unnamed'} (#{att['type'] || 'unknown type'})")
+                  manifest_content = File.read(manifest_path)
+                  UI.message("   📄 Manifest file size: #{manifest_content.length} bytes")
+                  manifest_data = JSON.parse(manifest_content)
+                  
+                  # Check different possible structures
+                  attachments = nil
+                  if manifest_data.is_a?(Array)
+                    attachments = manifest_data
+                    UI.message("   📋 Manifest is an array with #{attachments.count} item(s)")
+                  elsif manifest_data.is_a?(Hash)
+                    if manifest_data['attachments'] && manifest_data['attachments'].is_a?(Array)
+                      attachments = manifest_data['attachments']
+                    elsif manifest_data['tests'] && manifest_data['tests'].is_a?(Array)
+                      # Manifest might be organized by tests
+                      attachments = []
+                      manifest_data['tests'].each do |test|
+                        if test['attachments'] && test['attachments'].is_a?(Array)
+                          attachments.concat(test['attachments'])
+                        end
+                      end
+                    end
+                    UI.message("   📋 Manifest is a hash, found #{attachments ? attachments.count : 0} attachment(s)")
+                  end
+                  
+                  if attachments && attachments.any?
+                    UI.message("   📋 Total attachments found: #{attachments.count}")
+                    attachments.first(10).each do |att|
+                      if att.is_a?(Hash)
+                        UI.message("     - #{att['filename'] || att['name'] || 'unnamed'} (#{att['type'] || att['contentType'] || 'unknown type'})")
+                      else
+                        UI.message("     - #{att.inspect}")
+                      end
+                    end
+                    if attachments.count > 10
+                      UI.message("     ... (#{attachments.count - 10} more)")
                     end
                   else
-                    UI.message("   ⚠️  Manifest exists but no attachments listed")
+                    UI.message("   ⚠️  Manifest exists but no attachments found")
+                    if manifest_data.is_a?(Hash)
+                      UI.message("   📄 Manifest structure: #{manifest_data.keys.join(', ')}")
+                    end
                   end
+                rescue JSON::ParserError => e
+                  UI.message("   ⚠️  JSON parse error: #{e.message}")
+                  UI.message("   📄 First 200 chars of manifest: #{File.read(manifest_path)[0..200]}")
                 rescue => e
                   UI.message("   ⚠️  Could not parse manifest.json: #{e.message}")
+                  UI.message("   📄 Error class: #{e.class}")
+                  UI.message("   📄 Backtrace: #{e.backtrace.first(3).join("\n")}")
                 end
               end
             else
@@ -1132,21 +1170,31 @@ platform :ios do
             root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
             if !$?.success?
               # Fallback: Try without --legacy (will likely fail, but worth trying)
-              UI.message("   ⚠️  Legacy API failed, trying without --legacy flag...")
+              UI.message("   ⚠️  Legacy API failed (exit code: #{$?.exitstatus}), trying without --legacy flag...")
               root_output = `xcrun xcresulttool get object --format json --path "#{result_bundle_to_check}" 2>&1`
+              if !$?.success?
+                UI.message("   ⚠️  Non-legacy API also failed (exit code: #{$?.exitstatus})")
+                UI.message("   Error output: #{root_output[0..500]}")
+              end
             end
             
             if root_output && !root_output.empty? && ($?.nil? || $?.success?)
+              UI.message("   ✅ Successfully retrieved root object from result bundle")
+              UI.message("   📄 Root output length: #{root_output.length} characters")
               require 'json'
               begin
                 root_data = JSON.parse(root_output)
+                UI.message("   ✅ Successfully parsed root object JSON")
                 
                 # Navigate the JSON to find test actions and their activity logs
                 # The structure is: root -> actions -> actionResult -> testsRef -> tests -> test -> activities
                 if root_data['actions'] && root_data['actions'].is_a?(Array)
-                  root_data['actions'].each do |action|
+                  UI.message("   📋 Found #{root_data['actions'].count} action(s) in result bundle")
+                  root_data['actions'].each_with_index do |action, action_idx|
+                    UI.message("   🔍 Processing action #{action_idx + 1}...")
                     if action['actionResult'] && action['actionResult']['testsRef']
                       tests_id = action['actionResult']['testsRef']['id']
+                      UI.message("   ✅ Found testsRef with ID: #{tests_id}")
                       
                       # Get the tests object - using deprecated API with --legacy flag
                       # See comment above for why we use legacy API
@@ -1156,13 +1204,18 @@ platform :ios do
                       end
                       if tests_output && !tests_output.empty? && ($?.nil? || $?.success?)
                         tests_data = JSON.parse(tests_output)
+                        UI.message("   ✅ Successfully parsed tests object")
                         
                         # Navigate to find test activities
                         if tests_data['summaries'] && tests_data['summaries'].is_a?(Array)
-                          tests_data['summaries'].each do |summary|
+                          UI.message("   📋 Found #{tests_data['summaries'].count} test summary(ies)")
+                          tests_data['summaries'].each_with_index do |summary, summary_idx|
+                            UI.message("   🔍 Processing summary #{summary_idx + 1}...")
                             if summary['testRefs'] && summary['testRefs'].is_a?(Array)
-                              summary['testRefs'].each do |test_ref|
+                              UI.message("   📋 Found #{summary['testRefs'].count} test(s) in summary")
+                              summary['testRefs'].each_with_index do |test_ref, test_idx|
                                 test_id = test_ref['id']
+                                UI.message("   🔍 Processing test #{test_idx + 1} (ID: #{test_id})...")
                                 
                                 # Get the test object - using deprecated API with --legacy flag
                                 # See comment above for why we use legacy API
@@ -1172,6 +1225,11 @@ platform :ios do
                                 end
                                 if test_output && !test_output.empty? && ($?.nil? || $?.success?)
                                   test_data = JSON.parse(test_output)
+                                  UI.message("   ✅ Successfully parsed test object")
+                                  
+                                  # Get test name if available
+                                  test_name = test_data['identifier'] || test_data['name'] || "Unknown"
+                                  UI.message("   📝 Test name: #{test_name}")
                                   
                                   # CRITICAL: Check if test failed
                                   if test_data['testStatus'] && test_data['testStatus'] != 'Success'
@@ -1190,6 +1248,8 @@ platform :ios do
                                   # Check for activities with attachments or subactivities
                                   if test_data['activities'] && test_data['activities'].is_a?(Array)
                                     UI.message("   🔍 Found #{test_data['activities'].count} activities for test")
+                                    total_messages = 0
+                                    total_attachments = 0
                                     test_data['activities'].each_with_index do |activity, activity_idx|
                                       # CRITICAL: Extract and display activity logs to see what's happening
                                       if activity['title']
@@ -1199,7 +1259,9 @@ platform :ios do
                                       # Check for log messages in the activity (NSLog/print output)
                                       # CRITICAL DIAGNOSTICS: Extract ALL log messages to verify test execution
                                       if activity['messages'] && activity['messages'].is_a?(Array)
-                                        UI.message("   📝 Found #{activity['messages'].count} log messages in activity")
+                                        message_count = activity['messages'].count
+                                        total_messages += message_count
+                                        UI.message("   📝 Found #{message_count} log message(s) in activity")
                                         snapshot_related_messages = []
                                         debug_messages = []
                                         all_messages = []
@@ -1238,6 +1300,9 @@ platform :ios do
                                       
                                       # Check for attachments (screenshots)
                                       if activity['attachments'] && activity['attachments'].is_a?(Array)
+                                        attachment_count = activity['attachments'].count
+                                        total_attachments += attachment_count
+                                        UI.message("   📎 Found #{attachment_count} attachment(s) in activity")
                                         activity['attachments'].each do |attachment|
                                           if attachment['filename'] && attachment['filename'].match?(/\.png$/i)
                                             UI.message("   ✅ Found screenshot attachment: #{attachment['filename']}")
@@ -1279,26 +1344,56 @@ platform :ios do
                                         end
                                       end
                                     end
+                                    
+                                    # Summary for this test
+                                    UI.message("   📊 Test summary: #{total_messages} messages, #{total_attachments} attachments")
+                                  else
+                                    UI.message("   ⚠️  No activities found for test")
                                   end
+                                else
+                                  UI.message("   ⚠️  Failed to get test object (ID: #{test_id})")
+                                  UI.message("   Error output: #{test_output[0..200]}")
                                 end
                               end
+                            else
+                              UI.message("   ⚠️  Summary has no testRefs")
                             end
                           end
+                        else
+                          UI.message("   ⚠️  Tests object has no summaries")
                         end
+                      else
+                        UI.message("   ⚠️  Failed to get tests object (ID: #{tests_id})")
+                        UI.message("   Error output: #{tests_output[0..200]}")
                       end
+                    else
+                      UI.message("   ⚠️  Action has no actionResult.testsRef")
                     end
                   end
+                else
+                  UI.message("   ⚠️  Root object has no actions")
                 end
               rescue JSON::ParserError => e
                 UI.message("   ⚠️  Failed to parse result bundle JSON: #{e.message}")
-                UI.message("   Root output: #{root_output[0..500]}") # Show first 500 chars for debugging
+                UI.message("   Root output length: #{root_output.length} characters")
+                UI.message("   Root output (first 500 chars): #{root_output[0..500]}")
+                if root_output.length > 500
+                  UI.message("   Root output (last 500 chars): #{root_output[-500..-1]}")
+                end
               rescue => e
                 UI.message("   ⚠️  Error navigating result bundle structure: #{e.message}")
-                UI.message("   Backtrace: #{e.backtrace.first(3).join("\n")}")
+                UI.message("   Error class: #{e.class}")
+                UI.message("   Backtrace: #{e.backtrace.first(5).join("\n")}")
               end
             else
-              UI.message("   ⚠️  Failed to get root object from result bundle")
-              UI.message("   Error output: #{root_output.chomp}")
+              UI.message("   ⚠️  Root object retrieval failed or returned empty")
+              if $?
+                UI.message("   Exit code: #{$?.exitstatus}")
+              end
+              UI.message("   Output length: #{root_output ? root_output.length : 0} characters")
+              if root_output && !root_output.empty?
+                UI.message("   Output (first 500 chars): #{root_output[0..500]}")
+              end
               # Try to get basic info about the result bundle
               UI.message("   🔍 Attempting to list result bundle contents...")
               if Dir.exist?(result_bundle_to_check)
