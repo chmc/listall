@@ -1170,21 +1170,67 @@ platform :ios do
             UI.message("   🔍 DIAGNOSTICS: Extracting test activity logs from result bundle...")
             UI.message("   Result bundle path: #{result_bundle_to_check}")
             
-            # CRITICAL: Use xcresulttool to get test activity logs which contain NSLog/print output
-            # First, get the root object to find test actions
-            # NOTE: Using deprecated `get object --legacy` API because:
-            # 1. Modern API (`get test-results`) requires different code structure
-            # 2. Deprecated API still works and gives us full JSON structure we need
-            # 3. Apple requires --legacy flag for deprecated APIs
-            # TODO: Migrate to modern API (get test-results) in future refactoring
-            root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
-            if !$?.success?
-              # Fallback: Try without --legacy (will likely fail, but worth trying)
-              UI.message("   ⚠️  Legacy API failed (exit code: #{$?.exitstatus}), trying without --legacy flag...")
-              root_output = `xcrun xcresulttool get object --format json --path "#{result_bundle_to_check}" 2>&1`
+            # STRATEGY: Try modern API first (simpler, direct path to test data)
+            # If that fails, fall back to legacy API navigation
+            modern_api_success = false
+            
+            # Try modern API: xcresulttool get test-results
+            UI.message("   🔍 Trying modern API: get test-results...")
+            modern_output = `xcrun xcresulttool get test-results summary --path "#{result_bundle_to_check}" --format json 2>&1`
+            if $?.success? && modern_output && !modern_output.empty?
+              begin
+                require 'json'
+                modern_data = JSON.parse(modern_output)
+                UI.message("   ✅ Modern API succeeded!")
+                UI.message("   📋 Modern API keys: #{modern_data.keys.join(', ')}")
+                
+                # Modern API structure should have testNodes or similar
+                if modern_data['testNodes'] || modern_data['tests'] || modern_data['testSummaries']
+                  modern_api_success = true
+                  UI.message("   ✅ Found test data in modern API format")
+                  
+                  # Extract test information from modern API
+                  test_nodes = modern_data['testNodes'] || modern_data['tests'] || modern_data['testSummaries'] || []
+                  if test_nodes.is_a?(Array)
+                    UI.message("   📋 Found #{test_nodes.count} test node(s)")
+                    test_nodes.each_with_index do |test_node, idx|
+                      UI.message("   🔍 Test #{idx + 1}: #{test_node['name'] || test_node['identifier'] || 'Unknown'}")
+                      UI.message("      Status: #{test_node['testStatus'] || test_node['status'] || 'Unknown'}")
+                      
+                      # Check for activities or logs
+                      if test_node['activities'] || test_node['subtests']
+                        UI.message("      Has activities/subtests: Yes")
+                      end
+                    end
+                  end
+                end
+              rescue JSON::ParserError => e
+                UI.message("   ⚠️  Modern API returned invalid JSON: #{e.message}")
+              end
+            else
+              UI.message("   ⚠️  Modern API failed or returned empty: #{modern_output[0..200]}")
+            end
+            
+            # Fall back to legacy API if modern API didn't work
+            root_output = nil
+            unless modern_api_success
+              UI.message("   🔍 Falling back to legacy API navigation...")
+              
+              # CRITICAL: Use xcresulttool to get test activity logs which contain NSLog/print output
+              # First, get the root object to find test actions
+              # NOTE: Using deprecated `get object --legacy` API because:
+              # 1. Modern API (`get test-results`) requires different code structure
+              # 2. Deprecated API still works and gives us full JSON structure we need
+              # 3. Apple requires --legacy flag for deprecated APIs
+              root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
               if !$?.success?
-                UI.message("   ⚠️  Non-legacy API also failed (exit code: #{$?.exitstatus})")
-                UI.message("   Error output: #{root_output[0..500]}")
+                # Fallback: Try without --legacy (will likely fail, but worth trying)
+                UI.message("   ⚠️  Legacy API failed (exit code: #{$?.exitstatus}), trying without --legacy flag...")
+                root_output = `xcrun xcresulttool get object --format json --path "#{result_bundle_to_check}" 2>&1`
+                if !$?.success?
+                  UI.message("   ⚠️  Non-legacy API also failed (exit code: #{$?.exitstatus})")
+                  UI.message("   Error output: #{root_output[0..500]}")
+                end
               end
             end
             
@@ -1290,7 +1336,7 @@ platform :ios do
                             if summary.is_a?(Hash)
                               UI.message("     📋 Summary keys: #{summary.keys.join(', ')}")
                               # Show sample structure
-                              summary.keys.first(5).each do |key|
+                              summary.keys.first(10).each do |key|
                                 value = summary[key]
                                 value_type = value.class
                                 value_preview = if value.is_a?(String)
@@ -1308,9 +1354,22 @@ platform :ios do
                             
                             # Handle navigation through testableSummaries -> _values -> testableSummary -> testRefs
                             # Structure: summary -> testableSummaries (Hash) -> _values (Array) -> testableSummary -> testRefs
+                            # ALTERNATIVE: Check if summary itself has testRefs (not just testableSummaries)
                             summary_test_refs = if summary.is_a?(Hash)
+                              # Check for testRefs directly in summary first (simpler path)
+                              if summary['testRefs']
+                                UI.message("     ✅ Found testRefs directly in summary (not in testableSummaries)!")
+                                if summary['testRefs'].is_a?(Hash) && summary['testRefs']['_values']
+                                  UI.message("     ✅ testRefs is Hash with _values")
+                                  summary['testRefs']['_values']
+                                elsif summary['testRefs'].is_a?(Array)
+                                  UI.message("     ✅ testRefs is Array")
+                                  summary['testRefs']
+                                else
+                                  nil
+                                end
                               # Try Structure 1: testableSummaries -> _values -> testableSummary -> testRefs
-                              if summary['testableSummaries'] && summary['testableSummaries'].is_a?(Hash) && summary['testableSummaries']['_values']
+                              elsif summary['testableSummaries'] && summary['testableSummaries'].is_a?(Hash) && summary['testableSummaries']['_values']
                                 UI.message("     ✅ Found testableSummaries Hash with _values")
                                 testable_summaries_array = summary['testableSummaries']['_values']
                                 UI.message("     📋 Found #{testable_summaries_array.count} testable summary(ies)")
@@ -1354,8 +1413,14 @@ platform :ios do
                                     elsif testable_summary['_values'] && testable_summary['_values'].is_a?(Array)
                                       UI.message("         ✅ Found _values array in testable summary")
                                       all_test_refs.concat(testable_summary['_values'])
+                                    # ALTERNATIVE: Check if identifierURL can be used to get test data
+                                    elsif testable_summary['identifierURL'] && testable_summary['identifierURL'].is_a?(Hash) && testable_summary['identifierURL']['_value']
+                                      identifier_url = testable_summary['identifierURL']['_value']
+                                      UI.message("         🔍 Found identifierURL: #{identifier_url}")
+                                      UI.message("         💡 identifierURL might point to test data, but requires different navigation")
                                     else
                                       UI.message("         ⚠️  Testable summary has no testRefs, tests, or _values")
+                                      UI.message("         💡 Testable summary appears to be metadata only - test refs may be at summary level")
                                     end
                                   end
                                 end
