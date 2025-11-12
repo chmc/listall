@@ -1186,6 +1186,27 @@ platform :ios do
                 root_data = JSON.parse(root_output)
                 UI.message("   ✅ Successfully parsed root object JSON")
                 
+                # CRITICAL DIAGNOSTICS: Show actual structure of root object
+                UI.message("   🔍 Root object keys: #{root_data.keys.join(', ')}")
+                UI.message("   🔍 Root object type: #{root_data.class}")
+                
+                # Try different possible structures
+                # Structure 1: root -> actions -> actionResult -> testsRef
+                # Structure 2: root -> _type -> ActionsInvocationRecord (might need different navigation)
+                # Structure 3: Modern API structure (different keys)
+                
+                # Check if it's an ActionsInvocationRecord type
+                if root_data['_type'] && root_data['_type']['_name'] == 'ActionsInvocationRecord'
+                  UI.message("   📋 Root object is ActionsInvocationRecord")
+                  # ActionsInvocationRecord has 'actions' array
+                  if root_data['actions'] && root_data['actions'].is_a?(Array)
+                    UI.message("   ✅ Found actions array in ActionsInvocationRecord")
+                  else
+                    UI.message("   ⚠️  ActionsInvocationRecord has no actions array")
+                    UI.message("   🔍 Available keys in root: #{root_data.keys.join(', ')}")
+                  end
+                end
+                
                 # Navigate the JSON to find test actions and their activity logs
                 # The structure is: root -> actions -> actionResult -> testsRef -> tests -> test -> activities
                 if root_data['actions'] && root_data['actions'].is_a?(Array)
@@ -1372,6 +1393,50 @@ platform :ios do
                   end
                 else
                   UI.message("   ⚠️  Root object has no actions")
+                  UI.message("   🔍 Attempting alternative navigation methods...")
+                  
+                  # Try modern API approach: use get test-results directly
+                  UI.message("   🔍 Trying modern API: get test-results...")
+                  modern_output = `xcrun xcresulttool get test-results --path "#{result_bundle_to_check}" --format json 2>&1`
+                  if $?.success? && modern_output && !modern_output.empty?
+                    UI.message("   ✅ Modern API succeeded!")
+                    begin
+                      modern_data = JSON.parse(modern_output)
+                      UI.message("   📋 Modern API keys: #{modern_data.keys.join(', ')}")
+                      
+                      # Modern API structure: { "testResults": { "tests": [...] } }
+                      if modern_data['testResults'] && modern_data['testResults']['tests']
+                        tests = modern_data['testResults']['tests']
+                        UI.message("   📋 Found #{tests.count} test(s) via modern API")
+                        tests.each do |test|
+                          test_name = test['identifier'] || test['name'] || 'Unknown'
+                          test_status = test['testStatus'] || 'Unknown'
+                          UI.message("   📝 Test: #{test_name} - Status: #{test_status}")
+                        end
+                      end
+                    rescue => e
+                      UI.message("   ⚠️  Failed to parse modern API output: #{e.message}")
+                    end
+                  else
+                    UI.message("   ⚠️  Modern API failed: #{modern_output[0..200]}")
+                  end
+                  
+                  # Show sample of root object structure for debugging
+                  UI.message("   🔍 Root object sample (first level):")
+                  root_data.keys.first(10).each do |key|
+                    value = root_data[key]
+                    value_type = value.class
+                    value_preview = if value.is_a?(String)
+                      value[0..50]
+                    elsif value.is_a?(Array)
+                      "Array[#{value.count}]"
+                    elsif value.is_a?(Hash)
+                      "Hash{#{value.keys.first(3).join(', ')}}"
+                    else
+                      value.inspect[0..50]
+                    end
+                    UI.message("     - #{key}: #{value_type} = #{value_preview}")
+                  end
                 end
               rescue JSON::ParserError => e
                 UI.message("   ⚠️  Failed to parse result bundle JSON: #{e.message}")
