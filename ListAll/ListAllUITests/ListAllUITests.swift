@@ -96,19 +96,32 @@ final class ListAllUITests: XCTestCase {
         setupSnapshot(app)
         print("🔍 DEBUG: setupSnapshot() completed")
         
-        // CRITICAL: Verify setupSnapshot() actually worked
-        // Check if SnapshotHelper has a cache directory set
-        // We can't directly access Snapshot.cacheDirectory, but we can check if the cache files exist
+        // CRITICAL: Verify setupSnapshot() actually worked by checking cache directory
+        // This helps catch issues early before we try to take screenshots
         let cacheBase = ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? NSHomeDirectory()
         let cacheDir = (cacheBase as NSString).appendingPathComponent("Library/Caches/tools.fastlane")
         let languageFile = (cacheDir as NSString).appendingPathComponent("language.txt")
+        let screenshotsDir = (cacheDir as NSString).appendingPathComponent("screenshots")
+        
+        // Write verification marker to help Fastlane diagnose issues
+        let verificationMarker = URL(fileURLWithPath: "/tmp/setupSnapshot_verification.txt")
+        var verificationContent = "setupSnapshot() called\n"
+        verificationContent += "Cache dir: \(cacheDir)\n"
+        verificationContent += "Language file exists: \(FileManager.default.fileExists(atPath: languageFile))\n"
+        verificationContent += "Screenshots dir exists: \(FileManager.default.fileExists(atPath: screenshotsDir))\n"
+        verificationContent += "SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")\n"
+        verificationContent += "HOME: \(ProcessInfo.processInfo.environment["HOME"] ?? "NOT SET")\n"
+        try? verificationContent.write(to: verificationMarker, atomically: true, encoding: .utf8)
+        
         if FileManager.default.fileExists(atPath: languageFile) {
             print("✅ Verified: Cache directory files exist - setupSnapshot() succeeded")
         } else {
-            print("⚠️ WARNING: Cache directory files not found - setupSnapshot() may have failed")
+            let warningMsg = "⚠️ WARNING: Cache directory files not found - setupSnapshot() may have failed"
+            print(warningMsg)
             print("   Expected cache dir: \(cacheDir)")
             print("   SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")")
             print("   HOME: \(ProcessInfo.processInfo.environment["HOME"] ?? "NOT SET")")
+            // Don't fail here - let the test continue and fail when snapshot() is called if setupSnapshot() really failed
         }
         
         ensurePortrait()

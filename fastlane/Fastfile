@@ -910,6 +910,25 @@ platform :ios do
         # CRITICAL: Also check simulator's actual data directory for debug log
         # SnapshotHelper may write to /tmp or simulator's document directory as fallback
         possible_cache_dirs_for_log << "/tmp"
+        
+        # CRITICAL: Check for setupSnapshot verification marker and failure markers
+        # These are written to /tmp by the test code to help diagnose issues
+        setup_verification_marker = "/tmp/setupSnapshot_verification.txt"
+        setup_failed_marker = "/tmp/snapshot_setup_failed.txt"
+        
+        if File.exist?(setup_failed_marker)
+          UI.error("   ❌ CRITICAL: Found setupSnapshot() failure marker!")
+          UI.error("   This means snapshot() was called but setupSnapshot() failed or wasn't called")
+          failure_content = File.read(setup_failed_marker)
+          UI.error("   Failure details: #{failure_content.chomp}")
+        elsif File.exist?(setup_verification_marker)
+          UI.message("   ✅ Found setupSnapshot() verification marker")
+          verification_content = File.read(setup_verification_marker)
+          UI.message("   Verification details:")
+          verification_content.lines.each { |line| UI.message("     #{line.chomp}") }
+        else
+          UI.message("   ⚠️  setupSnapshot() verification marker not found in /tmp")
+        end
         begin
           simulator_info = `xcrun simctl list devices --json 2>&1`
           if $?.success?
@@ -1022,6 +1041,20 @@ platform :ios do
                                 test_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{test_id}" 2>&1`
                                 if $?.success?
                                   test_data = JSON.parse(test_output)
+                                  
+                                  # CRITICAL: Check if test failed
+                                  if test_data['testStatus'] && test_data['testStatus'] != 'Success'
+                                    UI.error("   ❌ Test status: #{test_data['testStatus']}")
+                                    if test_data['failureSummaries'] && test_data['failureSummaries'].is_a?(Array)
+                                      test_data['failureSummaries'].each do |failure|
+                                        if failure['message']
+                                          UI.error("   ❌ Test failure: #{failure['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')}")
+                                        end
+                                      end
+                                    end
+                                  else
+                                    UI.message("   ✅ Test status: Success")
+                                  end
                                   
                                   # Check for activities with attachments or subactivities
                                   if test_data['activities'] && test_data['activities'].is_a?(Array)

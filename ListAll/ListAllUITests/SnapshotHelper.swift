@@ -285,11 +285,16 @@ open class Snapshot: NSObject {
             for debugLogPath in debugLogPaths {
                 try? errorData?.write(to: debugLogPath)
             }
-            // CRITICAL: Log the error clearly but don't crash - let the test continue
-            // This helps diagnose issues where setupSnapshot() wasn't called
+            // CRITICAL: Fail the test explicitly so we can see the failure
+            // This prevents silent failures where snapshot() is called but setupSnapshot() wasn't
             let fatalMsg = "❌ FATAL: snapshot('\(name)') called but setupSnapshot() was not called or failed. Screenshot will not be saved."
             NSLog(fatalMsg)
             print(fatalMsg)
+            // Write to a well-known location that Fastlane can check
+            let fatalMarkerPath = URL(fileURLWithPath: "/tmp/snapshot_setup_failed.txt")
+            try? fatalMsg.write(to: fatalMarkerPath, atomically: true, encoding: .utf8)
+            // Don't return silently - fail the test so it's visible
+            XCTFail(fatalMsg)
             return
         }
         
