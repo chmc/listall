@@ -1231,7 +1231,18 @@ platform :ios do
                   actions_array.each_with_index do |action, action_idx|
                     UI.message("   🔍 Processing action #{action_idx + 1}...")
                     if action['actionResult'] && action['actionResult']['testsRef']
-                      tests_id = action['actionResult']['testsRef']['id']
+                      tests_ref_id = action['actionResult']['testsRef']['id']
+                      
+                      # Extract actual ID string - can be a Hash with _value or a direct string
+                      tests_id = if tests_ref_id.is_a?(Hash) && tests_ref_id['_value']
+                        tests_ref_id['_value']
+                      elsif tests_ref_id.is_a?(String)
+                        tests_ref_id
+                      else
+                        UI.message("   ⚠️  Unexpected testsRef ID structure: #{tests_ref_id.class}")
+                        tests_ref_id.to_s
+                      end
+                      
                       UI.message("   ✅ Found testsRef with ID: #{tests_id}")
                       
                       # Get the tests object - using deprecated API with --legacy flag
@@ -1252,7 +1263,18 @@ platform :ios do
                             if summary['testRefs'] && summary['testRefs'].is_a?(Array)
                               UI.message("   📋 Found #{summary['testRefs'].count} test(s) in summary")
                               summary['testRefs'].each_with_index do |test_ref, test_idx|
-                                test_id = test_ref['id']
+                                test_ref_id = test_ref['id']
+                                
+                                # Extract actual ID string - can be a Hash with _value or a direct string
+                                test_id = if test_ref_id.is_a?(Hash) && test_ref_id['_value']
+                                  test_ref_id['_value']
+                                elsif test_ref_id.is_a?(String)
+                                  test_ref_id
+                                else
+                                  UI.message("   ⚠️  Unexpected testRef ID structure: #{test_ref_id.class}")
+                                  test_ref_id.to_s
+                                end
+                                
                                 UI.message("   🔍 Processing test #{test_idx + 1} (ID: #{test_id})...")
                                 
                                 # Get the test object - using deprecated API with --legacy flag
