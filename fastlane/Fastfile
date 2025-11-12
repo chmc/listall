@@ -639,26 +639,18 @@ platform :ios do
             success = false
             
             # Try 1: Modern API (Xcode 11+)
-            begin
-              xcresulttool(
-                subcommand: "attachments",
-                result_bundle_path: result_bundle_to_check,
-                output_path: attachments_dir
-              )
+            # NOTE: The plugin doesn't support "attachments" subcommand, so use direct command
+            attachments_output = `xcrun xcresulttool attachments --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+            if $?.success? && !attachments_output.include?("deprecated") && !attachments_output.include?("unrecognized")
               success = true
               UI.message("   ✅ Modern attachments API succeeded")
-            rescue => e
+            else
               # Try 2: Legacy API
               UI.message("   ⚠️  Modern attachments API failed, trying legacy API...")
-              begin
-                # For legacy, we still need to use the command directly as the plugin may not support --legacy flag
-                attachments_output = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
-                if $?.success?
-                  success = true
-                  UI.message("   ✅ Legacy attachments API succeeded")
-                end
-              rescue => e2
-                UI.message("   ⚠️  Legacy API also failed: #{e2.message}")
+              attachments_output = `xcrun xcresulttool attachments --legacy --path "#{result_bundle_to_check}" --output-path "#{attachments_dir}" 2>&1`
+              if $?.success?
+                success = true
+                UI.message("   ✅ Legacy attachments API succeeded")
               end
             end
             
@@ -921,24 +913,78 @@ platform :ios do
         # SnapshotHelper may write to /tmp or simulator's document directory as fallback
         possible_cache_dirs_for_log << "/tmp"
         
-        # CRITICAL: Check for setupSnapshot verification marker and failure markers
-        # These are written to cache directory (primary) and /tmp (fallback) by the test code
-        # CRITICAL FIX: Check cache directory first, as /tmp may be process-specific in CI
-        cache_dir_to_check = File.join(simulator_host_home, "Library/Caches/tools.fastlane")
-        setup_verification_marker_cache = File.join(cache_dir_to_check, "setupSnapshot_verification.txt")
-        setup_failed_marker_cache = File.join(cache_dir_to_check, "snapshot_setup_failed.txt")
-        setup_verification_marker_tmp = "/tmp/setupSnapshot_verification.txt"
-        setup_failed_marker_tmp = "/tmp/snapshot_setup_failed.txt"
-        
-        # Check cache directory first (more reliable in CI)
-        setup_failed_marker = File.exist?(setup_failed_marker_cache) ? setup_failed_marker_cache : setup_failed_marker_tmp
-        setup_verification_marker = File.exist?(setup_verification_marker_cache) ? setup_verification_marker_cache : setup_verification_marker_tmp
-        
-        # CRITICAL: Check for execution flow markers to see exactly where tests stop
-        pre_setup_marker = File.join(cache_dir_to_check, "pre_setupSnapshot_marker.txt")
-        post_setup_marker = File.join(cache_dir_to_check, "post_setupSnapshot_marker.txt")
-        pre_snapshot_markers = Dir.glob(File.join(cache_dir_to_check, "pre_snapshot_*.txt"))
-        post_snapshot_markers = Dir.glob(File.join(cache_dir_to_check, "post_snapshot_*.txt"))
+       # CRITICAL: Check for setupSnapshot verification marker and failure markers
+       # These are written to cache directory (primary) and /tmp (fallback) by the test code
+       # CRITICAL FIX: Check cache directory first, as /tmp may be process-specific in CI
+       cache_dir_to_check = File.join(simulator_host_home, "Library/Caches/tools.fastlane")
+       setup_verification_marker_cache = File.join(cache_dir_to_check, "setupSnapshot_verification.txt")
+       setup_failed_marker_cache = File.join(cache_dir_to_check, "snapshot_setup_failed.txt")
+       setup_verification_marker_tmp = "/tmp/setupSnapshot_verification.txt"
+       setup_failed_marker_tmp = "/tmp/snapshot_setup_failed.txt"
+       
+       # CRITICAL: Check for execution flow markers to see exactly where tests stop
+       # Also check simulator-specific cache directories since tests run in simulator
+       simulator_cache_dirs = []
+       if simulator_id
+         simulator_cache_dir = File.join(ENV['HOME'] || Dir.home, "Library/Developer/CoreSimulator/Devices", simulator_id, "data/Library/Caches/tools.fastlane")
+         simulator_cache_dirs << simulator_cache_dir
+       end
+       # Also check all simulator devices
+       simulator_devices_dir = File.join(ENV['HOME'] || Dir.home, "Library/Developer/CoreSimulator/Devices")
+       if Dir.exist?(simulator_devices_dir)
+         Dir.glob(File.join(simulator_devices_dir, "*/data/Library/Caches/tools.fastlane")).each do |sim_cache|
+           simulator_cache_dirs << sim_cache
+         end
+       end
+       
+       # Check cache directory first (more reliable in CI)
+       # Also check simulator-specific cache directories
+       setup_failed_marker = setup_failed_marker_cache
+       setup_verification_marker = setup_verification_marker_cache
+       
+       if !File.exist?(setup_failed_marker_cache) && !File.exist?(setup_verification_marker_cache)
+         # Check simulator cache directories
+         simulator_cache_dirs.each do |sim_cache|
+           sim_failed = File.join(sim_cache, "snapshot_setup_failed.txt")
+           sim_verification = File.join(sim_cache, "setupSnapshot_verification.txt")
+           if File.exist?(sim_failed)
+             setup_failed_marker = sim_failed
+             UI.message("   ✅ Found setup failed marker in simulator cache: #{sim_cache}")
+           end
+           if File.exist?(sim_verification)
+             setup_verification_marker = sim_verification
+             UI.message("   ✅ Found setup verification marker in simulator cache: #{sim_cache}")
+           end
+         end
+       end
+       
+       # Fallback to /tmp if not found in cache directories
+       setup_failed_marker = setup_failed_marker_tmp if !File.exist?(setup_failed_marker) && File.exist?(setup_failed_marker_tmp)
+       setup_verification_marker = setup_verification_marker_tmp if !File.exist?(setup_verification_marker) && File.exist?(setup_verification_marker_tmp)
+       
+       pre_setup_marker = File.join(cache_dir_to_check, "pre_setupSnapshot_marker.txt")
+       post_setup_marker = File.join(cache_dir_to_check, "post_setupSnapshot_marker.txt")
+       pre_snapshot_markers = Dir.glob(File.join(cache_dir_to_check, "pre_snapshot_*.txt"))
+       post_snapshot_markers = Dir.glob(File.join(cache_dir_to_check, "post_snapshot_*.txt"))
+       
+       # Also check simulator cache directories
+       simulator_cache_dirs.each do |sim_cache|
+         pre_setup_marker_sim = File.join(sim_cache, "pre_setupSnapshot_marker.txt")
+         post_setup_marker_sim = File.join(sim_cache, "post_setupSnapshot_marker.txt")
+         pre_snapshot_markers_sim = Dir.glob(File.join(sim_cache, "pre_snapshot_*.txt"))
+         post_snapshot_markers_sim = Dir.glob(File.join(sim_cache, "post_snapshot_*.txt"))
+         
+         if File.exist?(pre_setup_marker_sim)
+           pre_setup_marker = pre_setup_marker_sim
+           UI.message("   ✅ Found pre_setupSnapshot_marker.txt in simulator cache: #{sim_cache}")
+         end
+         if File.exist?(post_setup_marker_sim)
+           post_setup_marker = post_setup_marker_sim
+           UI.message("   ✅ Found post_setupSnapshot_marker.txt in simulator cache: #{sim_cache}")
+         end
+         pre_snapshot_markers.concat(pre_snapshot_markers_sim) if pre_snapshot_markers_sim.any?
+         post_snapshot_markers.concat(post_snapshot_markers_sim) if post_snapshot_markers_sim.any?
+       end
         
         UI.message("   🔍 Execution flow markers:")
         if File.exist?(pre_setup_marker)
@@ -1068,26 +1114,16 @@ platform :ios do
             
             # CRITICAL: Use xcresulttool to get test activity logs which contain NSLog/print output
             # First, get the root object to find test actions
-            # Use the plugin for cleaner code
-            begin
-              root_output = xcresulttool_get(
-                result_bundle_path: result_bundle_to_check,
-                format: "json"
-              )
-              if root_output.nil? || root_output.empty?
-                # Try legacy API if modern fails
-                UI.message("   ⚠️  Modern API returned empty, trying legacy API...")
-                root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
-                raise "Legacy API needed" unless $?.success?
-              end
-            rescue => e
-              # Fallback to direct command if plugin fails
-              UI.message("   ⚠️  Plugin failed, using direct command: #{e.message}")
-              root_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" 2>&1`
-              if !$?.success? || root_output.include?("deprecated") || root_output.include?("--legacy")
-                UI.message("   ⚠️  Modern API failed, trying legacy API...")
-                root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
-              end
+            # NOTE: Using deprecated `get object --legacy` API because:
+            # 1. Modern API (`get test-results`) requires different code structure
+            # 2. Deprecated API still works and gives us full JSON structure we need
+            # 3. Apple requires --legacy flag for deprecated APIs
+            # TODO: Migrate to modern API (get test-results) in future refactoring
+            root_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" 2>&1`
+            if !$?.success?
+              # Fallback: Try without --legacy (will likely fail, but worth trying)
+              UI.message("   ⚠️  Legacy API failed, trying without --legacy flag...")
+              root_output = `xcrun xcresulttool get object --format json --path "#{result_bundle_to_check}" 2>&1`
             end
             
             if root_output && !root_output.empty? && ($?.nil? || $?.success?)
@@ -1102,16 +1138,11 @@ platform :ios do
                     if action['actionResult'] && action['actionResult']['testsRef']
                       tests_id = action['actionResult']['testsRef']['id']
                       
-                      # Get the tests object using plugin
-                      begin
-                        tests_output = xcresulttool_get(
-                          result_bundle_path: result_bundle_to_check,
-                          format: "json",
-                          id: tests_id
-                        )
-                        tests_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{tests_id}" 2>&1` if tests_output.nil? || tests_output.empty?
-                      rescue => e
-                        tests_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{tests_id}" 2>&1`
+                      # Get the tests object - using deprecated API with --legacy flag
+                      # See comment above for why we use legacy API
+                      tests_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" --id "#{tests_id}" 2>&1`
+                      if !$?.success?
+                        tests_output = `xcrun xcresulttool get object --format json --path "#{result_bundle_to_check}" --id "#{tests_id}" 2>&1`
                       end
                       if tests_output && !tests_output.empty? && ($?.nil? || $?.success?)
                         tests_data = JSON.parse(tests_output)
@@ -1123,16 +1154,11 @@ platform :ios do
                               summary['testRefs'].each do |test_ref|
                                 test_id = test_ref['id']
                                 
-                                # Get the test object using plugin
-                                begin
-                                  test_output = xcresulttool_get(
-                                    result_bundle_path: result_bundle_to_check,
-                                    format: "json",
-                                    id: test_id
-                                  )
-                                  test_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{test_id}" 2>&1` if test_output.nil? || test_output.empty?
-                                rescue => e
-                                  test_output = `xcrun xcresulttool get --format json --path "#{result_bundle_to_check}" --id "#{test_id}" 2>&1`
+                                # Get the test object - using deprecated API with --legacy flag
+                                # See comment above for why we use legacy API
+                                test_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" --id "#{test_id}" 2>&1`
+                                if !$?.success?
+                                  test_output = `xcrun xcresulttool get object --format json --path "#{result_bundle_to_check}" --id "#{test_id}" 2>&1`
                                 end
                                 if test_output && !test_output.empty? && ($?.nil? || $?.success?)
                                   test_data = JSON.parse(test_output)
@@ -1209,17 +1235,8 @@ platform :ios do
                                             if attachment['payloadRef'] && attachment['payloadRef']['id']
                                               attachment_id = attachment['payloadRef']['id']
                                               attachment_path = File.join(locale_dir, attachment['filename'])
-                                              # Use plugin to export attachment
-                                              begin
-                                                xcresulttool_export(
-                                                  result_bundle_path: result_bundle_to_check,
-                                                  output_path: attachment_path,
-                                                  export_items: [{ type: "file", id: attachment_id }]
-                                                )
-                                              rescue => e
-                                                # Fallback to direct command
-                                                extract_output = `xcrun xcresulttool export --type file --path "#{result_bundle_to_check}" --id "#{attachment_id}" --output-path "#{attachment_path}" 2>&1`
-                                              end
+                                              # Export attachment - use direct command since plugin export_items format may be wrong
+                                              extract_output = `xcrun xcresulttool export --type file --path "#{result_bundle_to_check}" --id "#{attachment_id}" --output-path "#{attachment_path}" 2>&1`
                                               if File.exist?(attachment_path)
                                                 extracted_count += 1
                                                 UI.message("   ✅ Extracted screenshot: #{attachment['filename']}")
@@ -1239,17 +1256,8 @@ platform :ios do
                                                 if attachment['payloadRef'] && attachment['payloadRef']['id']
                                                   attachment_id = attachment['payloadRef']['id']
                                                   attachment_path = File.join(locale_dir, attachment['filename'])
-                                                  # Use plugin to export attachment
-                                                  begin
-                                                    xcresulttool_export(
-                                                      result_bundle_path: result_bundle_to_check,
-                                                      output_path: attachment_path,
-                                                      export_items: [{ type: "file", id: attachment_id }]
-                                                    )
-                                                  rescue => e
-                                                    # Fallback to direct command
-                                                    extract_output = `xcrun xcresulttool export --type file --path "#{result_bundle_to_check}" --id "#{attachment_id}" --output-path "#{attachment_path}" 2>&1`
-                                                  end
+                                                  # Export attachment - use direct command since plugin export_items format may be wrong
+                                                  extract_output = `xcrun xcresulttool export --type file --path "#{result_bundle_to_check}" --id "#{attachment_id}" --output-path "#{attachment_path}" 2>&1`
                                                   if File.exist?(attachment_path)
                                                     extracted_count += 1
                                                     UI.message("   ✅ Extracted screenshot: #{attachment['filename']}")
@@ -1289,17 +1297,11 @@ platform :ios do
               end
               
               # CRITICAL DIAGNOSTICS: Try alternative method to extract test information
-              # Use xcresulttool to get test summaries directly
-              UI.message("   🔍 Trying alternative method: xcresulttool get --format json --id root...")
+              # Use xcresulttool to get test summaries directly - use legacy API
               begin
-                begin
-                  alt_output = xcresulttool_get(
-                    result_bundle_path: result_bundle_to_check,
-                    format: "json",
-                    id: "root"
-                  )
-                  alt_output = `xcrun xcresulttool get --format json --id root --path "#{result_bundle_to_check}" 2>&1` if alt_output.nil? || alt_output.empty?
-                rescue => e
+                UI.message("   🔍 Trying alternative method: xcresulttool get object --legacy --format json --id root...")
+                alt_output = `xcrun xcresulttool get object --legacy --format json --path "#{result_bundle_to_check}" --id root 2>&1`
+                if !$?.success?
                   alt_output = `xcrun xcresulttool get --format json --id root --path "#{result_bundle_to_check}" 2>&1`
                 end
                 if alt_output && !alt_output.empty? && ($?.nil? || $?.success?)
@@ -1743,20 +1745,12 @@ platform :ios do
             UI.message("   🔍 Checking xcresult bundle: #{latest_xcresult}")
             # Try to extract test output from result bundle
             begin
-              # Use xcresulttool to get test summaries (try both new and legacy API)
-              begin
-                test_summary = xcresulttool_get(
-                  result_bundle_path: latest_xcresult,
-                  format: "json"
-                )
-                if test_summary.nil? || test_summary.empty?
-                  test_summary = `xcrun xcresulttool get --format json --path "#{latest_xcresult}" 2>&1`
-                end
-              rescue => e
-                test_summary = `xcrun xcresulttool get --format json --path "#{latest_xcresult}" 2>&1`
-              end
-              if !test_summary || test_summary.empty? || (!($?.nil?) && !$?.success?) || test_summary.include?("deprecated") || test_summary.include?("--legacy")
-                test_summary = `xcrun xcresulttool get object --legacy --format json --path "#{latest_xcresult}" 2>&1`
+              # Use xcresulttool to get test summaries - using deprecated API with --legacy flag
+              # NOTE: Modern API (`get test-results`) exists but requires different code structure
+              # TODO: Migrate to modern API in future refactoring
+              test_summary = `xcrun xcresulttool get object --legacy --format json --path "#{latest_xcresult}" 2>&1`
+              if !$?.success?
+                test_summary = `xcrun xcresulttool get object --format json --path "#{latest_xcresult}" 2>&1`
               end
               
               if test_summary && !test_summary.empty? && ($?.nil? || $?.success?)
@@ -1768,18 +1762,10 @@ platform :ios do
                 attachments_dir = File.join(locale_dir, "xcresult_attachments")
                 FileUtils.mkdir_p(attachments_dir) unless File.directory?(attachments_dir)
                 
-                begin
-                  xcresulttool(
-                    subcommand: "attachments",
-                    result_bundle_path: latest_xcresult,
-                    output_path: attachments_dir
-                  )
-                rescue => e_plugin
-                  # Fallback to direct command
-                  attachments_output = `xcrun xcresulttool attachments --path "#{latest_xcresult}" --output-path "#{attachments_dir}" 2>&1`
-                  if !$?.success? || attachments_output.include?("deprecated") || attachments_output.include?("--legacy")
-                    attachments_output = `xcrun xcresulttool attachments --legacy --path "#{latest_xcresult}" --output-path "#{attachments_dir}" 2>&1`
-                  end
+                # NOTE: Plugin doesn't support "attachments" subcommand, use direct command
+                attachments_output = `xcrun xcresulttool attachments --path "#{latest_xcresult}" --output-path "#{attachments_dir}" 2>&1`
+                if !$?.success? || attachments_output.include?("deprecated") || attachments_output.include?("--legacy")
+                  attachments_output = `xcrun xcresulttool attachments --legacy --path "#{latest_xcresult}" --output-path "#{attachments_dir}" 2>&1`
                 end
                 
                 if Dir.exist?(attachments_dir)
