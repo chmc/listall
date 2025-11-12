@@ -93,25 +93,57 @@ final class ListAllUITests: XCTestCase {
         }
         
         print("🔍 DEBUG: About to call setupSnapshot()")
-        setupSnapshot(app)
-        print("🔍 DEBUG: setupSnapshot() completed")
+        print("🔍 DEBUG: App instance: \(app)")
+        print("🔍 DEBUG: FASTLANE_SNAPSHOT env: \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "NOT SET")")
+        print("🔍 DEBUG: FASTLANE_LANGUAGE env: \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "NOT SET")")
         
         // CRITICAL: Verify setupSnapshot() actually worked by checking cache directory
         // This helps catch issues early before we try to take screenshots
         let cacheBase = ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? NSHomeDirectory()
         let cacheDir = (cacheBase as NSString).appendingPathComponent("Library/Caches/tools.fastlane")
+        
+        // CRITICAL: Ensure cache directory exists before writing markers
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: cacheDir) {
+            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: nil)
+        }
+        
+        // CRITICAL: Write marker BEFORE setupSnapshot to verify test code is executing
+        let preSetupMarker = (cacheDir as NSString).appendingPathComponent("pre_setupSnapshot_marker.txt")
+        try? "About to call setupSnapshot() at \(Date())".write(toFile: preSetupMarker, atomically: true, encoding: .utf8)
+        
+        setupSnapshot(app)
+        
+        // CRITICAL: Write marker AFTER setupSnapshot to verify it completed
+        let postSetupMarker = (cacheDir as NSString).appendingPathComponent("post_setupSnapshot_marker.txt")
+        try? "setupSnapshot() completed at \(Date())".write(toFile: postSetupMarker, atomically: true, encoding: .utf8)
+        
+        print("🔍 DEBUG: setupSnapshot() completed")
         let languageFile = (cacheDir as NSString).appendingPathComponent("language.txt")
         let screenshotsDir = (cacheDir as NSString).appendingPathComponent("screenshots")
         
-        // Write verification marker to help Fastlane diagnose issues
-        let verificationMarker = URL(fileURLWithPath: "/tmp/setupSnapshot_verification.txt")
+        // Write verification marker to cache directory (accessible by both test and Fastlane processes)
+        // CRITICAL: Use cache directory instead of /tmp because /tmp may be process-specific in CI
+        let fileManager = FileManager.default
+        let verificationMarkerPath = (cacheDir as NSString).appendingPathComponent("setupSnapshot_verification.txt")
         var verificationContent = "setupSnapshot() called\n"
         verificationContent += "Cache dir: \(cacheDir)\n"
-        verificationContent += "Language file exists: \(FileManager.default.fileExists(atPath: languageFile))\n"
-        verificationContent += "Screenshots dir exists: \(FileManager.default.fileExists(atPath: screenshotsDir))\n"
+        verificationContent += "Language file exists: \(fileManager.fileExists(atPath: languageFile))\n"
+        verificationContent += "Screenshots dir exists: \(fileManager.fileExists(atPath: screenshotsDir))\n"
         verificationContent += "SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")\n"
         verificationContent += "HOME: \(ProcessInfo.processInfo.environment["HOME"] ?? "NOT SET")\n"
-        try? verificationContent.write(to: verificationMarker, atomically: true, encoding: .utf8)
+        verificationContent += "FASTLANE_SNAPSHOT: \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "NOT SET")\n"
+        verificationContent += "FASTLANE_LANGUAGE: \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "NOT SET")\n"
+        verificationContent += "NSHomeDirectory(): \(NSHomeDirectory())\n"
+        // Ensure cache directory exists before writing
+        if !fileManager.fileExists(atPath: cacheDir) {
+            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: nil)
+        }
+        try? verificationContent.write(toFile: verificationMarkerPath, atomically: true, encoding: .utf8)
+        
+        // Also write to /tmp as fallback (in case cache directory isn't accessible)
+        let tmpMarker = URL(fileURLWithPath: "/tmp/setupSnapshot_verification.txt")
+        try? verificationContent.write(to: tmpMarker, atomically: true, encoding: .utf8)
         
         if FileManager.default.fileExists(atPath: languageFile) {
             print("✅ Verified: Cache directory files exist - setupSnapshot() succeeded")
@@ -607,7 +639,23 @@ final class ListAllUITests: XCTestCase {
             }
         }
         
+        // CRITICAL: Write marker BEFORE snapshot call to verify we reach this point
+        let cacheBase = ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? NSHomeDirectory()
+        let cacheDir = (cacheBase as NSString).appendingPathComponent("Library/Caches/tools.fastlane")
+        // Ensure cache directory exists
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: cacheDir) {
+            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: nil)
+        }
+        let preSnapshotMarker = (cacheDir as NSString).appendingPathComponent("pre_snapshot_01-WelcomeScreen.txt")
+        try? "About to call snapshot('01-WelcomeScreen') at \(Date())".write(toFile: preSnapshotMarker, atomically: true, encoding: .utf8)
+        
         snapshotPortrait("01-WelcomeScreen", wait: 1)
+        
+        // CRITICAL: Write marker AFTER snapshot call to verify it completed
+        let postSnapshotMarker = (cacheDir as NSString).appendingPathComponent("post_snapshot_01-WelcomeScreen.txt")
+        try? "snapshot('01-WelcomeScreen') completed at \(Date())".write(toFile: postSnapshotMarker, atomically: true, encoding: .utf8)
+        
         print("🔍 DEBUG: snapshotPortrait('01-WelcomeScreen') completed")
         
         // CRITICAL: Verify screenshot was taken by checking if we can see the UI

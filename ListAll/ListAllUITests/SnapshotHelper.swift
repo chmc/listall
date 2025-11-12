@@ -290,9 +290,15 @@ open class Snapshot: NSObject {
             let fatalMsg = "❌ FATAL: snapshot('\(name)') called but setupSnapshot() was not called or failed. Screenshot will not be saved."
             NSLog(fatalMsg)
             print(fatalMsg)
-            // Write to a well-known location that Fastlane can check
-            let fatalMarkerPath = URL(fileURLWithPath: "/tmp/snapshot_setup_failed.txt")
-            try? fatalMsg.write(to: fatalMarkerPath, atomically: true, encoding: .utf8)
+            // Write to cache directory (accessible by both test and Fastlane processes)
+            // CRITICAL: Use cache directory instead of /tmp because /tmp may be process-specific in CI
+            if let cacheDir = self.cacheDirectory {
+                let fatalMarkerPath = cacheDir.appendingPathComponent("snapshot_setup_failed.txt")
+                try? fatalMsg.write(to: fatalMarkerPath, atomically: true, encoding: .utf8)
+            }
+            // Also write to /tmp as fallback
+            let tmpMarkerPath = URL(fileURLWithPath: "/tmp/snapshot_setup_failed.txt")
+            try? fatalMsg.write(to: tmpMarkerPath, atomically: true, encoding: .utf8)
             // Don't return silently - fail the test so it's visible
             XCTFail(fatalMsg)
             return
