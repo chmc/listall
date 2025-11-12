@@ -1278,9 +1278,21 @@ platform :ios do
                               UI.message("         No activities found in test node")
                               # Try alternative paths - maybe activities are nested differently
                               # Check 'result' field (not 'testResult')
+                              if test_node['result']
+                                UI.message("         Result field exists: #{test_node['result'].class}")
+                                if test_node['result'].is_a?(Hash)
+                                  UI.message("         Found result object (Hash)")
+                                  UI.message("         Result object keys: #{test_node['result'].keys.join(', ')}")
+                                elsif test_node['result'].is_a?(String)
+                                  UI.message("         Result is a string/reference: #{test_node['result'][0..100]}")
+                                else
+                                  UI.message("         Result type: #{test_node['result'].class}, value: #{test_node['result'].inspect[0..200]}")
+                                end
+                              else
+                                UI.message("         Result field does not exist in test node")
+                              end
+                              
                               if test_node['result'] && test_node['result'].is_a?(Hash)
-                                UI.message("         Found result object")
-                                UI.message("         Result object keys: #{test_node['result'].keys.join(', ')}")
                                 if test_node['result']['activities'] && test_node['result']['activities'].is_a?(Array)
                                   UI.message("         Found activities in result: #{test_node['result']['activities'].count}")
                                   # Extract activities from result
