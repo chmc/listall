@@ -1276,8 +1276,33 @@ platform :ios do
                         
                         test_refs_array = nil
                         
-                        # Try Structure 1: summaries array
-                        if tests_data['summaries'] && tests_data['summaries'].is_a?(Array)
+                        # Try Structure 1: summaries Hash with _values (like actions)
+                        if tests_data['summaries'] && tests_data['summaries'].is_a?(Hash) && tests_data['summaries']['_values']
+                          UI.message("   ✅ Found summaries Hash with _values array")
+                          summaries_array = tests_data['summaries']['_values']
+                          # Extract all testRefs from all summaries
+                          test_refs_array = []
+                          summaries_array.each do |summary|
+                            # Handle both Hash with _values and direct structure
+                            summary_test_refs = if summary.is_a?(Hash)
+                              if summary['testRefs'] && summary['testRefs'].is_a?(Hash) && summary['testRefs']['_values']
+                                summary['testRefs']['_values']
+                              elsif summary['testRefs'] && summary['testRefs'].is_a?(Array)
+                                summary['testRefs']
+                              elsif summary['_values'] && summary['_values'].is_a?(Array)
+                                summary['_values']
+                              else
+                                nil
+                              end
+                            else
+                              nil
+                            end
+                            if summary_test_refs && summary_test_refs.is_a?(Array)
+                              test_refs_array.concat(summary_test_refs)
+                            end
+                          end
+                        # Try Structure 1b: summaries array (direct)
+                        elsif tests_data['summaries'] && tests_data['summaries'].is_a?(Array)
                           UI.message("   ✅ Found summaries array")
                           # Extract all testRefs from all summaries
                           test_refs_array = []
