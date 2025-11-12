@@ -1306,9 +1306,34 @@ platform :ios do
                               end
                             end
                             
-                            # Handle both Hash with _values and direct structure
+                            # Handle navigation through testableSummaries -> _values -> testableSummary -> testRefs
+                            # Structure: summary -> testableSummaries (Hash) -> _values (Array) -> testableSummary -> testRefs
                             summary_test_refs = if summary.is_a?(Hash)
-                              if summary['testRefs'] && summary['testRefs'].is_a?(Hash) && summary['testRefs']['_values']
+                              # Try Structure 1: testableSummaries -> _values -> testableSummary -> testRefs
+                              if summary['testableSummaries'] && summary['testableSummaries'].is_a?(Hash) && summary['testableSummaries']['_values']
+                                UI.message("     ✅ Found testableSummaries Hash with _values")
+                                testable_summaries_array = summary['testableSummaries']['_values']
+                                UI.message("     📋 Found #{testable_summaries_array.count} testable summary(ies)")
+                                # Extract testRefs from all testableSummaries
+                                all_test_refs = []
+                                testable_summaries_array.each_with_index do |testable_summary, ts_idx|
+                                  UI.message("       🔍 Processing testable summary #{ts_idx + 1}...")
+                                  if testable_summary.is_a?(Hash)
+                                    # Check for testRefs in testableSummary
+                                    if testable_summary['testRefs'] && testable_summary['testRefs'].is_a?(Hash) && testable_summary['testRefs']['_values']
+                                      UI.message("         ✅ Found testRefs Hash with _values in testable summary")
+                                      all_test_refs.concat(testable_summary['testRefs']['_values'])
+                                    elsif testable_summary['testRefs'] && testable_summary['testRefs'].is_a?(Array)
+                                      UI.message("         ✅ Found testRefs Array in testable summary")
+                                      all_test_refs.concat(testable_summary['testRefs'])
+                                    else
+                                      UI.message("         ⚠️  Testable summary has no testRefs")
+                                    end
+                                  end
+                                end
+                                all_test_refs.any? ? all_test_refs : nil
+                              # Try Structure 2: testRefs directly in summary
+                              elsif summary['testRefs'] && summary['testRefs'].is_a?(Hash) && summary['testRefs']['_values']
                                 UI.message("     ✅ Found testRefs Hash with _values")
                                 summary['testRefs']['_values']
                               elsif summary['testRefs'] && summary['testRefs'].is_a?(Array)
@@ -1318,7 +1343,7 @@ platform :ios do
                                 UI.message("     ✅ Found _values array in summary")
                                 summary['_values']
                               else
-                                UI.message("     ⚠️  Summary has no testRefs or _values")
+                                UI.message("     ⚠️  Summary has no testableSummaries, testRefs, or _values")
                                 nil
                               end
                             else
@@ -1336,13 +1361,32 @@ platform :ios do
                         # Try Structure 1b: summaries array (direct)
                         elsif tests_data['summaries'] && tests_data['summaries'].is_a?(Array)
                           UI.message("   ✅ Found summaries array")
-                          # Extract all testRefs from all summaries
+                          # Extract all testRefs from all summaries (through testableSummaries if needed)
                           test_refs_array = []
-                          tests_data['summaries'].each do |summary|
-                            if summary['testRefs'] && summary['testRefs'].is_a?(Array)
-                              test_refs_array.concat(summary['testRefs'])
+                          tests_data['summaries'].each_with_index do |summary, summary_idx|
+                            UI.message("   🔍 Processing summary #{summary_idx + 1} from array...")
+                            if summary.is_a?(Hash)
+                              # Check for testableSummaries first
+                              if summary['testableSummaries'] && summary['testableSummaries'].is_a?(Hash) && summary['testableSummaries']['_values']
+                                testable_summaries_array = summary['testableSummaries']['_values']
+                                testable_summaries_array.each do |testable_summary|
+                                  if testable_summary.is_a?(Hash)
+                                    if testable_summary['testRefs'] && testable_summary['testRefs'].is_a?(Hash) && testable_summary['testRefs']['_values']
+                                      test_refs_array.concat(testable_summary['testRefs']['_values'])
+                                    elsif testable_summary['testRefs'] && testable_summary['testRefs'].is_a?(Array)
+                                      test_refs_array.concat(testable_summary['testRefs'])
+                                    end
+                                  end
+                                end
+                              # Fallback to direct testRefs
+                              elsif summary['testRefs'] && summary['testRefs'].is_a?(Hash) && summary['testRefs']['_values']
+                                test_refs_array.concat(summary['testRefs']['_values'])
+                              elsif summary['testRefs'] && summary['testRefs'].is_a?(Array)
+                                test_refs_array.concat(summary['testRefs'])
+                              end
                             end
                           end
+                          UI.message("   📊 Total test references extracted: #{test_refs_array.count}")
                         # Try Structure 2: _values array (like actions)
                         elsif tests_data['_values'] && tests_data['_values'].is_a?(Array)
                           UI.message("   ✅ Found _values array")
