@@ -131,6 +131,7 @@ DerivedData/
 # Logs
 *.log
 logs/
+preparepipeline.md
 
 # Build and test output logs
 *_output.txt
