@@ -648,7 +648,21 @@ platform :ios do
               # Check if manifest.json was created (indicates successful extraction)
               manifest_path = File.join(attachments_dir, "manifest.json")
               if File.exist?(manifest_path)
-                UI.message("   ✅ Attachment manifest created - check manifest.json for details")
+                UI.message("   ✅ Attachment manifest created - checking contents...")
+                begin
+                  require 'json'
+                  manifest_data = JSON.parse(File.read(manifest_path))
+                  if manifest_data['attachments'] && manifest_data['attachments'].is_a?(Array)
+                    UI.message("   📋 Manifest shows #{manifest_data['attachments'].count} attachment(s)")
+                    manifest_data['attachments'].each do |att|
+                      UI.message("     - #{att['filename'] || 'unnamed'} (#{att['type'] || 'unknown type'})")
+                    end
+                  else
+                    UI.message("   ⚠️  Manifest exists but no attachments listed")
+                  end
+                rescue => e
+                  UI.message("   ⚠️  Could not parse manifest.json: #{e.message}")
+                end
               end
             else
               UI.message("   ⚠️  export attachments failed: #{attachments_output.chomp}")
@@ -925,11 +939,7 @@ platform :ios do
        # CRITICAL: Check for execution flow markers to see exactly where tests stop
        # Also check simulator-specific cache directories since tests run in simulator
        simulator_cache_dirs = []
-       if simulator_id
-         simulator_cache_dir = File.join(ENV['HOME'] || Dir.home, "Library/Developer/CoreSimulator/Devices", simulator_id, "data/Library/Caches/tools.fastlane")
-         simulator_cache_dirs << simulator_cache_dir
-       end
-       # Also check all simulator devices
+       # Check all simulator devices (we don't know the exact simulator ID, so check all)
        simulator_devices_dir = File.join(ENV['HOME'] || Dir.home, "Library/Developer/CoreSimulator/Devices")
        if Dir.exist?(simulator_devices_dir)
          Dir.glob(File.join(simulator_devices_dir, "*/data/Library/Caches/tools.fastlane")).each do |sim_cache|
