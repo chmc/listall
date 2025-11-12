@@ -93,7 +93,7 @@ final class ListAllUITests: XCTestCase {
         }
         
         print("🔍 DEBUG: About to call setupSnapshot()")
-        print("🔍 DEBUG: App instance: \(app)")
+        print("🔍 DEBUG: App instance: \(String(describing: app))")
         print("🔍 DEBUG: FASTLANE_SNAPSHOT env: \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "NOT SET")")
         print("🔍 DEBUG: FASTLANE_LANGUAGE env: \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "NOT SET")")
         
@@ -105,7 +105,7 @@ final class ListAllUITests: XCTestCase {
         // CRITICAL: Ensure cache directory exists before writing markers
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: cacheDir) {
-            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: nil)
+            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: [:])
         }
         
         // CRITICAL: Write marker BEFORE setupSnapshot to verify test code is executing
@@ -124,7 +124,6 @@ final class ListAllUITests: XCTestCase {
         
         // Write verification marker to cache directory (accessible by both test and Fastlane processes)
         // CRITICAL: Use cache directory instead of /tmp because /tmp may be process-specific in CI
-        let fileManager = FileManager.default
         let verificationMarkerPath = (cacheDir as NSString).appendingPathComponent("setupSnapshot_verification.txt")
         var verificationContent = "setupSnapshot() called\n"
         verificationContent += "Cache dir: \(cacheDir)\n"
@@ -135,10 +134,6 @@ final class ListAllUITests: XCTestCase {
         verificationContent += "FASTLANE_SNAPSHOT: \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "NOT SET")\n"
         verificationContent += "FASTLANE_LANGUAGE: \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "NOT SET")\n"
         verificationContent += "NSHomeDirectory(): \(NSHomeDirectory())\n"
-        // Ensure cache directory exists before writing
-        if !fileManager.fileExists(atPath: cacheDir) {
-            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: nil)
-        }
         try? verificationContent.write(toFile: verificationMarkerPath, atomically: true, encoding: .utf8)
         
         // Also write to /tmp as fallback (in case cache directory isn't accessible)
@@ -645,7 +640,7 @@ final class ListAllUITests: XCTestCase {
         // Ensure cache directory exists
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: cacheDir) {
-            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: nil)
+            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: [:])
         }
         let preSnapshotMarker = (cacheDir as NSString).appendingPathComponent("pre_snapshot_01-WelcomeScreen.txt")
         try? "About to call snapshot('01-WelcomeScreen') at \(Date())".write(toFile: preSnapshotMarker, atomically: true, encoding: .utf8)
