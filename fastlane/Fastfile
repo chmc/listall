@@ -555,12 +555,22 @@ platform :ios do
           UI.error("   ❌ Failed to create cache files: #{e.message}")
         end
         
+        # CRITICAL FIX: Set environment variables in Ruby ENV so they're available to test process
+        # These will be passed to xcodebuild which forwards them to the test process
+        ENV['FASTLANE_SNAPSHOT'] = 'YES'
+        ENV['FASTLANE_LANGUAGE'] = locale
+        ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
+        ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
+        ENV['NSUnbufferedIO'] = 'YES'
+        
         # CRITICAL FIX: Try passing environment variables via xcargs
         # xcargs allows passing build settings and environment variables to xcodebuild
         # Format: ENV_VAR_NAME=value
         xcargs_env = [
           "SIMULATOR_HOST_HOME=#{simulator_host_home}",
           "SIMULATOR_DEVICE_NAME=#{device_name_sanitized}",
+          "FASTLANE_SNAPSHOT=YES",
+          "FASTLANE_LANGUAGE=#{locale}",
           "NSUnbufferedIO=YES"
         ].join(" ")
         
@@ -1255,15 +1265,74 @@ platform :ios do
                         tests_data = JSON.parse(tests_output)
                         UI.message("   ✅ Successfully parsed tests object")
                         
-                        # Navigate to find test activities
+                        # CRITICAL DIAGNOSTICS: Show actual structure of tests object
+                        UI.message("   🔍 Tests object keys: #{tests_data.keys.join(', ')}")
+                        UI.message("   🔍 Tests object type: #{tests_data.class}")
+                        
+                        # Check different possible structures
+                        # Structure 1: tests -> summaries -> testRefs
+                        # Structure 2: tests -> _values (array) -> testRefs
+                        # Structure 3: tests -> tests (array) -> test objects
+                        
+                        test_refs_array = nil
+                        
+                        # Try Structure 1: summaries array
                         if tests_data['summaries'] && tests_data['summaries'].is_a?(Array)
-                          UI.message("   📋 Found #{tests_data['summaries'].count} test summary(ies)")
-                          tests_data['summaries'].each_with_index do |summary, summary_idx|
-                            UI.message("   🔍 Processing summary #{summary_idx + 1}...")
+                          UI.message("   ✅ Found summaries array")
+                          # Extract all testRefs from all summaries
+                          test_refs_array = []
+                          tests_data['summaries'].each do |summary|
                             if summary['testRefs'] && summary['testRefs'].is_a?(Array)
-                              UI.message("   📋 Found #{summary['testRefs'].count} test(s) in summary")
-                              summary['testRefs'].each_with_index do |test_ref, test_idx|
-                                test_ref_id = test_ref['id']
+                              test_refs_array.concat(summary['testRefs'])
+                            end
+                          end
+                        # Try Structure 2: _values array (like actions)
+                        elsif tests_data['_values'] && tests_data['_values'].is_a?(Array)
+                          UI.message("   ✅ Found _values array")
+                          test_refs_array = tests_data['_values']
+                        # Try Structure 3: direct tests array
+                        elsif tests_data['tests'] && tests_data['tests'].is_a?(Array)
+                          UI.message("   ✅ Found tests array")
+                          test_refs_array = tests_data['tests']
+                        # Try Structure 4: testRefs directly
+                        elsif tests_data['testRefs'] && tests_data['testRefs'].is_a?(Array)
+                          UI.message("   ✅ Found testRefs array directly")
+                          test_refs_array = tests_data['testRefs']
+                        else
+                          UI.message("   ⚠️  Tests object has unexpected structure")
+                          UI.message("   🔍 Available keys: #{tests_data.keys.join(', ')}")
+                          # Show sample structure
+                          tests_data.keys.first(5).each do |key|
+                            value = tests_data[key]
+                            value_type = value.class
+                            value_preview = if value.is_a?(String)
+                              value[0..50]
+                            elsif value.is_a?(Array)
+                              "Array[#{value.count}]"
+                            elsif value.is_a?(Hash)
+                              "Hash{#{value.keys.first(3).join(', ')}}"
+                            else
+                              value.inspect[0..50]
+                            end
+                            UI.message("     - #{key}: #{value_type} = #{value_preview}")
+                          end
+                        end
+                        
+                        # Navigate to find test activities
+                        if test_refs_array && test_refs_array.is_a?(Array) && test_refs_array.any?
+                          UI.message("   📋 Found #{test_refs_array.count} test reference(s)")
+                          test_refs_array.each_with_index do |test_ref, test_idx|
+                            # Handle both testRef objects (with 'id' key) and direct test objects
+                            test_ref_id = if test_ref.is_a?(Hash)
+                              test_ref['id'] || test_ref['_value'] || test_ref['identifier']
+                            else
+                              test_ref
+                            end
+                            
+                            if test_ref_id.nil?
+                              UI.message("   ⚠️  Test reference #{test_idx + 1} has no ID, skipping")
+                              next
+                            end
                                 
                                 # Extract actual ID string - can be a Hash with _value or a direct string
                                 test_id = if test_ref_id.is_a?(Hash) && test_ref_id['_value']
@@ -1414,13 +1483,9 @@ platform :ios do
                                   UI.message("   ⚠️  Failed to get test object (ID: #{test_id})")
                                   UI.message("   Error output: #{test_output[0..200]}")
                                 end
-                              end
-                            else
-                              UI.message("   ⚠️  Summary has no testRefs")
                             end
-                          end
                         else
-                          UI.message("   ⚠️  Tests object has no summaries")
+                          UI.message("   ⚠️  Tests object has no test references")
                         end
                       else
                         UI.message("   ⚠️  Failed to get tests object (ID: #{tests_id})")
