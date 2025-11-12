@@ -1277,6 +1277,34 @@ platform :ios do
                             else
                               UI.message("         No activities found in test node")
                               # Try alternative paths - maybe activities are nested differently
+                              # Check 'result' field (not 'testResult')
+                              if test_node['result'] && test_node['result'].is_a?(Hash)
+                                UI.message("         Found result object")
+                                UI.message("         Result object keys: #{test_node['result'].keys.join(', ')}")
+                                if test_node['result']['activities'] && test_node['result']['activities'].is_a?(Array)
+                                  UI.message("         Found activities in result: #{test_node['result']['activities'].count}")
+                                  # Extract activities from result
+                                  test_node['result']['activities'].each_with_index do |activity, act_idx|
+                                    if activity.is_a?(Hash)
+                                      UI.message("         Result Activity #{act_idx + 1} keys: #{activity.keys.join(', ')}")
+                                      if activity['attachments'] && activity['attachments'].is_a?(Array)
+                                        UI.message("         Found #{activity['attachments'].count} attachment(s) in result activity #{act_idx + 1}")
+                                        activity['attachments'].each do |attachment|
+                                          if attachment.is_a?(Hash)
+                                            filename = attachment['filename'] || attachment['name'] || 'Unknown'
+                                            UI.message("           Attachment: #{filename}")
+                                          end
+                                        end
+                                      end
+                                    end
+                                  end
+                                end
+                                # Also check for sub-activities or nested structures
+                                if test_node['result']['subActivities'] && test_node['result']['subActivities'].is_a?(Array)
+                                  UI.message("         Found subActivities in result: #{test_node['result']['subActivities'].count}")
+                                end
+                              end
+                              # Also check 'testResult' for compatibility
                               if test_node['testResult'] && test_node['testResult'].is_a?(Hash)
                                 UI.message("         Found testResult object")
                                 if test_node['testResult']['activities'] && test_node['testResult']['activities'].is_a?(Array)
