@@ -1319,15 +1319,43 @@ platform :ios do
                                 testable_summaries_array.each_with_index do |testable_summary, ts_idx|
                                   UI.message("       🔍 Processing testable summary #{ts_idx + 1}...")
                                   if testable_summary.is_a?(Hash)
-                                    # Check for testRefs in testableSummary
+                                    # CRITICAL DIAGNOSTICS: Show what's in the testable summary
+                                    UI.message("         📋 Testable summary keys: #{testable_summary.keys.join(', ')}")
+                                    testable_summary.keys.first(10).each do |key|
+                                      value = testable_summary[key]
+                                      value_type = value.class
+                                      value_preview = if value.is_a?(String)
+                                        value[0..50]
+                                      elsif value.is_a?(Array)
+                                        "Array[#{value.count}]"
+                                      elsif value.is_a?(Hash)
+                                        "Hash{#{value.keys.first(3).join(', ')}}"
+                                      else
+                                        value.inspect[0..50]
+                                      end
+                                      UI.message("           - #{key}: #{value_type} = #{value_preview}")
+                                    end
+                                    
+                                    # Check for testRefs in testableSummary (various structures)
                                     if testable_summary['testRefs'] && testable_summary['testRefs'].is_a?(Hash) && testable_summary['testRefs']['_values']
                                       UI.message("         ✅ Found testRefs Hash with _values in testable summary")
                                       all_test_refs.concat(testable_summary['testRefs']['_values'])
                                     elsif testable_summary['testRefs'] && testable_summary['testRefs'].is_a?(Array)
                                       UI.message("         ✅ Found testRefs Array in testable summary")
                                       all_test_refs.concat(testable_summary['testRefs'])
+                                    # Check for tests (alternative structure)
+                                    elsif testable_summary['tests'] && testable_summary['tests'].is_a?(Hash) && testable_summary['tests']['_values']
+                                      UI.message("         ✅ Found tests Hash with _values in testable summary")
+                                      all_test_refs.concat(testable_summary['tests']['_values'])
+                                    elsif testable_summary['tests'] && testable_summary['tests'].is_a?(Array)
+                                      UI.message("         ✅ Found tests Array in testable summary")
+                                      all_test_refs.concat(testable_summary['tests'])
+                                    # Check for _values directly
+                                    elsif testable_summary['_values'] && testable_summary['_values'].is_a?(Array)
+                                      UI.message("         ✅ Found _values array in testable summary")
+                                      all_test_refs.concat(testable_summary['_values'])
                                     else
-                                      UI.message("         ⚠️  Testable summary has no testRefs")
+                                      UI.message("         ⚠️  Testable summary has no testRefs, tests, or _values")
                                     end
                                   end
                                 end
