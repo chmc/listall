@@ -560,67 +560,53 @@ platform :ios do
           File.write(simulator_host_home_file, simulator_host_home)
           UI.message("   ✅ Created simulator_host_home.txt: #{simulator_host_home}")
           
-          # CRITICAL FIX: Create cache files in simulator's home directory BEFORE snapshot runs
+          # CRITICAL FIX: Create cache files in ALL simulators matching device name BEFORE snapshot runs
+          # Fastlane snapshot may boot a different simulator than the one we find, so we create files in all matches
           # SnapshotHelper runs in the simulator and uses NSHomeDirectory() which returns the simulator's home
           # The simulator's data directory exists even when not booted, so we can create files there
-          # STABLE APPROACH: Create files before snapshot runs, in the simulator that will be used
-          # Fastlane snapshot will boot/create a simulator with the exact device name we specify
+          # STABLE APPROACH: Create files in all matching simulators to ensure the one that gets used has the files
           begin
             simulator_info = `xcrun simctl list devices --json 2>&1`
             if $?.success?
               require 'json'
               sim_data = JSON.parse(simulator_info)
               
-              # Find the simulator that matches our device name exactly (Fastlane snapshot uses exact name)
-              # Priority: 1) Exact name match, 2) Booted simulator with matching name, 3) Any matching simulator
-              target_sim = nil
+              # Find ALL simulators matching our device name (Fastlane snapshot may use any of them)
+              matching_sims = []
               
               sim_data['devices'].each do |runtime, devices|
                 devices.each do |sim|
                   if sim['name'] == device && sim['dataPath']
-                    # Exact match - this is the simulator Fastlane will use
-                    target_sim = sim
-                    break
+                    matching_sims << sim
                   end
-                end
-                break if target_sim
-              end
-              
-              # If no exact match, try to find booted simulator (snapshot might have already booted it)
-              if !target_sim
-                sim_data['devices'].each do |runtime, devices|
-                  devices.each do |sim|
-                    if sim['name'] == device && sim['state'] == 'Booted' && sim['dataPath']
-                      target_sim = sim
-                      break
-                    end
-                  end
-                  break if target_sim
                 end
               end
               
-              if target_sim && target_sim['dataPath']
-                sim_cache_dir = File.join(target_sim['dataPath'], "Library/Caches/tools.fastlane")
-                begin
-                  FileUtils.mkdir_p(sim_cache_dir) unless Dir.exist?(sim_cache_dir)
-                  
-                  # Create all cache files in simulator's cache directory
-                  sim_language_file = File.join(sim_cache_dir, "language.txt")
-                  sim_locale_file = File.join(sim_cache_dir, "locale.txt")
-                  sim_launch_args_file = File.join(sim_cache_dir, "snapshot-launch_arguments.txt")
-                  sim_device_name_file = File.join(sim_cache_dir, "device_name.txt")
-                  sim_host_home_file = File.join(sim_cache_dir, "simulator_host_home.txt")
-                  
-                  File.write(sim_language_file, language_code)
-                  File.write(sim_locale_file, locale)
-                  File.write(sim_launch_args_file, "") unless File.exist?(sim_launch_args_file)
-                  File.write(sim_device_name_file, device_name_sanitized)
-                  File.write(sim_host_home_file, simulator_host_home)
-                  
-                  UI.message("   ✅ Created cache files in simulator directory: #{sim_cache_dir}")
-                  UI.message("   📱 Simulator: #{target_sim['name']} (#{target_sim['udid']})")
-                rescue => e
-                  UI.message("   ⚠️  Could not create cache files in simulator directory #{sim_cache_dir}: #{e.message}")
+              if matching_sims.any?
+                UI.message("   🔍 Found #{matching_sims.count} simulator(s) matching '#{device}'")
+                matching_sims.each do |target_sim|
+                  sim_cache_dir = File.join(target_sim['dataPath'], "Library/Caches/tools.fastlane")
+                  begin
+                    FileUtils.mkdir_p(sim_cache_dir) unless Dir.exist?(sim_cache_dir)
+                    
+                    # Create all cache files in simulator's cache directory
+                    sim_language_file = File.join(sim_cache_dir, "language.txt")
+                    sim_locale_file = File.join(sim_cache_dir, "locale.txt")
+                    sim_launch_args_file = File.join(sim_cache_dir, "snapshot-launch_arguments.txt")
+                    sim_device_name_file = File.join(sim_cache_dir, "device_name.txt")
+                    sim_host_home_file = File.join(sim_cache_dir, "simulator_host_home.txt")
+                    
+                    File.write(sim_language_file, language_code)
+                    File.write(sim_locale_file, locale)
+                    File.write(sim_launch_args_file, "") unless File.exist?(sim_launch_args_file)
+                    File.write(sim_device_name_file, device_name_sanitized)
+                    File.write(sim_host_home_file, simulator_host_home)
+                    
+                    UI.message("   ✅ Created cache files in simulator: #{target_sim['name']} (#{target_sim['udid']})")
+                    UI.message("      Path: #{sim_cache_dir}")
+                  rescue => e
+                    UI.message("   ⚠️  Could not create cache files in simulator #{target_sim['udid']}: #{e.message}")
+                  end
                 end
               else
                 UI.message("   ⚠️  Could not find simulator '#{device}' - cache files will be created when simulator is booted")
@@ -672,6 +658,56 @@ platform :ios do
         UI.message("🔍 DIAGNOSTICS: Environment variables after snapshot:")
         UI.message("   SIMULATOR_HOST_HOME=#{ENV['SIMULATOR_HOST_HOME']}")
         UI.message("   SIMULATOR_DEVICE_NAME=#{ENV['SIMULATOR_DEVICE_NAME']}")
+        
+        # FALLBACK: Create cache files in booted simulator if they weren't created before
+        # This handles the case where simulator wasn't found before snapshot booted it
+        begin
+          simulator_info = `xcrun simctl list devices --json 2>&1`
+          if $?.success?
+            require 'json'
+            sim_data = JSON.parse(simulator_info)
+            
+            # Find booted simulator matching our device
+            booted_sim = nil
+            sim_data['devices'].each do |runtime, devices|
+              devices.each do |sim|
+                if sim['name'] == device && sim['state'] == 'Booted' && sim['dataPath']
+                  booted_sim = sim
+                  break
+                end
+              end
+              break if booted_sim
+            end
+            
+            if booted_sim && booted_sim['dataPath']
+              sim_cache_dir = File.join(booted_sim['dataPath'], "Library/Caches/tools.fastlane")
+              
+              # Check if cache files already exist
+              language_file = File.join(sim_cache_dir, "language.txt")
+              if !File.exist?(language_file)
+                UI.message("   🔧 FALLBACK: Creating cache files in booted simulator...")
+                begin
+                  FileUtils.mkdir_p(sim_cache_dir) unless Dir.exist?(sim_cache_dir)
+                  
+                  language_code = locale.split("-").first
+                  File.write(File.join(sim_cache_dir, "language.txt"), language_code)
+                  File.write(File.join(sim_cache_dir, "locale.txt"), locale)
+                  File.write(File.join(sim_cache_dir, "snapshot-launch_arguments.txt"), "") unless File.exist?(File.join(sim_cache_dir, "snapshot-launch_arguments.txt"))
+                  File.write(File.join(sim_cache_dir, "device_name.txt"), device_name_sanitized)
+                  File.write(File.join(sim_cache_dir, "simulator_host_home.txt"), simulator_host_home)
+                  
+                  UI.message("   ✅ Created cache files in booted simulator: #{sim_cache_dir}")
+                rescue => e
+                  UI.message("   ⚠️  Could not create cache files in booted simulator: #{e.message}")
+                end
+              else
+                UI.message("   ✅ Cache files already exist in simulator: #{sim_cache_dir}")
+              end
+            end
+          end
+        rescue => e
+          UI.message("   ⚠️  Could not verify/create cache files in booted simulator: #{e.message}")
+        end
         
         # CRITICAL FIX: Fastlane's log parsing often fails in CI environments where NSLog isn't captured
         # Manually extract screenshots from cache directory after tests complete
@@ -1086,6 +1122,28 @@ platform :ios do
          Dir.glob(File.join(simulator_devices_dir, "*/data/Library/Caches/tools.fastlane")).each do |sim_cache|
            simulator_cache_dirs << sim_cache
          end
+       end
+       
+       # CRITICAL: Also check the booted simulator's cache directory specifically
+       # This is the most likely location where marker files will be created
+       begin
+         simulator_info = `xcrun simctl list devices --json 2>&1`
+         if $?.success?
+           require 'json'
+           sim_data = JSON.parse(simulator_info)
+           sim_data['devices'].each do |runtime, devices|
+             devices.each do |sim|
+               if sim['name'] == device && sim['state'] == 'Booted' && sim['dataPath']
+                 booted_sim_cache = File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
+                 simulator_cache_dirs.unshift(booted_sim_cache) unless simulator_cache_dirs.include?(booted_sim_cache)
+                 UI.message("   🔍 Added booted simulator cache dir (priority): #{booted_sim_cache}")
+                 break
+               end
+             end
+           end
+         end
+       rescue => e
+         UI.message("   ⚠️  Could not find booted simulator for cache check: #{e.message}")
        end
        
        # Check cache directory first (more reliable in CI)

@@ -57,7 +57,64 @@ final class ListAllUITests: XCTestCase {
     // Helper: Launch app specifically for screenshot with custom arguments
     // CRITICAL: setupSnapshot() must be called AFTER setting launch arguments but BEFORE launching
     private func launchAppForScreenshot(skipTestData: Bool = false) {
+        // CRITICAL LOGGING: Verify this function is being called
+        print("🚀 ========================================")
+        print("🚀 launchAppForScreenshot() CALLED")
+        print("🚀 ========================================")
+        print("🚀 Timestamp: \(Date())")
+        print("🚀 skipTestData: \(skipTestData)")
+        print("🚀 App state: \(app.state.rawValue)")
+        
+        // CRITICAL: Verify environment variables are being passed to the test process
+        let env = ProcessInfo.processInfo.environment
+        print("🚀 ENVIRONMENT VARIABLES VERIFICATION:")
+        print("🚀   FASTLANE_SNAPSHOT: \(env["FASTLANE_SNAPSHOT"] ?? "❌ NOT SET")")
+        print("🚀   FASTLANE_LANGUAGE: \(env["FASTLANE_LANGUAGE"] ?? "❌ NOT SET")")
+        print("🚀   SIMULATOR_HOST_HOME: \(env["SIMULATOR_HOST_HOME"] ?? "❌ NOT SET")")
+        print("🚀   SIMULATOR_DEVICE_NAME: \(env["SIMULATOR_DEVICE_NAME"] ?? "❌ NOT SET")")
+        print("🚀   HOME: \(env["HOME"] ?? "❌ NOT SET")")
+        print("🚀   NSHomeDirectory(): \(NSHomeDirectory())")
+        
+        // CRITICAL DIAGNOSTICS: Write environment variables to multiple locations for debugging
+        // This helps verify if environment variables are being passed to the test process
+        var envDebugContent = "=== Environment Variables Debug ===\n"
+        envDebugContent += "Timestamp: \(Date())\n"
+        envDebugContent += "Function: launchAppForScreenshot(skipTestData: \(skipTestData))\n"
+        envDebugContent += "SIMULATOR_HOST_HOME: \(env["SIMULATOR_HOST_HOME"] ?? "NOT SET")\n"
+        envDebugContent += "SIMULATOR_DEVICE_NAME: \(env["SIMULATOR_DEVICE_NAME"] ?? "NOT SET")\n"
+        envDebugContent += "HOME: \(env["HOME"] ?? "NOT SET")\n"
+        envDebugContent += "FASTLANE_SNAPSHOT: \(env["FASTLANE_SNAPSHOT"] ?? "NOT SET")\n"
+        envDebugContent += "FASTLANE_LANGUAGE: \(env["FASTLANE_LANGUAGE"] ?? "NOT SET")\n"
+        envDebugContent += "NSHomeDirectory(): \(NSHomeDirectory())\n"
+        
+        // Write to document directory (accessible from simulator)
+        let envDebugPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("test_env_debug.txt")
+        if let envDebugPath = envDebugPath {
+            do {
+                try envDebugContent.write(to: envDebugPath, atomically: true, encoding: .utf8)
+                print("✅ Wrote environment debug to: \(envDebugPath.path)")
+            } catch {
+                print("⚠️ Failed to write environment debug to document directory: \(error)")
+            }
+        }
+        
+        // Also write to cache directory (accessible by Fastlane)
+        let cacheBase = env["SIMULATOR_HOST_HOME"] ?? NSHomeDirectory()
+        let cacheDir = (cacheBase as NSString).appendingPathComponent("Library/Caches/tools.fastlane")
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: cacheDir) {
+            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: [:])
+        }
+        let cacheEnvDebugPath = (cacheDir as NSString).appendingPathComponent("test_env_debug.txt")
+        do {
+            try envDebugContent.write(toFile: cacheEnvDebugPath, atomically: true, encoding: .utf8)
+            print("✅ Wrote environment debug to cache: \(cacheEnvDebugPath)")
+        } catch {
+            print("⚠️ Failed to write environment debug to cache: \(error)")
+        }
+        
         // Set up launch arguments first
+        print("🚀 Setting up launch arguments...")
         app.launchArguments.append("UITEST_MODE")
         if skipTestData {
             app.launchArguments.append("SKIP_TEST_DATA")
@@ -67,35 +124,15 @@ final class ListAllUITests: XCTestCase {
         app.launchEnvironment["UITEST_FORCE_PORTRAIT"] = "1"
         app.launchArguments.append("FORCE_LIGHT_MODE")
         app.launchArguments.append("DISABLE_TOOLTIPS")
+        print("🚀 Launch arguments set: \(app.launchArguments)")
+        print("🚀 Launch environment: \(app.launchEnvironment)")
         
         // CRITICAL: setupSnapshot() must be called AFTER setting arguments but BEFORE launching
         // This allows SnapshotHelper to read Fastlane's cache files and add snapshot-specific arguments
         // Note: SnapshotHelper has fallback logic to use HOME or NSHomeDirectory() if SIMULATOR_HOST_HOME isn't set
         
-        // CRITICAL DIAGNOSTICS: Write environment variables to a file for debugging
-        // This helps verify if environment variables are being passed to the test process
-        let env = ProcessInfo.processInfo.environment
-        let envDebugPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("test_env_debug.txt")
-        if let envDebugPath = envDebugPath {
-            var envDebugContent = "=== Environment Variables Debug ===\n"
-            envDebugContent += "SIMULATOR_HOST_HOME: \(env["SIMULATOR_HOST_HOME"] ?? "NOT SET")\n"
-            envDebugContent += "SIMULATOR_DEVICE_NAME: \(env["SIMULATOR_DEVICE_NAME"] ?? "NOT SET")\n"
-            envDebugContent += "HOME: \(env["HOME"] ?? "NOT SET")\n"
-            envDebugContent += "FASTLANE_SNAPSHOT: \(env["FASTLANE_SNAPSHOT"] ?? "NOT SET")\n"
-            envDebugContent += "FASTLANE_LANGUAGE: \(env["FASTLANE_LANGUAGE"] ?? "NOT SET")\n"
-            envDebugContent += "NSHomeDirectory(): \(NSHomeDirectory())\n"
-            do {
-                try envDebugContent.write(to: envDebugPath, atomically: true, encoding: .utf8)
-                print("✅ Wrote environment debug to: \(envDebugPath.path)")
-            } catch {
-                print("⚠️ Failed to write environment debug: \(error)")
-            }
-        }
-        
         print("🔍 DEBUG: About to call setupSnapshot()")
         print("🔍 DEBUG: App instance: \(String(describing: app))")
-        print("🔍 DEBUG: FASTLANE_SNAPSHOT env: \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "NOT SET")")
-        print("🔍 DEBUG: FASTLANE_LANGUAGE env: \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "NOT SET")")
         
         // CRITICAL: Verify setupSnapshot() actually worked by checking cache directory
         // This helps catch issues early before we try to take screenshots
@@ -110,17 +147,49 @@ final class ListAllUITests: XCTestCase {
         
         // CRITICAL: Write marker BEFORE setupSnapshot to verify test code is executing
         let preSetupMarker = (cacheDir as NSString).appendingPathComponent("pre_setupSnapshot_marker.txt")
-        try? "About to call setupSnapshot() at \(Date())".write(toFile: preSetupMarker, atomically: true, encoding: .utf8)
+        do {
+            try "About to call setupSnapshot() at \(Date())".write(toFile: preSetupMarker, atomically: true, encoding: .utf8)
+            print("✅ Created pre_setupSnapshot_marker.txt at: \(preSetupMarker)")
+        } catch {
+            print("❌ ERROR: Failed to create pre_setupSnapshot_marker.txt: \(error)")
+        }
         
-        setupSnapshot(app)
+        // CRITICAL: Call setupSnapshot() with error handling to surface failures
+        print("🔍 Calling setupSnapshot(app)...")
+        do {
+            setupSnapshot(app)
+            print("✅ setupSnapshot(app) completed successfully")
+        } catch {
+            let errorMsg = "❌ CRITICAL ERROR: setupSnapshot(app) failed with error: \(error)"
+            print(errorMsg)
+            // Write error to marker file so Fastlane can detect it
+            let errorMarker = (cacheDir as NSString).appendingPathComponent("setupSnapshot_error.txt")
+            try? errorMsg.write(toFile: errorMarker, atomically: true, encoding: .utf8)
+            // Don't throw - let test continue to see if it can recover
+        }
+        
+        // CRITICAL: Verify setupSnapshot() actually worked by checking if it set up the snapshot helper
+        // SnapshotHelper should have created the screenshots directory
+        let screenshotsDir = (cacheDir as NSString).appendingPathComponent("screenshots")
+        if fileManager.fileExists(atPath: screenshotsDir) {
+            print("✅ Verified: Screenshots directory exists - setupSnapshot() likely succeeded")
+        } else {
+            print("⚠️ WARNING: Screenshots directory not found - setupSnapshot() may have failed")
+            print("   Expected: \(screenshotsDir)")
+        }
         
         // CRITICAL: Write marker AFTER setupSnapshot to verify it completed
         let postSetupMarker = (cacheDir as NSString).appendingPathComponent("post_setupSnapshot_marker.txt")
-        try? "setupSnapshot() completed at \(Date())".write(toFile: postSetupMarker, atomically: true, encoding: .utf8)
+        do {
+            try "setupSnapshot() completed at \(Date())".write(toFile: postSetupMarker, atomically: true, encoding: .utf8)
+            print("✅ Created post_setupSnapshot_marker.txt at: \(postSetupMarker)")
+        } catch {
+            print("❌ ERROR: Failed to create post_setupSnapshot_marker.txt: \(error)")
+        }
         
         print("🔍 DEBUG: setupSnapshot() completed")
         let languageFile = (cacheDir as NSString).appendingPathComponent("language.txt")
-        let screenshotsDir = (cacheDir as NSString).appendingPathComponent("screenshots")
+        let screenshotsDirCheck = (cacheDir as NSString).appendingPathComponent("screenshots")
         
         // Write verification marker to cache directory (accessible by both test and Fastlane processes)
         // CRITICAL: Use cache directory instead of /tmp because /tmp may be process-specific in CI
@@ -128,7 +197,7 @@ final class ListAllUITests: XCTestCase {
         var verificationContent = "setupSnapshot() called\n"
         verificationContent += "Cache dir: \(cacheDir)\n"
         verificationContent += "Language file exists: \(fileManager.fileExists(atPath: languageFile))\n"
-        verificationContent += "Screenshots dir exists: \(fileManager.fileExists(atPath: screenshotsDir))\n"
+        verificationContent += "Screenshots dir exists: \(fileManager.fileExists(atPath: screenshotsDirCheck))\n"
         verificationContent += "SIMULATOR_HOST_HOME: \(ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? "NOT SET")\n"
         verificationContent += "HOME: \(ProcessInfo.processInfo.environment["HOME"] ?? "NOT SET")\n"
         verificationContent += "FASTLANE_SNAPSHOT: \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "NOT SET")\n"
@@ -616,8 +685,16 @@ final class ListAllUITests: XCTestCase {
     func testScreenshots01_WelcomeScreen() throws {
         // Special test that launches WITHOUT test data to show empty state
         // Uses the shared app instance to avoid redundant launch
-        print("🔍 DEBUG: testScreenshots01_WelcomeScreen starting")
+        print("📸 ========================================")
+        print("📸 testScreenshots01_WelcomeScreen() STARTING")
+        print("📸 ========================================")
+        print("📸 Timestamp: \(Date())")
+        print("📸 Test method: testScreenshots01_WelcomeScreen")
+        print("📸 About to call launchAppForScreenshot(skipTestData: true)")
+        
         launchAppForScreenshot(skipTestData: true)
+        
+        print("📸 launchAppForScreenshot() completed")
         
         print("🔍 DEBUG: App launched, waiting 2 seconds")
         sleep(2)
@@ -671,7 +748,16 @@ final class ListAllUITests: XCTestCase {
     func testScreenshots02_MainFlow() throws {
         // End-to-end EN screenshots for iPhone/iPad using deterministic data
         // Assumes Fastlane Snapshot sets language to en-US for this run
+        print("📸 ========================================")
+        print("📸 testScreenshots02_MainFlow() STARTING")
+        print("📸 ========================================")
+        print("📸 Timestamp: \(Date())")
+        print("📸 Test method: testScreenshots02_MainFlow")
+        print("📸 About to call launchAppForScreenshot(skipTestData: false)")
+        
         launchAppForScreenshot(skipTestData: false)
+        
+        print("📸 launchAppForScreenshot() completed")
         
         // Wait for app to fully load
         sleep(2)
