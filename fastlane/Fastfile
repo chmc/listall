@@ -494,10 +494,10 @@ platform :ios do
         ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
         UI.message("🔧 Setting SIMULATOR_DEVICE_NAME=#{device_name_sanitized} for SnapshotHelper")
         
-        # CRITICAL: Fastlane snapshot should automatically pass environment variables to the test process
-        # We've set ENV['SIMULATOR_HOST_HOME'] and ENV['SIMULATOR_DEVICE_NAME'] above, which should be inherited by xcodebuild and the test process
-        # However, if this doesn't work, SnapshotHelper has fallback logic to use HOME or NSHomeDirectory()
-        # Note: We can't use xcodebuild_command (not supported by snapshot action), so we rely on Fastlane's automatic passing
+        # CRITICAL FIX: Fastlane snapshot may not pass environment variables correctly with test_without_building
+        # Use xcargs to pass environment variables via test environment (works more reliably)
+        # However, xcargs is for build settings, not environment variables
+        # Instead, we rely on Fastlane's automatic passing AND ensure cache files are created
         
         # CRITICAL DIAGNOSTICS: Log environment variables before snapshot runs
         UI.message("🔍 DIAGNOSTICS: Environment variables before snapshot:")
@@ -864,6 +864,10 @@ platform :ios do
           primary_cache_dir = File.join(simulator_host_home_for_check, "Library/Caches/tools.fastlane/screenshots")
           possible_cache_dirs << primary_cache_dir
           UI.message("   🔍 Primary cache directory to check: #{primary_cache_dir}")
+          # CRITICAL FIX: Also check the base cache directory (screenshots might be saved directly there)
+          base_cache_dir = File.join(simulator_host_home_for_check, "Library/Caches/tools.fastlane")
+          possible_cache_dirs << base_cache_dir
+          UI.message("   🔍 Base cache directory to check: #{base_cache_dir}")
         end
         
         # Also try ENV['SIMULATOR_HOST_HOME'] directly (in case it was set differently)
@@ -886,6 +890,8 @@ platform :ios do
         
         # Try simulator's actual data directory (extract from simulator info)
         # Research shows: Simulator data is in ~/Library/Developer/CoreSimulator/Devices/<UUID>/data
+        # CRITICAL FIX: Check ALL simulators, not just the one matching device name
+        # In CI, the simulator might be booted with a different name or UUID
         begin
           simulator_info = `xcrun simctl list devices --json 2>&1`
           if $?.success?
@@ -895,13 +901,31 @@ platform :ios do
             device_name = device.gsub(" ", "").gsub("-", "")
             sim_data['devices'].each do |runtime, devices|
               devices.each do |sim|
-                if sim['name'] == device || sim['name'].include?(device_name)
+                # Check both exact match and partial match
+                if sim['name'] == device || sim['name'].include?(device_name) || sim['name'].gsub(/[^a-zA-Z0-9]/, "") == device_name
                   if sim['dataPath']
                     # Simulator's data directory - screenshots might be in Library/Caches
                     possible_cache_dirs << File.join(sim['dataPath'], "Library/Caches/tools.fastlane/screenshots")
                     # Also check simulator's home directory (if different from dataPath)
                     sim_home = File.join(sim['dataPath'], "Library")
                     possible_cache_dirs << File.join(sim_home, "Caches/tools.fastlane/screenshots")
+                    # CRITICAL FIX: Also check base cache directory (screenshots might be saved there)
+                    possible_cache_dirs << File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
+                    UI.message("   🔍 Added simulator cache dir: #{File.join(sim['dataPath'], 'Library/Caches/tools.fastlane/screenshots')}")
+                  end
+                end
+              end
+            end
+            # CRITICAL FIX: Also check ALL booted simulators (in case device name doesn't match exactly)
+            booted_sims = `xcrun simctl list devices | grep "(Booted)" | head -5`.lines.map(&:chomp)
+            if booted_sims.any?
+              UI.message("   🔍 Found #{booted_sims.count} booted simulator(s), checking their cache directories...")
+              sim_data['devices'].each do |runtime, devices|
+                devices.each do |sim|
+                  if sim['state'] == 'Booted' && sim['dataPath']
+                    possible_cache_dirs << File.join(sim['dataPath'], "Library/Caches/tools.fastlane/screenshots")
+                    possible_cache_dirs << File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
+                    UI.message("   🔍 Added booted simulator cache dir: #{File.join(sim['dataPath'], 'Library/Caches/tools.fastlane/screenshots')}")
                   end
                 end
               end
@@ -1156,7 +1180,7 @@ platform :ios do
         
         # Method 2b: Extract test activity logs from result bundle to check for NSLog output
         # CRITICAL DIAGNOSTICS: This helps verify if snapshot() is actually being called
-        if File.exist?(result_bundle_to_check)
+        if result_bundle_to_check && File.exist?(result_bundle_to_check)
           begin
             UI.message("   🔍 DIAGNOSTICS: Extracting test activity logs from result bundle...")
             UI.message("   Result bundle path: #{result_bundle_to_check}")
@@ -1916,6 +1940,8 @@ platform :ios do
         
         # Check all possible cache directories
         found_cache = false
+        # CRITICAL FIX: Check cache directories in order of priority
+        # First check the primary location, then fallbacks
         possible_cache_dirs.uniq.each do |cache_dir|
           UI.message("   Checking cache directory: #{cache_dir}")
           if Dir.exist?(cache_dir)
@@ -1926,6 +1952,15 @@ platform :ios do
             all_files = Dir.entries(cache_dir).reject { |f| f.start_with?(".") }
             if all_files.any?
               UI.message("   Files in cache directory (#{all_files.count}): #{all_files.first(10).join(", ")}")
+              # CRITICAL FIX: If this is the base cache directory (not screenshots subdirectory), also check for screenshots subdirectory
+              if !cache_dir.end_with?("screenshots") && Dir.exist?(File.join(cache_dir, "screenshots"))
+                screenshots_subdir = File.join(cache_dir, "screenshots")
+                UI.message("   🔍 Also checking screenshots subdirectory: #{screenshots_subdir}")
+                subdir_files = Dir.entries(screenshots_subdir).reject { |f| f.start_with?(".") }
+                if subdir_files.any?
+                  UI.message("   Files in screenshots subdirectory (#{subdir_files.count}): #{subdir_files.first(10).join(", ")}")
+                end
+              end
             end
             
             # Check for debug log in this directory too
@@ -1941,13 +1976,20 @@ platform :ios do
             # CRITICAL: Use the same device name sanitization format as SnapshotHelper
             # This matches what we set in ENV['SIMULATOR_DEVICE_NAME'] above
             device_sanitized = device_name_sanitized || device.gsub(/[^a-zA-Z0-9]/, "")
+            cache_screenshots = []
+            # CRITICAL FIX: Check for ALL PNG files first (most reliable)
             cache_screenshots = Dir.glob(File.join(cache_dir, "*.{png,PNG}"))
             # Also check for files that might have device name in them (exact match)
-            cache_screenshots += Dir.glob(File.join(cache_dir, "#{device_sanitized}-*.png"))
-            cache_screenshots += Dir.glob(File.join(cache_dir, "#{device_sanitized}-*.PNG"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "#{device_sanitized}-*.{png,PNG}"))
             # Fallback: check for any device name pattern
-            cache_screenshots += Dir.glob(File.join(cache_dir, "*iPhone*.png"))
-            cache_screenshots += Dir.glob(File.join(cache_dir, "*iPad*.png"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "*iPhone*.{png,PNG}"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "*iPad*.{png,PNG}"))
+            # CRITICAL FIX: Also check for screenshot names directly (in case device prefix was removed)
+            cache_screenshots += Dir.glob(File.join(cache_dir, "01-*.{png,PNG}"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "02-*.{png,PNG}"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "03-*.{png,PNG}"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "04-*.{png,PNG}"))
+            cache_screenshots += Dir.glob(File.join(cache_dir, "05-*.{png,PNG}"))
             cache_screenshots.uniq!
             
             if cache_screenshots.any?
@@ -1972,10 +2014,46 @@ platform :ios do
                   UI.message("   ⏭️  Skipped (already exists): #{basename}")
                 end
               end
-              UI.message("   ✅ Copied #{extracted_count} screenshots from cache")
-              break # Found screenshots, no need to check other directories
+              UI.message("   ✅ Copied #{cache_screenshots.count} screenshots from cache directory")
+              # CRITICAL FIX: Don't break immediately - check if we got all expected screenshots
+              # Only break if we found enough screenshots (at least 5 per test method)
+              if extracted_count >= 5
+                UI.message("   ✅ Found sufficient screenshots, stopping cache directory search")
+                break
+              else
+                UI.message("   ⚠️  Only found #{extracted_count} screenshots, continuing search...")
+              end
             else
               UI.message("   ⚠️  Cache directory exists but no screenshots found")
+              # CRITICAL FIX: If this is the base cache directory, also check screenshots subdirectory
+              if !cache_dir.end_with?("screenshots")
+                screenshots_subdir = File.join(cache_dir, "screenshots")
+                if Dir.exist?(screenshots_subdir)
+                  UI.message("   🔍 Checking screenshots subdirectory: #{screenshots_subdir}")
+                  subdir_screenshots = Dir.glob(File.join(screenshots_subdir, "*.{png,PNG}"))
+                  if subdir_screenshots.any?
+                    UI.message("   ✅ Found #{subdir_screenshots.count} screenshots in subdirectory!")
+                    subdir_screenshots.each do |src|
+                      basename = File.basename(src)
+                      if basename.include?("-")
+                        parts = basename.split("-", 2)
+                        if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
+                          basename = parts[1]
+                        end
+                      end
+                      dst = File.join(locale_dir, basename)
+                      unless File.exist?(dst)
+                        FileUtils.cp(src, dst)
+                        extracted_count += 1
+                        UI.message("   ✅ Copied from subdirectory: #{basename}")
+                      end
+                    end
+                    if extracted_count >= 5
+                      break
+                    end
+                  end
+                end
+              end
               # List what IS in the directory
               if all_files.any?
                 UI.message("   Directory contents: #{all_files.join(", ")}")
@@ -2266,7 +2344,7 @@ platform :ios do
         UI.header("📊 DIAGNOSTIC SUMMARY for #{device} (#{locale})")
         UI.message("   Screenshots extracted: #{extracted_count}")
         UI.message("   Debug log found: #{debug_log_found ? 'Yes' : 'No'}")
-        UI.message("   Result bundle exists: #{File.exist?(result_bundle_to_check) ? 'Yes' : 'No'}")
+        UI.message("   Result bundle exists: #{result_bundle_to_check && File.exist?(result_bundle_to_check) ? 'Yes' : 'No'}")
         UI.message("   Cache directory checked: #{simulator_host_home_for_check}/Library/Caches/tools.fastlane/screenshots")
         UI.message("   Expected screenshots: ~#{expected_per_combination}")
         
