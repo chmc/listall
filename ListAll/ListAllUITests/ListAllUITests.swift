@@ -134,17 +134,6 @@ final class ListAllUITests: XCTestCase {
         print("🔍 DEBUG: About to call setupSnapshot()")
         print("🔍 DEBUG: App instance: \(String(describing: app))")
         
-        // CRITICAL: Verify setupSnapshot() actually worked by checking cache directory
-        // This helps catch issues early before we try to take screenshots
-        let cacheBase = ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] ?? NSHomeDirectory()
-        let cacheDir = (cacheBase as NSString).appendingPathComponent("Library/Caches/tools.fastlane")
-        
-        // CRITICAL: Ensure cache directory exists before writing markers
-        let fileManager = FileManager.default
-        if !fileManager.fileExists(atPath: cacheDir) {
-            try? fileManager.createDirectory(atPath: cacheDir, withIntermediateDirectories: true, attributes: [:])
-        }
-        
         // CRITICAL: Write marker BEFORE setupSnapshot to verify test code is executing
         let preSetupMarker = (cacheDir as NSString).appendingPathComponent("pre_setupSnapshot_marker.txt")
         do {
@@ -154,19 +143,10 @@ final class ListAllUITests: XCTestCase {
             print("❌ ERROR: Failed to create pre_setupSnapshot_marker.txt: \(error)")
         }
         
-        // CRITICAL: Call setupSnapshot() with error handling to surface failures
+        // CRITICAL: Call setupSnapshot() - note: it doesn't throw, but we verify it worked
         print("🔍 Calling setupSnapshot(app)...")
-        do {
-            setupSnapshot(app)
-            print("✅ setupSnapshot(app) completed successfully")
-        } catch {
-            let errorMsg = "❌ CRITICAL ERROR: setupSnapshot(app) failed with error: \(error)"
-            print(errorMsg)
-            // Write error to marker file so Fastlane can detect it
-            let errorMarker = (cacheDir as NSString).appendingPathComponent("setupSnapshot_error.txt")
-            try? errorMsg.write(toFile: errorMarker, atomically: true, encoding: .utf8)
-            // Don't throw - let test continue to see if it can recover
-        }
+        setupSnapshot(app)
+        print("✅ setupSnapshot(app) completed")
         
         // CRITICAL: Verify setupSnapshot() actually worked by checking if it set up the snapshot helper
         // SnapshotHelper should have created the screenshots directory
