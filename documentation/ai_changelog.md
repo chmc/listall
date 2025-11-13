@@ -1,5 +1,66 @@
 # AI Changelog
 
+## 2025-01-XX - Screenshot Extraction Fixes ✅ COMPLETED
+
+### Summary
+Fixed critical issues in screenshot extraction logic that were preventing screenshots from being found and copied from cache directories. Improved cache directory detection to check all booted simulators, base cache directories, and screenshots subdirectories. Enhanced PNG file pattern matching to find screenshots with various naming patterns.
+
+### The Problem
+**User Request**: "Run stopped, logs updated, analyse log, make fixes to get screenshots working. Commit those changes, push them to the remote repository, and trigger a new run. Delete the .pipeline_needs_analysis file."
+
+**Key Issues Identified**:
+1. Screenshot extraction was only checking simulators matching exact device name
+2. Not checking base cache directory, only screenshots subdirectory
+3. PNG file pattern matching was too restrictive
+4. Extraction stopped after first cache directory check, even if insufficient screenshots found
+
+### Implementation Details
+
+#### 1. Improved Simulator Cache Directory Detection
+**File**: `fastlane/Fastfile` - `screenshots_framed` lane
+
+**Changes**:
+- **CRITICAL FIX**: Check ALL booted simulators, not just the one matching device name
+- In CI, simulators might be booted with different names or UUIDs
+- Added check for booted simulators and their cache directories
+- Check both exact match and partial match for device names
+- Added base cache directory check in addition to screenshots subdirectory
+
+**Impact**: Screenshots are now found even if simulator name doesn't match exactly or if screenshots are saved to base cache directory.
+
+#### 2. Enhanced PNG File Pattern Matching
+**File**: `fastlane/Fastfile` - `screenshots_framed` lane
+
+**Changes**:
+- Check for ALL PNG files first (most reliable)
+- Added patterns for screenshot names directly (01-*, 02-*, etc.)
+- Improved case-insensitive matching
+- Check both base cache directory and screenshots subdirectory
+
+**Impact**: Screenshots are found regardless of naming pattern or location within cache directory.
+
+#### 3. Improved Extraction Logic
+**File**: `fastlane/Fastfile` - `screenshots_framed` lane
+
+**Changes**:
+- Continue searching cache directories until sufficient screenshots found (at least 5)
+- Check screenshots subdirectory when base cache directory is checked
+- Better error messages and diagnostics
+- Don't stop extraction after first cache directory if insufficient screenshots found
+
+**Impact**: More reliable screenshot extraction, especially in CI environments where cache directory location may vary.
+
+### Expected Results
+- Screenshots are reliably found and extracted from cache directories
+- Works even if simulator name doesn't match exactly
+- Handles screenshots saved to base cache directory or screenshots subdirectory
+- Better diagnostics help identify issues if screenshots still not found
+
+### Files Modified
+- `fastlane/Fastfile` - Enhanced screenshot extraction logic in `screenshots_framed` lane
+
+---
+
 ## 2025-11-11 - Pipeline Failure Analysis & Fast-Fail Optimizations 🔧 IN PROGRESS
 
 ### Summary

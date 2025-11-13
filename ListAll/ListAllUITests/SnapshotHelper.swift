@@ -524,17 +524,44 @@ open class Snapshot: NSObject {
             // Strategy 1: Check SIMULATOR_HOST_HOME (set by Fastlane)
             simulatorHostHome = ProcessInfo().environment["SIMULATOR_HOST_HOME"]
             
-            // Strategy 2: Check HOME environment variable
+            // Strategy 2: Read from cache file (workaround for test_without_building not passing env vars)
+            // Try multiple possible cache locations to find the file
+            if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
+                let possibleCacheDirs = [
+                    URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches/tools.fastlane"),
+                    URL(fileURLWithPath: "/Users/runner/Library/Caches/tools.fastlane"),
+                    URL(fileURLWithPath: ProcessInfo().environment["HOME"] ?? "").appendingPathComponent("Library/Caches/tools.fastlane"),
+                    URL(fileURLWithPath: "/tmp/tools.fastlane")
+                ]
+                
+                for cacheDir in possibleCacheDirs {
+                    let hostHomeFile = cacheDir.appendingPathComponent("simulator_host_home.txt")
+                    if FileManager.default.fileExists(atPath: hostHomeFile.path) {
+                        do {
+                            let hostHomePath = try String(contentsOf: hostHomeFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !hostHomePath.isEmpty && FileManager.default.fileExists(atPath: hostHomePath) {
+                                simulatorHostHome = hostHomePath
+                                NSLog("✅ Read SIMULATOR_HOST_HOME from file: \(hostHomePath)")
+                                break
+                            }
+                        } catch {
+                            // Continue to next strategy
+                        }
+                    }
+                }
+            }
+            
+            // Strategy 3: Check HOME environment variable
             if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
                 simulatorHostHome = ProcessInfo().environment["HOME"]
             }
             
-            // Strategy 3: Use NSHomeDirectory() (should always work in simulator)
+            // Strategy 4: Use NSHomeDirectory() (should always work in simulator)
             if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
                 simulatorHostHome = NSHomeDirectory()
             }
             
-            // Strategy 4: Last resort - use /Users/runner (common CI path) or /tmp
+            // Strategy 5: Last resort - use /Users/runner (common CI path) or /tmp
             if simulatorHostHome == nil || simulatorHostHome!.isEmpty {
                 simulatorHostHome = "/Users/runner"
                 // Verify it exists, if not use /tmp
