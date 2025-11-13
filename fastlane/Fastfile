@@ -560,45 +560,72 @@ platform :ios do
           File.write(simulator_host_home_file, simulator_host_home)
           UI.message("   ✅ Created simulator_host_home.txt: #{simulator_host_home}")
           
-          # CRITICAL FIX: Also create cache files in simulator's home directory
+          # CRITICAL FIX: Create cache files in simulator's home directory BEFORE snapshot runs
           # SnapshotHelper runs in the simulator and uses NSHomeDirectory() which returns the simulator's home
-          # We need to create the cache files there so SnapshotHelper can find them
-          # Note: Simulator may not be booted yet, but its data directory exists
+          # The simulator's data directory exists even when not booted, so we can create files there
+          # STABLE APPROACH: Create files before snapshot runs, in the simulator that will be used
+          # Fastlane snapshot will boot/create a simulator with the exact device name we specify
           begin
             simulator_info = `xcrun simctl list devices --json 2>&1`
             if $?.success?
               require 'json'
               sim_data = JSON.parse(simulator_info)
-              device_name = device.gsub(" ", "").gsub("-", "")
               
-              # Find simulators matching our device (booted or not - data directory exists either way)
+              # Find the simulator that matches our device name exactly (Fastlane snapshot uses exact name)
+              # Priority: 1) Exact name match, 2) Booted simulator with matching name, 3) Any matching simulator
+              target_sim = nil
+              
               sim_data['devices'].each do |runtime, devices|
                 devices.each do |sim|
-                  if (sim['name'] == device || sim['name'].include?(device_name) || sim['name'].gsub(/[^a-zA-Z0-9]/, "") == device_name) && sim['dataPath']
-                    sim_cache_dir = File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
-                    begin
-                      FileUtils.mkdir_p(sim_cache_dir) unless Dir.exist?(sim_cache_dir)
-                      
-                      # Create all cache files in simulator's cache directory
-                      sim_language_file = File.join(sim_cache_dir, "language.txt")
-                      sim_locale_file = File.join(sim_cache_dir, "locale.txt")
-                      sim_launch_args_file = File.join(sim_cache_dir, "snapshot-launch_arguments.txt")
-                      sim_device_name_file = File.join(sim_cache_dir, "device_name.txt")
-                      sim_host_home_file = File.join(sim_cache_dir, "simulator_host_home.txt")
-                      
-                      File.write(sim_language_file, language_code)
-                      File.write(sim_locale_file, locale)
-                      File.write(sim_launch_args_file, "") unless File.exist?(sim_launch_args_file)
-                      File.write(sim_device_name_file, device_name_sanitized)
-                      File.write(sim_host_home_file, simulator_host_home)
-                      
-                      UI.message("   ✅ Created cache files in simulator directory: #{sim_cache_dir}")
-                      break
-                    rescue => e
-                      UI.message("   ⚠️  Could not create cache files in simulator directory #{sim_cache_dir}: #{e.message}")
-                    end
+                  if sim['name'] == device && sim['dataPath']
+                    # Exact match - this is the simulator Fastlane will use
+                    target_sim = sim
+                    break
                   end
                 end
+                break if target_sim
+              end
+              
+              # If no exact match, try to find booted simulator (snapshot might have already booted it)
+              if !target_sim
+                sim_data['devices'].each do |runtime, devices|
+                  devices.each do |sim|
+                    if sim['name'] == device && sim['state'] == 'Booted' && sim['dataPath']
+                      target_sim = sim
+                      break
+                    end
+                  end
+                  break if target_sim
+                end
+              end
+              
+              if target_sim && target_sim['dataPath']
+                sim_cache_dir = File.join(target_sim['dataPath'], "Library/Caches/tools.fastlane")
+                begin
+                  FileUtils.mkdir_p(sim_cache_dir) unless Dir.exist?(sim_cache_dir)
+                  
+                  # Create all cache files in simulator's cache directory
+                  sim_language_file = File.join(sim_cache_dir, "language.txt")
+                  sim_locale_file = File.join(sim_cache_dir, "locale.txt")
+                  sim_launch_args_file = File.join(sim_cache_dir, "snapshot-launch_arguments.txt")
+                  sim_device_name_file = File.join(sim_cache_dir, "device_name.txt")
+                  sim_host_home_file = File.join(sim_cache_dir, "simulator_host_home.txt")
+                  
+                  File.write(sim_language_file, language_code)
+                  File.write(sim_locale_file, locale)
+                  File.write(sim_launch_args_file, "") unless File.exist?(sim_launch_args_file)
+                  File.write(sim_device_name_file, device_name_sanitized)
+                  File.write(sim_host_home_file, simulator_host_home)
+                  
+                  UI.message("   ✅ Created cache files in simulator directory: #{sim_cache_dir}")
+                  UI.message("   📱 Simulator: #{target_sim['name']} (#{target_sim['udid']})")
+                rescue => e
+                  UI.message("   ⚠️  Could not create cache files in simulator directory #{sim_cache_dir}: #{e.message}")
+                end
+              else
+                UI.message("   ⚠️  Could not find simulator '#{device}' - cache files will be created when simulator is booted")
+                # Note: SnapshotHelper will try to create cache directory if it doesn't exist, but may fail
+                # This is acceptable - the file-based approach is a workaround, not required
               end
             end
           rescue => e
