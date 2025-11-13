@@ -418,7 +418,8 @@ platform :ios do
     setup_ci if ENV['CI']
     
     # Shared derived data path for prebuild and snapshot
-    derived = "./fastlane/derivedDataSnapshot"
+    # CRITICAL: Use absolute path for derived data to ensure xcresult bundle extraction works
+    derived = File.expand_path("./fastlane/derivedDataSnapshot")
     
     # 0. ONE-TIME BUILD-FOR-TESTING
     # Build once, then snapshot reuses these compiled products for all devices/languages
@@ -1082,8 +1083,11 @@ platform :ios do
         UI.message("   🔍 DIAGNOSTICS: Checking xcresult bundle for test activity logs...")
         begin
           # Find the most recent xcresult bundle in derived data
-          if derived && Dir.exist?(derived)
-            test_logs_dir = File.join(derived, "Logs/Test")
+          # CRITICAL: Ensure derived path is absolute
+          derived_absolute = derived ? File.expand_path(derived) : nil
+          UI.message("   🔍 Derived data path: #{derived_absolute}")
+          if derived_absolute && Dir.exist?(derived_absolute)
+            test_logs_dir = File.join(derived_absolute, "Logs/Test")
             UI.message("   🔍 Checking test logs directory: #{test_logs_dir}")
             if Dir.exist?(test_logs_dir)
               xcresult_bundles = Dir.glob(File.join(test_logs_dir, "*.xcresult")).sort_by { |f| File.mtime(f) }
@@ -1158,7 +1162,38 @@ platform :ios do
               UI.message("   ⚠️  Test logs directory does not exist: #{test_logs_dir}")
             end
           else
-            UI.message("   ⚠️  Derived data directory does not exist: #{derived}")
+            UI.message("   ⚠️  Derived data directory does not exist: #{derived_absolute}")
+            # Try to find xcresult bundles in common locations as fallback
+            UI.message("   🔍 Trying fallback locations for xcresult bundles...")
+            fallback_paths = [
+              File.expand_path("./fastlane/derivedDataSnapshot/Logs/Test"),
+              File.expand_path("~/Library/Developer/Xcode/DerivedData"),
+              File.join(Dir.pwd, "fastlane/derivedDataSnapshot/Logs/Test")
+            ]
+            fallback_paths.each do |fallback_path|
+              if Dir.exist?(fallback_path)
+                UI.message("   🔍 Checking fallback path: #{fallback_path}")
+                xcresult_bundles = Dir.glob(File.join(fallback_path, "**", "*.xcresult")).sort_by { |f| File.mtime(f) }
+                if xcresult_bundles.any?
+                  UI.message("   ✅ Found #{xcresult_bundles.count} xcresult bundle(s) in fallback location")
+                  latest_bundle = xcresult_bundles.last
+                  UI.message("   🔍 Using fallback xcresult bundle: #{latest_bundle}")
+                  # Try to extract from this bundle (same extraction code as above)
+                  begin
+                    summary_output = `xcrun xcresulttool get test-results summary --path "#{latest_bundle}" --format json 2>&1`
+                    if $?.success? && summary_output && !summary_output.empty?
+                      require 'json'
+                      summary_data = JSON.parse(summary_output)
+                      UI.message("   ✅ Successfully extracted test summary from fallback xcresult bundle")
+                      # Continue with extraction...
+                    end
+                  rescue => e
+                    UI.message("   ⚠️  Could not extract from fallback bundle: #{e.message}")
+                  end
+                  break
+                end
+              end
+            end
           end
         rescue => e
           UI.message("   ⚠️  Could not check xcresult bundle for test logs: #{e.message}")
