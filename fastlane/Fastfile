@@ -2420,25 +2420,56 @@ platform :ios do
           UI.message("   ⚠️  No cache directories found in any expected location")
         end
         
-        # Method 4: Targeted search as last resort (if screenshots still not found)
-        # PERFORMANCE FIX: Skip expensive recursive search - it was taking 30+ seconds per run
-        # and only finding app icons, not real screenshots. Only search in specific locations.
+        # Method 4: Recursive search as last resort (if screenshots still not found)
         if extracted_count == 0
-          UI.message("   ⚠️  Performing targeted search for screenshots (skipping expensive recursive search)...")
+          UI.message("   🔍 Performing recursive search for screenshots...")
           
-          # Only search in very specific, targeted locations (not entire home directory)
+          # Define reasonable search roots (don't search entire filesystem)
           search_roots = []
           
-          # Search in workspace directory (where screenshots should be)
-          workspace_root = File.expand_path(".")
-          search_roots << workspace_root
+          # Search in home directory
+          if ENV['HOME']
+            search_roots << ENV['HOME']
+          end
+          search_roots << Dir.home
           
           # Search in derived data
           if derived && Dir.exist?(derived)
             search_roots << derived
           end
           
-          # Fastlane screenshots output directory (might have been created elsewhere)
+          # Search in simulator directories
+          simulator_base = File.expand_path("~/Library/Developer/CoreSimulator/Devices")
+          if Dir.exist?(simulator_base)
+            search_roots << simulator_base
+          end
+          
+          # Search in workspace directory
+          workspace_root = File.expand_path(".")
+          search_roots << workspace_root
+          
+          # Research-based additional search locations:
+          # 1. Default Xcode Derived Data (if different from custom derived path)
+          default_derived_data = File.expand_path("~/Library/Developer/Xcode/DerivedData")
+          if Dir.exist?(default_derived_data) && default_derived_data != derived
+            search_roots << default_derived_data
+          end
+          
+          # 2. Xcode logs directory
+          xcode_logs = File.expand_path("~/Library/Logs")
+          if Dir.exist?(xcode_logs)
+            search_roots << xcode_logs
+          end
+          
+          # 3. Temporary directories (screenshots might be in temp locations)
+          if ENV['TMPDIR']
+            search_roots << ENV['TMPDIR']
+          end
+          if ENV['TMP']
+            search_roots << ENV['TMP']
+          end
+          
+          # 4. Fastlane screenshots output directory (might have been created elsewhere)
           fastlane_screenshots_base = File.expand_path("./fastlane/screenshots")
           if Dir.exist?(fastlane_screenshots_base)
             search_roots << fastlane_screenshots_base
@@ -2531,19 +2562,14 @@ platform :ios do
         end
         
         # Method 5: Recursive search for debug logs
-        # PERFORMANCE FIX: Limit debug log search to specific locations only
-        UI.message("   🔍 Searching for debug logs in targeted locations...")
+        UI.message("   🔍 Performing recursive search for debug logs...")
         log_search_roots = []
-        # Only search in workspace and derived data (not entire home directory)
-        workspace_root = File.expand_path(".")
-        log_search_roots << workspace_root
+        if ENV['HOME']
+          log_search_roots << ENV['HOME']
+        end
+        log_search_roots << Dir.home
         if derived && Dir.exist?(derived)
           log_search_roots << derived
-        end
-        # Also check the explicit log path we set
-        explicit_log_path = File.expand_path("~/Library/Logs/snapshot")
-        if Dir.exist?(explicit_log_path)
-          log_search_roots << explicit_log_path
         end
         
         found_logs = []
