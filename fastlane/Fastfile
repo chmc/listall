@@ -419,7 +419,9 @@ platform :ios do
     
     # Shared derived data path for prebuild and snapshot
     # CRITICAL: Use absolute path for derived data to ensure xcresult bundle extraction works
-    derived = File.expand_path("./fastlane/derivedDataSnapshot")
+    # Use Dir.pwd to get project root (not fastlane directory)
+    project_root = File.expand_path("..", __dir__)
+    derived = File.join(project_root, "fastlane", "derivedDataSnapshot")
     
     # 0. ONE-TIME BUILD-FOR-TESTING
     # Build once, then snapshot reuses these compiled products for all devices/languages
@@ -1081,6 +1083,48 @@ platform :ios do
         # xcodebuild still creates an xcresult bundle even when result_bundle: false
         # This can contain NSLog() output that isn't in the main log file
         UI.message("   🔍 DIAGNOSTICS: Checking xcresult bundle for test activity logs...")
+        
+        # Helper function to recursively extract test activities
+        extract_test_activities = lambda do |test_node, depth = 0|
+          activities_found = []
+          
+          # Check if this node has activities
+          if test_node['activities'] && test_node['activities'].is_a?(Array)
+            test_node['activities'].each do |activity|
+              if activity['messages'] && activity['messages'].is_a?(Array)
+                activity['messages'].each do |message|
+                  if message['message'] && message['message']['values']
+                    message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
+                    activities_found << message_text
+                  end
+                end
+              end
+              # Also check subactivities recursively
+              if activity['subactivities'] && activity['subactivities'].is_a?(Array)
+                activity['subactivities'].each do |subactivity|
+                  if subactivity['messages'] && subactivity['messages'].is_a?(Array)
+                    subactivity['messages'].each do |message|
+                      if message['message'] && message['message']['values']
+                        message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
+                        activities_found << message_text
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+          
+          # Recursively check nested testNodes
+          if test_node['testNodes'] && test_node['testNodes'].is_a?(Array)
+            test_node['testNodes'].each do |nested_node|
+              activities_found.concat(extract_test_activities.call(nested_node, depth + 1))
+            end
+          end
+          
+          activities_found
+        end
+        
         begin
           # Find the most recent xcresult bundle in derived data
           # CRITICAL: Ensure derived path is absolute
@@ -1113,35 +1157,43 @@ platform :ios do
                       UI.message("   ✅ Found test details in xcresult bundle")
                       
                       # Look for NSLog/print output in test activities
-                      if tests_data['tests'] && tests_data['tests'].is_a?(Array)
-                        UI.message("   📋 Processing #{tests_data['tests'].count} test(s)...")
-                        tests_data['tests'].each do |test|
-                          test_name = test['identifier'] || test['name'] || "Unknown"
+                      # CRITICAL: The JSON structure uses 'testNodes' not 'tests', and may be nested
+                      test_nodes = tests_data['testNodes'] || tests_data['tests'] || []
+                      if test_nodes.is_a?(Array) && test_nodes.any?
+                        UI.message("   📋 Processing #{test_nodes.count} test node(s)...")
+                        all_activities = []
+                        test_nodes.each do |test_node|
+                          test_name = test_node['identifier'] || test_node['name'] || test_node['testCaseName'] || "Unknown"
                           UI.message("   📋 Test: #{test_name}")
-                          
-                          # Check for activities with messages
-                          if test['activities'] && test['activities'].is_a?(Array)
-                            UI.message("     🔍 Found #{test['activities'].count} activities for this test")
-                            test['activities'].each do |activity|
-                              if activity['messages'] && activity['messages'].is_a?(Array)
-                                UI.message("       📝 Found #{activity['messages'].count} message(s) in activity")
-                                activity['messages'].each do |message|
-                                  if message['message'] && message['message']['values']
-                                    message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
-                                    # Look for our diagnostic messages
-                                    if message_text.include?('🔧') || message_text.include?('🚀') || message_text.include?('📸') || message_text.include?('setUpWithError') || message_text.include?('launchAppForScreenshot') || message_text.include?('setupSnapshot') || message_text.include?('snapshot:')
-                                      UI.message("     ✅ Found diagnostic log: #{message_text[0..300]}")
-                                    end
-                                  end
-                                end
-                              end
-                            end
-                          else
-                            UI.message("     ⚠️  No activities found for this test")
+                          activities = extract_test_activities.call(test_node)
+                          all_activities.concat(activities)
+                          if activities.any?
+                            UI.message("     ✅ Found #{activities.count} log message(s) in this test")
+                          end
+                        end
+                        
+                        # Look for diagnostic messages
+                        diagnostic_messages = all_activities.select { |msg| 
+                          msg.include?('🔧') || msg.include?('🚀') || msg.include?('📸') || 
+                          msg.include?('setUpWithError') || msg.include?('launchAppForScreenshot') || 
+                          msg.include?('setupSnapshot') || msg.include?('snapshot:')
+                        }
+                        
+                        if diagnostic_messages.any?
+                          UI.message("   ✅ Found #{diagnostic_messages.count} diagnostic message(s):")
+                          diagnostic_messages.first(10).each do |msg|
+                            UI.message("     📝 #{msg[0..200]}")
+                          end
+                        else
+                          UI.message("   ⚠️  No diagnostic messages found in test activities")
+                          if all_activities.any?
+                            UI.message("   📝 Sample messages found (first 5):")
+                            all_activities.first(5).each { |msg| UI.message("     #{msg[0..150]}") }
                           end
                         end
                       else
-                        UI.message("   ⚠️  No tests array found in test details")
+                        UI.message("   ⚠️  No test nodes found in test details")
+                        UI.message("   📋 Available keys: #{tests_data.keys.join(', ')}")
                       end
                     else
                       UI.message("   ⚠️  Could not get test details (exit code: #{$?.exitstatus})")
