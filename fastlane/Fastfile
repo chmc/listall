@@ -1079,15 +1079,18 @@ platform :ios do
         # CRITICAL: Try to extract test output from xcresult bundle even when result_bundle: false
         # xcodebuild still creates an xcresult bundle even when result_bundle: false
         # This can contain NSLog() output that isn't in the main log file
+        UI.message("   🔍 DIAGNOSTICS: Checking xcresult bundle for test activity logs...")
         begin
           # Find the most recent xcresult bundle in derived data
           if derived && Dir.exist?(derived)
             test_logs_dir = File.join(derived, "Logs/Test")
+            UI.message("   🔍 Checking test logs directory: #{test_logs_dir}")
             if Dir.exist?(test_logs_dir)
               xcresult_bundles = Dir.glob(File.join(test_logs_dir, "*.xcresult")).sort_by { |f| File.mtime(f) }
+              UI.message("   🔍 Found #{xcresult_bundles.count} xcresult bundle(s)")
               if xcresult_bundles.any?
                 latest_bundle = xcresult_bundles.last
-                UI.message("   🔍 Found xcresult bundle: #{latest_bundle}")
+                UI.message("   🔍 Using most recent xcresult bundle: #{latest_bundle}")
                 UI.message("   🔍 Attempting to extract test activity logs from xcresult bundle...")
                 
                 # Try to extract test activity logs using xcresulttool
@@ -1107,38 +1110,59 @@ platform :ios do
                       
                       # Look for NSLog/print output in test activities
                       if tests_data['tests'] && tests_data['tests'].is_a?(Array)
+                        UI.message("   📋 Processing #{tests_data['tests'].count} test(s)...")
                         tests_data['tests'].each do |test|
                           test_name = test['identifier'] || test['name'] || "Unknown"
                           UI.message("   📋 Test: #{test_name}")
                           
                           # Check for activities with messages
                           if test['activities'] && test['activities'].is_a?(Array)
+                            UI.message("     🔍 Found #{test['activities'].count} activities for this test")
                             test['activities'].each do |activity|
                               if activity['messages'] && activity['messages'].is_a?(Array)
+                                UI.message("       📝 Found #{activity['messages'].count} message(s) in activity")
                                 activity['messages'].each do |message|
                                   if message['message'] && message['message']['values']
                                     message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
                                     # Look for our diagnostic messages
-                                    if message_text.include?('🔧') || message_text.include?('🚀') || message_text.include?('📸') || message_text.include?('setUpWithError') || message_text.include?('launchAppForScreenshot')
-                                      UI.message("     ✅ Found diagnostic log: #{message_text[0..200]}")
+                                    if message_text.include?('🔧') || message_text.include?('🚀') || message_text.include?('📸') || message_text.include?('setUpWithError') || message_text.include?('launchAppForScreenshot') || message_text.include?('setupSnapshot') || message_text.include?('snapshot:')
+                                      UI.message("     ✅ Found diagnostic log: #{message_text[0..300]}")
                                     end
                                   end
                                 end
                               end
                             end
+                          else
+                            UI.message("     ⚠️  No activities found for this test")
                           end
                         end
+                      else
+                        UI.message("   ⚠️  No tests array found in test details")
                       end
+                    else
+                      UI.message("   ⚠️  Could not get test details (exit code: #{$?.exitstatus})")
+                      UI.message("   ⚠️  Output: #{tests_output[0..500] if tests_output}")
                     end
+                  else
+                    UI.message("   ⚠️  Could not get test summary (exit code: #{$?.exitstatus})")
+                    UI.message("   ⚠️  Output: #{summary_output[0..500] if summary_output}")
                   end
                 rescue => e
                   UI.message("   ⚠️  Could not extract test logs from xcresult bundle: #{e.message}")
+                  UI.message("   ⚠️  Backtrace: #{e.backtrace.first(3).join(', ')}")
                 end
+              else
+                UI.message("   ⚠️  No xcresult bundles found in test logs directory")
               end
+            else
+              UI.message("   ⚠️  Test logs directory does not exist: #{test_logs_dir}")
             end
+          else
+            UI.message("   ⚠️  Derived data directory does not exist: #{derived}")
           end
         rescue => e
           UI.message("   ⚠️  Could not check xcresult bundle for test logs: #{e.message}")
+          UI.message("   ⚠️  Backtrace: #{e.backtrace.first(3).join(', ')}")
         end
         
         # Method 2a: Check for SnapshotHelper debug log file and marker files

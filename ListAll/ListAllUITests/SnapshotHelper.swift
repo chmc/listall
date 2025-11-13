@@ -130,6 +130,19 @@ open class Snapshot: NSObject {
             setLanguage(app)
             setLocale(app)
             setLaunchArguments(app)
+            
+            // CRITICAL: Write marker file to verify setupSnapshot() completed
+            let markerPath = cacheDir.appendingPathComponent("setupSnapshot_completed.txt")
+            let markerContent = "setupSnapshot() completed at \(Date())\nCache directory: \(cacheDir.path)\nScreenshots directory: \(screenshotsDirectory?.path ?? "nil")"
+            do {
+                try markerContent.write(to: markerPath, atomically: true, encoding: .utf8)
+                NSLog("✅ Created setupSnapshot completion marker: \(markerPath.path)")
+                print("✅ Created setupSnapshot completion marker: \(markerPath.path)")
+            } catch {
+                NSLog("⚠️ Could not write setupSnapshot marker: \(error.localizedDescription)")
+                print("⚠️ Could not write setupSnapshot marker: \(error.localizedDescription)")
+            }
+            
             let successMsg = "✅ setupSnapshot() completed successfully"
             NSLog(successMsg)
             print(successMsg)
