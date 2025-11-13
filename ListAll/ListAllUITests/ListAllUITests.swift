@@ -57,23 +57,29 @@ final class ListAllUITests: XCTestCase {
     // Helper: Launch app specifically for screenshot with custom arguments
     // CRITICAL: setupSnapshot() must be called AFTER setting launch arguments but BEFORE launching
     private func launchAppForScreenshot(skipTestData: Bool = false) {
-        // CRITICAL LOGGING: Verify this function is being called
-        print("🚀 ========================================")
-        print("🚀 launchAppForScreenshot() CALLED")
-        print("🚀 ========================================")
-        print("🚀 Timestamp: \(Date())")
-        print("🚀 skipTestData: \(skipTestData)")
-        print("🚀 App state: \(app.state.rawValue)")
+        // CRITICAL LOGGING: Use NSLog() instead of print() - print() may not be captured with test_without_building
+        // NSLog() is more reliably captured in xcodebuild logs
+        NSLog("🚀 ========================================")
+        NSLog("🚀 launchAppForScreenshot() CALLED")
+        NSLog("🚀 ========================================")
+        NSLog("🚀 Timestamp: \(Date())")
+        NSLog("🚀 skipTestData: \(skipTestData)")
+        NSLog("🚀 App state: \(app.state.rawValue)")
         
         // CRITICAL: Verify environment variables are being passed to the test process
         let env = ProcessInfo.processInfo.environment
-        print("🚀 ENVIRONMENT VARIABLES VERIFICATION:")
-        print("🚀   FASTLANE_SNAPSHOT: \(env["FASTLANE_SNAPSHOT"] ?? "❌ NOT SET")")
-        print("🚀   FASTLANE_LANGUAGE: \(env["FASTLANE_LANGUAGE"] ?? "❌ NOT SET")")
-        print("🚀   SIMULATOR_HOST_HOME: \(env["SIMULATOR_HOST_HOME"] ?? "❌ NOT SET")")
-        print("🚀   SIMULATOR_DEVICE_NAME: \(env["SIMULATOR_DEVICE_NAME"] ?? "❌ NOT SET")")
-        print("🚀   HOME: \(env["HOME"] ?? "❌ NOT SET")")
-        print("🚀   NSHomeDirectory(): \(NSHomeDirectory())")
+        NSLog("🚀 ENVIRONMENT VARIABLES VERIFICATION:")
+        NSLog("🚀   FASTLANE_SNAPSHOT: \(env["FASTLANE_SNAPSHOT"] ?? "❌ NOT SET")")
+        NSLog("🚀   FASTLANE_LANGUAGE: \(env["FASTLANE_LANGUAGE"] ?? "❌ NOT SET")")
+        NSLog("🚀   SIMULATOR_HOST_HOME: \(env["SIMULATOR_HOST_HOME"] ?? "❌ NOT SET")")
+        NSLog("🚀   SIMULATOR_DEVICE_NAME: \(env["SIMULATOR_DEVICE_NAME"] ?? "❌ NOT SET")")
+        NSLog("🚀   HOME: \(env["HOME"] ?? "❌ NOT SET")")
+        NSLog("🚀   NSHomeDirectory(): \(NSHomeDirectory())")
+        
+        // Also use print() as fallback
+        print("🚀 ========================================")
+        print("🚀 launchAppForScreenshot() CALLED")
+        print("🚀 ========================================")
         
         // CRITICAL DIAGNOSTICS: Write environment variables to multiple locations for debugging
         // This helps verify if environment variables are being passed to the test process
@@ -131,6 +137,9 @@ final class ListAllUITests: XCTestCase {
         // This allows SnapshotHelper to read Fastlane's cache files and add snapshot-specific arguments
         // Note: SnapshotHelper has fallback logic to use HOME or NSHomeDirectory() if SIMULATOR_HOST_HOME isn't set
         
+        // CRITICAL: Use NSLog() for better log capture with test_without_building
+        NSLog("🔍 DEBUG: About to call setupSnapshot()")
+        NSLog("🔍 DEBUG: App instance: \(String(describing: app))")
         print("🔍 DEBUG: About to call setupSnapshot()")
         print("🔍 DEBUG: App instance: \(String(describing: app))")
         
@@ -138,14 +147,18 @@ final class ListAllUITests: XCTestCase {
         let preSetupMarker = (cacheDir as NSString).appendingPathComponent("pre_setupSnapshot_marker.txt")
         do {
             try "About to call setupSnapshot() at \(Date())".write(toFile: preSetupMarker, atomically: true, encoding: .utf8)
+            NSLog("✅ Created pre_setupSnapshot_marker.txt at: \(preSetupMarker)")
             print("✅ Created pre_setupSnapshot_marker.txt at: \(preSetupMarker)")
         } catch {
+            NSLog("❌ ERROR: Failed to create pre_setupSnapshot_marker.txt: \(error)")
             print("❌ ERROR: Failed to create pre_setupSnapshot_marker.txt: \(error)")
         }
         
         // CRITICAL: Call setupSnapshot() - note: it doesn't throw, but we verify it worked
+        NSLog("🔍 Calling setupSnapshot(app)...")
         print("🔍 Calling setupSnapshot(app)...")
         setupSnapshot(app)
+        NSLog("✅ setupSnapshot(app) completed")
         print("✅ setupSnapshot(app) completed")
         
         // CRITICAL: Verify setupSnapshot() actually worked by checking if it set up the snapshot helper
@@ -665,15 +678,20 @@ final class ListAllUITests: XCTestCase {
     func testScreenshots01_WelcomeScreen() throws {
         // Special test that launches WITHOUT test data to show empty state
         // Uses the shared app instance to avoid redundant launch
+        // CRITICAL: Use NSLog() for better log capture with test_without_building
+        NSLog("📸 ========================================")
+        NSLog("📸 testScreenshots01_WelcomeScreen() STARTING")
+        NSLog("📸 ========================================")
+        NSLog("📸 Timestamp: \(Date())")
+        NSLog("📸 Test method: testScreenshots01_WelcomeScreen")
+        NSLog("📸 About to call launchAppForScreenshot(skipTestData: true)")
         print("📸 ========================================")
         print("📸 testScreenshots01_WelcomeScreen() STARTING")
         print("📸 ========================================")
-        print("📸 Timestamp: \(Date())")
-        print("📸 Test method: testScreenshots01_WelcomeScreen")
-        print("📸 About to call launchAppForScreenshot(skipTestData: true)")
         
         launchAppForScreenshot(skipTestData: true)
         
+        NSLog("📸 launchAppForScreenshot() completed")
         print("📸 launchAppForScreenshot() completed")
         
         print("🔍 DEBUG: App launched, waiting 2 seconds")
@@ -728,15 +746,20 @@ final class ListAllUITests: XCTestCase {
     func testScreenshots02_MainFlow() throws {
         // End-to-end EN screenshots for iPhone/iPad using deterministic data
         // Assumes Fastlane Snapshot sets language to en-US for this run
+        // CRITICAL: Use NSLog() for better log capture with test_without_building
+        NSLog("📸 ========================================")
+        NSLog("📸 testScreenshots02_MainFlow() STARTING")
+        NSLog("📸 ========================================")
+        NSLog("📸 Timestamp: \(Date())")
+        NSLog("📸 Test method: testScreenshots02_MainFlow")
+        NSLog("📸 About to call launchAppForScreenshot(skipTestData: false)")
         print("📸 ========================================")
         print("📸 testScreenshots02_MainFlow() STARTING")
         print("📸 ========================================")
-        print("📸 Timestamp: \(Date())")
-        print("📸 Test method: testScreenshots02_MainFlow")
-        print("📸 About to call launchAppForScreenshot(skipTestData: false)")
         
         launchAppForScreenshot(skipTestData: false)
         
+        NSLog("📸 launchAppForScreenshot() completed")
         print("📸 launchAppForScreenshot() completed")
         
         // Wait for app to fully load
