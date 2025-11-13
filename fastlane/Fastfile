@@ -1150,6 +1150,20 @@ platform :ios do
                     summary_data = JSON.parse(summary_output)
                     UI.message("   ✅ Successfully extracted test summary from xcresult bundle")
                     
+                    # Log test summary details
+                    if summary_data['testsRef'] || summary_data['testRefs']
+                        UI.message("   📊 Test summary structure: #{summary_data.keys.join(', ')}")
+                    end
+                    if summary_data['testsCount']
+                        UI.message("   📊 Total tests: #{summary_data['testsCount']}")
+                    end
+                    if summary_data['testsPassedCount']
+                        UI.message("   📊 Tests passed: #{summary_data['testsPassedCount']}")
+                    end
+                    if summary_data['testsFailedCount']
+                        UI.message("   📊 Tests failed: #{summary_data['testsFailedCount']}")
+                    end
+                    
                     # Try to get individual test details
                     tests_output = `xcrun xcresulttool get test-results tests --path "#{latest_bundle}" --format json 2>&1`
                     if $?.success? && tests_output && !tests_output.empty?
@@ -1162,9 +1176,30 @@ platform :ios do
                       if test_nodes.is_a?(Array) && test_nodes.any?
                         UI.message("   📋 Processing #{test_nodes.count} test node(s)...")
                         all_activities = []
+                        
+                        # Helper to recursively log test node structure
+                        log_test_node_structure = lambda do |node, indent = "  "|
+                          node_name = node['identifier'] || node['name'] || node['testCaseName'] || "Unknown"
+                          node_type = node['testStatus'] || node['type'] || "unknown"
+                          UI.message("#{indent}📋 #{node_name} (#{node_type})")
+                          
+                          # Log nested testNodes
+                          if node['testNodes'] && node['testNodes'].is_a?(Array) && node['testNodes'].any?
+                            UI.message("#{indent}  └─ Found #{node['testNodes'].count} nested test node(s)")
+                            node['testNodes'].each do |nested|
+                              log_test_node_structure.call(nested, indent + "  ")
+                            end
+                          end
+                          
+                          # Log activities count
+                          if node['activities'] && node['activities'].is_a?(Array)
+                            UI.message("#{indent}  └─ Found #{node['activities'].count} activit(ies)")
+                          end
+                        end
+                        
                         test_nodes.each do |test_node|
+                          log_test_node_structure.call(test_node)
                           test_name = test_node['identifier'] || test_node['name'] || test_node['testCaseName'] || "Unknown"
-                          UI.message("   📋 Test: #{test_name}")
                           activities = extract_test_activities.call(test_node)
                           all_activities.concat(activities)
                           if activities.any?
