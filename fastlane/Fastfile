@@ -638,13 +638,18 @@ platform :ios do
         # Environment variables are passed automatically via Ruby ENV above
         existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
         
+        # CRITICAL FIX: Remove only_testing when using test_without_building
+        # When using test_without_building, xcodebuild may not correctly match test identifiers
+        # from the pre-built test bundle. Instead, let it discover all tests and filter via skip_testing.
+        # The test methods will still run because they're the only ones in the test bundle.
         snapshot(
           derived_data_path: derived,
           test_without_building: true,
           devices: [device],
           languages: [locale],
           clear_previous_screenshots: is_first,  # Only clear on first run
-          only_testing: ["ListAllUITests/testScreenshots01_WelcomeScreen", "ListAllUITests/testScreenshots02_MainFlow"],
+          # REMOVED: only_testing - causes 0 tests to run with test_without_building
+          # The test bundle only contains the screenshot tests anyway (ListAllTests is skipped)
           skip_testing: ["ListAllTests"],
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
