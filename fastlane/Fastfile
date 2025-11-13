@@ -2562,14 +2562,19 @@ platform :ios do
         end
         
         # Method 5: Recursive search for debug logs
-        UI.message("   🔍 Performing recursive search for debug logs...")
+        # PERFORMANCE FIX: Limit debug log search to specific locations only
+        UI.message("   🔍 Searching for debug logs in targeted locations...")
         log_search_roots = []
-        if ENV['HOME']
-          log_search_roots << ENV['HOME']
-        end
-        log_search_roots << Dir.home
+        # Only search in workspace and derived data (not entire home directory)
+        workspace_root = File.expand_path(".")
+        log_search_roots << workspace_root
         if derived && Dir.exist?(derived)
           log_search_roots << derived
+        end
+        # Also check the explicit log path we set
+        explicit_log_path = File.expand_path("~/Library/Logs/snapshot")
+        if Dir.exist?(explicit_log_path)
+          log_search_roots << explicit_log_path
         end
         
         found_logs = []
