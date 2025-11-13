@@ -560,6 +560,51 @@ platform :ios do
           File.write(simulator_host_home_file, simulator_host_home)
           UI.message("   ✅ Created simulator_host_home.txt: #{simulator_host_home}")
           
+          # CRITICAL FIX: Also create cache files in simulator's home directory
+          # SnapshotHelper runs in the simulator and uses NSHomeDirectory() which returns the simulator's home
+          # We need to create the cache files there so SnapshotHelper can find them
+          # Note: Simulator may not be booted yet, but its data directory exists
+          begin
+            simulator_info = `xcrun simctl list devices --json 2>&1`
+            if $?.success?
+              require 'json'
+              sim_data = JSON.parse(simulator_info)
+              device_name = device.gsub(" ", "").gsub("-", "")
+              
+              # Find simulators matching our device (booted or not - data directory exists either way)
+              sim_data['devices'].each do |runtime, devices|
+                devices.each do |sim|
+                  if (sim['name'] == device || sim['name'].include?(device_name) || sim['name'].gsub(/[^a-zA-Z0-9]/, "") == device_name) && sim['dataPath']
+                    sim_cache_dir = File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
+                    begin
+                      FileUtils.mkdir_p(sim_cache_dir) unless Dir.exist?(sim_cache_dir)
+                      
+                      # Create all cache files in simulator's cache directory
+                      sim_language_file = File.join(sim_cache_dir, "language.txt")
+                      sim_locale_file = File.join(sim_cache_dir, "locale.txt")
+                      sim_launch_args_file = File.join(sim_cache_dir, "snapshot-launch_arguments.txt")
+                      sim_device_name_file = File.join(sim_cache_dir, "device_name.txt")
+                      sim_host_home_file = File.join(sim_cache_dir, "simulator_host_home.txt")
+                      
+                      File.write(sim_language_file, language_code)
+                      File.write(sim_locale_file, locale)
+                      File.write(sim_launch_args_file, "") unless File.exist?(sim_launch_args_file)
+                      File.write(sim_device_name_file, device_name_sanitized)
+                      File.write(sim_host_home_file, simulator_host_home)
+                      
+                      UI.message("   ✅ Created cache files in simulator directory: #{sim_cache_dir}")
+                      break
+                    rescue => e
+                      UI.message("   ⚠️  Could not create cache files in simulator directory #{sim_cache_dir}: #{e.message}")
+                    end
+                  end
+                end
+              end
+            end
+          rescue => e
+            UI.message("   ⚠️  Could not find simulator to create cache files: #{e.message}")
+          end
+          
         rescue => e
           UI.error("   ❌ Failed to create cache files: #{e.message}")
         end
