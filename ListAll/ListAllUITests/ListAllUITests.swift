@@ -6,6 +6,15 @@ final class ListAllUITests: XCTestCase {
     var app: XCUIApplication!
 
     override func setUpWithError() throws {
+        // CRITICAL: Log immediately to verify setUpWithError() is being called
+        NSLog("🔧 ========================================")
+        NSLog("🔧 setUpWithError() CALLED")
+        NSLog("🔧 ========================================")
+        NSLog("🔧 Timestamp: \(Date())")
+        print("🔧 ========================================")
+        print("🔧 setUpWithError() CALLED")
+        print("🔧 ========================================")
+        
         // Put setup code here. This method is called before the invocation of each test method in the class.
 
         // In UI tests it is usually best to stop immediately when a failure occurs.
@@ -13,6 +22,8 @@ final class ListAllUITests: XCTestCase {
 
         // In UI tests it's important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
         app = XCUIApplication()
+        NSLog("🔧 Created XCUIApplication instance")
+        print("🔧 Created XCUIApplication instance")
         
         // Handle system alerts (notifications, privacy prompts) on fresh simulators
         // Critical for CI where simulator is erased before each run
@@ -32,17 +43,27 @@ final class ListAllUITests: XCTestCase {
         // Let individual screenshot tests manage their own launch with specific arguments
         // This avoids redundant launches and gives tests full control over app state
         let isSnapshotMode = ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES"
+        NSLog("🔧 FASTLANE_SNAPSHOT: \(isSnapshotMode ? "YES" : "NO")")
+        print("🔧 FASTLANE_SNAPSHOT: \(isSnapshotMode ? "YES" : "NO")")
         
         if !isSnapshotMode {
             // Normal test mode: setup snapshot and launch with standard test data
+            NSLog("🔧 Normal test mode - setting up snapshot and launching app")
+            print("🔧 Normal test mode - setting up snapshot and launching app")
             setupSnapshot(app)
             configureAppForNormalTests()
             ensurePortrait()
             app.launch()
             app.tap() // Trigger interruption monitor
+        } else {
+            NSLog("🔧 Snapshot mode - skipping auto-launch, will launch in test methods")
+            print("🔧 Snapshot mode - skipping auto-launch, will launch in test methods")
         }
         // If snapshot mode, setupSnapshot() will be called in launchAppForScreenshot()
         // after setting launch arguments but before launching
+        
+        NSLog("🔧 setUpWithError() completed")
+        print("🔧 setUpWithError() completed")
     }
     
     // Helper: Configure app for normal (non-screenshot) tests

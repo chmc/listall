@@ -1076,6 +1076,71 @@ platform :ios do
           end
         end
         
+        # CRITICAL: Try to extract test output from xcresult bundle even when result_bundle: false
+        # xcodebuild still creates an xcresult bundle even when result_bundle: false
+        # This can contain NSLog() output that isn't in the main log file
+        begin
+          # Find the most recent xcresult bundle in derived data
+          if derived && Dir.exist?(derived)
+            test_logs_dir = File.join(derived, "Logs/Test")
+            if Dir.exist?(test_logs_dir)
+              xcresult_bundles = Dir.glob(File.join(test_logs_dir, "*.xcresult")).sort_by { |f| File.mtime(f) }
+              if xcresult_bundles.any?
+                latest_bundle = xcresult_bundles.last
+                UI.message("   🔍 Found xcresult bundle: #{latest_bundle}")
+                UI.message("   🔍 Attempting to extract test activity logs from xcresult bundle...")
+                
+                # Try to extract test activity logs using xcresulttool
+                begin
+                  # Get test results summary
+                  summary_output = `xcrun xcresulttool get test-results summary --path "#{latest_bundle}" --format json 2>&1`
+                  if $?.success? && summary_output && !summary_output.empty?
+                    require 'json'
+                    summary_data = JSON.parse(summary_output)
+                    UI.message("   ✅ Successfully extracted test summary from xcresult bundle")
+                    
+                    # Try to get individual test details
+                    tests_output = `xcrun xcresulttool get test-results tests --path "#{latest_bundle}" --format json 2>&1`
+                    if $?.success? && tests_output && !tests_output.empty?
+                      tests_data = JSON.parse(tests_output)
+                      UI.message("   ✅ Found test details in xcresult bundle")
+                      
+                      # Look for NSLog/print output in test activities
+                      if tests_data['tests'] && tests_data['tests'].is_a?(Array)
+                        tests_data['tests'].each do |test|
+                          test_name = test['identifier'] || test['name'] || "Unknown"
+                          UI.message("   📋 Test: #{test_name}")
+                          
+                          # Check for activities with messages
+                          if test['activities'] && test['activities'].is_a?(Array)
+                            test['activities'].each do |activity|
+                              if activity['messages'] && activity['messages'].is_a?(Array)
+                                activity['messages'].each do |message|
+                                  if message['message'] && message['message']['values']
+                                    message_text = message['message']['values'].map { |v| v['text'] || v['value'] || '' }.join('')
+                                    # Look for our diagnostic messages
+                                    if message_text.include?('🔧') || message_text.include?('🚀') || message_text.include?('📸') || message_text.include?('setUpWithError') || message_text.include?('launchAppForScreenshot')
+                                      UI.message("     ✅ Found diagnostic log: #{message_text[0..200]}")
+                                    end
+                                  end
+                                end
+                              end
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
+                rescue => e
+                  UI.message("   ⚠️  Could not extract test logs from xcresult bundle: #{e.message}")
+                end
+              end
+            end
+          end
+        rescue => e
+          UI.message("   ⚠️  Could not check xcresult bundle for test logs: #{e.message}")
+        end
+        
         # Method 2a: Check for SnapshotHelper debug log file and marker files
         # SnapshotHelper writes a debug log file and marker files to verify snapshot() calls
         # CRITICAL: Check ALL possible cache directories, including simulator-specific ones
