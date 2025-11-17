@@ -70,9 +70,9 @@ number_of_retries(2)
 skip_testing(["ListAllTests"])
 
 # NOTE: only_testing and skip_testing are configured in Fastfile for better control
-# When using test_without_building, we use only_testing: ["ListAllUITests/ListAllUITests"] (CLASS-level)
-# This runs all tests in the ListAllUITests class but skips ListAllUITestsLaunchTests which hangs
-# Format: "TargetName/ClassName" works with test_without_building, method-level does not
+# Using method-level only_testing with full build+test (NOT test_without_building)
+# Format: "TargetName/ClassName/testMethodName" specifies exactly which 2 tests to run
+# This skips all other UI tests and the hanging ListAllUITestsLaunchTests
 
 # For more information about all available options run
 # fastlane action snapshot

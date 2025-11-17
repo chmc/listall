@@ -15,7 +15,7 @@ jobs:
   generate-screenshots:
     name: Generate Screenshots
     runs-on: macos-14
-    timeout-minutes: 45  # Reduced from 90 - should complete in ~20-30 minutes with fixes
+    timeout-minutes: 60  # Using full build+test approach (no prebuild optimization) takes ~40-50 minutes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

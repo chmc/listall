@@ -423,24 +423,12 @@ platform :ios do
     project_root = File.expand_path("..", __dir__)
     derived = File.join(project_root, "fastlane", "derivedDataSnapshot")
     
-    # 0. ONE-TIME BUILD-FOR-TESTING
-    # Build once, then snapshot reuses these compiled products for all devices/languages
-    # This prevents rebuilding 4x (2 devices × 2 languages), saving 10-15 minutes
-    UI.header("Building app and UI tests once for all snapshot runs")
-    scan(
-      scheme: "ListAll",
-      project: "./ListAll/ListAll.xcodeproj",
-      devices: ["iPhone 16 Pro Max"],  # Any device; we only need to populate DerivedData
-      clean: true,
-      build_for_testing: true,
-      # Note: build_for_testing and test_without_building are mutually exclusive
-      # build_for_testing means: build only, don't run tests
-      # We need to build UI tests for snapshot, so don't use skip_testing here
-      # Skip unit tests to speed up build (we only need UI tests for screenshots)
-      skip_testing: ["ListAllTests"],
-      derived_data_path: derived,
-      xcargs: "ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
-    )
+    # REMOVED: ONE-TIME BUILD-FOR-TESTING OPTIMIZATION
+    # Method-level only_testing does not work reliably with test_without_building - tests hang after "Testing started"
+    # Fallback approach: Let snapshot build and run tests for each device/locale combination
+    # This is slower (~40-50 minutes total vs ~20-30 with optimization) but more reliable
+    # Full build+test fully supports only_testing at method level
+    UI.header("Using full build+test approach for maximum reliability")
     
     # 1. Raw screenshots using pre-built products
     # Run snapshot per device/language combination for incremental verification
@@ -648,13 +636,13 @@ platform :ios do
         # Format: "TargetName" (not "TargetName/TestClass/testMethod")
         snapshot(
           derived_data_path: derived,
-          test_without_building: true,
           devices: [device],
           languages: [locale],
           clear_previous_screenshots: is_first,  # Only clear on first run
           # CRITICAL: Use method-level only_testing to run ONLY the screenshot tests
           # Format: "TargetName/ClassName/testMethodName"
           # This runs only the 2 screenshot test methods and skips all other tests
+          # This works reliably with full build+test (without test_without_building)
           only_testing: [
             "ListAllUITests/ListAllUITests/testScreenshots01_WelcomeScreen",
             "ListAllUITests/ListAllUITests/testScreenshots02_MainFlow"
@@ -664,7 +652,7 @@ platform :ios do
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
           xcargs: existing_xcargs,  # Only build settings, not environment variables
           # CRITICAL FIX: Use result_bundle: false to enable Fastlane log parsing for automatic screenshot extraction
-          # With xcodebuild_formatter: "" and NSUnbufferedIO=YES, log parsing works correctly with test_without_building
+          # With xcodebuild_formatter: "" and NSUnbufferedIO=YES, log parsing works correctly
           # Fastlane parses NSLog("snapshot: ...") entries from logs to automatically extract screenshots
           # Manual extraction code below provides fallback if automatic extraction fails
           result_bundle: false,
