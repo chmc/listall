@@ -703,8 +703,9 @@ final class ListAllUITests: XCTestCase {
     // MARK: - Screenshot Tests
     
     /// Screenshot 01: Welcome screen with empty state and template options
+    /// DISABLED: Replaced by ListAllUITests_Screenshots class
     @MainActor
-    func testScreenshots01_WelcomeScreen() throws {
+    func testScreenshots01_WelcomeScreen_OLD() throws {
         // Special test that launches WITHOUT test data to show empty state
         // Uses the shared app instance to avoid redundant launch
         // CRITICAL: Use NSLog() for better log capture with test_without_building
@@ -771,8 +772,9 @@ final class ListAllUITests: XCTestCase {
     }
     
     /// Screenshots 02-05: Main app flow with test data
+    /// DISABLED: Replaced by ListAllUITests_Screenshots class
     @MainActor
-    func testScreenshots02_MainFlow() throws {
+    func testScreenshots02_MainFlow_OLD() throws {
         // End-to-end EN screenshots for iPhone/iPad using deterministic data
         // Assumes Fastlane Snapshot sets language to en-US for this run
         // CRITICAL: Use NSLog() for better log capture with test_without_building
