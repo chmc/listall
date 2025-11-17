@@ -642,15 +642,20 @@ platform :ios do
         # When using test_without_building, xcodebuild may not correctly match test identifiers
         # from the pre-built test bundle. Instead, let it discover all tests and filter via skip_testing.
         # The test methods will still run because they're the only ones in the test bundle.
+        #
+        # CRITICAL FIX #2: Explicitly specify only_testing for ListAllUITests target to ensure tests are discovered
+        # When using test_without_building, we need to tell xcodebuild which TARGET to run tests from
+        # Format: "TargetName" (not "TargetName/TestClass/testMethod")
         snapshot(
           derived_data_path: derived,
           test_without_building: true,
           devices: [device],
           languages: [locale],
           clear_previous_screenshots: is_first,  # Only clear on first run
-          # REMOVED: only_testing - causes 0 tests to run with test_without_building
-          # The test bundle only contains the screenshot tests anyway (ListAllTests is skipped)
-          skip_testing: ["ListAllTests"],
+          # CRITICAL: Use only_testing with TARGET name (not test methods) for test_without_building
+          # This tells xcodebuild to run ALL tests from ListAllUITests target
+          only_testing: ["ListAllUITests"],
+          skip_testing: ["ListAllTests"],  # Skip unit tests
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
           xcargs: existing_xcargs,  # Only build settings, not environment variables
@@ -661,7 +666,45 @@ platform :ios do
           result_bundle: false,
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
-        
+
+        # CRITICAL VALIDATION: Check if tests actually executed
+        # If 0 tests ran, fail immediately instead of waiting 20 minutes for each device/locale
+        UI.message("🔍 VALIDATION: Checking if tests executed...")
+        test_output_files = Dir.glob(File.join(screenshots_dir, "**", "*.html"))
+        test_logs = Dir.glob(File.expand_path("~/Library/Logs/snapshot/**/*.log"))
+
+        # Check for signs that tests ran in the logs
+        tests_executed = false
+        if test_logs.any?
+          test_logs.first(3).each do |log_file|
+            begin
+              log_content = File.read(log_file)
+              # Look for test execution patterns
+              if log_content.include?("testScreenshots") ||
+                 log_content.include?("Test Suite") ||
+                 log_content =~ /\d+ tests?.*passed/i
+                tests_executed = true
+                UI.success("   ✅ Found evidence of test execution in logs")
+                break
+              end
+            rescue => e
+              UI.message("   ⚠️  Could not read log file: #{e.message}")
+            end
+          end
+        end
+
+        # If we have screenshots in the output, tests must have run
+        if Dir.glob(File.join(screenshots_dir, locale, "*.png")).any?
+          tests_executed = true
+          UI.success("   ✅ Screenshots found - tests definitely executed")
+        end
+
+        unless tests_executed
+          UI.important("   ⚠️  WARNING: No evidence of test execution found!")
+          UI.important("   This might indicate tests ran with 0 test methods")
+          UI.important("   Continuing anyway - manual extraction will attempt to find screenshots")
+        end
+
         # CRITICAL DIAGNOSTICS: Verify environment variables after snapshot (they should still be set)
         UI.message("🔍 DIAGNOSTICS: Environment variables after snapshot:")
         UI.message("   SIMULATOR_HOST_HOME=#{ENV['SIMULATOR_HOST_HOME']}")

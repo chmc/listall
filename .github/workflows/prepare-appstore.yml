@@ -15,7 +15,7 @@ jobs:
   generate-screenshots:
     name: Generate Screenshots
     runs-on: macos-14
-    timeout-minutes: 90
+    timeout-minutes: 45  # Reduced from 90 - should complete in ~20-30 minutes with fixes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
       - name: Generate all App Store screenshots
         run: bundle exec fastlane ios prepare_appstore
         env:
-          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "90"
+          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"  # Reduced from 90 for faster failure detection
 
       - name: Upload iPhone/iPad screenshots artifact
         if: success()

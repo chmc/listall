@@ -82,6 +82,7 @@ fastlane/Preview.html
 fastlane/screenshots/
 fastlane/screenshots_compat/
 fastlane/test_output
+fastlane/derivedDataSnapshot/
 
 # Code Injection
 #

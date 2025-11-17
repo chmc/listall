@@ -69,14 +69,10 @@ number_of_retries(2)
 # This prevents hanging at "Touching ListAllTests.xctest" phase
 skip_testing(["ListAllTests"])
 
-# REMOVED: only_testing - causes 0 tests to run with test_without_building
-# When using test_without_building, xcodebuild may not correctly match test identifiers
-# from the pre-built test bundle. Instead, let it discover all tests and filter via skip_testing.
-# The test methods will still run because they're the only ones in the test bundle (ListAllTests is skipped).
-# only_testing([
-#   "ListAllUITests/testScreenshots01_WelcomeScreen",
-#   "ListAllUITests/testScreenshots02_MainFlow"
-# ])
+# NOTE: only_testing and skip_testing are configured in Fastfile for better control
+# When using test_without_building, we use only_testing: ["ListAllUITests"] to specify the TARGET
+# This is different from only_testing with test methods like "ListAllUITests/testScreenshots01_WelcomeScreen"
+# Target-level only_testing works correctly with test_without_building, while method-level does not
 
 # For more information about all available options run
 # fastlane action snapshot
