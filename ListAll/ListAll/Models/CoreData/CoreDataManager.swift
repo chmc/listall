@@ -20,12 +20,18 @@ class CoreDataManager: ObservableObject {
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
+        // Detect if running in UI test mode
+        let isUITesting = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+
         // Using NSPersistentCloudKitContainer for CloudKit sync (activated with paid developer account)
         // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
+        // CRITICAL: Disable CloudKit during UI tests to prevent crashes (CloudKit can't initialize without proper signing)
         #if os(watchOS)
         let container = NSPersistentContainer(name: "ListAll")
         #else
-        let container = NSPersistentCloudKitContainer(name: "ListAll")
+        let container: NSPersistentContainer = isUITesting ?
+            NSPersistentContainer(name: "ListAll") :
+            NSPersistentCloudKitContainer(name: "ListAll")
         #endif
         
         // Configure store description for migration
@@ -52,9 +58,12 @@ class CoreDataManager: ObservableObject {
         
         // Enable CloudKit sync (activated with paid developer account)
         // Note: Only enable for iOS - watchOS has persistent portal config issues
+        // CRITICAL: Disable CloudKit during UI tests to prevent crashes
         #if os(iOS)
-        let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
-        storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
+        if !isUITesting {
+            let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
+            storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
+        }
         #endif
         
         container.loadPersistentStores { [weak self] storeDescription, error in
