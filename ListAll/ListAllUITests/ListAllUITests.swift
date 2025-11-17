@@ -39,14 +39,22 @@ final class ListAllUITests: XCTestCase {
             return false
         }
         
-        // OPTIMIZATION: Don't auto-launch in setUpWithError during FASTLANE_SNAPSHOT
-        // Let individual screenshot tests manage their own launch with specific arguments
-        // This avoids redundant launches and gives tests full control over app state
-        let isSnapshotMode = ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] == "YES"
-        NSLog("🔧 FASTLANE_SNAPSHOT: \(isSnapshotMode ? "YES" : "NO")")
-        print("🔧 FASTLANE_SNAPSHOT: \(isSnapshotMode ? "YES" : "NO")")
-        
-        if !isSnapshotMode {
+        // CRITICAL FIX: Don't check FASTLANE_SNAPSHOT environment variable here
+        // The environment variable is set by xcodebuild, but doesn't reliably propagate to the test runner process
+        // Instead, detect snapshot mode by checking if test name contains "Screenshot"
+        // This is more reliable and works with both build test and test-without-building
+
+        // For screenshot tests: Don't auto-launch, let test methods handle launch with specific arguments
+        // For normal tests: Setup and launch with standard test data
+        let testName = String(describing: self)
+        let isScreenshotTest = testName.contains("Screenshot") || testName.contains("screenshot")
+
+        NSLog("🔧 Test name: \(testName)")
+        NSLog("🔧 Is screenshot test: \(isScreenshotTest)")
+        print("🔧 Test name: \(testName)")
+        print("🔧 Is screenshot test: \(isScreenshotTest)")
+
+        if !isScreenshotTest {
             // Normal test mode: setup snapshot and launch with standard test data
             NSLog("🔧 Normal test mode - setting up snapshot and launching app")
             print("🔧 Normal test mode - setting up snapshot and launching app")
@@ -56,10 +64,10 @@ final class ListAllUITests: XCTestCase {
             app.launch()
             app.tap() // Trigger interruption monitor
         } else {
-            NSLog("🔧 Snapshot mode - skipping auto-launch, will launch in test methods")
-            print("🔧 Snapshot mode - skipping auto-launch, will launch in test methods")
+            NSLog("🔧 Screenshot test mode - skipping auto-launch, will launch in test methods")
+            print("🔧 Screenshot test mode - skipping auto-launch, will launch in test methods")
         }
-        // If snapshot mode, setupSnapshot() will be called in launchAppForScreenshot()
+        // For screenshot tests, setupSnapshot() will be called in launchAppForScreenshot()
         // after setting launch arguments but before launching
         
         NSLog("🔧 setUpWithError() completed")
