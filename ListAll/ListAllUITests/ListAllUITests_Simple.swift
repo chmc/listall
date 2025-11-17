@@ -19,10 +19,17 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // Launch with empty state
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "0"  // Empty state
-        // Pass FASTLANE_LANGUAGE to app so LocalizationManager can detect it
+
+        // Set AppleLanguages to match FASTLANE_LANGUAGE for proper localization
+        // Fastlane sets FASTLANE_LANGUAGE as environment variable in test runner
         if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
-            app.launchEnvironment["FASTLANE_LANGUAGE"] = fastlaneLanguage
+            // Map language codes to proper Apple language identifiers
+            let languageCode = fastlaneLanguage.hasPrefix("fi") ? "fi" : "en"
+            app.launchArguments.append("-AppleLanguages")
+            app.launchArguments.append("(\(languageCode))")
+            print("🧪 Setting AppleLanguages to: \(languageCode)")
         }
+
         app.launch()
 
         // Wait for app to be ready
@@ -37,10 +44,17 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // Launch with test data
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "1"  // With test data
-        // Pass FASTLANE_LANGUAGE to app so LocalizationManager can detect it
+
+        // Set AppleLanguages to match FASTLANE_LANGUAGE for proper localization
+        // Fastlane sets FASTLANE_LANGUAGE as environment variable in test runner
         if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
-            app.launchEnvironment["FASTLANE_LANGUAGE"] = fastlaneLanguage
+            // Map language codes to proper Apple language identifiers
+            let languageCode = fastlaneLanguage.hasPrefix("fi") ? "fi" : "en"
+            app.launchArguments.append("-AppleLanguages")
+            app.launchArguments.append("(\(languageCode))")
+            print("🧪 Setting AppleLanguages to: \(languageCode)")
         }
+
         app.launch()
 
         // Wait for app to be ready
