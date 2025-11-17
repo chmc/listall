@@ -19,6 +19,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // Launch with empty state
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "0"  // Empty state
+        // Pass FASTLANE_LANGUAGE to app so LocalizationManager can detect it
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            app.launchEnvironment["FASTLANE_LANGUAGE"] = fastlaneLanguage
+        }
         app.launch()
 
         // Wait for app to be ready
@@ -33,6 +37,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // Launch with test data
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "1"  // With test data
+        // Pass FASTLANE_LANGUAGE to app so LocalizationManager can detect it
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            app.launchEnvironment["FASTLANE_LANGUAGE"] = fastlaneLanguage
+        }
         app.launch()
 
         // Wait for app to be ready
