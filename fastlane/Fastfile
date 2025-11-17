@@ -652,9 +652,10 @@ platform :ios do
           devices: [device],
           languages: [locale],
           clear_previous_screenshots: is_first,  # Only clear on first run
-          # CRITICAL: Use only_testing with TARGET name (not test methods) for test_without_building
-          # This tells xcodebuild to run ALL tests from ListAllUITests target
-          only_testing: ["ListAllUITests"],
+          # CRITICAL: Use only_testing with CLASS name (not target or methods) for test_without_building
+          # Format: "TargetName/ClassName" to run all tests in a specific class
+          # This avoids running ListAllUITestsLaunchTests which hangs in snapshot mode
+          only_testing: ["ListAllUITests/ListAllUITests"],
           skip_testing: ["ListAllTests"],  # Skip unit tests
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
           buildlog_path: "~/Library/Logs/snapshot",  # Explicit log path for better debugging
