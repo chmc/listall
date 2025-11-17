@@ -69,10 +69,12 @@ number_of_retries(2)
 # This prevents hanging at "Touching ListAllTests.xctest" phase
 skip_testing(["ListAllTests"])
 
-# NOTE: only_testing and skip_testing are configured in Fastfile for better control
-# Using method-level only_testing with full build+test (NOT test_without_building)
-# Format: "TargetName/ClassName/testMethodName" specifies exactly which 2 tests to run
-# This skips all other UI tests and the hanging ListAllUITestsLaunchTests
+# CRITICAL: Only run the simplified screenshot tests (not the old complex tests)
+# This prevents duplicate screenshots from both old and new test classes
+only_testing([
+  "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
+  "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow"
+])
 
 # For more information about all available options run
 # fastlane action snapshot
