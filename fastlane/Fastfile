@@ -416,7 +416,28 @@ platform :ios do
   lane :screenshots_framed do
     # Setup CI keychain if running in CI (prevents signing hangs)
     setup_ci if ENV['CI']
-    
+
+    # Clean up old screenshot subdirectories that accumulate in local development
+    # CI doesn't need this as it starts with clean workspace
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+    UI.message("🧹 Cleaning old screenshot subdirectories...")
+    %w[test_output watch delivery attachments].each do |subdir|
+      subdir_path = File.join(screenshots_dir, subdir)
+      if Dir.exist?(subdir_path)
+        UI.message("  Removing #{subdir}...")
+        FileUtils.rm_rf(subdir_path)
+      end
+    end
+    # Also clean subdirectories within language folders
+    %w[en-US fi].each do |lang|
+      lang_dir = File.join(screenshots_dir, lang)
+      next unless Dir.exist?(lang_dir)
+      Dir.glob(File.join(lang_dir, "*")).select { |p| File.directory?(p) }.each do |subdir|
+        UI.message("  Removing #{File.basename(lang_dir)}/#{File.basename(subdir)}...")
+        FileUtils.rm_rf(subdir)
+      end
+    end
+
     # Shared derived data path for prebuild and snapshot
     # CRITICAL: Use absolute path for derived data to ensure xcresult bundle extraction works
     # Use Dir.pwd to get project root (not fastlane directory)
@@ -2458,15 +2479,21 @@ platform :ios do
         # Method 4: Recursive search as last resort (if screenshots still not found)
         if extracted_count == 0
           UI.message("   🔍 Performing recursive search for screenshots...")
-          
+
           # Define reasonable search roots (don't search entire filesystem)
           search_roots = []
-          
-          # Search in home directory
-          if ENV['HOME']
-            search_roots << ENV['HOME']
+
+          # ONLY search home directory in CI environment
+          # For local development, skip home directory to avoid finding old test screenshots
+          # in user directories like ~/Documents, ~/Downloads, etc.
+          if ENV['CI']
+            if ENV['HOME']
+              search_roots << ENV['HOME']
+            end
+            search_roots << Dir.home
+          else
+            UI.message("   ⏭️  Skipping home directory search for local run (CI only)")
           end
-          search_roots << Dir.home
           
           # Search in derived data
           if derived && Dir.exist?(derived)

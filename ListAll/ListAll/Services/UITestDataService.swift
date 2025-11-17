@@ -25,17 +25,28 @@ class UITestDataService {
         print("🧪 FASTLANE_LANGUAGE = \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "not set")")
         print("🧪 FASTLANE_SNAPSHOT = \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "not set")")
 
-        // LocalizationManager now defaults to English and users can manually change to Finnish
-        // No need to override based on AppleLanguages - that was causing Finnish screenshots
+        // CRITICAL: For UI tests with Fastlane, check FASTLANE_LANGUAGE environment variable
+        // This is set by Fastlane Snapshot to "fi" or "en-US" to match screenshot language
+        // We must use this instead of LocalizationManager to ensure test data matches UI language
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            if fastlaneLanguage.hasPrefix("fi") {
+                print("🧪 FASTLANE_LANGUAGE=\(fastlaneLanguage) -> Generating FINNISH test data")
+                return generateFinnishTestData()
+            } else {
+                print("🧪 FASTLANE_LANGUAGE=\(fastlaneLanguage) -> Generating ENGLISH test data")
+                return generateEnglishTestData()
+            }
+        }
 
+        // Fallback: Check LocalizationManager for non-Fastlane UI test runs
         let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
         print("🧪 LocalizationManager.currentLanguage = \(currentLanguage)")
 
         if currentLanguage == "fi" {
-            print("🧪 Generating FINNISH test data")
+            print("🧪 Generating FINNISH test data (from LocalizationManager)")
             return generateFinnishTestData()
         } else {
-            print("🧪 Generating ENGLISH test data")
+            print("🧪 Generating ENGLISH test data (from LocalizationManager)")
             return generateEnglishTestData()
         }
     }
