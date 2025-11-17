@@ -20,18 +20,21 @@ class CoreDataManager: ObservableObject {
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
-        // Detect if running in UI test mode
-        let isUITesting = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
-
         // Using NSPersistentCloudKitContainer for CloudKit sync (activated with paid developer account)
         // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
-        // CRITICAL: Disable CloudKit during UI tests to prevent crashes (CloudKit can't initialize without proper signing)
+        // CRITICAL: Disable CloudKit for Debug builds (simulators) to prevent crashes
+        // CloudKit requires proper code signing and credentials which aren't available in unsigned simulator builds
         #if os(watchOS)
         let container = NSPersistentContainer(name: "ListAll")
+        print("📦 CoreDataManager: Using NSPersistentContainer (watchOS)")
+        #elseif DEBUG
+        // Use plain NSPersistentContainer for Debug builds (no CloudKit)
+        let container = NSPersistentContainer(name: "ListAll")
+        print("📦 CoreDataManager: Using NSPersistentContainer (Debug build - CloudKit DISABLED)")
         #else
-        let container: NSPersistentContainer = isUITesting ?
-            NSPersistentContainer(name: "ListAll") :
-            NSPersistentCloudKitContainer(name: "ListAll")
+        // Use CloudKit-enabled container for Release builds only
+        let container = NSPersistentCloudKitContainer(name: "ListAll")
+        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Release build - CloudKit ENABLED)")
         #endif
         
         // Configure store description for migration
@@ -57,13 +60,12 @@ class CoreDataManager: ObservableObject {
         storeDescription.shouldInferMappingModelAutomatically = true
         
         // Enable CloudKit sync (activated with paid developer account)
-        // Note: Only enable for iOS - watchOS has persistent portal config issues
-        // CRITICAL: Disable CloudKit during UI tests to prevent crashes
-        #if os(iOS)
-        if !isUITesting {
-            let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
-            storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
-        }
+        // Note: Only enable for iOS Release builds - watchOS and Debug builds don't support CloudKit
+        // CRITICAL: CloudKit requires proper code signing which isn't available in Debug/simulator builds
+        #if os(iOS) && !DEBUG
+        let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
+        storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
+        print("📦 CoreDataManager: CloudKit container options configured")
         #endif
         
         container.loadPersistentStores { [weak self] storeDescription, error in
