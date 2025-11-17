@@ -44,6 +44,11 @@ reinstall_app(true)
 # This may save 2-3 minutes per device by reusing booted simulator
 erase_simulator(false)
 
+# CRITICAL: Set simulator system language to match screenshot language
+# This ensures iOS loads the correct .strings bundle BEFORE app launches
+# Without this, simulator inherits Finnish from macOS system settings
+localize_simulator(true)
+
 # Note: test_without_building and derived_data_path are set in Fastfile
 # to coordinate with the scan(build_for_testing) prebuild step
 

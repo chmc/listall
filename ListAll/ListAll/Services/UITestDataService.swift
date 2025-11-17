@@ -25,20 +25,8 @@ class UITestDataService {
         print("🧪 FASTLANE_LANGUAGE = \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "not set")")
         print("🧪 FASTLANE_SNAPSHOT = \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "not set")")
 
-        // CRITICAL FIX: Force set language from AppleLanguages for screenshot tests
-        // LocalizationManager singleton is initialized before AppleLanguages is set,
-        // so we need to explicitly check and override it here
-        if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-           let firstLanguage = appleLanguages.first {
-            print("🧪 Found AppleLanguages preference: \(firstLanguage)")
-            if firstLanguage.hasPrefix("fi") && LocalizationManager.shared.currentLanguage != .finnish {
-                print("🧪 OVERRIDING language to Finnish based on AppleLanguages")
-                LocalizationManager.shared.setLanguage(.finnish)
-            } else if firstLanguage.hasPrefix("en") && LocalizationManager.shared.currentLanguage != .english {
-                print("🧪 OVERRIDING language to English based on AppleLanguages")
-                LocalizationManager.shared.setLanguage(.english)
-            }
-        }
+        // LocalizationManager now defaults to English and users can manually change to Finnish
+        // No need to override based on AppleLanguages - that was causing Finnish screenshots
 
         let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
         print("🧪 LocalizationManager.currentLanguage = \(currentLanguage)")

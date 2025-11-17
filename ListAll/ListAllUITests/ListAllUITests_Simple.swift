@@ -16,6 +16,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     /// Test: Capture welcome screen (empty state)
     func testScreenshots01_WelcomeScreen() throws {
+        // CRITICAL: Terminate app first to force fresh launch with correct AppleLanguages
+        // iOS caches .strings bundle on first launch, so we need to kill/relaunch for language change
+        app.terminate()
+
         // Launch with empty state
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "0"  // Empty state

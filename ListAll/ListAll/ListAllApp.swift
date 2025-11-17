@@ -28,9 +28,23 @@ struct ListAllApp: App {
         guard UITestDataService.isUITesting else {
             return
         }
-        
+
         print("🧪 UI Test mode detected - setting up deterministic test data")
-        
+
+        // CRITICAL: Set AppleLanguages BEFORE any UI loads to control .strings file selection
+        // This must happen EARLY to ensure NSLocalizedString uses the correct language bundle
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            let languageCode = fastlaneLanguage.hasPrefix("fi") ? "fi" : "en"
+            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+            print("🧪 Set AppleLanguages to [\(languageCode)] from FASTLANE_LANGUAGE=\(fastlaneLanguage)")
+        } else {
+            // Default to English for UI tests
+            UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+            print("🧪 Set AppleLanguages to [en] (default for UI tests)")
+        }
+
         // Disable iCloud sync during UI tests to prevent interference
         UserDefaults.standard.set(false, forKey: "iCloudSyncEnabled")
         
