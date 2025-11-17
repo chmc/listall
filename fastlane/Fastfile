@@ -2970,8 +2970,8 @@ platform :ios do
       Dir.glob(File.join(src, "*.png")).each do |png|
         # Skip obvious non-screenshot assets like icons
         basename = File.basename(png)
-        # Only process our 5 numbered screenshots
-        next unless basename =~ /-(01|02|03|04|05)-/
+        # Only process our numbered screenshots (supports both -NN- and -NN_ formats)
+        next unless basename =~ /-(01|02|03|04|05)[-_]/
 
         # Detect size
         size = sh("identify -format '%w %h' #{Shellwords.escape(png)}").strip.split.map(&:to_i) rescue []
