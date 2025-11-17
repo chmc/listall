@@ -68,21 +68,23 @@ class LocalizationManager: ObservableObject {
             return
         }
         
-        // Check if AppleLanguages preference is set (used by Fastlane)
-        if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-           let firstLanguage = appleLanguages.first {
-            print("🧪 AppleLanguages detected: \(firstLanguage)")
-            if firstLanguage.hasPrefix("fi") {
-                self.currentLanguage = .finnish
-                print("🧪 Set currentLanguage to Finnish from AppleLanguages")
-                return
-            } else if firstLanguage.hasPrefix("en") {
-                self.currentLanguage = .english
-                print("🧪 Set currentLanguage to English from AppleLanguages")
-                return
-            }
-        }
-        
+        // DISABLED: Don't check AppleLanguages from system (prevents inheriting macOS language)
+        // App should always default to English, not system language
+        // Users can manually change language to Finnish in Settings
+        // if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+        //    let firstLanguage = appleLanguages.first {
+        //     print("🧪 AppleLanguages detected: \(firstLanguage)")
+        //     if firstLanguage.hasPrefix("fi") {
+        //         self.currentLanguage = .finnish
+        //         print("🧪 Set currentLanguage to Finnish from AppleLanguages")
+        //         return
+        //     } else if firstLanguage.hasPrefix("en") {
+        //         self.currentLanguage = .english
+        //         print("🧪 Set currentLanguage to English from AppleLanguages")
+        //         return
+        //     }
+        // }
+
         // Load saved language or default to English
         if let savedLanguageCode = userDefaults.string(forKey: userDefaultsKey),
            let savedLanguage = AppLanguage(rawValue: savedLanguageCode) {
