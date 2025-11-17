@@ -105,6 +105,18 @@ Generate screenshots for App Store
 
 Runs automated UI tests to capture screenshots for all configured devices and locales
 
+### ios prepare_appstore
+
+```sh
+[bundle exec] fastlane ios prepare_appstore
+```
+
+Unified App Store screenshot generation pipeline
+
+Generates all screenshots (iPhone, iPad, Watch) with validation and fail-fast checks
+
+This is the main entry point for CI/CD pipelines
+
 ### ios screenshots_framed
 
 ```sh
@@ -129,7 +141,7 @@ Verify framed screenshots exist for all locales
 
 Generate watchOS screenshots (fully automated via UITests + simctl)
 
-Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales
+Captures screenshots from Apple Watch Series 10 (46mm) for EN and FI locales
 
 ### ios verify_watch_screenshots
 

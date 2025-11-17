@@ -22,23 +22,23 @@ class UITestDataService {
     static func generateTestData() -> [List] {
         // Debug: Check environment and language detection
         print("🧪 UI Test Data Generation:")
-        print("🧪 FASTLANE_LANGUAGE = \(ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] ?? "not set")")
-        print("🧪 FASTLANE_SNAPSHOT = \(ProcessInfo.processInfo.environment["FASTLANE_SNAPSHOT"] ?? "not set")")
 
-        // CRITICAL: For UI tests with Fastlane, check FASTLANE_LANGUAGE environment variable
-        // This is set by Fastlane Snapshot to "fi" or "en-US" to match screenshot language
-        // We must use this instead of LocalizationManager to ensure test data matches UI language
-        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
-            if fastlaneLanguage.hasPrefix("fi") {
-                print("🧪 FASTLANE_LANGUAGE=\(fastlaneLanguage) -> Generating FINNISH test data")
+        // CRITICAL: For UI tests, check AppleLanguages that was set in ListAllApp.init()
+        // This was already set based on FASTLANE_LANGUAGE before any UI loaded
+        // We can't access FASTLANE_LANGUAGE directly because xcodebuild env vars don't pass to the app process
+        if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+           let firstLanguage = appleLanguages.first {
+            print("🧪 AppleLanguages = \(appleLanguages)")
+            if firstLanguage.hasPrefix("fi") {
+                print("🧪 AppleLanguages[\(firstLanguage)] -> Generating FINNISH test data")
                 return generateFinnishTestData()
             } else {
-                print("🧪 FASTLANE_LANGUAGE=\(fastlaneLanguage) -> Generating ENGLISH test data")
+                print("🧪 AppleLanguages[\(firstLanguage)] -> Generating ENGLISH test data")
                 return generateEnglishTestData()
             }
         }
 
-        // Fallback: Check LocalizationManager for non-Fastlane UI test runs
+        // Fallback: Check LocalizationManager for non-UI-test runs
         let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
         print("🧪 LocalizationManager.currentLanguage = \(currentLanguage)")
 
