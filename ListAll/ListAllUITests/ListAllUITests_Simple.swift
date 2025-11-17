@@ -17,7 +17,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
     /// Test: Capture welcome screen (empty state)
     func testScreenshots01_WelcomeScreen() throws {
         // Launch with empty state
-        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE"]
+        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "0"  // Empty state
         app.launch()
 
@@ -31,7 +31,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
     /// Test: Capture main flow with data
     func testScreenshots02_MainFlow() throws {
         // Launch with test data
-        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE"]
+        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
         app.launchEnvironment["UITEST_SEED"] = "1"  // With test data
         app.launch()
 
