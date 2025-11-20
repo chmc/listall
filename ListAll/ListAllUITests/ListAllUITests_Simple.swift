@@ -20,31 +20,29 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // iOS caches .strings bundle on first launch, so we need to kill/relaunch for language change
         app.terminate()
 
-        // Launch with empty state
-        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
-        app.launchEnvironment["UITEST_SEED"] = "0"  // Empty state
+        // Launch with empty state - SKIP_TEST_DATA prevents populating lists
+        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"]
 
         app.launch()
 
         // Wait for app to be ready
         sleep(2)
 
-        // Take screenshot
+        // Take screenshot of empty state
         snapshot("01_Welcome")
     }
 
     /// Test: Capture main flow with data
     func testScreenshots02_MainFlow() throws {
-        // Launch with test data
+        // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
-        app.launchEnvironment["UITEST_SEED"] = "1"  // With test data
 
         app.launch()
 
         // Wait for app to be ready
         sleep(2)
 
-        // Screenshot 1: Main screen with lists
+        // Screenshot: Main screen with hardcoded test lists
         snapshot("02_MainScreen")
 
         // Navigate and take more screenshots as needed
