@@ -31,18 +31,16 @@ struct ListAllApp: App {
 
         print("🧪 UI Test mode detected - setting up deterministic test data")
 
-        // CRITICAL: Set AppleLanguages BEFORE any UI loads to control .strings file selection
-        // This must happen EARLY to ensure NSLocalizedString uses the correct language bundle
-        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
-            let languageCode = fastlaneLanguage.hasPrefix("fi") ? "fi" : "en"
-            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
-            UserDefaults.standard.synchronize()
-            print("🧪 Set AppleLanguages to [\(languageCode)] from FASTLANE_LANGUAGE=\(fastlaneLanguage)")
+        // CRITICAL: AppleLanguages is already set by Fastlane's localize_simulator(true)
+        // before app launch. We should NOT override it here.
+        // Just log what it's set to for debugging purposes.
+        if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String] {
+            print("🧪 AppleLanguages already set by simulator: \(appleLanguages)")
         } else {
-            // Default to English for UI tests
+            // Fallback: If for some reason AppleLanguages isn't set, default to English
             UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
             UserDefaults.standard.synchronize()
-            print("🧪 Set AppleLanguages to [en] (default for UI tests)")
+            print("🧪 Set AppleLanguages to [en] (fallback default)")
         }
 
         // Disable iCloud sync during UI tests to prevent interference
