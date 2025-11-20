@@ -52,38 +52,29 @@ class LocalizationManager: ObservableObject {
             self.userDefaults = .standard
         }
         
-        // For UI tests: Check if Fastlane Snapshot set a language via environment variable
-        // Also check AppleLanguages which is set by Fastlane for app localization
-        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
-            print("🧪 Fastlane language detected in environment: \(fastlaneLanguage)")
-            // Map FASTLANE_LANGUAGE codes to our AppLanguage enum
-            if fastlaneLanguage.hasPrefix("fi") {
+        // For UI tests: Check AppleLanguages which is set by ListAllApp.init() for Fastlane screenshots
+        // This must be checked FIRST before checking saved language preference
+        // IMPORTANT: FASTLANE_LANGUAGE environment variable is NOT accessible to the app process
+        // (xcodebuild env vars don't pass through), so we check AppleLanguages that was already set
+        let isUITesting = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+        if isUITesting,
+           let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+           let firstLanguage = appleLanguages.first {
+            print("🧪 UI Test mode: AppleLanguages detected: \(appleLanguages)")
+            if firstLanguage.hasPrefix("fi") {
                 self.currentLanguage = .finnish
-            } else {
+                print("🧪 Set currentLanguage to Finnish from AppleLanguages")
+                // Apply the language immediately
+                applyLanguage(currentLanguage)
+                return
+            } else if firstLanguage.hasPrefix("en") {
                 self.currentLanguage = .english
+                print("🧪 Set currentLanguage to English from AppleLanguages")
+                // Apply the language immediately
+                applyLanguage(currentLanguage)
+                return
             }
-            // Apply the language immediately
-            applyLanguage(currentLanguage)
-            print("🧪 Set currentLanguage to: \(currentLanguage.rawValue)")
-            return
         }
-        
-        // DISABLED: Don't check AppleLanguages from system (prevents inheriting macOS language)
-        // App should always default to English, not system language
-        // Users can manually change language to Finnish in Settings
-        // if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-        //    let firstLanguage = appleLanguages.first {
-        //     print("🧪 AppleLanguages detected: \(firstLanguage)")
-        //     if firstLanguage.hasPrefix("fi") {
-        //         self.currentLanguage = .finnish
-        //         print("🧪 Set currentLanguage to Finnish from AppleLanguages")
-        //         return
-        //     } else if firstLanguage.hasPrefix("en") {
-        //         self.currentLanguage = .english
-        //         print("🧪 Set currentLanguage to English from AppleLanguages")
-        //         return
-        //     }
-        // }
 
         // Load saved language or default to English
         if let savedLanguageCode = userDefaults.string(forKey: userDefaultsKey),

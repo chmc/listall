@@ -20,33 +20,19 @@ class UITestDataService {
     
     /// Generate deterministic test lists based on the current locale
     static func generateTestData() -> [List] {
-        // Debug: Check environment and language detection
+        // Debug: Check language detection
         print("🧪 UI Test Data Generation:")
 
-        // CRITICAL: For UI tests, check AppleLanguages that was set in ListAllApp.init()
-        // This was already set based on FASTLANE_LANGUAGE before any UI loaded
-        // We can't access FASTLANE_LANGUAGE directly because xcodebuild env vars don't pass to the app process
-        if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-           let firstLanguage = appleLanguages.first {
-            print("🧪 AppleLanguages = \(appleLanguages)")
-            if firstLanguage.hasPrefix("fi") {
-                print("🧪 AppleLanguages[\(firstLanguage)] -> Generating FINNISH test data")
-                return generateFinnishTestData()
-            } else {
-                print("🧪 AppleLanguages[\(firstLanguage)] -> Generating ENGLISH test data")
-                return generateEnglishTestData()
-            }
-        }
-
-        // Fallback: Check LocalizationManager for non-UI-test runs
+        // Use LocalizationManager to determine language
+        // LocalizationManager.init() checks AppleLanguages for UI tests (set by ListAllApp.init())
         let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
         print("🧪 LocalizationManager.currentLanguage = \(currentLanguage)")
 
         if currentLanguage == "fi" {
-            print("🧪 Generating FINNISH test data (from LocalizationManager)")
+            print("🧪 Generating FINNISH test data")
             return generateFinnishTestData()
         } else {
-            print("🧪 Generating ENGLISH test data (from LocalizationManager)")
+            print("🧪 Generating ENGLISH test data")
             return generateEnglishTestData()
         }
     }
