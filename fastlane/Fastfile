@@ -659,6 +659,8 @@ platform :ios do
           derived_data_path: derived,
           devices: [device],
           languages: [locale],
+          # Note: ios_version parameter removed - Fastlane will auto-select iOS 18.1 for both devices
+          # iPhone 16 Pro Max only has iOS 18.1, iPad has both 18.1 and 18.2 beta (18.1 preferred)
           clear_previous_screenshots: is_first,  # Only clear on first run
           # SIMPLIFIED: Use method-level only_testing to run ONLY the screenshot tests
           # Format: "TargetName/ClassName/testMethodName"

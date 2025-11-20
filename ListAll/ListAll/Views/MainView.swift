@@ -281,6 +281,7 @@ struct MainView: View {
                     .edgesIgnoringSafeArea(.bottom)
                 }
             }
+            .navigationViewStyle(.stack)  // Force stack style on iPad for screenshots (prevents split-view)
             .navigationBarTitleDisplayMode(.large)
         .onAppear {
             viewModel.loadLists()
