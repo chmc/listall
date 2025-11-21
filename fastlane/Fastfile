@@ -2411,12 +2411,15 @@ platform :ios do
               cache_screenshots.each do |src|
                 basename = File.basename(src)
                 # Remove device prefix if present (e.g., "iPhone16ProMax-01-WelcomeScreen.png" -> "01-WelcomeScreen.png")
-                # Fastlane expects just the screenshot name
-                if basename.include?("-")
-                  # Try to extract just the screenshot name part
-                  parts = basename.split("-", 2)
-                  if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
-                    basename = parts[1] # Use just the screenshot name part
+                # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens, so we can't just split on first hyphen
+                # Instead, look for the screenshot number pattern (e.g., "-01_" or "-02_") which marks the end of device name
+                screenshot_name = basename
+                if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
+                  device_part = match[1]
+                  screenshot_part = match[2]
+                  # Only strip device prefix if it looks like a device name (contains iPhone or iPad)
+                  if device_part.include?("iPhone") || device_part.include?("iPad")
+                    basename = screenshot_part.sub(/^-/, '') # Remove leading hyphen
                   end
                 end
                 dst = File.join(locale_dir, basename)
@@ -2449,10 +2452,13 @@ platform :ios do
                     UI.message("   ✅ Found #{subdir_screenshots.count} screenshots in subdirectory!")
                     subdir_screenshots.each do |src|
                       basename = File.basename(src)
-                      if basename.include?("-")
-                        parts = basename.split("-", 2)
-                        if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
-                          basename = parts[1]
+                      # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens
+                      # Use regex to find screenshot number pattern instead of splitting on first hyphen
+                      if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
+                        device_part = match[1]
+                        screenshot_part = match[2]
+                        if device_part.include?("iPhone") || device_part.include?("iPad")
+                          basename = screenshot_part.sub(/^-/, '')
                         end
                       end
                       dst = File.join(locale_dir, basename)
@@ -2607,11 +2613,13 @@ platform :ios do
             found_screenshots.each do |src|
               begin
                 basename = File.basename(src)
-                # Try to extract screenshot name (remove device prefix if present)
-                if basename.include?("-")
-                  parts = basename.split("-", 2)
-                  if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
-                    basename = parts[1]
+                # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens
+                # Use regex to find screenshot number pattern instead of splitting on first hyphen
+                if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
+                  device_part = match[1]
+                  screenshot_part = match[2]
+                  if device_part.include?("iPhone") || device_part.include?("iPad")
+                    basename = screenshot_part.sub(/^-/, '')
                   end
                 end
                 dst = File.join(locale_dir, basename)
@@ -3067,7 +3075,8 @@ platform :ios do
   desc "Verify framed screenshots exist for all locales"
   lane :verify_framed do
     locales = %w[en-US fi]
-    prefixes = %w[01-WelcomeScreen 02-ListsHome 03-ListDetail 04-ItemDetail 05-Settings]
+    # Match actual screenshot names from UI tests (01_Welcome, 02_MainScreen)
+    prefixes = %w[01_Welcome 02_MainScreen]
     missing = []
     locales.each do |loc|
       base = File.expand_path(File.join('screenshots','framed', loc), __dir__)
