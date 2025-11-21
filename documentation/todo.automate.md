@@ -541,10 +541,17 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
   - ✅ Device names like "iPad Pro 13-inch (M4)" contain hyphens, causing truncated filenames like "inch (M4)-01_Welcome.png"
   - ✅ New regex `/^(.+?)(-\d{2}[-_].+\.png)$/i` properly finds screenshot number pattern to identify device prefix end
 
-### 5.5.2 Verify App Store preparation workflow works
 
 ### 5.6 Revert back App Store preparation workflow
-- Uncomment task 5.4 comments back to original state
+- **Status**: COMPLETED
+  - ✅ Snapfile: Restored iPhone 16 Pro Max and en-US locale
+  - ✅ Fastfile screenshots_framed: Restored devices and locales arrays
+  - ✅ Fastfile prepare_appstore: Restored Watch screenshot generation
+  - ✅ Fastfile verify_framed: Restored both locales (en-US + fi)
+  - ✅ Fastfile validate_delivery_screenshots: Restored iPhone and Watch validation
+  - All "TEMPORARY SPEEDUP (task 5.5)" comments removed
+
+### 5.7 Verify App Store preparation workflow works
 
 ---
 
