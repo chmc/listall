@@ -9,15 +9,19 @@ project "./ListAll/ListAll.xcodeproj"
 # iPhone 16 Pro Max is 6.7" which is acceptable for App Store 6.5" slot
 # NOTE: Device names vary by Xcode version - CI uses Xcode 16.1 which has iPhone 16 Pro Max (not iPhone 17)
 # Fastlane will automatically select iOS 18.1 simulator since it's most common/stable
+# TEMPORARY SPEEDUP (task 5.5): Only Finnish iPad to debug pipeline faster
+# TODO: Revert in task 5.6
 devices([
-  "iPhone 16 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
+  # "iPhone 16 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
   "iPad Pro 13-inch (M4)"   # 13" iPad Pro for App Store screenshots
 ])
 
 # List of languages to generate screenshots for
 # Screenshots will be generated for both English and Finnish
+# TEMPORARY SPEEDUP (task 5.5): Only Finnish to debug pipeline faster
+# TODO: Revert in task 5.6
 languages([
-  "en-US",
+  # "en-US",
   "fi"
 ])
 

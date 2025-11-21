@@ -389,13 +389,16 @@ platform :ios do
     
     begin
       # 1. Generate iPhone and iPad screenshots (with framing)
-      UI.header("Step 1/2: Generating iPhone and iPad screenshots")
+      # TEMPORARY SPEEDUP (task 5.5): Only Finnish iPad
+      UI.header("Step 1/1: Generating iPad screenshots (Finnish only - speedup mode)")
       screenshots_framed
-      
-      # 2. Generate Watch screenshots
-      UI.header("Step 2/2: Generating Watch screenshots")
-      watch_screenshots
-      
+
+      # TEMPORARY SPEEDUP (task 5.5): Skip Watch screenshots
+      # TODO: Revert in task 5.6
+      # # 2. Generate Watch screenshots
+      # UI.header("Step 2/2: Generating Watch screenshots")
+      # watch_screenshots
+
       # 3. Final validation: ensure all expected screenshots exist
       UI.header("Final Validation: Verifying all screenshots were generated")
       validate_delivery_screenshots
@@ -455,8 +458,12 @@ platform :ios do
     # Run snapshot per device/language combination for incremental verification
     # This provides immediate feedback instead of waiting 30+ minutes
     screenshots_dir = File.expand_path("screenshots", __dir__)
-    devices = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"]
-    locales = %w[en-US fi]
+    # TEMPORARY SPEEDUP (task 5.5): Only Finnish iPad to debug pipeline faster
+    # TODO: Revert in task 5.6
+    # devices = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"]
+    # locales = %w[en-US fi]
+    devices = ["iPad Pro 13-inch (M4)"]
+    locales = %w[fi]
     
     # Track expected screenshots (5 per test method × 2 test methods = 10 per device/locale)
     expected_per_combination = 10
@@ -3062,7 +3069,10 @@ platform :ios do
 
   desc "Verify framed screenshots exist for all locales"
   lane :verify_framed do
-    locales = %w[en-US fi]
+    # TEMPORARY SPEEDUP (task 5.5): Only Finnish to debug pipeline faster
+    # TODO: Revert in task 5.6
+    # locales = %w[en-US fi]
+    locales = %w[fi]
     prefixes = %w[01-WelcomeScreen 02-ListsHome 03-ListDetail 04-ItemDetail 05-Settings]
     missing = []
     locales.each do |loc|
@@ -3238,9 +3248,12 @@ platform :ios do
 
   desc "Validate all delivery-ready screenshots (framed iPhone/iPad + naked Watch)"
   lane :validate_delivery_screenshots do
-    UI.header("� Validating delivery-ready screenshots for App Store submission")
-    
-    locales = %w[en-US fi]
+    UI.header("📸 Validating delivery-ready screenshots for App Store submission")
+
+    # TEMPORARY SPEEDUP (task 5.5): Only Finnish to debug pipeline faster
+    # TODO: Revert in task 5.6
+    # locales = %w[en-US fi]
+    locales = %w[fi]
     errors = []
     warnings = []
     
@@ -3258,23 +3271,25 @@ platform :ios do
         next
       end
       
-      # Check iPhone framed screenshots
-      iphone_framed = Dir.glob(File.join(locale_dir, "iPhone*_framed.png"))
-      if iphone_framed.count != 5
-        warnings << "⚠️  #{locale}: Expected 5 iPhone framed screenshots, found #{iphone_framed.count}"
-      end
-      
-      iphone_framed.each do |shot|
-        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-        w, h = dims.split('x').map(&:to_i)
-        if (w - iphone_framed_size[:width]).abs > iphone_framed_size[:tolerance] ||
-           (h - iphone_framed_size[:height]).abs > iphone_framed_size[:tolerance]
-          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected ~#{iphone_framed_size[:width]}x#{iphone_framed_size[:height]})"
-        else
-          puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
-        end
-      end
-      
+      # TEMPORARY SPEEDUP (task 5.5): Skip iPhone validation
+      # TODO: Revert in task 5.6
+      # # Check iPhone framed screenshots
+      # iphone_framed = Dir.glob(File.join(locale_dir, "iPhone*_framed.png"))
+      # if iphone_framed.count != 5
+      #   warnings << "⚠️  #{locale}: Expected 5 iPhone framed screenshots, found #{iphone_framed.count}"
+      # end
+      #
+      # iphone_framed.each do |shot|
+      #   dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+      #   w, h = dims.split('x').map(&:to_i)
+      #   if (w - iphone_framed_size[:width]).abs > iphone_framed_size[:tolerance] ||
+      #      (h - iphone_framed_size[:height]).abs > iphone_framed_size[:tolerance]
+      #     errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected ~#{iphone_framed_size[:width]}x#{iphone_framed_size[:height]})"
+      #   else
+      #     puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
+      #   end
+      # end
+
       # Check iPad framed screenshots
       ipad_framed = Dir.glob(File.join(locale_dir, "iPad*_framed.png"))
       if ipad_framed.count != 5
@@ -3293,34 +3308,36 @@ platform :ios do
       end
     end
     
-    # Check watch naked screenshots
-    watch_dir = File.expand_path("screenshots/watch_normalized", __dir__)
-    if Dir.exist?(watch_dir)
-      locales.each do |locale|
-        locale_dir = File.join(watch_dir, locale)
-        unless Dir.exist?(locale_dir)
-          errors << "❌ Missing watch screenshots directory: #{locale_dir}"
-          next
-        end
-        
-        watch_shots = Dir.glob(File.join(locale_dir, "*.png"))
-        if watch_shots.count != 5
-          warnings << "⚠️  #{locale}: Expected 5 watch screenshots, found #{watch_shots.count}"
-        end
-        
-        watch_shots.each do |shot|
-          dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-          w, h = dims.split('x').map(&:to_i)
-          if w != watch_size[:width] || h != watch_size[:height]
-            errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{watch_size[:width]}x#{watch_size[:height]})"
-          else
-            puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
-          end
-        end
-      end
-    else
-      warnings << "⚠️  Watch screenshots directory not found: #{watch_dir}"
-    end
+    # TEMPORARY SPEEDUP (task 5.5): Skip Watch validation
+    # TODO: Revert in task 5.6
+    # # Check watch naked screenshots
+    # watch_dir = File.expand_path("screenshots/watch_normalized", __dir__)
+    # if Dir.exist?(watch_dir)
+    #   locales.each do |locale|
+    #     locale_dir = File.join(watch_dir, locale)
+    #     unless Dir.exist?(locale_dir)
+    #       errors << "❌ Missing watch screenshots directory: #{locale_dir}"
+    #       next
+    #     end
+    #
+    #     watch_shots = Dir.glob(File.join(locale_dir, "*.png"))
+    #     if watch_shots.count != 5
+    #       warnings << "⚠️  #{locale}: Expected 5 watch screenshots, found #{watch_shots.count}"
+    #     end
+    #
+    #     watch_shots.each do |shot|
+    #       dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+    #       w, h = dims.split('x').map(&:to_i)
+    #       if w != watch_size[:width] || h != watch_size[:height]
+    #         errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{watch_size[:width]}x#{watch_size[:height]})"
+    #       else
+    #         puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
+    #       end
+    #     end
+    #   end
+    # else
+    #   warnings << "⚠️  Watch screenshots directory not found: #{watch_dir}"
+    # end
     
     # Print summary
     puts "\n" + "=" * 70

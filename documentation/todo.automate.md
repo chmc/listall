@@ -524,9 +524,18 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
   - Wait for completion (~15 minutes)
   - Follow next-steps summary to create version and submit in App Store Connect
 
-### 5.5 App Store preparation workflow temporary speedup
+### ✅ 5.5 App Store preparation workflow temporary speedup - COMPLETED
 - Comment out (do not remove) all but only fin iPad screenshots
 - This is done to speedup pipeline to fix last step
+- **Status**: COMPLETED
+  - ✅ Snapfile: Commented out iPhone and en-US, keeping only Finnish iPad
+  - ✅ Fastfile screenshots_framed: Reduced devices/locales arrays
+  - ✅ Fastfile verify_framed: Only checking Finnish locale
+  - ✅ Fastfile validate_delivery_screenshots: Skip iPhone and Watch validation
+  - ✅ Fastfile prepare_appstore: Skip Watch screenshot generation
+  - All changes marked with "TEMPORARY SPEEDUP (task 5.5)" and "TODO: Revert in task 5.6"
+
+### 5.5.1 Verify App Store preparation workflow works
 
 ### 5.6 Revert back App Store preparation workflow
 - Uncomment task 5.4 comments back to original state
