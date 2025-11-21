@@ -3271,10 +3271,10 @@ platform :ios do
         next
       end
       
-      # Check iPhone framed screenshots
+      # Check iPhone framed screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
       iphone_framed = Dir.glob(File.join(locale_dir, "iPhone*_framed.png"))
-      if iphone_framed.count != 5
-        warnings << "⚠️  #{locale}: Expected 5 iPhone framed screenshots, found #{iphone_framed.count}"
+      if iphone_framed.count != 2
+        warnings << "⚠️  #{locale}: Expected 2 iPhone framed screenshots, found #{iphone_framed.count}"
       end
 
       iphone_framed.each do |shot|
@@ -3288,10 +3288,10 @@ platform :ios do
         end
       end
 
-      # Check iPad framed screenshots
+      # Check iPad framed screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
       ipad_framed = Dir.glob(File.join(locale_dir, "iPad*_framed.png"))
-      if ipad_framed.count != 5
-        warnings << "⚠️  #{locale}: Expected 5 iPad framed screenshots, found #{ipad_framed.count}"
+      if ipad_framed.count != 2
+        warnings << "⚠️  #{locale}: Expected 2 iPad framed screenshots, found #{ipad_framed.count}"
       end
       
       ipad_framed.each do |shot|

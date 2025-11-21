@@ -14,7 +14,7 @@
   },
   "data": [
     {
-      "filter": "01-WelcomeScreen",
+      "filter": "01_Welcome",
       "title": {
         "en-US": "Organize Anything Instantly",
         "fi": "Järjestä Kaikki Hetkessä"
@@ -25,7 +25,7 @@
       }
     },
     {
-      "filter": "02-ListsHome",
+      "filter": "02_MainScreen",
       "title": {
         "en-US": "All Your Lists at a Glance",
         "fi": "Kaikki Listat Yhdellä Silmäyksellä"
@@ -35,40 +35,6 @@
         "fi": "Selkeä näkymä. Nopeat toiminnot."
       }
     },
-    {
-      "filter": "03-ListDetail",
-      "title": {
-        "en-US": "Track Progress Effortlessly",
-        "fi": "Seuraa Edistystä Vaivatta"
-      },
-      "subtitle": {
-        "en-US": "Organize items, photos & notes",
-        "fi": "Jäsentele kohteet, kuvat ja muistiinpanot"
-      }
-    },
-    {
-      "filter": "04-ItemDetail",
-      "title": {
-        "en-US": "Rich Item Details",
-        "fi": "Monipuoliset Kohteen Tiedot"
-      },
-      "subtitle": {
-        "en-US": "Add photos, notes & flags",
-        "fi": "Lisää kuvia, muistiinpanoja ja merkkejä"
-      }
-    },
-    {
-      "filter": "05-Settings",
-      "title": {
-        "en-US": "Customize Your Flow",
-        "fi": "Mukauta Työskentelytapasi"
-      },
-      "subtitle": {
-        "en-US": "Light mode, sorting & more",
-        "fi": "Vaalea teema, lajittelu ja paljon muuta"
-      }
-    }
-    ,
     {
       "filter": "01_Watch_Lists_Home",
       "title": {
