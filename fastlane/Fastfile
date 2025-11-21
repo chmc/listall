@@ -908,11 +908,15 @@ platform :ios do
                   png_files_in_bundle.each do |png_path|
                     basename = File.basename(png_path)
                     # Extract screenshot name from filename (remove device prefix if present)
+                    # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens, so we can't just split on first hyphen
+                    # Instead, look for the screenshot number pattern (e.g., "-01_" or "-02_") which marks the end of device name
                     screenshot_name = basename
-                    if basename.include?("-")
-                      parts = basename.split("-", 2)
-                      if parts.length == 2 && (parts[0].include?("iPhone") || parts[0].include?("iPad"))
-                        screenshot_name = parts[1] # Use just the screenshot name part
+                    if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
+                      device_part = match[1]
+                      screenshot_part = match[2]
+                      # Only strip device prefix if it looks like a device name (contains iPhone or iPad)
+                      if device_part.include?("iPhone") || device_part.include?("iPad")
+                        screenshot_name = screenshot_part.sub(/^-/, '') # Remove leading hyphen
                       end
                     end
                     dst = File.join(locale_dir, screenshot_name)
