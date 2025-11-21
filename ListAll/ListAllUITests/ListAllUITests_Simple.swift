@@ -34,6 +34,11 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     /// Test: Capture main flow with data
     func testScreenshots02_MainFlow() throws {
+        // CRITICAL: Terminate app first to force fresh launch with correct AppleLanguages
+        // Without this, the app from test01 might still be running with stale state
+        // This caused 30-minute hangs on iPad Finnish in CI
+        app.terminate()
+
         // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
         app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
 
