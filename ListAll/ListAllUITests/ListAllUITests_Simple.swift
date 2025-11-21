@@ -21,7 +21,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
         app.terminate()
 
         // Launch with empty state - SKIP_TEST_DATA prevents populating lists
-        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"]
+        // CRITICAL: Use += to APPEND arguments, not = which would overwrite the language settings from setupSnapshot()
+        app.launchArguments += ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"]
 
         app.launch()
 
@@ -40,7 +41,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
         app.terminate()
 
         // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
-        app.launchArguments = ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
+        // CRITICAL: Use += to APPEND arguments, not = which would overwrite the language settings from setupSnapshot()
+        app.launchArguments += ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]
 
         app.launch()
 

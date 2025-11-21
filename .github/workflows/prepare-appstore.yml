@@ -118,6 +118,9 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Install ImageMagick (required for screenshot validation)
+        run: brew install imagemagick
+
       - name: Download iPhone/iPad screenshots
         uses: actions/download-artifact@v4
         with:
