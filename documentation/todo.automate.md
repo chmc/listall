@@ -524,6 +524,13 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
   - Wait for completion (~15 minutes)
   - Follow next-steps summary to create version and submit in App Store Connect
 
+### 5.5 App Store preparation workflow temporary speedup
+- Comment out (do not remove) all but only fin iPad screenshots
+- This is done to speedup pipeline to fix last step
+
+### 5.6 Revert back App Store preparation workflow
+- Uncomment task 5.4 comments back to original state
+
 ---
 
 ## Phase 6 — Quality, docs, and guardrails
