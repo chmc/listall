@@ -83,6 +83,7 @@ fastlane/screenshots/
 fastlane/screenshots_compat/
 fastlane/test_output
 fastlane/derivedDataSnapshot/
+fastlane/derivedDataWatch/
 
 # Code Injection
 #

@@ -3161,7 +3161,8 @@ platform :ios do
       skip_helper_version_check: true,
       result_bundle: false,  # Disable to allow Fastlane auto-extraction
       xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
-      stop_after_first_error: false  # Don't stop on first error to allow all languages to run
+      stop_after_first_error: false,  # Don't stop on first error to allow all languages to run
+      only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"]  # Run only Watch screenshot tests
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist before processing

@@ -235,11 +235,9 @@ open class Snapshot: NSObject {
             let homeDir = URL(fileURLWithPath: NSHomeDirectory())
             return homeDir.appendingPathComponent(cachePath)
         #elseif arch(i386) || arch(x86_64) || arch(arm64)
-            // CRITICAL FIX: Fastlane snapshot should set SIMULATOR_HOST_HOME, but with test_without_building it may not
-            // Fall back to HOME environment variable or NSHomeDirectory() if SIMULATOR_HOST_HOME is not set
-            let simulatorHostHome = ProcessInfo().environment["SIMULATOR_HOST_HOME"] 
-                                    ?? ProcessInfo().environment["HOME"]
-                                    ?? NSHomeDirectory()
+            guard let simulatorHostHome = ProcessInfo().environment["SIMULATOR_HOST_HOME"] else {
+                throw SnapshotError.cannotFindSimulatorHomeDirectory
+            }
             let homeDir = URL(fileURLWithPath: simulatorHostHome)
             return homeDir.appendingPathComponent(cachePath)
         #else
