@@ -29,7 +29,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
         sleep(2)
 
         // Take screenshot of empty state
-        snapshot("01_Welcome")
+        // Use timeWaitingForIdle: 0 to skip waiting for network indicator (causes 25+ min hangs on iPad)
+        snapshot("01_Welcome", timeWaitingForIdle: 0)
     }
 
     /// Test: Capture main flow with data
@@ -43,7 +44,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
         sleep(2)
 
         // Screenshot: Main screen with hardcoded test lists
-        snapshot("02_MainScreen")
+        // Use timeWaitingForIdle: 0 to skip waiting for network indicator (causes 25+ min hangs on iPad)
+        snapshot("02_MainScreen", timeWaitingForIdle: 0)
 
         // Navigate and take more screenshots as needed
         // Example: tap first list, wait, screenshot
