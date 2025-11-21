@@ -15,7 +15,7 @@ jobs:
   generate-screenshots:
     name: Generate Screenshots
     runs-on: macos-14
-    timeout-minutes: 90  # Increased from 60 to handle full build+test for iPhone, iPad, and Watch
+    timeout-minutes: 150  # 2.5 hours to handle full build+test for iPhone, iPad, and Watch with retries
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
