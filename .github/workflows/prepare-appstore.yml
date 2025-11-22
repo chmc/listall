@@ -137,7 +137,7 @@ jobs:
         run: bundle exec fastlane ios validate_delivery_screenshots
 
       - name: Upload metadata and screenshots to App Store Connect
-        run: bundle exec fastlane release
+        run: bundle exec fastlane release version:${{ inputs.version }}
 
       - name: Summary
         run: |
