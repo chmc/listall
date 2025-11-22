@@ -288,7 +288,7 @@ CI usage
 - Implemented
   - Added `fastlane/Framefile.json` with per-locale captions (EN+FI) for all 5 scenes using filename filters (`01-`..`05-`).
   - Background set to dark (`#0E1117`), titles/subtitles enabled; SF Pro Display Semibold path is configurable at `fastlane/fonts/`.
-  - New lane `screenshots_framed`: runs `snapshot` (raw capture), normalizes to Frameit-supported sizes (iPhone 6.7" → 1290x2796, iPad 13" → 2048x2732), then frames via `frameit`.
+  - New lane `screenshots_framed`: runs `snapshot` (raw capture), normalizes to Frameit-supported sizes (iPhone 6.7" → 1290x2796, iPad 13" → 2064x2752), then frames via `frameit`.
   - Validation lane `verify_framed`: asserts the framed variants exist for both locales (EN, FI) and all scenes (01–05).
   - Outputs stored under `fastlane/screenshots/framed/<locale>`; raw captures remain under `fastlane/screenshots/<locale>`.
 - Notes
@@ -320,7 +320,7 @@ CI usage
 - Acceptance criteria MET:
   - ✅ `release_dry_run` shows 10 framed screenshots detected per device + locale (5 scenes × 2 devices)
   - ✅ Both EN and FI locales prepared correctly
-  - ✅ Screenshot dimensions match App Store requirements (iPhone 6.7": 1421x2909, iPad Pro 12.9": 2286x3168)
+  - ✅ Screenshot dimensions match App Store requirements (iPhone 6.7": 1290x2796, iPad 13": 2064x2752)
   - ✅ Only framed variants included (raw captures excluded from delivery)
   - ✅ `deliver` configured with correct parameters for screenshot upload
   - ✅ Ready for actual upload via `bundle exec fastlane release`
@@ -551,7 +551,25 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
   - ✅ Fastfile validate_delivery_screenshots: Restored iPhone and Watch validation
   - All "TEMPORARY SPEEDUP (task 5.5)" comments removed
 
-### 5.7 Verify App Store preparation workflow works
+### ✅ 5.7 iPad screenshots going to 12.9" slot instead of 13" — FIXED
+
+**Problem**: iPad screenshots (2048x2732) were appearing in "iPad Pro (2nd Gen) 12.9"" slot in App Store Connect instead of the new "iPad 13"" slot.
+
+**Root cause**: Apple introduced new 13" iPad dimensions (2064x2752) in 2024. The old 2048x2732 dimensions are now mapped to the legacy 12.9" display slot.
+
+**Solution**: Updated all screenshot normalization to use the new 13" dimensions:
+- `fastlane/lib/screenshot_helper.rb`: Added `ipad_13` size (2064x2752), updated defaults
+- `fastlane/Fastfile`: Updated dimension references and validation
+- `.github/workflows/prepare-appstore.yml`: Updated summary text
+- `fastlane/lib/README_SCREENSHOT_NORMALIZATION.md`: Updated documentation
+
+**Dimensions**:
+- Old (12.9"): 2048x2732 → goes to legacy "iPad Pro 12.9"" slot
+- New (13"): 2064x2752 → goes to "iPad 13"" slot (2024 standard)
+
+Commit: 9beb592
+
+### 5.8 Verify App Store preparation workflow works
 
 ---
 
