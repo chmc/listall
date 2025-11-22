@@ -232,7 +232,7 @@ platform :ios do
       overwrite_screenshots: true,
       skip_binary_upload: true,
       submit_for_review: false,
-      run_precheck_before_submit: false,  # Precheck can't validate IAPs with API key
+      precheck_include_in_app_purchases: false,  # No IAPs in this app (also incompatible with API key auth)
       force: true
     )
   end
