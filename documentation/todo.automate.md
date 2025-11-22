@@ -575,7 +575,26 @@ Commit: 9beb592
 - Fixed support_url.txt to use correct URL (https://chmc.github.io/listall-privacy/support.html)
 - Metadata includes: description, keywords, promotional_text, release_notes, subtitle, support_url, privacy_policy_url, copyright
 
-### 5.8 Verify App Store preparation workflow works
+### 5.8 Fix failing App Store preparation workflow pipeline ✅
+**Issue**: Pipeline failing with two problems:
+1. Apple Watch Series 10 (46mm) - "multiple devices matched" error due to duplicate simulators with different watchOS versions (11.1 and 11.2) in GitHub Actions macos-14 runner
+2. iPad Pro 13-inch testScreenshots02_MainFlow - intermittent test failures (flaky test, takes 400+ seconds when failing vs 23-34 seconds when passing)
+
+**Root Cause Analysis**:
+- The Watch issue existed in BOTH runs (19596934989 "success" and 19598901637 "failure")
+- The "successful" run got lucky on one en-US retry when xcodebuild happened to select the right simulator
+- The failing run never got lucky across all retries
+- This is a race condition in simulator selection, not a new issue from commit 9beb592
+
+**Fix**:
+- Added Python script to `.github/workflows/prepare-appstore.yml` to clean up duplicate Watch simulators before screenshot generation
+- Keeps only the latest watchOS version to avoid ambiguous device selection
+- Improved iPad test reliability in `ListAllUITests_Simple.swift`:
+  - Replaced `sleep(2)` with proper `app.wait(for: .runningForeground, timeout: 30)`
+  - Added fail-fast with clear error message if app doesn't launch within 30 seconds
+  - Note: This helps with launch-related hangs but doesn't fix simulator instability. iPad tests may still be flaky due to CI environment; existing `number_of_retries(2)` setting handles this
+
+### 5.9 Verify App Store preparation workflow works
 
 ---
 

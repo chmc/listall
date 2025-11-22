@@ -6,12 +6,30 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     var app: XCUIApplication!
 
+    /// Timeout for app launch - iPad in CI can be slow
+    private let launchTimeout: TimeInterval = 30
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
 
         // Setup Fastlane snapshot
         setupSnapshot(app)
+    }
+
+    /// Wait for app to be fully launched and in foreground
+    /// This prevents timeouts on slow iPad simulators in CI
+    private func waitForAppReady() -> Bool {
+        // Wait for app to be in running foreground state
+        let launched = app.wait(for: .runningForeground, timeout: launchTimeout)
+        if !launched {
+            XCTFail("App failed to launch within \(launchTimeout) seconds")
+            return false
+        }
+
+        // Additional small delay for UI to settle
+        sleep(1)
+        return true
     }
 
     /// Test: Capture welcome screen (empty state)
@@ -26,8 +44,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         app.launch()
 
-        // Wait for app to be ready
-        sleep(2)
+        // Wait for app to be ready with proper timeout
+        guard waitForAppReady() else { return }
 
         // Take screenshot of empty state
         snapshot("01_Welcome")
@@ -46,8 +64,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         app.launch()
 
-        // Wait for app to be ready
-        sleep(2)
+        // Wait for app to be ready with proper timeout
+        guard waitForAppReady() else { return }
 
         // Screenshot: Main screen with hardcoded test lists
         snapshot("02_MainScreen")
