@@ -35,23 +35,8 @@ jobs:
       - name: Install ImageMagick (required for Frameit)
         run: brew install imagemagick
 
-      - name: Cache DerivedData
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-derived-data-screenshots-${{ hashFiles('ListAll/ListAll.xcodeproj/project.pbxproj') }}
-          restore-keys: |
-            ${{ runner.os }}-derived-data-
-
-      - name: Cache SPM packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.swiftpm
-            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('ListAll/ListAll.xcodeproj/project.pbxproj') }}
-          restore-keys: |
-            ${{ runner.os }}-spm-
+      # Caching disabled due to hashFiles issues in GitHub Actions
+      # Can be re-enabled with static key if needed for performance
 
       - name: Clean simulator state
         run: |
