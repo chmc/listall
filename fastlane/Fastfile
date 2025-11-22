@@ -14,24 +14,34 @@ def require_asc_env!
   UI.user_error!("Missing App Store Connect API key env vars: #{missing.join(', ')}") unless missing.empty?
 end
 
-# Prepare screenshots for deliver by copying only framed versions to a clean directory
-def prepare_screenshots_for_delivery(framed_path)
+# Prepare screenshots for deliver by copying RAW NORMALIZED screenshots (not framed)
+# App Store Connect requires exact pixel dimensions:
+# - iPhone 6.7": 1290x2796
+# - iPad Pro 12.9": 2048x2732
+# Framed screenshots have device bezels which change dimensions to non-standard sizes
+# that App Store Connect rejects.
+def prepare_screenshots_for_delivery(compat_path)
   delivery_path = File.expand_path("screenshots/delivery", __dir__)
   FileUtils.rm_rf(delivery_path)
   FileUtils.mkdir_p(delivery_path)
-  
+
   locales = %w[en-US fi]
   locales.each do |locale|
-    src_dir = File.join(framed_path, locale)
+    src_dir = File.join(compat_path, locale)
     dst_dir = File.join(delivery_path, locale)
     FileUtils.mkdir_p(dst_dir)
-    
-    # Copy only framed screenshots (exclude non-framed variants)
-    Dir.glob(File.join(src_dir, "*_framed.png")).each do |framed_file|
-      FileUtils.cp(framed_file, dst_dir)
+
+    # Copy raw normalized screenshots (NOT framed - exact App Store dimensions)
+    # Match patterns like "iPhone 16 Pro Max-01_Welcome.png" and "iPad Pro 13-inch (M4)-02_MainScreen.png"
+    Dir.glob(File.join(src_dir, "*.png")).each do |screenshot|
+      basename = File.basename(screenshot)
+      # Skip framed versions and only include device-prefixed screenshots
+      next if basename.include?("_framed")
+      next unless basename.include?("iPhone") || basename.include?("iPad")
+      FileUtils.cp(screenshot, dst_dir)
     end
   end
-  
+
   delivery_path
 end
 
@@ -191,16 +201,21 @@ platform :ios do
       in_house: false
     )
 
-    # Path to framed screenshots
-    framed_path = File.expand_path("screenshots/framed", __dir__)
-    
-    # Verify framed screenshots exist before attempting delivery
-    verify_framed
-    
-    # Prepare delivery directory with only framed screenshots
-    delivery_path = prepare_screenshots_for_delivery(framed_path)
-    
-    UI.message("📸 Using framed screenshots from: #{delivery_path}")
+    # Path to normalized screenshots (exact App Store dimensions, not framed)
+    # App Store Connect requires exact pixel dimensions:
+    # - iPhone 6.7": 1290x2796
+    # - iPad Pro 12.9": 2048x2732
+    compat_path = File.expand_path("screenshots_compat", __dir__)
+
+    # Verify normalized screenshots exist
+    unless Dir.exist?(compat_path)
+      UI.user_error!("Screenshots not found at #{compat_path}. Run screenshots_framed first.")
+    end
+
+    # Prepare delivery directory with raw normalized screenshots (not framed)
+    delivery_path = prepare_screenshots_for_delivery(compat_path)
+
+    UI.message("📸 Using normalized screenshots from: #{delivery_path}")
 
     deliver(
       api_key: api_key,
@@ -213,7 +228,7 @@ platform :ios do
     )
   end
 
-  desc "Dry-run: Verify framed screenshots would be detected by deliver (no upload)"
+  desc "Dry-run: Verify normalized screenshots would be detected by deliver (no upload)"
   lane :release_dry_run do
     require_asc_env!
     api_key = app_store_connect_api_key(
@@ -224,15 +239,17 @@ platform :ios do
       in_house: false
     )
 
-    # Path to framed screenshots
-    framed_path = File.expand_path("screenshots/framed", __dir__)
-    
-    # Verify framed screenshots exist
-    verify_framed
-    
-    # Prepare delivery directory with only framed screenshots
-    delivery_path = prepare_screenshots_for_delivery(framed_path)
-    
+    # Path to normalized screenshots (exact App Store dimensions)
+    compat_path = File.expand_path("screenshots_compat", __dir__)
+
+    # Verify normalized screenshots exist
+    unless Dir.exist?(compat_path)
+      UI.user_error!("Screenshots not found at #{compat_path}. Run screenshots_framed first.")
+    end
+
+    # Prepare delivery directory with raw normalized screenshots
+    delivery_path = prepare_screenshots_for_delivery(compat_path)
+
     UI.message("📸 Verifying screenshots prepared for delivery from: #{delivery_path}")
     
     # List what deliver would find
@@ -3249,57 +3266,58 @@ platform :ios do
     end
   end
 
-  desc "Validate all delivery-ready screenshots (framed iPhone/iPad + naked Watch)"
+  desc "Validate all delivery-ready screenshots (normalized iPhone/iPad + naked Watch)"
   lane :validate_delivery_screenshots do
     UI.header("📸 Validating delivery-ready screenshots for App Store submission")
 
     locales = %w[en-US fi]
     errors = []
     warnings = []
-    
-    # Expected framed dimensions (Frameit output with device frames)
-    iphone_framed_size = { width: 1421, height: 2909, tolerance: 50 }
-    ipad_framed_size = { width: 2286, height: 3168, tolerance: 50 }
-    watch_size = { width: 396, height: 484, tolerance: 0 }  # Exact match required
-    
-    # Check framed iPhone/iPad screenshots
-    framed_dir = File.expand_path("screenshots/framed", __dir__)
+
+    # Expected App Store dimensions (exact sizes required)
+    # These are RAW normalized screenshots, NOT framed
+    iphone_size = { width: 1290, height: 2796, tolerance: 0 }  # iPhone 6.7" exact
+    ipad_size = { width: 2048, height: 2732, tolerance: 0 }    # iPad Pro 12.9" exact
+    watch_size = { width: 396, height: 484, tolerance: 0 }     # Watch Series 7+ exact
+
+    # Check normalized iPhone/iPad screenshots (App Store ready)
+    compat_dir = File.expand_path("screenshots_compat", __dir__)
     locales.each do |locale|
-      locale_dir = File.join(framed_dir, locale)
+      locale_dir = File.join(compat_dir, locale)
       unless Dir.exist?(locale_dir)
-        errors << "❌ Missing framed screenshots directory: #{locale_dir}"
+        errors << "❌ Missing screenshots directory: #{locale_dir}"
         next
       end
-      
-      # Check iPhone framed screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
-      iphone_framed = Dir.glob(File.join(locale_dir, "iPhone*_framed.png"))
-      if iphone_framed.count != 2
-        warnings << "⚠️  #{locale}: Expected 2 iPhone framed screenshots, found #{iphone_framed.count}"
+
+      # Check iPhone screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
+      # Only count non-framed iPhone files
+      iphone_shots = Dir.glob(File.join(locale_dir, "iPhone*.png")).reject { |f| f.include?("_framed") }
+      if iphone_shots.count != 2
+        warnings << "⚠️  #{locale}: Expected 2 iPhone screenshots, found #{iphone_shots.count}"
       end
 
-      iphone_framed.each do |shot|
+      iphone_shots.each do |shot|
         dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
         w, h = dims.split('x').map(&:to_i)
-        if (w - iphone_framed_size[:width]).abs > iphone_framed_size[:tolerance] ||
-           (h - iphone_framed_size[:height]).abs > iphone_framed_size[:tolerance]
-          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected ~#{iphone_framed_size[:width]}x#{iphone_framed_size[:height]})"
+        if w != iphone_size[:width] || h != iphone_size[:height]
+          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{iphone_size[:width]}x#{iphone_size[:height]})"
         else
           puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
         end
       end
 
-      # Check iPad framed screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
-      ipad_framed = Dir.glob(File.join(locale_dir, "iPad*_framed.png"))
-      if ipad_framed.count != 2
-        warnings << "⚠️  #{locale}: Expected 2 iPad framed screenshots, found #{ipad_framed.count}"
+      # Check iPad screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
+      # Only count non-framed iPad files
+      ipad_shots = Dir.glob(File.join(locale_dir, "iPad*.png")).reject { |f| f.include?("_framed") }
+      if ipad_shots.count != 2
+        warnings << "⚠️  #{locale}: Expected 2 iPad screenshots, found #{ipad_shots.count}"
       end
-      
-      ipad_framed.each do |shot|
+
+      ipad_shots.each do |shot|
         dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
         w, h = dims.split('x').map(&:to_i)
-        if (w - ipad_framed_size[:width]).abs > ipad_framed_size[:tolerance] ||
-           (h - ipad_framed_size[:height]).abs > ipad_framed_size[:tolerance]
-          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected ~#{ipad_framed_size[:width]}x#{ipad_framed_size[:height]})"
+        if w != ipad_size[:width] || h != ipad_size[:height]
+          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{ipad_size[:width]}x#{ipad_size[:height]})"
         else
           puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
         end
