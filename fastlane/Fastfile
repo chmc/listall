@@ -18,6 +18,7 @@ end
 # App Store Connect requires exact pixel dimensions:
 # - iPhone 6.7": 1290x2796
 # - iPad Pro 12.9": 2048x2732
+# - Watch Series 7+: 396x484
 # Framed screenshots have device bezels which change dimensions to non-standard sizes
 # that App Store Connect rejects.
 def prepare_screenshots_for_delivery(compat_path)
@@ -39,6 +40,22 @@ def prepare_screenshots_for_delivery(compat_path)
       next if basename.include?("_framed")
       next unless basename.include?("iPhone") || basename.include?("iPad")
       FileUtils.cp(screenshot, dst_dir)
+    end
+  end
+
+  # Also copy Watch screenshots from watch_normalized directory
+  watch_src_dir = File.expand_path("screenshots/watch_normalized", __dir__)
+  if Dir.exist?(watch_src_dir)
+    locales.each do |locale|
+      watch_locale_dir = File.join(watch_src_dir, locale)
+      dst_dir = File.join(delivery_path, locale)
+      FileUtils.mkdir_p(dst_dir)
+
+      if Dir.exist?(watch_locale_dir)
+        Dir.glob(File.join(watch_locale_dir, "*.png")).each do |screenshot|
+          FileUtils.cp(screenshot, dst_dir)
+        end
+      end
     end
   end
 
