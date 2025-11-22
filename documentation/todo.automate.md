@@ -569,6 +569,12 @@ Automate App Store submission using Fastlane's `release` lane. This lane uploads
 
 Commit: 9beb592
 
+### 5.8 App store app is missing meta data ✅
+- Moved metadata folder from project root to `fastlane/metadata/` where Fastlane deliver expects it
+- Added missing `copyright.txt` for both en-US and fi locales
+- Fixed support_url.txt to use correct URL (https://chmc.github.io/listall-privacy/support.html)
+- Metadata includes: description, keywords, promotional_text, release_notes, subtitle, support_url, privacy_policy_url, copyright
+
 ### 5.8 Verify App Store preparation workflow works
 
 ---
