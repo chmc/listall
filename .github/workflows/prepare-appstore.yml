@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-derived-data-screenshots-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+          key: ${{ runner.os }}-derived-data-screenshots-${{ hashFiles('ListAll/ListAll.xcodeproj/project.pbxproj') }}
           restore-keys: |
             ${{ runner.os }}-derived-data-
 
@@ -49,7 +49,7 @@ jobs:
           path: |
             ~/.swiftpm
             ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('ListAll/ListAll.xcodeproj/project.pbxproj') }}
           restore-keys: |
             ${{ runner.os }}-spm-
 
