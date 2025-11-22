@@ -8,6 +8,7 @@ require 'fileutils'
 module ScreenshotHelper
   # Apple App Store Connect official screenshot sizes
   # Reference: https://help.apple.com/app-store-connect/
+  # Updated 2024: iPad 13" now requires 2064x2752 (not the old 2048x2732 for 12.9")
   OFFICIAL_SIZES = {
     # iPhone sizes
     iphone_67: { width: 1290, height: 2796, name: "iPhone 6.7\" (14/15/16 Pro Max)", platform: :ios },
@@ -15,12 +16,13 @@ module ScreenshotHelper
     iphone_61: { width: 1179, height: 2556, name: "iPhone 6.1\" (14/15/16 Pro)", platform: :ios },
     iphone_58: { width: 1170, height: 2532, name: "iPhone 5.8\" (X, XS, 11 Pro)", platform: :ios },
     iphone_55: { width: 1242, height: 2208, name: "iPhone 5.5\" (6/7/8 Plus)", platform: :ios },
-    
-    # iPad sizes
+
+    # iPad sizes (2024 update: 13" is the new standard, 12.9" is legacy)
+    ipad_13: { width: 2064, height: 2752, name: "iPad 13\" (M4 Pro/Air)", platform: :ios },
     ipad_129_3rd: { width: 2048, height: 2732, name: "iPad Pro 12.9\" (3rd gen+)", platform: :ios },
     ipad_129: { width: 2048, height: 2732, name: "iPad Pro 12.9\"", platform: :ios },
     ipad_11: { width: 1668, height: 2388, name: "iPad Pro 11\"", platform: :ios },
-    
+
     # Apple Watch sizes
     watch_ultra: { width: 410, height: 502, name: "Apple Watch Ultra (49mm)", platform: :watchos },
     watch_series7plus: { width: 396, height: 484, name: "Apple Watch Series 7+ (45mm)", platform: :watchos },
@@ -30,7 +32,7 @@ module ScreenshotHelper
   # Default target sizes for normalization
   DEFAULT_TARGETS = {
     ios: :iphone_67,      # iPhone 6.7" for main App Store slot
-    ipados: :ipad_129,    # iPad Pro 12.9" for iPad screenshots
+    ipados: :ipad_13,     # iPad 13" for iPad screenshots (2024 standard)
     watchos: :watch_series7plus  # Apple Watch Series 7+ 45mm
   }.freeze
 
@@ -60,7 +62,7 @@ module ScreenshotHelper
     when :iphone
       OFFICIAL_SIZES[:iphone_67]
     when :ipad
-      OFFICIAL_SIZES[:ipad_129]
+      OFFICIAL_SIZES[:ipad_13]  # 2024: Use 13" (2064x2752) instead of 12.9" (2048x2732)
     when :watch
       OFFICIAL_SIZES[:watch_series7plus]
     else
@@ -163,7 +165,7 @@ module ScreenshotHelper
     puts "Screenshot Normalization Summary"
     puts "=" * 70
     puts "iPhone: #{stats[:iphone]} screenshots normalized to #{OFFICIAL_SIZES[:iphone_67][:width]}x#{OFFICIAL_SIZES[:iphone_67][:height]}"
-    puts "iPad: #{stats[:ipad]} screenshots normalized to #{OFFICIAL_SIZES[:ipad_129][:width]}x#{OFFICIAL_SIZES[:ipad_129][:height]}"
+    puts "iPad: #{stats[:ipad]} screenshots normalized to #{OFFICIAL_SIZES[:ipad_13][:width]}x#{OFFICIAL_SIZES[:ipad_13][:height]}"
     puts "Watch: #{stats[:watch]} screenshots normalized to #{OFFICIAL_SIZES[:watch_series7plus][:width]}x#{OFFICIAL_SIZES[:watch_series7plus][:height]}"
     puts "Skipped: #{stats[:skipped]}" if stats[:skipped] > 0
     puts "Total: #{normalized_count} screenshots"

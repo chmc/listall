@@ -17,7 +17,7 @@ end
 # Prepare screenshots for deliver by copying RAW NORMALIZED screenshots (not framed)
 # App Store Connect requires exact pixel dimensions:
 # - iPhone 6.7": 1290x2796
-# - iPad Pro 12.9": 2048x2732
+# - iPad 13": 2064x2752 (2024 standard, replaces old 12.9" 2048x2732)
 # - Watch Series 7+: 396x484
 # Framed screenshots have device bezels which change dimensions to non-standard sizes
 # that App Store Connect rejects.
@@ -227,7 +227,7 @@ platform :ios do
     # Path to normalized screenshots (exact App Store dimensions, not framed)
     # App Store Connect requires exact pixel dimensions:
     # - iPhone 6.7": 1290x2796
-    # - iPad Pro 12.9": 2048x2732
+    # - iPad 13": 2064x2752 (2024 standard)
     compat_path = File.expand_path("screenshots_compat", __dir__)
 
     # Verify normalized screenshots exist
@@ -3063,7 +3063,11 @@ platform :ios do
         if size == [1320, 2868]
           target_w, target_h = [1290, 2796]       # iPhone 6.7" classic
         elsif size == [2064, 2752]
-          target_w, target_h = [2048, 2732]       # iPad Pro 12.9"
+          # Keep iPad 13" native size - this is the 2024 App Store standard
+          target_w, target_h = [2064, 2752]       # iPad 13" (M4 Pro/Air)
+        elsif size == [2048, 2732]
+          # Legacy 12.9" - upscale to 13" dimensions
+          target_w, target_h = [2064, 2752]       # iPad 13"
         else
           # Pass-through if already supported sizes
           target_w, target_h = size
@@ -3303,7 +3307,7 @@ platform :ios do
     # Expected App Store dimensions (exact sizes required)
     # These are RAW normalized screenshots, NOT framed
     iphone_size = { width: 1290, height: 2796, tolerance: 0 }  # iPhone 6.7" exact
-    ipad_size = { width: 2048, height: 2732, tolerance: 0 }    # iPad Pro 12.9" exact
+    ipad_size = { width: 2064, height: 2752, tolerance: 0 }    # iPad 13" exact (2024 standard)
     watch_size = { width: 396, height: 484, tolerance: 0 }     # Watch Series 7+ exact
 
     # Check normalized iPhone/iPad screenshots (App Store ready)

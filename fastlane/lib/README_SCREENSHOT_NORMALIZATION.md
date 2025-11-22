@@ -24,7 +24,8 @@ This system automatically:
 ### iPad Screenshots
 | Size | Dimensions | Devices |
 |------|------------|---------|
-| 12.9" | 2048x2732 | iPad Pro 12.9" (3rd gen+) ← **Default** |
+| 13" | 2064x2752 | iPad 13" (M4 Pro/Air) ← **Default (2024)** |
+| 12.9" | 2048x2732 | iPad Pro 12.9" (3rd gen+, legacy) |
 | 11" | 1668x2388 | iPad Pro 11" |
 
 ### Apple Watch Screenshots
@@ -77,7 +78,7 @@ fastlane/
 ├── screenshots_normalized/             # Normalized (iPhone/iPad)
 │   ├── en-US/
 │   │   ├── iPhone 17 Pro Max-*.png   # 1290x2796 ← App Store ready
-│   │   └── iPad Pro 13-inch-*.png    # 2048x2732 ← App Store ready
+│   │   └── iPad Pro 13-inch-*.png    # 2064x2752 ← App Store ready
 │   └── fi/
 └── screenshots/watch_normalized/       # Normalized (Watch)
     ├── en-US/                         # 396x484 ← App Store ready
@@ -131,14 +132,14 @@ Normalizes all screenshots (iPhone, iPad, Watch) to App Store dimensions.
 **Example output**:
 ```
 🔄 en-US/iPhone 17 Pro Max-01-WelcomeScreen.png: 1320x2868 → 1290x2796
-🔄 en-US/iPad Pro 13-inch (M4)-01-WelcomeScreen.png: 2064x2752 → 2048x2732
+✅ en-US/iPad Pro 13-inch (M4)-01-WelcomeScreen.png: Already 2064x2752, copying...
 🔄 en-US/Apple Watch Series 11-01_Watch_Lists_Home.png: 416x496 → 396x484
 
 ======================================================================
 Screenshot Normalization Summary
 ======================================================================
 iPhone: 10 screenshots normalized to 1290x2796
-iPad: 10 screenshots normalized to 2048x2732
+iPad: 10 screenshots normalized to 2064x2752 (13" standard)
 Watch: 10 screenshots normalized to 396x484
 Total: 30 screenshots
 ```
@@ -156,7 +157,7 @@ Validates all normalized screenshots against App Store requirements.
 **Example output**:
 ```
 ✅ en-US/iPhone 17 Pro Max-01-WelcomeScreen.png: 1290x2796 (iPhone 6.7")
-✅ en-US/iPad Pro 13-inch (M4)-01-WelcomeScreen.png: 2048x2732 (iPad Pro 12.9")
+✅ en-US/iPad Pro 13-inch (M4)-01-WelcomeScreen.png: 2064x2752 (iPad 13")
 ✅ en-US/Apple Watch Series 11-01_Watch_Lists_Home.png: 396x484 (Apple Watch Series 7+ 45mm)
 
 ======================================================================
@@ -207,7 +208,7 @@ ScreenshotHelper.normalize_screenshots(
 ScreenshotHelper.validate_screenshots(
   'path/to/normalized',
   expected_count: 10,
-  allowed_sizes: [:iphone_67, :ipad_129],
+  allowed_sizes: [:iphone_67, :ipad_13],
   strict: false  # true = warnings also fail
 )
 ```
@@ -229,8 +230,8 @@ ScreenshotHelper.normalize_screenshots(
 |----------|--------|-------|----------|-----------------|--------|
 | iPhone | en-US | 5 | 1320x2868 | 1290x2796 | ✅ Valid |
 | iPhone | fi | 5 | 1320x2868 | 1290x2796 | ✅ Valid |
-| iPad | en-US | 5 | 2064x2752 | 2048x2732 | ✅ Valid |
-| iPad | fi | 5 | 2064x2752 | 2048x2732 | ✅ Valid |
+| iPad | en-US | 5 | 2064x2752 | 2064x2752 | ✅ Valid (native 13") |
+| iPad | fi | 5 | 2064x2752 | 2064x2752 | ✅ Valid (native 13") |
 | Watch | en-US | 5 | 416x496 | 396x484 | ✅ Valid |
 | Watch | fi | 5 | 416x496 | 396x484 | ✅ Valid |
 | **Total** | | **30** | | | ✅ **All Valid** |
@@ -329,6 +330,6 @@ ScreenshotHelper.validate_screenshots(...)
 
 ---
 
-**Last Updated**: November 10, 2025  
-**Version**: 1.0  
+**Last Updated**: November 22, 2025
+**Version**: 1.1 (Updated to iPad 13" 2064x2752 standard)
 **Status**: Production Ready ✅
