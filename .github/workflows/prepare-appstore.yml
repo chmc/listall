@@ -15,7 +15,7 @@ jobs:
   generate-iphone-ipad-screenshots:
     name: Generate iPhone/iPad Screenshots
     runs-on: macos-14
-    timeout-minutes: 90  # iPhone + iPad with retries
+    timeout-minutes: 115  # iPhone + iPad with retries
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
