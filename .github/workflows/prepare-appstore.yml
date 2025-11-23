@@ -12,10 +12,10 @@ permissions:
   contents: read
 
 jobs:
-  generate-screenshots:
-    name: Generate Screenshots
+  generate-iphone-ipad-screenshots:
+    name: Generate iPhone/iPad Screenshots
     runs-on: macos-14
-    timeout-minutes: 180  # 3 hours to handle full build+test for iPhone, iPad, and Watch with retries
+    timeout-minutes: 90  # iPhone + iPad with retries
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,8 +35,69 @@ jobs:
       - name: Install ImageMagick (required for Frameit)
         run: brew install imagemagick
 
-      # Caching disabled due to hashFiles issues in GitHub Actions
-      # Can be re-enabled with static key if needed for performance
+      - name: Clean simulator state
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl delete unavailable || true
+
+      - name: Generate iPhone and iPad screenshots
+        run: bundle exec fastlane ios screenshots_framed
+        env:
+          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
+
+      - name: Upload iPhone/iPad screenshots artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-iphone-ipad
+          path: fastlane/screenshots_compat/
+          retention-days: 30
+
+      - name: Upload framed screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-framed
+          path: fastlane/screenshots/framed/
+          retention-days: 30
+
+      - name: Upload HTML report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-report-ios
+          path: fastlane/screenshots/screenshots.html
+          retention-days: 30
+
+      - name: Upload xcresult and logs for diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-ios
+          path: |
+            ~/Library/Logs/snapshot
+            **/Logs/Test/*.xcresult
+          retention-days: 7
+
+  generate-watch-screenshots:
+    name: Generate Watch Screenshots
+    runs-on: macos-14
+    timeout-minutes: 45  # Watch only
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
 
       - name: Clean simulator state
         run: |
@@ -45,21 +106,18 @@ jobs:
           # Clean up duplicate Watch simulators to avoid "multiple devices matched" error
           # Keep the oldest watchOS version (matches Xcode 16.1 bundled watchOS 11.1)
           echo "Cleaning duplicate Apple Watch Series 10 (46mm) simulators..."
-          # Get all Watch Series 10 46mm UDIDs except the oldest (Xcode-compatible) version
           WATCH_UDIDS=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys, re
           data = json.load(sys.stdin)
           watches = []
           for runtime, devices in data.get('devices', {}).items():
               if 'watchOS' in runtime:
-                  # Extract version tuple (major, minor) from runtime like 'watchOS-11-2'
                   match = re.search(r'watchOS-(\d+)-(\d+)', runtime)
                   version_tuple = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
                   for d in devices:
                       if 'Apple Watch Series 10 (46mm)' in d['name'] and d['isAvailable']:
                           watches.append((d['udid'], runtime, version_tuple))
-          # Sort by version tuple ascending, keep oldest (Xcode 16.1 uses watchOS 11.1)
-          # Delete newer versions that Xcode 16.1 can't use
+          # Sort ascending, keep oldest (Xcode 16.1 uses watchOS 11.1)
           watches.sort(key=lambda x: x[2])
           if len(watches) > 1:
               for w in watches[1:]:
@@ -70,18 +128,10 @@ jobs:
             xcrun simctl delete "$UDID" || true
           done
 
-      - name: Generate all App Store screenshots
-        run: bundle exec fastlane ios prepare_appstore
+      - name: Generate Watch screenshots
+        run: bundle exec fastlane ios watch_screenshots
         env:
-          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"  # Reduced from 90 for faster failure detection
-
-      - name: Upload iPhone/iPad screenshots artifact (normalized for App Store)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-iphone-ipad
-          path: fastlane/screenshots_compat/
-          retention-days: 30
+          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
       - name: Upload Watch screenshots artifact
         if: success()
@@ -91,21 +141,19 @@ jobs:
           path: fastlane/screenshots/watch_normalized/
           retention-days: 30
 
-      - name: Upload HTML reports
+      - name: Upload HTML report
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshot-reports
-          path: |
-            fastlane/screenshots/screenshots.html
-            fastlane/screenshots/watch/screenshots.html
+          name: screenshot-report-watch
+          path: fastlane/screenshots/watch/screenshots.html
           retention-days: 30
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-and-logs
+          name: test-results-watch
           path: |
             ~/Library/Logs/snapshot
             ~/Library/Logs/scan
@@ -114,8 +162,9 @@ jobs:
 
   upload-to-appstore:
     name: Upload Metadata & Screenshots
-    needs: generate-screenshots
+    needs: [generate-iphone-ipad-screenshots, generate-watch-screenshots]
     runs-on: macos-14
+    timeout-minutes: 30
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -133,7 +182,7 @@ jobs:
       - name: Install ImageMagick (required for screenshot validation)
         run: brew install imagemagick
 
-      - name: Download iPhone/iPad screenshots (normalized for App Store)
+      - name: Download iPhone/iPad screenshots
         uses: actions/download-artifact@v4
         with:
           name: screenshots-iphone-ipad
