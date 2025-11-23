@@ -3160,10 +3160,6 @@ platform :ios do
     
     # Setup CI keychain if running in CI (prevents signing hangs)
     setup_ci if ENV['CI']
-    
-    # Shared derived data path for prebuild and snapshot
-    derived = "./fastlane/derivedDataWatch"
-    
     # CRITICAL: Pair Watch simulator with iPhone simulator
     # Without pairing, Watch tests may run on iPhone instead of Watch,
     # and screenshots will show "iPhone Disconnected" icon (violates App Store guidelines)
@@ -3192,12 +3188,14 @@ platform :ios do
     # NOTE: We previously used test_without_building with a pre-build step, but this causes
     # Watch UI tests to hang indefinitely with "Testing started" and wait_for_debugger=1.
     # The xcodebuild test scheduler incorrectly routes Watch tests to iPhone simulator.
-    # WORKAROUND: Let snapshot build and run tests fresh for each language.
-    # This adds ~5 min per language but avoids the hang.
+    # WORKAROUND: Use plain 'xcodebuild test' instead of 'build-for-testing + test-without-building'.
+    # When derived_data_path is set, Snapshot uses test-without-building which has a bug where
+    # xcodebuild test scheduler sets RUN_DESTINATION to iPhone instead of Watch, causing hang.
+    # By NOT setting derived_data_path, Snapshot uses plain 'xcodebuild test' which works correctly.
 
     # 1. Raw screenshots - build and test for each language
     # CRITICAL: Disable xcodebuild_formatter so Fastlane can parse NSLog("snapshot: ...") entries
-    UI.header("Running watch snapshot (build + test for each language)")
+    UI.header("Running watch snapshot (plain xcodebuild test for each language)")
     snapshot(
       project: "./ListAll/ListAll.xcodeproj",
       scheme: "ListAllWatch Watch App",
@@ -3208,8 +3206,8 @@ platform :ios do
       clear_previous_screenshots: true,
       override_status_bar: true,
       reinstall_app: true,
-      # CRITICAL: Do NOT use test_without_building - causes hang with wait_for_debugger=1
-      derived_data_path: derived,
+      # CRITICAL: Do NOT set derived_data_path - it causes Snapshot to use test-without-building
+      # which has a bug where RUN_DESTINATION points to iPhone instead of Watch, causing hang.
       concurrent_simulators: false,
       skip_helper_version_check: true,
       result_bundle: false,  # Disable to allow Fastlane auto-extraction
