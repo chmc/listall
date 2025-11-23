@@ -3189,29 +3189,15 @@ platform :ios do
       UI.important("⚠️  Some simulators may not be available. Snapshot will attempt to create/pair automatically.")
     end
     
-    # 0. ONE-TIME BUILD-FOR-TESTING
-    # Build once, then snapshot reuses these compiled products for all languages
-    # This prevents rebuilding 2x (2 languages), saving 5-8 minutes
-    UI.header("Building Watch app and UI tests once for all snapshot runs")
-    scan(
-      scheme: "ListAllWatch Watch App",
-      project: "./ListAll/ListAll.xcodeproj",
-      testplan: "ListAllWatch Watch App",
-      devices: [watch_device],  # Any device; we only need to populate DerivedData
-      clean: true,
-      build_for_testing: true,
-      # Note: build_for_testing and test_without_building are mutually exclusive
-      # build_for_testing means: build only, don't run tests
-      # We need to build UI tests for snapshot, so don't use skip_testing here
-      derived_data_path: derived,
-      xcargs: "ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
-    )
-    
-    # 1. Raw screenshots using pre-built products
-    # Note: test_without_building reuses the build from scan above
+    # NOTE: We previously used test_without_building with a pre-build step, but this causes
+    # Watch UI tests to hang indefinitely with "Testing started" and wait_for_debugger=1.
+    # The xcodebuild test scheduler incorrectly routes Watch tests to iPhone simulator.
+    # WORKAROUND: Let snapshot build and run tests fresh for each language.
+    # This adds ~5 min per language but avoids the hang.
+
+    # 1. Raw screenshots - build and test for each language
     # CRITICAL: Disable xcodebuild_formatter so Fastlane can parse NSLog("snapshot: ...") entries
-    # CRITICAL: Ensure iPhone simulator stays running for Watch pairing
-    UI.header("Running watch snapshot using pre-built tests")
+    UI.header("Running watch snapshot (build + test for each language)")
     snapshot(
       project: "./ListAll/ListAll.xcodeproj",
       scheme: "ListAllWatch Watch App",
@@ -3222,14 +3208,15 @@ platform :ios do
       clear_previous_screenshots: true,
       override_status_bar: true,
       reinstall_app: true,
-      test_without_building: true,  # Reuse pre-built products
+      # CRITICAL: Do NOT use test_without_building - causes hang with wait_for_debugger=1
       derived_data_path: derived,
       concurrent_simulators: false,
       skip_helper_version_check: true,
       result_bundle: false,  # Disable to allow Fastlane auto-extraction
       xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
       stop_after_first_error: false,  # Don't stop on first error to allow all languages to run
-      only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"]  # Run only Watch screenshot tests
+      only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"],  # Run only Watch screenshot tests
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist before processing
