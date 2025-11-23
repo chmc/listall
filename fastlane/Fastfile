@@ -2532,7 +2532,14 @@ platform :ios do
         end
         
         # Method 4: Recursive search as last resort (if screenshots still not found)
-        if extracted_count == 0
+        # CRITICAL FIX: First check if Fastlane's native extraction already succeeded
+        # by looking for screenshots in the locale output directory
+        # This prevents a 2+ hour hang searching through hundreds of simulator directories
+        locale_screenshots = Dir.glob(File.join(locale_dir, "*.png"))
+        if locale_screenshots.any?
+          UI.message("   ✅ Fastlane native extraction succeeded - found #{locale_screenshots.count} screenshots in #{locale_dir}")
+          UI.message("   ⏭️  Skipping recursive search (not needed)")
+        elsif extracted_count == 0
           UI.message("   🔍 Performing recursive search for screenshots...")
 
           # Define reasonable search roots (don't search entire filesystem)
