@@ -99,6 +99,9 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Install ImageMagick (required for screenshot normalization)
+        run: brew install imagemagick
+
       - name: Clean simulator state
         run: |
           xcrun simctl shutdown all || true
