@@ -594,7 +594,9 @@ Commit: 9beb592
   - Added fail-fast with clear error message if app doesn't launch within 30 seconds
   - Note: This helps with launch-related hangs but doesn't fix simulator instability. iPad tests may still be flaky due to CI environment; existing `number_of_retries(2)` setting handles this
 
-### 5.9 Verify App Store preparation workflow works
+### 5.9 Split iPhone and iPad from Apple Watch job ✅
+
+### 5.10 Verify App Store preparation workflow works
 
 ---
 
