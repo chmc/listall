@@ -32,11 +32,23 @@ final class ListAllUITests_Screenshots: XCTestCase {
         return true
     }
 
+    /// Safely terminate the app, ignoring any termination failures
+    /// This prevents "Failed to terminate" errors from failing the test on iPad
+    private func safeTerminate() {
+        // Check if app is running before attempting to terminate
+        if app.state != .notRunning {
+            app.terminate()
+            // Wait briefly for termination to complete
+            _ = app.wait(for: .notRunning, timeout: 5)
+        }
+    }
+
     /// Test: Capture welcome screen (empty state)
     func testScreenshots01_WelcomeScreen() throws {
         // CRITICAL: Terminate app first to force fresh launch with correct AppleLanguages
         // iOS caches .strings bundle on first launch, so we need to kill/relaunch for language change
-        app.terminate()
+        // Use safe termination to avoid "Failed to terminate" errors on iPad
+        safeTerminate()
 
         // Launch with empty state - SKIP_TEST_DATA prevents populating lists
         // CRITICAL: Use += to APPEND arguments, not = which would overwrite the language settings from setupSnapshot()
@@ -55,8 +67,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
     func testScreenshots02_MainFlow() throws {
         // CRITICAL: Terminate app first to force fresh launch with correct AppleLanguages
         // Without this, the app from test01 might still be running with stale state
-        // This caused 30-minute hangs on iPad Finnish in CI
-        app.terminate()
+        // Use safe termination to avoid "Failed to terminate" errors on iPad
+        safeTerminate()
 
         // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
         // CRITICAL: Use += to APPEND arguments, not = which would overwrite the language settings from setupSnapshot()
