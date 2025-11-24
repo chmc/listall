@@ -66,7 +66,7 @@ jobs:
   generate-ipad-screenshots:
     name: Generate iPad Screenshots
     runs-on: macos-14
-    timeout-minutes: 60
+    timeout-minutes: 90  # iPad tests are flaky and need retries
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
