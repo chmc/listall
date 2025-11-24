@@ -408,7 +408,8 @@ platform :ios do
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,  # No IAPs in this app (also incompatible with API key auth)
-      force: true
+      force: true,
+      ignore_language_directory_validation: true  # Allow documentation folders in metadata
     )
   end
 
@@ -476,7 +477,8 @@ platform :ios do
       skip_binary_upload: true,
       submit_for_review: false,
       run_precheck_before_submit: false,  # Precheck doesn't work with API keys
-      force: true
+      force: true,
+      ignore_language_directory_validation: true  # Allow documentation folders in metadata
     )
   end
 
