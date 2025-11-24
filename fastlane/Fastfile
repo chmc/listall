@@ -3450,8 +3450,9 @@ platform :ios do
       xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
       stop_after_first_error: false,  # Don't stop on first error to allow all languages to run
       only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"],  # Run only Watch screenshot tests
-      # Add test timeout to prevent hung tests from blocking CI
-      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300",
+      # Test timeout: 300s default (5 min), 600s max (10 min)
+      # Watch tests capture 5 screenshots with navigation - needs more time than iPhone/iPad
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
       number_of_retries: 2  # Retry flaky tests in CI
     )
     

@@ -23,7 +23,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     /// Launch app with retry logic to handle "Failed to terminate" errors on iPad simulators
     /// This is a known flaky issue where app.launch() internally fails to terminate the previous instance
-    private func launchAppWithRetry(arguments: [String], maxRetries: Int = 3) -> Bool {
+    /// Note: maxRetries=2 gives 2×60s=120s budget, leaving 180s for test execution within 300s timeout
+    private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) -> Bool {
         for attempt in 1...maxRetries {
             // Brief pause before retry attempts to let system settle
             if attempt > 1 {

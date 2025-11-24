@@ -35,10 +35,31 @@ jobs:
       - name: Install ImageMagick (required for screenshot normalization)
         run: brew install imagemagick
 
-      - name: Clean simulator state
+      - name: Clean and pre-boot simulator
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
+          # Pre-boot iPhone simulator to reduce test startup time
+          echo "Pre-booting iPhone 16 Pro Max simulator..."
+          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data.get('devices', {}).items():
+              if 'iOS' in runtime:
+                  for d in devices:
+                      if 'iPhone 16 Pro Max' in d['name'] and d['isAvailable']:
+                          print(d['udid'])
+                          sys.exit(0)
+          " 2>/dev/null || true)
+          if [ -n "$DEVICE_UDID" ]; then
+            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+            echo "Waiting 30s for simulator to fully boot..."
+            sleep 30
+            xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
+            echo "✅ Simulator pre-booted and ready"
+          else
+            echo "⚠️ Could not find iPhone 16 Pro Max simulator, will boot on demand"
+          fi
 
       - name: Generate iPhone screenshots
         uses: nick-fields/retry@v3
@@ -91,10 +112,31 @@ jobs:
       - name: Install ImageMagick (required for screenshot normalization)
         run: brew install imagemagick
 
-      - name: Clean simulator state
+      - name: Clean and pre-boot simulator
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
+          # Pre-boot iPad simulator to reduce test startup time
+          echo "Pre-booting iPad Pro 13-inch (M4) simulator..."
+          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data.get('devices', {}).items():
+              if 'iOS' in runtime:
+                  for d in devices:
+                      if 'iPad Pro 13-inch (M4)' in d['name'] and d['isAvailable']:
+                          print(d['udid'])
+                          sys.exit(0)
+          " 2>/dev/null || true)
+          if [ -n "$DEVICE_UDID" ]; then
+            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+            echo "Waiting 30s for simulator to fully boot..."
+            sleep 30
+            xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
+            echo "✅ Simulator pre-booted and ready"
+          else
+            echo "⚠️ Could not find iPad Pro 13-inch (M4) simulator, will boot on demand"
+          fi
 
       - name: Generate iPad screenshots
         uses: nick-fields/retry@v3
