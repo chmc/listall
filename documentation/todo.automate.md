@@ -596,7 +596,49 @@ Commit: 9beb592
 
 ### 5.9 Split iPhone and iPad from Apple Watch job ✅
 
-### 5.10 Verify App Store preparation workflow works
+### 5.10 Split iPhone and iPad job to separate lanes ✅
+
+**Problem**: Combined iPhone+iPad job was timing out at ~115 minutes with no visibility into which device was causing issues.
+
+**Solution**: Split into separate parallel jobs for better visibility and faster failure detection.
+
+**Implementation**:
+- Created `screenshots_iphone` lane in Fastfile - captures iPhone 16 Pro Max screenshots only
+- Created `screenshots_ipad` lane in Fastfile - captures iPad Pro 13-inch (M4) screenshots only
+- Added helper methods:
+  - `generate_screenshots_for_device(device)` - captures screenshots for a specific device
+  - `normalize_device_screenshots(device_type)` - normalizes to App Store dimensions
+- Updated `.github/workflows/prepare-appstore.yml`:
+  - Split `generate-iphone-ipad-screenshots` into `generate-iphone-screenshots` and `generate-ipad-screenshots`
+  - Each job has 60-minute timeout (down from 115 combined)
+  - All three jobs (iPhone, iPad, Watch) run in parallel
+  - Upload job merges artifacts from all three before validation and delivery
+
+**Benefits**:
+- Early failure visibility - iPhone failure shows in ~30 min instead of 2 hours
+- Parallel execution - All screenshot jobs run simultaneously
+- Better resource isolation - Each runner only boots one device type
+- Easier debugging - Clear which device is problematic
+
+**Local testing**:
+```bash
+bundle exec fastlane ios screenshots_iphone  # Test iPhone only
+bundle exec fastlane ios screenshots_ipad    # Test iPad only
+bundle exec fastlane ios screenshots_framed  # Both (legacy)
+```
+
+### 5.11 Verify App Store preparation workflow works
+
+### 5.12 Implement custom framing for screenshots
+- **Status**: TODO
+- **Context**: Frameit doesn't support current Apple 2024 device frame standards (iPad 13", iPhone 16 Pro Max)
+- **Current state**: Using naked (unframed) screenshots which App Store accepts
+- **Goal**: Create custom framing solution with marketing captions for more professional App Store presence
+- **Options to evaluate**:
+  1. Custom ImageMagick script to add device frames and captions
+  2. Wait for Frameit update with new device support
+  3. Third-party tool like screenshots.pro
+- **Acceptance**: Framed screenshots with device bezels and marketing text uploaded to App Store
 
 ---
 

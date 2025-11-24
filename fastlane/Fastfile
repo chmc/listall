@@ -63,6 +63,161 @@ def prepare_screenshots_for_delivery(compat_path)
   delivery_path
 end
 
+# Helper method to run screenshot generation for a specific device
+# @param device [String] Device name (e.g., "iPhone 16 Pro Max" or "iPad Pro 13-inch (M4)")
+# @param locales [Array<String>] Locales to capture (default: ["en-US", "fi"])
+# @param clear_previous [Boolean] Whether to clear previous screenshots (default: true)
+# @return [Integer] Number of screenshots captured
+def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previous: true)
+  require 'fileutils'
+  require 'shellwords'
+
+  screenshots_dir = File.expand_path("screenshots", __dir__)
+  project_root = File.expand_path("..", __dir__)
+  derived = File.join(project_root, "fastlane", "derivedDataSnapshot")
+
+  # Expected screenshots per device/locale combination
+  expected_per_combination = 2  # 01_Welcome, 02_MainScreen
+
+  # Set environment variables
+  ENV['SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT'] = '30'
+  simulator_host_home = ENV['HOME'] || Dir.home
+  ENV['SIMULATOR_HOST_HOME'] = simulator_host_home
+
+  device_name_sanitized = device.gsub(/[^a-zA-Z0-9]/, "")
+  total_captured = 0
+
+  locales.each_with_index do |locale, locale_idx|
+    is_first = locale_idx == 0 && clear_previous
+    UI.header("📸 Generating screenshots for #{device} (#{locale})")
+
+    # Set up environment for this run
+    language_code = locale.split("-").first
+    ENV['FASTLANE_SNAPSHOT'] = 'YES'
+    ENV['FASTLANE_LANGUAGE'] = locale
+    ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
+    ENV['NSUnbufferedIO'] = 'YES'
+
+    # Create cache files in simulator directories
+    cache_dir = File.join(simulator_host_home, "Library/Caches/tools.fastlane")
+    FileUtils.mkdir_p(cache_dir)
+    File.write(File.join(cache_dir, "language.txt"), language_code)
+    File.write(File.join(cache_dir, "locale.txt"), locale)
+    File.write(File.join(cache_dir, "device_name.txt"), device_name_sanitized)
+
+    # Also create cache files in simulator data directories
+    begin
+      simulator_info = `xcrun simctl list devices --json 2>&1`
+      if $?.success?
+        require 'json'
+        sim_data = JSON.parse(simulator_info)
+        sim_data['devices'].each do |runtime, devices|
+          devices.each do |sim|
+            if sim['name'] == device && sim['dataPath']
+              sim_cache_dir = File.join(sim['dataPath'], "Library/Caches/tools.fastlane")
+              FileUtils.mkdir_p(sim_cache_dir) rescue nil
+              File.write(File.join(sim_cache_dir, "language.txt"), language_code) rescue nil
+              File.write(File.join(sim_cache_dir, "locale.txt"), locale) rescue nil
+              File.write(File.join(sim_cache_dir, "device_name.txt"), device_name_sanitized) rescue nil
+            end
+          end
+        end
+      end
+    rescue => e
+      UI.message("⚠️  Could not create simulator cache files: #{e.message}")
+    end
+
+    # Run snapshot
+    # Note: Many settings (scheme, project, output_directory) are inherited from Snapfile
+    # We explicitly pass device-specific overrides here
+    xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300"
+
+    snapshot(
+      derived_data_path: derived,
+      devices: [device],
+      languages: [locale],
+      clear_previous_screenshots: is_first,
+      only_testing: [
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow"
+      ],
+      skip_testing: ["ListAllTests"],
+      xcodebuild_formatter: "",
+      buildlog_path: "~/Library/Logs/snapshot",
+      xcargs: xcargs,
+      result_bundle: false,
+      # Explicitly set critical options (also in Snapfile, but be explicit)
+      override_status_bar: true,
+      reinstall_app: true,
+      localize_simulator: true,
+      number_of_retries: 2
+    )
+
+    # Verify screenshots were captured
+    locale_dir = File.join(screenshots_dir, locale)
+    device_pattern = device.include?("iPhone") ? "iPhone*.png" : "iPad*.png"
+    device_shots = Dir.glob(File.join(locale_dir, device_pattern)).reject { |f| f.include?("_framed") }
+
+    if device_shots.count >= expected_per_combination
+      UI.success("✅ Generated #{device_shots.count} screenshots for #{device} (#{locale})")
+      total_captured += device_shots.count
+    elsif device_shots.count > 0
+      UI.message("⚠️  Found #{device_shots.count} screenshots for #{device} (#{locale}) (expected #{expected_per_combination})")
+      total_captured += device_shots.count
+    else
+      UI.error("❌ No screenshots found for #{device} (#{locale})")
+    end
+  end
+
+  total_captured
+end
+
+# Helper method to normalize screenshots for a specific device type to App Store dimensions
+# @param device_type [Symbol] :iphone or :ipad
+# @param locales [Array<String>] Locales to process
+def normalize_device_screenshots(device_type, locales: %w[en-US fi])
+  require 'fileutils'
+  require 'shellwords'
+
+  screenshots_dir = File.expand_path("screenshots", __dir__)
+  compat_root = File.expand_path("screenshots_compat", __dir__)
+
+  # Target dimensions
+  target_sizes = {
+    iphone: { width: 1290, height: 2796 },   # iPhone 6.7"
+    ipad: { width: 2064, height: 2752 }      # iPad 13" (2024 standard)
+  }
+  target = target_sizes[device_type]
+  device_pattern = device_type == :iphone ? "iPhone" : "iPad"
+
+  FileUtils.mkdir_p(compat_root)
+
+  locales.each do |locale|
+    src = File.join(screenshots_dir, locale)
+    dst = File.join(compat_root, locale)
+    FileUtils.mkdir_p(dst)
+
+    Dir.glob(File.join(src, "#{device_pattern}*.png")).each do |png|
+      basename = File.basename(png)
+      next if basename.include?("_framed")
+      next unless basename =~ /-(01|02|03|04|05)[-_]/
+
+      size = `identify -format '%w %h' #{Shellwords.escape(png)}`.strip.split.map(&:to_i) rescue []
+      next if size.empty? || size == [0, 0]
+
+      out = File.join(dst, basename)
+
+      if size == [target[:width], target[:height]]
+        FileUtils.cp(png, out)
+        UI.message("✅ #{locale}/#{basename}: Already #{target[:width]}x#{target[:height]}")
+      else
+        UI.message("🔄 #{locale}/#{basename}: #{size.inspect} → #{target[:width]}x#{target[:height]}")
+        `magick convert #{Shellwords.escape(png)} -resize #{target[:width]}x#{target[:height]}! #{Shellwords.escape(out)}`
+      end
+    end
+  end
+end
+
 
 platform :ios do
   desc "Run unit and UI tests (xcodebuild like CI)"
@@ -417,9 +572,91 @@ platform :ios do
   lane :screenshots do
     # Capture screenshots using the snapshot tool
     snapshot
-    
+
     UI.success("✅ Screenshots generated successfully")
     UI.message("📁 Screenshots saved to: fastlane/screenshots")
+  end
+
+  desc "Generate iPhone screenshots only"
+  desc "Captures iPhone 16 Pro Max screenshots for EN and FI locales"
+  desc "Outputs normalized screenshots to screenshots_compat/ ready for App Store"
+  lane :screenshots_iphone do
+    UI.header("📱 Generating iPhone Screenshots")
+
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+
+    # Clean up old screenshot subdirectories
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+    UI.message("🧹 Cleaning old screenshot subdirectories...")
+    %w[test_output delivery attachments].each do |subdir|
+      subdir_path = File.join(screenshots_dir, subdir)
+      FileUtils.rm_rf(subdir_path) if Dir.exist?(subdir_path)
+    end
+
+    # Generate iPhone screenshots
+    device = "iPhone 16 Pro Max"
+    count = generate_screenshots_for_device(device, clear_previous: true)
+
+    if count == 0
+      UI.user_error!("🚨 iPhone screenshot generation failed: No screenshots captured")
+    end
+
+    # Normalize to App Store dimensions
+    UI.header("📐 Normalizing iPhone screenshots to App Store dimensions")
+    normalize_device_screenshots(:iphone)
+
+    # Verify normalized screenshots
+    compat_dir = File.expand_path("screenshots_compat", __dir__)
+    iphone_shots = Dir.glob(File.join(compat_dir, "**", "iPhone*.png")).reject { |f| f.include?("_framed") }
+
+    if iphone_shots.empty?
+      UI.user_error!("🚨 iPhone normalization failed: No normalized screenshots found")
+    end
+
+    UI.success("✅ iPhone screenshots complete: #{iphone_shots.count} normalized screenshots")
+    UI.message("📁 Output: #{compat_dir}")
+  end
+
+  desc "Generate iPad screenshots only"
+  desc "Captures iPad Pro 13-inch (M4) screenshots for EN and FI locales"
+  desc "Outputs normalized screenshots to screenshots_compat/ ready for App Store"
+  lane :screenshots_ipad do
+    UI.header("📱 Generating iPad Screenshots")
+
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+
+    # Clean up old screenshot subdirectories
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+    UI.message("🧹 Cleaning old screenshot subdirectories...")
+    %w[test_output delivery attachments].each do |subdir|
+      subdir_path = File.join(screenshots_dir, subdir)
+      FileUtils.rm_rf(subdir_path) if Dir.exist?(subdir_path)
+    end
+
+    # Generate iPad screenshots
+    device = "iPad Pro 13-inch (M4)"
+    count = generate_screenshots_for_device(device, clear_previous: true)
+
+    if count == 0
+      UI.user_error!("🚨 iPad screenshot generation failed: No screenshots captured")
+    end
+
+    # Normalize to App Store dimensions
+    UI.header("📐 Normalizing iPad screenshots to App Store dimensions")
+    normalize_device_screenshots(:ipad)
+
+    # Verify normalized screenshots
+    compat_dir = File.expand_path("screenshots_compat", __dir__)
+    ipad_shots = Dir.glob(File.join(compat_dir, "**", "iPad*.png")).reject { |f| f.include?("_framed") }
+
+    if ipad_shots.empty?
+      UI.user_error!("🚨 iPad normalization failed: No normalized screenshots found")
+    end
+
+    UI.success("✅ iPad screenshots complete: #{ipad_shots.count} normalized screenshots")
+    UI.message("📁 Output: #{compat_dir}")
   end
 
   desc "Unified App Store screenshot generation pipeline"

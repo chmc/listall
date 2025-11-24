@@ -12,10 +12,10 @@ permissions:
   contents: read
 
 jobs:
-  generate-iphone-ipad-screenshots:
-    name: Generate iPhone/iPad Screenshots
+  generate-iphone-screenshots:
+    name: Generate iPhone Screenshots
     runs-on: macos-14
-    timeout-minutes: 115  # iPhone + iPad with retries
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Install ImageMagick (required for Frameit)
+      - name: Install ImageMagick (required for screenshot normalization)
         run: brew install imagemagick
 
       - name: Clean simulator state
@@ -40,40 +40,75 @@ jobs:
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
 
-      - name: Generate iPhone and iPad screenshots
-        run: bundle exec fastlane ios screenshots_framed
+      - name: Generate iPhone screenshots
+        run: bundle exec fastlane ios screenshots_iphone
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
-      - name: Upload iPhone/iPad screenshots artifact
+      - name: Upload iPhone screenshots artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-iphone-ipad
+          name: screenshots-iphone
           path: fastlane/screenshots_compat/
-          retention-days: 30
-
-      - name: Upload framed screenshots
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-framed
-          path: fastlane/screenshots/framed/
-          retention-days: 30
-
-      - name: Upload HTML report
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshot-report-ios
-          path: fastlane/screenshots/screenshots.html
           retention-days: 30
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-ios
+          name: test-results-iphone
+          path: |
+            ~/Library/Logs/snapshot
+            **/Logs/Test/*.xcresult
+          retention-days: 7
+
+  generate-ipad-screenshots:
+    name: Generate iPad Screenshots
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install ImageMagick (required for screenshot normalization)
+        run: brew install imagemagick
+
+      - name: Clean simulator state
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl delete unavailable || true
+
+      - name: Generate iPad screenshots
+        run: bundle exec fastlane ios screenshots_ipad
+        env:
+          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
+
+      - name: Upload iPad screenshots artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-ipad
+          path: fastlane/screenshots_compat/
+          retention-days: 30
+
+      - name: Upload xcresult and logs for diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-ipad
           path: |
             ~/Library/Logs/snapshot
             **/Logs/Test/*.xcresult
@@ -82,7 +117,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 45  # Watch only
+    timeout-minutes: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -165,7 +200,7 @@ jobs:
 
   upload-to-appstore:
     name: Upload Metadata & Screenshots
-    needs: [generate-iphone-ipad-screenshots, generate-watch-screenshots]
+    needs: [generate-iphone-screenshots, generate-ipad-screenshots, generate-watch-screenshots]
     runs-on: macos-14
     timeout-minutes: 30
     env:
@@ -185,10 +220,19 @@ jobs:
       - name: Install ImageMagick (required for screenshot validation)
         run: brew install imagemagick
 
-      - name: Download iPhone/iPad screenshots
+      - name: Create screenshots_compat directory
+        run: mkdir -p fastlane/screenshots_compat
+
+      - name: Download iPhone screenshots
         uses: actions/download-artifact@v4
         with:
-          name: screenshots-iphone-ipad
+          name: screenshots-iphone
+          path: fastlane/screenshots_compat/
+
+      - name: Download iPad screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-ipad
           path: fastlane/screenshots_compat/
 
       - name: Download Watch screenshots
@@ -196,6 +240,14 @@ jobs:
         with:
           name: screenshots-watch
           path: fastlane/screenshots/watch_normalized/
+
+      - name: List merged screenshots
+        run: |
+          echo "=== iPhone/iPad Screenshots (screenshots_compat) ==="
+          find fastlane/screenshots_compat -name "*.png" | head -20
+          echo ""
+          echo "=== Watch Screenshots ==="
+          find fastlane/screenshots/watch_normalized -name "*.png" | head -20
 
       - name: Validate screenshots before upload
         run: bundle exec fastlane ios validate_delivery_screenshots
