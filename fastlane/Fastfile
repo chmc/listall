@@ -6,6 +6,7 @@ require 'shellwords'
 require_relative 'lib/version_helper'
 require_relative 'lib/watch_screenshot_helper'
 require_relative 'lib/screenshot_helper'
+require_relative 'lib/fastlane_patch_ipad13'
 
 default_platform(:ios)
 
