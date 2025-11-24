@@ -164,10 +164,9 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
       UI.success("✅ Generated #{device_shots.count} screenshots for #{device} (#{locale})")
       total_captured += device_shots.count
     elsif device_shots.count > 0
-      UI.message("⚠️  Found #{device_shots.count} screenshots for #{device} (#{locale}) (expected #{expected_per_combination})")
-      total_captured += device_shots.count
+      UI.user_error!("🚨 Incomplete screenshot generation: #{device} (#{locale}) has only #{device_shots.count}/#{expected_per_combination} screenshots")
     else
-      UI.error("❌ No screenshots found for #{device} (#{locale})")
+      UI.user_error!("🚨 Screenshot generation failed: No screenshots found for #{device} (#{locale})")
     end
   end
 
@@ -3458,13 +3457,25 @@ platform :ios do
       number_of_retries: 2  # Retry flaky tests in CI
     )
     
-    # 2. Fail-fast check: ensure raw screenshots exist before processing
+    # 2. Fail-fast check: ensure raw screenshots exist for EACH locale before processing
     watch_raw_dir = File.expand_path("screenshots/watch", __dir__)
     raw_shots = Dir.glob(File.join(watch_raw_dir, "**/*.png"))
     if raw_shots.empty?
       UI.user_error!("🚨 Watch screenshot generation failed: No screenshots found in #{watch_raw_dir}")
     end
-    UI.success("✅ Found #{raw_shots.count} raw watch screenshots")
+
+    # Validate per-locale screenshot count (expect 5 per locale)
+    expected_per_locale = 5
+    locales = %w[en-US fi]
+    locales.each do |locale|
+      locale_dir = File.join(watch_raw_dir, locale)
+      locale_shots = Dir.glob(File.join(locale_dir, "*.png"))
+      if locale_shots.count < expected_per_locale
+        UI.user_error!("🚨 Watch screenshot generation incomplete: #{locale} has only #{locale_shots.count}/#{expected_per_locale} screenshots")
+      end
+    end
+
+    UI.success("✅ Found #{raw_shots.count} raw watch screenshots (#{expected_per_locale} per locale)")
     
     UI.success("🍎⌚️ Watch screenshots generation complete!")
     UI.message("📁 Raw screenshots saved to: fastlane/screenshots/watch")
