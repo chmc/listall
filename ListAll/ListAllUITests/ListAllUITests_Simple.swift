@@ -61,27 +61,34 @@ final class ListAllUITests_Screenshots: XCTestCase {
     /// Test: Capture welcome screen (empty state)
     func testScreenshots01_WelcomeScreen() throws {
         // Launch with empty state - SKIP_TEST_DATA prevents populating lists
-        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"]) else { return }
+        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"]) else {
+            XCTFail("App failed to launch for welcome screen screenshot")
+            return
+        }
+
+        // Wait for UI to be ready
+        sleep(2)
 
         // Take screenshot of empty state
+        print("📸 Capturing welcome screen screenshot")
         snapshot("01_Welcome")
+        print("✅ Welcome screen screenshot captured")
     }
 
     /// Test: Capture main flow with data
     func testScreenshots02_MainFlow() throws {
         // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
-        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]) else { return }
+        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]) else {
+            XCTFail("App failed to launch for main flow screenshot")
+            return
+        }
+
+        // Wait for UI to be ready and data to load
+        sleep(2)
 
         // Screenshot: Main screen with hardcoded test lists
+        print("📸 Capturing main screen screenshot")
         snapshot("02_MainScreen")
-
-        // Navigate and take more screenshots as needed
-        // Example: tap first list, wait, screenshot
-        // let firstList = app.collectionViews.cells.firstMatch
-        // if firstList.exists {
-        //     firstList.tap()
-        //     sleep(1)
-        //     snapshot("03_ListDetail")
-        // }
+        print("✅ Main screen screenshot captured")
     }
 }
