@@ -56,9 +56,10 @@ localize_simulator(true)
 # Disable code signing for simulator builds (not needed, prevents hangs)
 # Add test timeout to prevent hung tests from blocking CI for 55+ minutes
 # -test-timeouts-enabled YES: Enable test timeouts
-# -default-test-execution-time-allowance 180: 3 minutes default per test
-# -maximum-test-execution-time-allowance 300: 5 minutes max per test (hard limit)
-xcargs("CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300")
+# -default-test-execution-time-allowance 300: 5 minutes default per test (increased from 180s)
+# -maximum-test-execution-time-allowance 600: 10 minutes max per test (hard limit)
+# Note: Tests may need multiple launch retries (3x60s=180s) plus UI waits plus snapshot
+xcargs("CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600")
 
 # Run devices sequentially to avoid signing deadlocks in CI
 # Concurrent mode causes keychain access conflicts during code signing

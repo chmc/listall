@@ -130,7 +130,9 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
     # Run snapshot
     # Note: Many settings (scheme, project, output_directory) are inherited from Snapfile
     # We explicitly pass device-specific overrides here
-    xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300"
+    # Test timeout: 300s default (5 min), 600s max (10 min)
+    # Tests may need multiple launch retries (3x60s=180s) plus UI waits plus snapshot
+    xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600"
 
     snapshot(
       derived_data_path: derived,
