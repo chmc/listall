@@ -689,7 +689,8 @@ platform :ios do
         
         # Use xcargs only for build settings (code signing), not environment variables
         # Environment variables are passed automatically via Ruby ENV above
-        existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+        # Add test timeout to prevent hung tests from blocking CI for 55+ minutes
+        existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300"
         
         # CRITICAL FIX: Remove only_testing when using test_without_building
         # When using test_without_building, xcodebuild may not correctly match test identifiers
@@ -3210,7 +3211,8 @@ platform :ios do
       xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
       stop_after_first_error: false,  # Don't stop on first error to allow all languages to run
       only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"],  # Run only Watch screenshot tests
-      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+      # Add test timeout to prevent hung tests from blocking CI
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300"
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist before processing
