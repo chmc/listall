@@ -3449,7 +3449,8 @@ platform :ios do
       stop_after_first_error: false,  # Don't stop on first error to allow all languages to run
       only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"],  # Run only Watch screenshot tests
       # Add test timeout to prevent hung tests from blocking CI
-      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300"
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300",
+      number_of_retries: 2  # Retry flaky tests in CI
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist before processing

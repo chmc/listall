@@ -15,7 +15,7 @@ jobs:
   generate-iphone-screenshots:
     name: Generate iPhone Screenshots
     runs-on: macos-14
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +41,12 @@ jobs:
           xcrun simctl delete unavailable || true
 
       - name: Generate iPhone screenshots
-        run: bundle exec fastlane ios screenshots_iphone
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 45
+          max_attempts: 2
+          retry_wait_seconds: 30
+          command: bundle exec fastlane ios screenshots_iphone
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -66,7 +71,7 @@ jobs:
   generate-ipad-screenshots:
     name: Generate iPad Screenshots
     runs-on: macos-14
-    timeout-minutes: 90  # iPad tests are flaky and need retries
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,7 +97,12 @@ jobs:
           xcrun simctl delete unavailable || true
 
       - name: Generate iPad screenshots
-        run: bundle exec fastlane ios screenshots_ipad
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 45
+          max_attempts: 2
+          retry_wait_seconds: 30
+          command: bundle exec fastlane ios screenshots_ipad
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -117,7 +127,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -167,7 +177,12 @@ jobs:
           done
 
       - name: Generate Watch screenshots
-        run: bundle exec fastlane ios watch_screenshots
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 45
+          max_attempts: 2
+          retry_wait_seconds: 30
+          command: bundle exec fastlane ios watch_screenshots
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
