@@ -1,0 +1,308 @@
+# GitHub Workflows & CI Tooling
+
+This directory contains GitHub Actions workflows, CI helper scripts, and development tools for the ListAll iOS app.
+
+## 📁 Directory Structure
+
+```
+.github/
+├── workflows/              # GitHub Actions workflows
+│   ├── prepare-appstore.yml         # Main screenshot generation pipeline
+│   └── TROUBLESHOOTING.md           # Comprehensive troubleshooting guide
+├── scripts/                # CI helper scripts
+│   ├── test-pipeline-locally.sh     # Local CI simulator
+│   ├── analyze-ci-failure.sh        # Automated log analysis
+│   ├── find-simulator.sh            # Simulator discovery
+│   ├── cleanup-watch-duplicates.sh  # Watch simulator cleanup
+│   ├── validate-screenshots.sh      # Screenshot validation
+│   ├── preflight-check.sh           # Environment validation
+│   └── README.md                    # Scripts documentation
+├── hooks/                  # Git hooks
+│   └── pre-commit                   # Automated validation hook
+├── DEVELOPMENT.md          # Local development guide
+└── README.md               # This file
+```
+
+## 🚀 Quick Start
+
+### For Developers
+
+**Before committing CI changes:**
+```bash
+# Fast validation (1-2s)
+.github/scripts/test-pipeline-locally.sh --validate-only
+
+# Quick test with simulator boot (10-15s)
+.github/scripts/test-pipeline-locally.sh --quick
+```
+
+**Install pre-commit hook (optional):**
+```bash
+ln -sf ../../.github/hooks/pre-commit .git/hooks/pre-commit
+```
+
+### For Troubleshooting CI Failures
+
+**Automatic diagnosis:**
+```bash
+# Analyze latest run
+.github/scripts/analyze-ci-failure.sh --latest
+
+# Analyze specific run
+.github/scripts/analyze-ci-failure.sh 19667213668
+```
+
+**Manual troubleshooting:**
+See [workflows/TROUBLESHOOTING.md](workflows/TROUBLESHOOTING.md)
+
+### For Running Pipeline
+
+**Trigger screenshot generation:**
+```bash
+gh workflow run prepare-appstore.yml -f version=1.2.0
+```
+
+**Monitor progress:**
+```bash
+gh run watch
+```
+
+## 📚 Documentation
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Local testing workflow, debugging tips | Developers |
+| [workflows/TROUBLESHOOTING.md](workflows/TROUBLESHOOTING.md) | CI failure diagnosis and fixes | Maintainers |
+| [scripts/README.md](scripts/README.md) | Script reference documentation | Developers |
+
+## 🛠️ Tools Overview
+
+### Local Testing
+
+**[test-pipeline-locally.sh](scripts/test-pipeline-locally.sh)**
+- Simulates complete CI pipeline locally
+- Three modes: validate-only (1-2s), quick (10-15s), full (60-90min)
+- Catches issues before pushing to CI
+
+### CI Diagnostics
+
+**[analyze-ci-failure.sh](scripts/analyze-ci-failure.sh)**
+- Automatically diagnoses pipeline failures
+- Analyzes GitHub Actions logs
+- Provides direct links to fixes
+
+### Git Hooks
+
+**[pre-commit](hooks/pre-commit)**
+- Optional git hook for automatic validation
+- Runs on CI file changes only
+- Prevents pushing broken code
+
+### Helper Scripts
+
+**[preflight-check.sh](scripts/preflight-check.sh)**
+- Validates environment before 90min run
+- Checks Xcode, simulators, dependencies
+- Fails fast on configuration issues
+
+**[find-simulator.sh](scripts/find-simulator.sh)**
+- Reliable simulator discovery
+- Prevents shell injection
+- UUID validation
+
+**[cleanup-watch-duplicates.sh](scripts/cleanup-watch-duplicates.sh)**
+- Removes duplicate Watch simulators
+- Prevents "multiple devices matched" errors
+
+**[validate-screenshots.sh](scripts/validate-screenshots.sh)**
+- Validates screenshot dimensions
+- Checks for blank/corrupt images
+- Ensures App Store requirements met
+
+## 🔧 Workflow: prepare-appstore.yml
+
+The main workflow for generating and uploading App Store screenshots.
+
+### Jobs
+
+1. **generate-iphone-screenshots** (20-24 min)
+   - Generates iPhone 16 Pro Max screenshots
+   - Normalizes to 1290x2796
+   - Validates dimensions
+
+2. **generate-ipad-screenshots** (18-20 min)
+   - Generates iPad Pro 13" screenshots
+   - Normalizes to 2064x2752
+   - Validates dimensions
+
+3. **generate-watch-screenshots** (16 min)
+   - Generates Apple Watch Series 10 screenshots
+   - Normalizes to 396x484
+   - Validates dimensions
+
+4. **upload-to-appstore** (5-10 min)
+   - Merges all screenshots
+   - Validates before upload
+   - Uploads to App Store Connect
+
+### Features
+
+- ✅ **Parallel job execution** - All devices generate simultaneously
+- ✅ **Pre-boot optimization** - 76% faster (iPad: 84min → 20min)
+- ✅ **Fail-fast validation** - Catches issues at 1min instead of 90min
+- ✅ **Retry logic** - 2 attempts per job with 30s backoff
+- ✅ **Comprehensive validation** - Dimensions, format, content
+- ✅ **Detailed diagnostics** - Logs and artifacts for debugging
+
+### Performance
+
+| Job | Duration | Timeout | Buffer |
+|-----|----------|---------|--------|
+| iPhone | 20-24 min | 90 min | 4x |
+| iPad | 18-20 min | 120 min | 6x |
+| Watch | 16 min | 90 min | 5.6x |
+| **Total** | **~60 min** | **120 min** | **2x** |
+
+### Reliability Improvements
+
+Based on fixing 140 consecutive failures:
+
+**Before hardening:**
+- ❌ Silent failures masked issues
+- ❌ Shell injection vulnerabilities
+- ❌ Timeout at 93% capacity (iPad)
+- ❌ No validation until upload
+- ❌ Poor error messages
+
+**After hardening:**
+- ✅ Fail-fast validation at each stage
+- ✅ Secure environment variable injection
+- ✅ 76% performance improvement
+- ✅ Screenshot validation before merge
+- ✅ Comprehensive error handling
+- ✅ Automated diagnosis tools
+
+## 🎯 Best Practices
+
+### Before Committing
+
+1. Run local validation:
+   ```bash
+   .github/scripts/test-pipeline-locally.sh --quick
+   ```
+
+2. For major changes, run full test:
+   ```bash
+   .github/scripts/test-pipeline-locally.sh --full
+   ```
+
+3. Review changes against security checklist:
+   - No shell injection vulnerabilities
+   - Proper error handling
+   - Input validation
+   - Clear error messages
+
+### When CI Fails
+
+1. Run automated diagnosis:
+   ```bash
+   .github/scripts/analyze-ci-failure.sh --latest
+   ```
+
+2. Check linked troubleshooting sections
+
+3. Test fix locally before retrying
+
+4. If issue persists, check TROUBLESHOOTING.md
+
+### Debugging Workflow
+
+1. **Fast iteration:**
+   - Use `--validate-only` for syntax checks
+   - Use `--quick` for environment validation
+   - Use `--full` only before releases
+
+2. **CI debugging:**
+   - Use analyzer for instant diagnosis
+   - Check pre-flight logs first
+   - Download xcresult artifacts for details
+
+3. **Simulator issues:**
+   - Clean state: `xcrun simctl shutdown all`
+   - Delete unavailable: `xcrun simctl delete unavailable`
+   - List available: `xcrun simctl list devices available`
+
+## 📊 Monitoring
+
+**Check workflow runs:**
+```bash
+# List recent runs
+gh run list --workflow=prepare-appstore.yml --limit 5
+
+# Watch current run
+gh run watch
+
+# View run details
+gh run view <run-id> --web
+```
+
+**Analyze failures:**
+```bash
+# Auto-analyze
+.github/scripts/analyze-ci-failure.sh <run-id>
+
+# Download logs
+gh run view <run-id> --log > run.log
+```
+
+## 🔄 Change History
+
+### 2025-11-25 - Major Reliability Overhaul
+
+**Fixes:**
+- ✅ Fixed 140-attempt failure streak
+- ✅ 11 CRITICAL/HIGH security bugs
+- ✅ 4 MEDIUM robustness issues
+- ✅ Shell injection vulnerabilities
+- ✅ Silent failure modes
+- ✅ Pre-boot optimization (76% faster)
+
+**New Tools:**
+- ✅ Local CI simulator (3 modes)
+- ✅ Automated log analyzer
+- ✅ Pre-commit hook
+- ✅ Comprehensive documentation
+
+**Documentation:**
+- ✅ TROUBLESHOOTING.md (420 lines)
+- ✅ DEVELOPMENT.md (400+ lines)
+- ✅ scripts/README.md (280+ lines)
+- ✅ This README
+
+## 🆘 Getting Help
+
+1. **Quick issues:** Check [TROUBLESHOOTING.md](workflows/TROUBLESHOOTING.md)
+2. **Development questions:** Check [DEVELOPMENT.md](DEVELOPMENT.md)
+3. **Script usage:** Check [scripts/README.md](scripts/README.md)
+4. **Automated diagnosis:** Run analyzer tool
+5. **Still stuck:** File GitHub issue with analyzer output
+
+## 🤝 Contributing
+
+When modifying CI infrastructure:
+
+1. ✅ Test locally first (`--quick` minimum)
+2. ✅ Use feature branches
+3. ✅ Run critical code review
+4. ✅ Update relevant documentation
+5. ✅ Verify CI passes before merging
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed guidelines.
+
+---
+
+**Last Updated:** 2025-11-25
+**Maintainer:** @chmc
+**Status:** ✅ Production-ready after comprehensive hardening
+
+🤖 This infrastructure was built by analyzing and fixing 140 consecutive pipeline failures.
