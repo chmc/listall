@@ -37,7 +37,7 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Pin to major version 7 for API stability
+          # Install ImageMagick 7 (Homebrew provides 7.x by default)
           brew install imagemagick
 
           # Verify installation and log version
@@ -48,6 +48,12 @@ jobs:
 
           echo "ImageMagick version:"
           magick --version || convert --version
+
+          # Verify we got version 7+
+          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || echo "0")
+          if [ "$MAGICK_MAJOR" -lt 7 ]; then
+            echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
+          fi
 
           # Verify required commands are available
           command -v identify || { echo "❌ identify command not found"; exit 1; }
@@ -133,7 +139,7 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Pin to major version 7 for API stability
+          # Install ImageMagick 7 (Homebrew provides 7.x by default)
           brew install imagemagick
 
           # Verify installation and log version
@@ -144,6 +150,12 @@ jobs:
 
           echo "ImageMagick version:"
           magick --version || convert --version
+
+          # Verify we got version 7+
+          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || echo "0")
+          if [ "$MAGICK_MAJOR" -lt 7 ]; then
+            echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
+          fi
 
           # Verify required commands are available
           command -v identify || { echo "❌ identify command not found"; exit 1; }
@@ -229,7 +241,7 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Pin to major version 7 for API stability
+          # Install ImageMagick 7 (Homebrew provides 7.x by default)
           brew install imagemagick
 
           # Verify installation and log version
@@ -240,6 +252,12 @@ jobs:
 
           echo "ImageMagick version:"
           magick --version || convert --version
+
+          # Verify we got version 7+
+          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || echo "0")
+          if [ "$MAGICK_MAJOR" -lt 7 ]; then
+            echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
+          fi
 
           # Verify required commands are available
           command -v identify || { echo "❌ identify command not found"; exit 1; }

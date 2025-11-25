@@ -75,8 +75,8 @@ if [ $PYTHON_EXIT_CODE -ne 0 ]; then
     exit $PYTHON_EXIT_CODE
 fi
 
-# Validate UDID format (should be UUID format)
-if ! echo "$DEVICE_UDID" | grep -qE '^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$'; then
+# Validate UDID format (should be UUID format, case-insensitive)
+if ! echo "$DEVICE_UDID" | grep -qE '^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'; then
     echo "❌ Error: Invalid UDID format returned: $DEVICE_UDID" >&2
     exit 5
 fi

@@ -52,9 +52,9 @@ if ! command -v identify &> /dev/null; then
     exit 4
 fi
 
-# Find all PNG files
+# Find all PNG files and count them properly
+SCREENSHOT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -type f | wc -l | tr -d ' ')
 SCREENSHOTS=$(find "$SCREENSHOT_DIR" -name "*.png" -type f)
-SCREENSHOT_COUNT=$(echo "$SCREENSHOTS" | grep -c . || echo "0")
 
 if [ "$SCREENSHOT_COUNT" -eq 0 ]; then
     echo "❌ Error: No PNG screenshots found in $SCREENSHOT_DIR" >&2
@@ -93,7 +93,20 @@ while IFS= read -r screenshot; do
     fi
 
     # Check file size (should be > 10KB for real screenshots)
-    FILE_SIZE=$(stat -f%z "$screenshot" 2>/dev/null || stat -c%s "$screenshot" 2>/dev/null || echo "0")
+    if [ ! -f "$screenshot" ]; then
+        echo "❌ File not found: $(basename "$screenshot")" >&2
+        ERRORS=$((ERRORS + 1))
+        continue
+    fi
+
+    # Platform-independent file size check
+    if stat -f%z "$screenshot" >/dev/null 2>&1; then
+        # macOS
+        FILE_SIZE=$(stat -f%z "$screenshot")
+    else
+        # Linux
+        FILE_SIZE=$(stat -c%s "$screenshot")
+    fi
     FILE_SIZE_KB=$((FILE_SIZE / 1024))
 
     if [ "$FILE_SIZE_KB" -lt 10 ]; then
