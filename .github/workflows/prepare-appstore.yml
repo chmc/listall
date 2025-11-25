@@ -86,30 +86,9 @@ jobs:
             done
 
             if [ "$BOOT_SUCCESS" = true ]; then
-              # Verify SpringBoard is responsive before declaring success
-              echo "Verifying SpringBoard readiness..."
-              SPRINGBOARD_TIMEOUT=30
-              SPRINGBOARD_START=$(date +%s)
-              SPRINGBOARD_READY=false
-
-              while [ $(($(date +%s) - SPRINGBOARD_START)) -lt $SPRINGBOARD_TIMEOUT ]; do
-                # Check if SpringBoard is running
-                if xcrun simctl spawn "$DEVICE_UDID" launchctl list 2>/dev/null | grep -q "com.apple.SpringBoard"; then
-                  SPRINGBOARD_READY=true
-                  break
-                fi
-                sleep 1
-              done
-
-              if [ "$SPRINGBOARD_READY" = true ]; then
-                # Set status bar for consistent screenshots
-                xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
-                echo "✅ Simulator pre-booted and SpringBoard ready"
-              else
-                echo "⚠️ SpringBoard not ready within ${SPRINGBOARD_TIMEOUT}s, will boot on demand"
-                xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
-                BOOT_SUCCESS=false
-              fi
+              # Set status bar for consistent screenshots
+              xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+              echo "✅ Simulator pre-booted and ready"
             else
               echo "⚠️ Pre-boot did not complete within ${BOOT_TIMEOUT}s, will boot on demand"
               xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
@@ -226,30 +205,9 @@ jobs:
             done
 
             if [ "$BOOT_SUCCESS" = true ]; then
-              # Verify SpringBoard is responsive before declaring success
-              echo "Verifying SpringBoard readiness..."
-              SPRINGBOARD_TIMEOUT=30
-              SPRINGBOARD_START=$(date +%s)
-              SPRINGBOARD_READY=false
-
-              while [ $(($(date +%s) - SPRINGBOARD_START)) -lt $SPRINGBOARD_TIMEOUT ]; do
-                # Check if SpringBoard is running
-                if xcrun simctl spawn "$DEVICE_UDID" launchctl list 2>/dev/null | grep -q "com.apple.SpringBoard"; then
-                  SPRINGBOARD_READY=true
-                  break
-                fi
-                sleep 1
-              done
-
-              if [ "$SPRINGBOARD_READY" = true ]; then
-                # Set status bar for consistent screenshots
-                xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
-                echo "✅ Simulator pre-booted and SpringBoard ready"
-              else
-                echo "⚠️ SpringBoard not ready within ${SPRINGBOARD_TIMEOUT}s, will boot on demand"
-                xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
-                BOOT_SUCCESS=false
-              fi
+              # Set status bar for consistent screenshots
+              xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+              echo "✅ Simulator pre-booted and ready"
             else
               echo "⚠️ Pre-boot did not complete within ${BOOT_TIMEOUT}s, will boot on demand"
               xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
