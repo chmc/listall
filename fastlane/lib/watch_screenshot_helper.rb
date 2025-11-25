@@ -47,9 +47,20 @@ module WatchScreenshotHelper
         basename = File.basename(src_file)
         dst_file = File.join(dst_dir, basename)
 
-        # Get current dimensions
-        current_dims = `identify -format '%wx%h' #{Shellwords.escape(src_file)}`.strip
+        # Get current dimensions with proper error handling
+        current_dims = `identify -format '%wx%h' #{Shellwords.escape(src_file)} 2>&1`.strip
+
+        # Validate identify output
+        unless current_dims =~ /^\d+x\d+$/
+          raise ValidationError, "Failed to read dimensions from #{src_file}: identify returned '#{current_dims}'"
+        end
+
         current_width, current_height = current_dims.split('x').map(&:to_i)
+
+        # Sanity check dimensions
+        if current_width <= 0 || current_height <= 0
+          raise ValidationError, "Invalid dimensions for #{src_file}: #{current_width}x#{current_height}"
+        end
 
         # Check if already normalized
         if current_width == target[:width] && current_height == target[:height]
@@ -126,8 +137,21 @@ module WatchScreenshotHelper
 
         # Check dimensions
         begin
-          dimensions = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+          dimensions = `identify -format '%wx%h' #{Shellwords.escape(shot)} 2>&1`.strip
+
+          # Validate identify output
+          unless dimensions =~ /^\d+x\d+$/
+            errors << "❌ #{locale}/#{basename}: Failed to read dimensions - identify returned '#{dimensions}'"
+            next
+          end
+
           width, height = dimensions.split('x').map(&:to_i)
+
+          # Sanity check dimensions
+          if width <= 0 || height <= 0
+            errors << "❌ #{locale}/#{basename}: Invalid dimensions: #{width}x#{height}"
+            next
+          end
 
           # Check if dimensions match any official size
           matching_size = OFFICIAL_WATCH_SIZES.find do |key, size|
