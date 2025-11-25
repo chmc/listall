@@ -62,12 +62,10 @@ else
 fi
 echo "" >&2
 
-# Check 3: ImageMagick
+# Check 3: ImageMagick (optional - workflow installs it)
 echo "🎨 Checking ImageMagick..." >&2
 if ! command -v convert &> /dev/null && ! command -v magick &> /dev/null; then
-    echo "❌ ImageMagick not installed" >&2
-    echo "   Install with: brew install imagemagick" >&2
-    ERRORS=$((ERRORS + 1))
+    echo "ℹ️  ImageMagick not yet installed (workflow will install it)" >&2
 else
     if command -v magick &> /dev/null; then
         MAGICK_VERSION=$(magick --version | head -1 || echo "Unknown")
@@ -79,8 +77,8 @@ else
 
     # Check specific commands needed
     if ! command -v identify &> /dev/null; then
-        echo "❌ ImageMagick 'identify' command not found" >&2
-        ERRORS=$((ERRORS + 1))
+        echo "⚠️  Warning: ImageMagick 'identify' command not found" >&2
+        WARNINGS=$((WARNINGS + 1))
     fi
 fi
 echo "" >&2
