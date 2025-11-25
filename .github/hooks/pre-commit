@@ -1,0 +1,48 @@
+#!/bin/bash
+# Pre-commit hook for CI pipeline validation
+# Runs quick validation checks before allowing commit
+#
+# To install: ln -sf ../../.github/hooks/pre-commit .git/hooks/pre-commit
+# To bypass: git commit --no-verify
+
+set -e
+
+echo "🔍 Running pre-commit validation..."
+
+# Check if we're modifying CI-related files
+MODIFIED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Patterns to watch for
+CI_PATTERNS=(
+    ".github/workflows/"
+    ".github/scripts/"
+    "fastlane/"
+)
+
+# Check if any CI files are modified
+CI_FILES_MODIFIED=false
+for pattern in "${CI_PATTERNS[@]}"; do
+    if echo "$MODIFIED_FILES" | grep -q "^$pattern"; then
+        CI_FILES_MODIFIED=true
+        break
+    fi
+done
+
+if [ "$CI_FILES_MODIFIED" = false ]; then
+    echo "✅ No CI files modified, skipping validation"
+    exit 0
+fi
+
+echo "📋 CI files modified, running validation..."
+
+# Run validation-only test (fast, ~1-2 seconds)
+if ! .github/scripts/test-pipeline-locally.sh --validate-only 2>&1 | grep -v "^🚀\|^📱\|^🎨\|^💎\|^💾\|^📁\|^🌐\|^═\|^⚠️\|^🧹\|^ℹ️"; then
+    echo ""
+    echo "❌ Pre-commit validation failed!"
+    echo "   Fix the errors above or use 'git commit --no-verify' to skip"
+    echo ""
+    exit 1
+fi
+
+echo "✅ Pre-commit validation passed"
+exit 0

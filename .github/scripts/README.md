@@ -2,7 +2,55 @@
 
 This directory contains shell scripts used by the App Store screenshot generation pipeline.
 
+## 🚀 Quick Start
+
+**Test the pipeline locally before pushing:**
+
+```bash
+# Fast validation (1-2s) - Run before every commit
+.github/scripts/test-pipeline-locally.sh --validate-only
+
+# Quick test (10-15s) - Run before pushing CI changes
+.github/scripts/test-pipeline-locally.sh --quick
+
+# Full test (60-90min) - Run before major releases
+.github/scripts/test-pipeline-locally.sh --full
+```
+
+**For detailed usage, see:** [`.github/DEVELOPMENT.md`](../DEVELOPMENT.md)
+
+---
+
 ## Scripts Overview
+
+### `test-pipeline-locally.sh`
+**Purpose:** Simulate the complete CI pipeline locally for validation before push
+
+**Usage:**
+```bash
+.github/scripts/test-pipeline-locally.sh [--full|--quick|--validate-only]
+```
+
+**Modes:**
+- `--validate-only` (1-2s): Syntax checks, environment validation
+- `--quick` (10-15s): All validations + simulator boot test (default)
+- `--full` (60-90min): Complete pipeline with screenshot generation
+
+**Tests:**
+- ✅ Helper script existence and syntax
+- ✅ Pre-flight environment check
+- ✅ Simulator discovery and boot
+- ✅ Screenshot generation (full mode only)
+- ✅ Screenshot validation (full mode only)
+- ✅ Fastfile and workflow YAML syntax
+- ✅ Documentation completeness
+
+**Exit Codes:**
+- `0` - All tests passed
+- `1` - One or more tests failed
+- `2` - Invalid arguments
+
+---
 
 ### `find-simulator.sh`
 **Purpose:** Reliably find and validate iOS/watchOS simulators
