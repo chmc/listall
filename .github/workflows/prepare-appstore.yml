@@ -111,7 +111,7 @@ jobs:
   generate-ipad-screenshots:
     name: Generate iPad Screenshots
     runs-on: macos-14
-    timeout-minutes: 120  # iPad is significantly slower than iPhone in CI (needs ~84min for both locales)
+    timeout-minutes: 120  # Actual: ~20min (was 84min before pre-boot fixes), generous buffer for CI variability
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -175,7 +175,7 @@ jobs:
       - name: Generate iPad screenshots
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 60  # iPad needs more time due to slower simulator performance
+          timeout_minutes: 60  # Conservative timeout (actual: ~18min), allows retry buffer
           max_attempts: 2
           retry_wait_seconds: 30
           command: bundle exec fastlane ios screenshots_ipad
