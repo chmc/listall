@@ -10,8 +10,11 @@ This directory contains GitHub Actions workflows, CI helper scripts, and develop
 │   ├── prepare-appstore.yml         # Main screenshot generation pipeline
 │   └── TROUBLESHOOTING.md           # Comprehensive troubleshooting guide
 ├── scripts/                # CI helper scripts
-│   ├── test-pipeline-locally.sh     # Local CI simulator
+│   ├── test-pipeline-locally.sh     # Local CI simulator (3 modes)
 │   ├── analyze-ci-failure.sh        # Automated log analysis
+│   ├── compare-screenshots.sh       # Visual regression detection
+│   ├── track-performance.sh         # Performance monitoring
+│   ├── release-checklist.sh         # Release automation
 │   ├── find-simulator.sh            # Simulator discovery
 │   ├── cleanup-watch-duplicates.sh  # Watch simulator cleanup
 │   ├── validate-screenshots.sh      # Screenshot validation
@@ -67,6 +70,29 @@ gh workflow run prepare-appstore.yml -f version=1.2.0
 gh run watch
 ```
 
+### For Quality Assurance & Release
+
+**Compare screenshots between runs:**
+```bash
+# Detect visual regressions
+.github/scripts/compare-screenshots.sh <old-run> <new-run>
+```
+
+**Track performance:**
+```bash
+# Track latest run
+.github/scripts/track-performance.sh --latest
+
+# View history
+.github/scripts/track-performance.sh --history 10
+```
+
+**Generate release checklist:**
+```bash
+# After successful pipeline
+.github/scripts/release-checklist.sh --latest 1.2.0
+```
+
 ## 📚 Documentation
 
 | Document | Purpose | Audience |
@@ -90,6 +116,28 @@ gh run watch
 - Automatically diagnoses pipeline failures
 - Analyzes GitHub Actions logs
 - Provides direct links to fixes
+
+### Quality Assurance
+
+**[compare-screenshots.sh](scripts/compare-screenshots.sh)**
+- Compare screenshots between two CI runs
+- Detect visual regressions automatically
+- Generate diff images and reports
+- Configurable difference threshold
+
+**[track-performance.sh](scripts/track-performance.sh)**
+- Track pipeline performance over time
+- Detect performance degradation (>20%)
+- Store historical metrics in CSV
+- Warn when approaching timeouts
+
+### Release Automation
+
+**[release-checklist.sh](scripts/release-checklist.sh)**
+- Generate comprehensive release checklist
+- Validate pipeline completion
+- Include all steps: pre-release to post-release
+- Standardize release process
 
 ### Git Hooks
 
@@ -255,9 +303,19 @@ gh run view <run-id> --web
 gh run view <run-id> --log > run.log
 ```
 
+**Quality monitoring:**
+```bash
+# Compare screenshots for regressions
+.github/scripts/compare-screenshots.sh <baseline-run> <current-run>
+
+# Track performance
+.github/scripts/track-performance.sh --latest
+.github/scripts/track-performance.sh --history 10
+```
+
 ## 🔄 Change History
 
-### 2025-11-25 - Major Reliability Overhaul
+### 2025-11-25 - Major Reliability Overhaul + Advanced Tooling
 
 **Fixes:**
 - ✅ Fixed 140-attempt failure streak
@@ -267,17 +325,24 @@ gh run view <run-id> --log > run.log
 - ✅ Silent failure modes
 - ✅ Pre-boot optimization (76% faster)
 
-**New Tools:**
-- ✅ Local CI simulator (3 modes)
-- ✅ Automated log analyzer
+**New Tools (10 total):**
+- ✅ Local CI simulator (test-pipeline-locally.sh)
+- ✅ Automated log analyzer (analyze-ci-failure.sh)
+- ✅ Screenshot comparison (compare-screenshots.sh)
+- ✅ Performance tracking (track-performance.sh)
+- ✅ Release checklist (release-checklist.sh)
+- ✅ Simulator finder (find-simulator.sh)
+- ✅ Watch cleanup (cleanup-watch-duplicates.sh)
+- ✅ Screenshot validator (validate-screenshots.sh)
+- ✅ Pre-flight checker (preflight-check.sh)
 - ✅ Pre-commit hook
-- ✅ Comprehensive documentation
 
-**Documentation:**
+**Documentation (1,800+ lines):**
 - ✅ TROUBLESHOOTING.md (420 lines)
-- ✅ DEVELOPMENT.md (400+ lines)
-- ✅ scripts/README.md (280+ lines)
-- ✅ This README
+- ✅ DEVELOPMENT.md (440+ lines)
+- ✅ scripts/README.md (420+ lines)
+- ✅ .github/README.md (360+ lines)
+- ✅ Comprehensive guides and references
 
 ## 🆘 Getting Help
 
