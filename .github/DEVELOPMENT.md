@@ -224,6 +224,34 @@ magick screenshot.png -colorspace Gray -format "%[fx:mean]" info:
 identify -format '%m' screenshot.png
 ```
 
+### CI Failure Diagnosis
+
+```bash
+# Automatically analyze latest CI run
+.github/scripts/analyze-ci-failure.sh --latest
+
+# Analyze specific run
+.github/scripts/analyze-ci-failure.sh 19667213668
+
+# View run in browser
+gh run view 19667213668 --web
+
+# Watch run in real-time
+gh run watch
+
+# Download logs manually
+gh run view 19667213668 --log > run.log
+```
+
+The analyzer identifies:
+- Pre-flight failures
+- Simulator boot issues
+- Screenshot generation timeouts
+- Validation failures
+- Upload problems
+
+See: `.github/workflows/TROUBLESHOOTING.md` for detailed manual troubleshooting
+
 ## 📊 Performance Expectations
 
 Based on successful CI runs:

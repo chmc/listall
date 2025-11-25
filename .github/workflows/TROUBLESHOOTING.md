@@ -15,6 +15,30 @@ This guide helps diagnose and fix common issues in the screenshot generation pip
 4. ❌ Screenshot validation → Wrong dimensions or corrupt files
 5. ❌ Upload → App Store Connect credentials
 
+### 🤖 Automated Diagnosis
+
+**Use the CI log analyzer for instant diagnosis:**
+
+```bash
+# Analyze latest run
+.github/scripts/analyze-ci-failure.sh --latest
+
+# Analyze specific run
+.github/scripts/analyze-ci-failure.sh 19667213668
+
+# Or pipe logs directly
+gh run view 19667213668 --log | .github/scripts/analyze-ci-failure.sh --stdin
+```
+
+The analyzer automatically:
+- ✅ Identifies error patterns across all failure stages
+- ✅ Links to relevant troubleshooting sections
+- ✅ Provides next steps recommendations
+- ✅ Analyzes performance metrics
+- ✅ Categorizes issues by severity
+
+**Continue reading below for detailed manual troubleshooting.**
+
 ---
 
 ## 📋 Common Issues & Solutions

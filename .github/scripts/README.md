@@ -158,6 +158,46 @@ This directory contains shell scripts used by the App Store screenshot generatio
 
 ---
 
+### `analyze-ci-failure.sh`
+**Purpose:** Automatically diagnose GitHub Actions workflow failures by analyzing logs
+
+**Usage:**
+```bash
+# Analyze specific run
+.github/scripts/analyze-ci-failure.sh <run-id>
+
+# Analyze latest run
+.github/scripts/analyze-ci-failure.sh --latest
+
+# Analyze from piped logs
+gh run view <run-id> --log | .github/scripts/analyze-ci-failure.sh --stdin
+```
+
+**Analyzes:**
+- ✅ Pre-flight check failures (Xcode, simulators, dependencies)
+- ✅ Simulator boot issues (duplicates, state corruption)
+- ✅ Screenshot generation timeouts and app launch failures
+- ✅ Screenshot validation failures (dimensions, blank images)
+- ✅ ImageMagick conversion errors
+- ✅ App Store Connect upload authentication issues
+- ✅ Performance metrics and warnings
+
+**Output:**
+- Color-coded issue categories (errors, warnings, suspicious patterns)
+- Direct links to troubleshooting guide sections
+- Performance analysis with job durations
+- Summary with error/warning counts
+- Next steps recommendations
+
+**Exit Codes:**
+- `0` - Analysis completed (check output for issues)
+- `1` - Invalid arguments or gh command failed
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed and authenticated
+
+---
+
 ## Development Guidelines
 
 ### Testing Scripts Locally
