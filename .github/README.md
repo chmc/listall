@@ -9,24 +9,33 @@ This directory contains GitHub Actions workflows, CI helper scripts, and develop
 ├── workflows/              # GitHub Actions workflows
 │   ├── prepare-appstore.yml         # Main screenshot generation pipeline
 │   └── TROUBLESHOOTING.md           # Comprehensive troubleshooting guide
-├── scripts/                # CI helper scripts
+├── scripts/                # CI helper scripts (14 total)
 │   ├── test-pipeline-locally.sh     # Local CI simulator (3 modes)
 │   ├── analyze-ci-failure.sh        # Automated log analysis
 │   ├── compare-screenshots.sh       # Visual regression detection
 │   ├── track-performance.sh         # Performance monitoring
 │   ├── release-checklist.sh         # Release automation
+│   ├── cleanup-artifacts.sh         # Artifact management
+│   ├── track-ci-cost.sh             # Cost tracking
+│   ├── generate-dashboard.sh        # Status dashboard
 │   ├── find-simulator.sh            # Simulator discovery
 │   ├── cleanup-watch-duplicates.sh  # Watch simulator cleanup
 │   ├── validate-screenshots.sh      # Screenshot validation
 │   ├── preflight-check.sh           # Environment validation
+│   ├── completions.bash             # Tab completion
 │   └── README.md                    # Scripts documentation
 ├── hooks/                  # Git hooks
 │   └── pre-commit                   # Automated validation hook
 ├── DEVELOPMENT.md          # Local development guide
+├── QUICK_REFERENCE.md      # One-page cheat sheet
 └── README.md               # This file
 ```
 
 ## 🚀 Quick Start
+
+**New to the project?** Check [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for a one-page cheat sheet!
+
+**Want tab completion?** Run: `source .github/scripts/completions.bash`
 
 ### For Developers
 
@@ -138,6 +147,40 @@ gh run watch
 - Validate pipeline completion
 - Include all steps: pre-release to post-release
 - Standardize release process
+
+### Monitoring & Cost Management
+
+**[generate-dashboard.sh](scripts/generate-dashboard.sh)**
+- Generate visual HTML/markdown dashboard
+- Show current pipeline status and health
+- Recent runs table with success rates
+- Performance history visualization
+
+**[track-ci-cost.sh](scripts/track-ci-cost.sh)**
+- Track GitHub Actions CI costs
+- Calculate monthly usage and costs
+- Project future expenses
+- Check free tier utilization
+
+**[cleanup-artifacts.sh](scripts/cleanup-artifacts.sh)**
+- Clean up old artifacts (>30 days default)
+- Save storage space (2GB limit)
+- Dry-run mode for preview
+- Automated maintenance
+
+### Developer Experience
+
+**[completions.bash](scripts/completions.bash)**
+- Bash tab completion for all scripts
+- Recent run ID suggestions
+- Device name auto-complete
+- Context-aware completions
+
+**[QUICK_REFERENCE.md](QUICK_REFERENCE.md)**
+- One-page cheat sheet
+- All common commands
+- Quick diagnosis steps
+- Common workflows
 
 ### Git Hooks
 
@@ -325,24 +368,41 @@ gh run view <run-id> --log > run.log
 - ✅ Silent failure modes
 - ✅ Pre-boot optimization (76% faster)
 
-**New Tools (10 total):**
-- ✅ Local CI simulator (test-pipeline-locally.sh)
-- ✅ Automated log analyzer (analyze-ci-failure.sh)
-- ✅ Screenshot comparison (compare-screenshots.sh)
-- ✅ Performance tracking (track-performance.sh)
-- ✅ Release checklist (release-checklist.sh)
-- ✅ Simulator finder (find-simulator.sh)
-- ✅ Watch cleanup (cleanup-watch-duplicates.sh)
-- ✅ Screenshot validator (validate-screenshots.sh)
-- ✅ Pre-flight checker (preflight-check.sh)
-- ✅ Pre-commit hook
+**New Tools (14 total scripts + 1 hook):**
 
-**Documentation (1,800+ lines):**
-- ✅ TROUBLESHOOTING.md (420 lines)
-- ✅ DEVELOPMENT.md (440+ lines)
-- ✅ scripts/README.md (420+ lines)
-- ✅ .github/README.md (360+ lines)
-- ✅ Comprehensive guides and references
+*Development:*
+- ✅ Local CI simulator (test-pipeline-locally.sh) - 3 modes
+- ✅ Pre-commit hook - Auto-validation
+- ✅ Bash completion (completions.bash) - Tab completion
+
+*Diagnostics:*
+- ✅ Log analyzer (analyze-ci-failure.sh) - Auto-diagnosis
+
+*Quality Assurance:*
+- ✅ Screenshot comparison (compare-screenshots.sh) - Visual regression
+- ✅ Performance tracking (track-performance.sh) - Metrics & trends
+
+*Release:*
+- ✅ Release checklist (release-checklist.sh) - Process automation
+
+*Monitoring:*
+- ✅ Status dashboard (generate-dashboard.sh) - HTML/markdown
+- ✅ Cost tracking (track-ci-cost.sh) - Budget analysis
+- ✅ Artifact cleanup (cleanup-artifacts.sh) - Storage management
+
+*Infrastructure:*
+- ✅ Simulator finder (find-simulator.sh) - Discovery
+- ✅ Watch cleanup (cleanup-watch-duplicates.sh) - Duplicate removal
+- ✅ Screenshot validator (validate-screenshots.sh) - Dimension check
+- ✅ Pre-flight checker (preflight-check.sh) - Environment validation
+
+**Documentation (2,500+ lines):**
+- ✅ TROUBLESHOOTING.md (420 lines) - 140-failure analysis
+- ✅ DEVELOPMENT.md (440 lines) - Local testing guide
+- ✅ scripts/README.md (570 lines) - Complete tool reference
+- ✅ .github/README.md (410 lines) - Infrastructure hub
+- ✅ QUICK_REFERENCE.md (350 lines) - One-page cheat sheet
+- ✅ All tools include --help documentation
 
 ## 🆘 Getting Help
 
