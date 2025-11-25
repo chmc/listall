@@ -208,9 +208,16 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
       next if basename.include?("_framed")
       next unless basename =~ /-(01|02|03|04|05)[-_]/
 
-      size = `identify -format '%w %h' #{Shellwords.escape(png)}`.strip.split.map(&:to_i) rescue []
-      if size.empty? || size == [0, 0]
-        UI.error("❌ Failed to read dimensions: #{basename}")
+      # Read dimensions with validation
+      size_str = `identify -format '%w %h' #{Shellwords.escape(png)} 2>&1`.strip
+      unless size_str =~ /^\d+\s+\d+$/
+        UI.error("❌ Failed to read dimensions for #{basename}: identify returned '#{size_str[0..50]}'")
+        next
+      end
+
+      size = size_str.split.map(&:to_i)
+      if size.any? { |d| d <= 0 }
+        UI.error("❌ Invalid dimensions for #{basename}: #{size.inspect}")
         next
       end
 
@@ -239,13 +246,25 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
 
         # Verify dimensions of output file
         begin
-          out_size = `identify -format '%w %h' #{Shellwords.escape(out)}`.strip.split.map(&:to_i)
+          out_dims = `identify -format '%w %h' #{Shellwords.escape(out)} 2>&1`.strip
+
+          # Validate identify output
+          unless out_dims =~ /^\d+\s+\d+$/
+            UI.user_error!("❌ Failed to verify output dimensions for #{basename}: identify returned '#{out_dims}'")
+          end
+
+          out_size = out_dims.split.map(&:to_i)
+
+          # Sanity check
+          if out_size.any? { |d| d <= 0 }
+            UI.user_error!("❌ Invalid output dimensions for #{basename}: #{out_size.inspect}")
+          end
         rescue StandardError => e
           UI.user_error!("❌ Failed to verify output dimensions: #{e.message}")
         end
 
         unless out_size == [target[:width], target[:height]]
-          UI.user_error!("❌ Output dimensions incorrect: #{out_size.inspect} (expected #{target[:width]}x#{target[:height]})")
+          UI.user_error!("❌ Output dimensions incorrect for #{basename}: #{out_size.inspect} (expected #{target[:width]}x#{target[:height]})")
         end
       end
     end
