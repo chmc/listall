@@ -220,3 +220,31 @@ venv.bak/
 
 **/*.xcuserstate
 **/xcuserdata/
+
+# --- Claude Flow / Hive / Swarm ---
+
+# All Claude project config & commands (local tooling)
+.claude/
+
+# Local Claude Flow wrapper & config
+claude-flow
+claude-flow.config.json
+.mcp.json
+
+# Runtime state & memory
+.swarm/
+.hive-mind/
+.claude-flow/
+memory/
+coordination/
+
+# Databases / journals created by Claude Flow / hive-mind
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# Temporary prompt / log files
+hive-mind-prompt-*.txt
