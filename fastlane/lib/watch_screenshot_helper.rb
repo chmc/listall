@@ -5,6 +5,23 @@ require 'fileutils'
 
 # Helper module for normalizing and validating watchOS screenshots
 module WatchScreenshotHelper
+  # Check ImageMagick availability
+  def self.check_imagemagick!
+    unless system('which identify > /dev/null 2>&1')
+      raise ValidationError, "ImageMagick 'identify' command not found. Install with: brew install imagemagick"
+    end
+
+    unless system('which convert > /dev/null 2>&1') || system('which magick > /dev/null 2>&1')
+      raise ValidationError, "ImageMagick 'convert' or 'magick' command not found. Install with: brew install imagemagick"
+    end
+
+    # Verify it's actually working
+    test_version = `identify -version 2>&1 | head -1`.strip
+    unless test_version =~ /ImageMagick/
+      raise ValidationError, "ImageMagick found but not working properly. Output: #{test_version}"
+    end
+  end
+
   # Apple App Store Connect official watchOS screenshot sizes
   OFFICIAL_WATCH_SIZES = {
     ultra: { width: 410, height: 502, name: "Apple Watch Ultra (49mm)" },
@@ -22,6 +39,9 @@ module WatchScreenshotHelper
   # @param output_dir [String] Directory for normalized screenshots
   # @param target_size [Symbol] Target size from OFFICIAL_WATCH_SIZES
   def self.normalize_screenshots(input_dir, output_dir, target_size: DEFAULT_TARGET)
+    # Fail fast if ImageMagick not available
+    check_imagemagick!
+
     unless OFFICIAL_WATCH_SIZES.key?(target_size)
       raise ArgumentError, "Invalid target_size: #{target_size}. Must be one of #{OFFICIAL_WATCH_SIZES.keys.join(', ')}"
     end
@@ -103,6 +123,9 @@ module WatchScreenshotHelper
   # @param expected_count [Integer] Expected number of screenshots per locale
   # @param allowed_sizes [Array<Symbol>] Allowed sizes from OFFICIAL_WATCH_SIZES
   def self.validate_screenshots(screenshots_dir, expected_count: 5, allowed_sizes: OFFICIAL_WATCH_SIZES.keys)
+    # Fail fast if ImageMagick not available
+    check_imagemagick!
+
     locales = %w[en-US fi]
     errors = []
     warnings = []

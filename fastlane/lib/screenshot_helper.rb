@@ -6,6 +6,23 @@ require 'fileutils'
 # Helper module for normalizing and validating iOS, iPadOS, and watchOS screenshots
 # Ensures all screenshots meet Apple App Store Connect requirements
 module ScreenshotHelper
+  # Check ImageMagick availability
+  def self.check_imagemagick!
+    unless system('which identify > /dev/null 2>&1')
+      raise ValidationError, "ImageMagick 'identify' command not found. Install with: brew install imagemagick"
+    end
+
+    unless system('which convert > /dev/null 2>&1') || system('which magick > /dev/null 2>&1')
+      raise ValidationError, "ImageMagick 'convert' or 'magick' command not found. Install with: brew install imagemagick"
+    end
+
+    # Verify it's actually working
+    test_version = `identify -version 2>&1 | head -1`.strip
+    unless test_version =~ /ImageMagick/
+      raise ValidationError, "ImageMagick found but not working properly. Output: #{test_version}"
+    end
+  end
+
   # Apple App Store Connect official screenshot sizes
   # Reference: https://help.apple.com/app-store-connect/
   # Updated 2024: iPad 13" now requires 2064x2752 (not the old 2048x2732 for 12.9")
@@ -77,9 +94,12 @@ module ScreenshotHelper
   # @option options [Boolean] :auto_detect Auto-detect device types (default: true)
   # @option options [Symbol] :force_target Force a specific target size key
   def self.normalize_screenshots(input_dir, output_dir, options = {})
+    # Fail fast if ImageMagick not available
+    check_imagemagick!
+
     auto_detect = options.fetch(:auto_detect, true)
     force_target = options[:force_target]
-    
+
     FileUtils.mkdir_p(output_dir)
 
     locales = %w[en-US fi]
@@ -192,10 +212,13 @@ module ScreenshotHelper
   # @option options [Array<Symbol>] :allowed_sizes Allowed size keys from OFFICIAL_SIZES
   # @option options [Boolean] :strict Fail on warnings (default: false)
   def self.validate_screenshots(screenshots_dir, options = {})
+    # Fail fast if ImageMagick not available
+    check_imagemagick!
+
     expected_count = options[:expected_count]
     allowed_sizes = options[:allowed_sizes] || OFFICIAL_SIZES.keys
     strict = options.fetch(:strict, false)
-    
+
     locales = %w[en-US fi]
     errors = []
     warnings = []
