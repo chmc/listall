@@ -15,7 +15,7 @@ jobs:
   generate-iphone-screenshots:
     name: Generate iPhone Screenshots
     runs-on: macos-14
-    timeout-minutes: 90
+    timeout-minutes: 90  # Actual: ~22min, buffer for CI slowness and retries (2x attempts × 45min)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,6 +26,9 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Pre-flight environment check
+        run: .github/scripts/preflight-check.sh
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -33,32 +36,44 @@ jobs:
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot normalization)
-        run: brew install imagemagick
+        run: |
+          # Pin to major version 7 for API stability
+          brew install imagemagick
+
+          # Verify installation and log version
+          if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
+            echo "❌ ImageMagick installation failed"
+            exit 1
+          fi
+
+          echo "ImageMagick version:"
+          magick --version || convert --version
+
+          # Verify required commands are available
+          command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Clean and pre-boot simulator
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
-          # Pre-boot iPhone simulator to reduce test startup time
+
+          # Pre-boot iPhone simulator using robust script
           echo "Pre-booting iPhone 16 Pro Max simulator..."
-          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          for runtime, devices in data.get('devices', {}).items():
-              if 'iOS' in runtime:
-                  for d in devices:
-                      if 'iPhone 16 Pro Max' in d['name'] and d['isAvailable']:
-                          print(d['udid'])
-                          sys.exit(0)
-          " 2>/dev/null || true)
-          if [ -n "$DEVICE_UDID" ]; then
-            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-            echo "Waiting 30s for simulator to fully boot..."
-            sleep 30
-            xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
-            echo "✅ Simulator pre-booted and ready"
+          if DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPhone 16 Pro Max" iOS); then
+            echo "Using simulator: $DEVICE_UDID"
+
+            # Boot with status monitoring (blocks until fully ready)
+            if xcrun simctl bootstatus "$DEVICE_UDID" -b; then
+              # Set status bar for consistent screenshots
+              xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+              echo "✅ Simulator pre-booted and ready"
+            else
+              echo "⚠️ Pre-boot failed, will boot on demand"
+            fi
           else
-            echo "⚠️ Could not find iPhone 16 Pro Max simulator, will boot on demand"
+            echo "❌ Error: iPhone 16 Pro Max simulator not found"
+            echo "   Run 'xcrun simctl list devices available' to see available simulators"
+            exit 1
           fi
 
       - name: Generate iPhone screenshots
@@ -70,6 +85,10 @@ jobs:
           command: bundle exec fastlane ios screenshots_iphone
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
+
+      - name: Validate iPhone screenshot dimensions
+        if: success()
+        run: .github/scripts/validate-screenshots.sh fastlane/screenshots_compat iphone
 
       - name: Upload iPhone screenshots artifact
         if: success()
@@ -103,6 +122,9 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Pre-flight environment check
+        run: .github/scripts/preflight-check.sh
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -110,32 +132,44 @@ jobs:
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot normalization)
-        run: brew install imagemagick
+        run: |
+          # Pin to major version 7 for API stability
+          brew install imagemagick
+
+          # Verify installation and log version
+          if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
+            echo "❌ ImageMagick installation failed"
+            exit 1
+          fi
+
+          echo "ImageMagick version:"
+          magick --version || convert --version
+
+          # Verify required commands are available
+          command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Clean and pre-boot simulator
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
-          # Pre-boot iPad simulator to reduce test startup time
+
+          # Pre-boot iPad simulator using robust script
           echo "Pre-booting iPad Pro 13-inch (M4) simulator..."
-          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          for runtime, devices in data.get('devices', {}).items():
-              if 'iOS' in runtime:
-                  for d in devices:
-                      if 'iPad Pro 13-inch (M4)' in d['name'] and d['isAvailable']:
-                          print(d['udid'])
-                          sys.exit(0)
-          " 2>/dev/null || true)
-          if [ -n "$DEVICE_UDID" ]; then
-            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-            echo "Waiting 30s for simulator to fully boot..."
-            sleep 30
-            xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
-            echo "✅ Simulator pre-booted and ready"
+          if DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPad Pro 13-inch (M4)" iOS); then
+            echo "Using simulator: $DEVICE_UDID"
+
+            # Boot with status monitoring (blocks until fully ready)
+            if xcrun simctl bootstatus "$DEVICE_UDID" -b; then
+              # Set status bar for consistent screenshots
+              xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+              echo "✅ Simulator pre-booted and ready"
+            else
+              echo "⚠️ Pre-boot failed, will boot on demand"
+            fi
           else
-            echo "⚠️ Could not find iPad Pro 13-inch (M4) simulator, will boot on demand"
+            echo "❌ Error: iPad Pro 13-inch (M4) simulator not found"
+            echo "   Run 'xcrun simctl list devices available' to see available simulators"
+            exit 1
           fi
 
       - name: Generate iPad screenshots
@@ -147,6 +181,10 @@ jobs:
           command: bundle exec fastlane ios screenshots_ipad
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
+
+      - name: Validate iPad screenshot dimensions
+        if: success()
+        run: .github/scripts/validate-screenshots.sh fastlane/screenshots_compat ipad
 
       - name: Upload iPad screenshots artifact
         if: success()
@@ -169,7 +207,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 90
+    timeout-minutes: 90  # Actual: ~16min, generous buffer for Watch simulator pairing issues
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -180,6 +218,9 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Pre-flight environment check
+        run: .github/scripts/preflight-check.sh
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -187,36 +228,29 @@ jobs:
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot normalization)
-        run: brew install imagemagick
+        run: |
+          # Pin to major version 7 for API stability
+          brew install imagemagick
+
+          # Verify installation and log version
+          if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
+            echo "❌ ImageMagick installation failed"
+            exit 1
+          fi
+
+          echo "ImageMagick version:"
+          magick --version || convert --version
+
+          # Verify required commands are available
+          command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Clean simulator state
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
-          # Clean up duplicate Watch simulators to avoid "multiple devices matched" error
-          # Keep the oldest watchOS version (matches Xcode 16.1 bundled watchOS 11.1)
-          echo "Cleaning duplicate Apple Watch Series 10 (46mm) simulators..."
-          WATCH_UDIDS=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys, re
-          data = json.load(sys.stdin)
-          watches = []
-          for runtime, devices in data.get('devices', {}).items():
-              if 'watchOS' in runtime:
-                  match = re.search(r'watchOS-(\d+)-(\d+)', runtime)
-                  version_tuple = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
-                  for d in devices:
-                      if 'Apple Watch Series 10 (46mm)' in d['name'] and d['isAvailable']:
-                          watches.append((d['udid'], runtime, version_tuple))
-          # Sort ascending, keep oldest (Xcode 16.1 uses watchOS 11.1)
-          watches.sort(key=lambda x: x[2])
-          if len(watches) > 1:
-              for w in watches[1:]:
-                  print(w[0])
-          " 2>/dev/null || true)
-          for UDID in $WATCH_UDIDS; do
-            echo "Deleting duplicate simulator: $UDID"
-            xcrun simctl delete "$UDID" || true
-          done
+
+          # Clean up duplicate Watch simulators using robust script
+          .github/scripts/cleanup-watch-duplicates.sh || true
 
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
@@ -227,6 +261,10 @@ jobs:
           command: bundle exec fastlane ios watch_screenshots
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
+
+      - name: Validate Watch screenshot dimensions
+        if: success()
+        run: .github/scripts/validate-screenshots.sh fastlane/screenshots/watch_normalized watch
 
       - name: Upload Watch screenshots artifact
         if: success()
@@ -275,7 +313,13 @@ jobs:
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot validation)
-        run: brew install imagemagick
+        run: |
+          # Pin to major version 7 for API stability
+          brew install imagemagick
+
+          # Verify installation
+          magick --version || convert --version
+          command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Create screenshots_compat directory
         run: mkdir -p fastlane/screenshots_compat

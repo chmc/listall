@@ -204,7 +204,10 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
       next unless basename =~ /-(01|02|03|04|05)[-_]/
 
       size = `identify -format '%w %h' #{Shellwords.escape(png)}`.strip.split.map(&:to_i) rescue []
-      next if size.empty? || size == [0, 0]
+      if size.empty? || size == [0, 0]
+        UI.error("❌ Failed to read dimensions: #{basename}")
+        next
+      end
 
       out = File.join(dst, basename)
 
@@ -213,7 +216,32 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
         UI.message("✅ #{locale}/#{basename}: Already #{target[:width]}x#{target[:height]}")
       else
         UI.message("🔄 #{locale}/#{basename}: #{size.inspect} → #{target[:width]}x#{target[:height]}")
-        `magick convert #{Shellwords.escape(png)} -resize #{target[:width]}x#{target[:height]}! #{Shellwords.escape(out)}`
+
+        # Execute ImageMagick conversion and capture result immediately
+        dimensions = "#{target[:width]}x#{target[:height]}!"
+        result = `magick convert #{Shellwords.escape(png)} -resize #{Shellwords.escape(dimensions)} #{Shellwords.escape(out)}`
+        exit_status = $?
+
+        # Verify ImageMagick operation succeeded
+        unless exit_status.success?
+          UI.user_error!("❌ ImageMagick conversion failed for #{basename} (exit code: #{exit_status.exitstatus})")
+        end
+
+        # Verify output file exists and is valid
+        unless File.exist?(out) && File.size(out) > 0
+          UI.user_error!("❌ ImageMagick produced invalid output: #{out}")
+        end
+
+        # Verify dimensions of output file
+        begin
+          out_size = `identify -format '%w %h' #{Shellwords.escape(out)}`.strip.split.map(&:to_i)
+        rescue StandardError => e
+          UI.user_error!("❌ Failed to verify output dimensions: #{e.message}")
+        end
+
+        unless out_size == [target[:width], target[:height]]
+          UI.user_error!("❌ Output dimensions incorrect: #{out_size.inspect} (expected #{target[:width]}x#{target[:height]})")
+        end
       end
     end
   end
