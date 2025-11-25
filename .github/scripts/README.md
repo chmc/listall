@@ -341,6 +341,173 @@ gh run view <run-id> --log | .github/scripts/analyze-ci-failure.sh --stdin
 
 ---
 
+### `cleanup-artifacts.sh`
+**Purpose:** Cleanup old GitHub Actions artifacts to save storage space
+
+**Usage:**
+```bash
+# Delete artifacts older than 30 days (default)
+.github/scripts/cleanup-artifacts.sh
+
+# Delete artifacts older than 60 days
+.github/scripts/cleanup-artifacts.sh --older-than 60
+
+# Preview what would be deleted
+.github/scripts/cleanup-artifacts.sh --older-than 7 --dry-run
+```
+
+**Features:**
+- ✅ Automatically deletes old artifacts
+- ✅ Configurable age threshold (days)
+- ✅ Dry-run mode for preview
+- ✅ Shows storage savings
+- ✅ Provides retention recommendations
+- ✅ Checks against GitHub storage limits
+
+**Use Cases:**
+- Monthly maintenance to free up storage
+- Prevent hitting 2GB storage limit
+- Clean up after major testing periods
+- Audit artifact retention policies
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed
+
+**Exit Codes:**
+- `0` - Success
+- `1` - Invalid arguments or gh command failed
+
+---
+
+### `track-ci-cost.sh`
+**Purpose:** Track GitHub Actions CI costs and usage over time
+
+**Usage:**
+```bash
+# Current month summary
+.github/scripts/track-ci-cost.sh
+
+# Specific month
+.github/scripts/track-ci-cost.sh --month 2025-11
+
+# Detailed per-run breakdown
+.github/scripts/track-ci-cost.sh --detailed
+```
+
+**Features:**
+- ✅ Calculates total CI minutes used
+- ✅ Estimates cost at macOS runner rate ($0.08/min)
+- ✅ Tracks successful vs failed runs
+- ✅ Projects monthly cost based on usage
+- ✅ Checks against free tier limits
+- ✅ Provides optimization recommendations
+- ✅ Calculates cost per successful release
+
+**Metrics:**
+- Total minutes used (all jobs combined)
+- Total cost at macOS rate
+- Success/failure rate
+- Daily average and projections
+- Free tier utilization
+- Cost per successful release
+
+**Use Cases:**
+- Budget planning and forecasting
+- Cost optimization analysis
+- Justify CI spending
+- Track efficiency improvements
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed
+
+**Exit Codes:**
+- `0` - Success
+- `1` - Invalid arguments or API error
+
+---
+
+### `generate-dashboard.sh`
+**Purpose:** Generate visual CI pipeline health dashboard
+
+**Usage:**
+```bash
+# Generate HTML dashboard
+.github/scripts/generate-dashboard.sh
+
+# Generate markdown dashboard
+.github/scripts/generate-dashboard.sh --format markdown
+
+# Custom output location
+.github/scripts/generate-dashboard.sh --output reports/dashboard.html
+```
+
+**Features:**
+- ✅ Visual HTML dashboard with charts
+- ✅ Markdown format option
+- ✅ Shows current pipeline status
+- ✅ Recent runs table
+- ✅ Success rate metrics
+- ✅ Performance history (if available)
+- ✅ Quick links to documentation
+- ✅ Auto-refreshable
+
+**Output Formats:**
+- **HTML:** Beautiful interactive dashboard with styling
+- **Markdown:** Text-based for README/docs
+
+**Use Cases:**
+- Team status updates
+- Project documentation
+- README badges
+- Executive reporting
+- Historical tracking
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed
+
+**Exit Codes:**
+- `0` - Success
+- `1` - Invalid arguments
+
+---
+
+### `completions.bash`
+**Purpose:** Bash completion for all CI helper scripts
+
+**Usage:**
+```bash
+# Load completions for current session
+source .github/scripts/completions.bash
+
+# Add to ~/.bashrc for persistent completions
+echo "source $(pwd)/.github/scripts/completions.bash" >> ~/.bashrc
+```
+
+**Features:**
+- ✅ Tab completion for all script commands
+- ✅ Suggests recent run IDs from GitHub
+- ✅ Device name suggestions for simulators
+- ✅ Common version number suggestions
+- ✅ Flag and option completion
+- ✅ Context-aware suggestions
+
+**Supported Scripts:**
+- test-pipeline-locally.sh (--full, --quick, --validate-only)
+- analyze-ci-failure.sh (recent run IDs, --latest)
+- compare-screenshots.sh (recent run IDs, --threshold)
+- track-performance.sh (recent run IDs, --latest, --history)
+- release-checklist.sh (recent run IDs, version suggestions)
+- find-simulator.sh (device names, OS types)
+- validate-screenshots.sh (directories, device types)
+
+**Benefits:**
+- Faster command entry
+- Fewer typos
+- Discover available options
+- Better developer experience
+
+---
+
 ## Development Guidelines
 
 ### Testing Scripts Locally
