@@ -105,15 +105,19 @@ echo "" >&2
 # Check 5: Disk space
 echo "💾 Checking disk space..." >&2
 if command -v df &> /dev/null; then
-    # macOS uses -h for human readable
+    # macOS uses -m for megabytes
     FREE_SPACE_MB=$(df -m . | tail -1 | awk '{print $4}' || echo "0")
     FREE_SPACE_GB=$((FREE_SPACE_MB / 1024))
 
-    if [ "$FREE_SPACE_MB" -lt 500 ]; then
-        echo "❌ Insufficient disk space: ${FREE_SPACE_GB}GB (need at least 500MB)" >&2
+    # Pipeline needs: ~5-10GB for derived data, 1-2GB for xcresult, 1-2GB for screenshots
+    # Minimum: 10GB required, 15GB recommended
+    if [ "$FREE_SPACE_MB" -lt 10240 ]; then
+        echo "❌ Insufficient disk space: ${FREE_SPACE_GB}GB (need at least 10GB)" >&2
+        echo "   Pipeline requires ~5-10GB for derived data + 1-2GB for xcresult + 1-2GB for screenshots" >&2
         ERRORS=$((ERRORS + 1))
-    elif [ "$FREE_SPACE_MB" -lt 2000 ]; then
-        echo "⚠️  Warning: Low disk space: ${FREE_SPACE_GB}GB (recommended: 2GB+)" >&2
+    elif [ "$FREE_SPACE_MB" -lt 15360 ]; then
+        echo "⚠️  Warning: Low disk space: ${FREE_SPACE_GB}GB (recommended: 15GB+)" >&2
+        echo "   Pipeline may succeed but could run out of space if CI is slower than usual" >&2
         WARNINGS=$((WARNINGS + 1))
     else
         echo "✅ Disk space: ${FREE_SPACE_GB}GB available" >&2
