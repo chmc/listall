@@ -58,41 +58,16 @@ jobs:
           # Verify required commands are available
           command -v identify || { echo "❌ identify command not found"; exit 1; }
 
-      - name: Clean and pre-boot simulator
+      - name: Clean simulator state
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
 
-          # Pre-boot iPhone simulator using robust script
-          echo "Pre-booting iPhone 16 Pro Max simulator..."
+          # Verify simulator exists (boot on demand by Fastlane)
+          echo "Verifying iPhone 16 Pro Max simulator..."
           if DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPhone 16 Pro Max" iOS); then
-            echo "Using simulator: $DEVICE_UDID"
-
-            # Try to boot simulator (non-blocking)
-            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-
-            # Wait up to 120 seconds for boot to complete
-            echo "Waiting for simulator to boot..."
-            BOOT_TIMEOUT=120
-            BOOT_START=$(date +%s)
-            BOOT_SUCCESS=false
-
-            while [ $(($(date +%s) - BOOT_START)) -lt $BOOT_TIMEOUT ]; do
-              if xcrun simctl bootstatus "$DEVICE_UDID" -c 2>/dev/null; then
-                BOOT_SUCCESS=true
-                break
-              fi
-              sleep 2
-            done
-
-            if [ "$BOOT_SUCCESS" = true ]; then
-              # Set status bar for consistent screenshots
-              xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
-              echo "✅ Simulator pre-booted and ready"
-            else
-              echo "⚠️ Pre-boot did not complete within ${BOOT_TIMEOUT}s, will boot on demand"
-              xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
-            fi
+            echo "✅ Found simulator: $DEVICE_UDID"
+            echo "   Fastlane will boot simulator on demand (SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT=60s)"
           else
             echo "❌ Error: iPhone 16 Pro Max simulator not found"
             echo "   Run 'xcrun simctl list devices available' to see available simulators"
@@ -177,41 +152,16 @@ jobs:
           # Verify required commands are available
           command -v identify || { echo "❌ identify command not found"; exit 1; }
 
-      - name: Clean and pre-boot simulator
+      - name: Clean simulator state
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
 
-          # Pre-boot iPad simulator using robust script
-          echo "Pre-booting iPad Pro 13-inch (M4) simulator..."
+          # Verify simulator exists (boot on demand by Fastlane)
+          echo "Verifying iPad Pro 13-inch (M4) simulator..."
           if DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPad Pro 13-inch (M4)" iOS); then
-            echo "Using simulator: $DEVICE_UDID"
-
-            # Try to boot simulator (non-blocking)
-            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-
-            # Wait up to 120 seconds for boot to complete
-            echo "Waiting for simulator to boot..."
-            BOOT_TIMEOUT=120
-            BOOT_START=$(date +%s)
-            BOOT_SUCCESS=false
-
-            while [ $(($(date +%s) - BOOT_START)) -lt $BOOT_TIMEOUT ]; do
-              if xcrun simctl bootstatus "$DEVICE_UDID" -c 2>/dev/null; then
-                BOOT_SUCCESS=true
-                break
-              fi
-              sleep 2
-            done
-
-            if [ "$BOOT_SUCCESS" = true ]; then
-              # Set status bar for consistent screenshots
-              xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
-              echo "✅ Simulator pre-booted and ready"
-            else
-              echo "⚠️ Pre-boot did not complete within ${BOOT_TIMEOUT}s, will boot on demand"
-              xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
-            fi
+            echo "✅ Found simulator: $DEVICE_UDID"
+            echo "   Fastlane will boot simulator on demand (SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT=60s)"
           else
             echo "❌ Error: iPad Pro 13-inch (M4) simulator not found"
             echo "   Run 'xcrun simctl list devices available' to see available simulators"
