@@ -198,6 +198,149 @@ gh run view <run-id> --log | .github/scripts/analyze-ci-failure.sh --stdin
 
 ---
 
+### `compare-screenshots.sh`
+**Purpose:** Compare screenshots between two CI runs to detect visual regressions
+
+**Usage:**
+```bash
+# Compare two runs
+.github/scripts/compare-screenshots.sh <run-id-1> <run-id-2>
+
+# With custom threshold
+.github/scripts/compare-screenshots.sh 19660858956 19667213668 --threshold 10
+```
+
+**Features:**
+- ✅ Downloads screenshots from both runs automatically
+- ✅ Pixel-by-pixel comparison using ImageMagick
+- ✅ Configurable difference threshold (default 5%)
+- ✅ Generates diff images highlighting changes
+- ✅ Creates markdown report with statistics
+- ✅ Categorizes changes (identical, similar, different, missing, new)
+
+**Output:**
+- Markdown report: `screenshot-comparison-<run1>-vs-<run2>.md`
+- Diff images directory: `screenshot-diffs-<run1>-vs-<run2>/`
+- Console summary with color-coded results
+
+**Use Cases:**
+- Pre-release validation (compare before/after changes)
+- Detect unintended UI regressions
+- Code review assistance (visual changes)
+- Quality assurance
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed
+- ImageMagick must be installed
+
+**Exit Codes:**
+- `0` - Comparison completed (check report for details)
+- `1` - Invalid arguments or missing dependencies
+- `2` - Failed to download artifacts
+- `3` - Comparison failed
+
+---
+
+### `track-performance.sh`
+**Purpose:** Track CI pipeline performance metrics over time to detect degradation
+
+**Usage:**
+```bash
+# Track specific run
+.github/scripts/track-performance.sh <run-id>
+
+# Track latest run
+.github/scripts/track-performance.sh --latest
+
+# View history
+.github/scripts/track-performance.sh --history [N]
+```
+
+**Features:**
+- ✅ Extracts timing data for all jobs
+- ✅ Stores historical data in CSV format
+- ✅ Calculates statistics (avg, min, max)
+- ✅ Detects performance degradation (>20% slower)
+- ✅ Warns when approaching timeout limits
+- ✅ Tracks trends across multiple runs
+
+**Metrics Tracked:**
+- iPhone screenshot generation duration
+- iPad screenshot generation duration
+- Watch screenshot generation duration
+- Upload duration
+- Total pipeline duration
+- Job conclusions (success/failure)
+
+**Output:**
+- Performance data saved to: `.github/performance-history.csv`
+- Console report with job durations and analysis
+- Warnings for timeout risks (>60% usage)
+- Performance degradation alerts
+
+**Use Cases:**
+- Monitor pipeline health over time
+- Detect performance regressions
+- Capacity planning (timeout adjustments)
+- Optimization impact measurement
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed
+
+**Exit Codes:**
+- `0` - Success
+- `1` - Invalid arguments or gh command failed
+
+---
+
+### `release-checklist.sh`
+**Purpose:** Generate comprehensive App Store release checklist after pipeline completion
+
+**Usage:**
+```bash
+# Generate checklist for specific run
+.github/scripts/release-checklist.sh <run-id> <version>
+
+# Generate for latest run
+.github/scripts/release-checklist.sh --latest <version>
+```
+
+**Features:**
+- ✅ Validates pipeline completed successfully
+- ✅ Generates detailed markdown checklist
+- ✅ Includes all release steps (pre-release to post-release)
+- ✅ Provides troubleshooting commands
+- ✅ Links to relevant documentation
+- ✅ Customized for the specific version
+
+**Checklist Sections:**
+1. **Pre-Release Verification** - Pipeline status, screenshots, quality
+2. **App Store Connect** - Version creation, build selection, metadata
+3. **Final Verification** - Technical checks, legal compliance
+4. **Submission** - Submit for review, post-submission monitoring
+5. **Post-Release** - After approval, monitoring, documentation
+
+**Output:**
+- Markdown file: `release-checklist-v<version>.md`
+- Console summary with next steps
+- Interactive checklist with checkboxes
+
+**Use Cases:**
+- Standardize release process
+- Ensure nothing is forgotten
+- Onboard new team members
+- Document release history
+- Quality assurance
+
+**Requirements:**
+- GitHub CLI (`gh`) must be installed
+
+**Exit Codes:**
+- `0` - Success
+- `1` - Invalid arguments or gh command failed
+
+---
+
 ## Development Guidelines
 
 ### Testing Scripts Locally
