@@ -70,9 +70,10 @@ concurrent_simulators(false)
 # Removing from Snapfile to avoid conflicts - Fastfile override will be used
 # result_bundle(false)  # Commented out - controlled by Fastfile
 
-# Increase retry count for CI stability (handles occasional segfaults)
-# Snapshot automatically retries on random failures
-number_of_retries(2)
+# CRITICAL FIX: Remove Fastlane-level retries, rely on GitHub Actions retry instead
+# This prevents double-retry confusion (Fastlane × GitHub Actions = exponential delays)
+# GitHub Actions retry is more intelligent and provides better failure isolation
+number_of_retries(0)
 
 # Skip building/running the unit test target entirely
 # This prevents hanging at "Touching ListAllTests.xctest" phase

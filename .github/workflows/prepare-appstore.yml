@@ -11,6 +11,13 @@ on:
 permissions:
   contents: read
 
+# CRITICAL FIX: Prevent concurrent workflow runs that could waste resources
+# Each run consumes 5 parallel macOS runners, so overlapping runs are expensive
+# Don't cancel in-progress runs - let them complete (screenshot generation is expensive)
+concurrency:
+  group: prepare-appstore-${{ github.ref }}-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
 jobs:
   # ============================================================================
   # iPhone Screenshots - Per-Locale Parallelization
@@ -84,9 +91,7 @@ jobs:
           command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Clean simulator state
-        run: |
-          xcrun simctl shutdown all || true
-          xcrun simctl delete unavailable || true
+        run: .github/scripts/cleanup-simulators-robust.sh
 
           # Verify simulator exists (boot on demand by Fastlane)
           echo "Verifying iPhone 16 Pro Max simulator..."
@@ -143,7 +148,8 @@ jobs:
   generate-ipad-screenshots:
     name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 75  # Per-locale timeout (was 120 for both locales)
+    timeout-minutes: 90  # CRITICAL FIX: Was 75, but retry logic needs 2×40=80 min + overhead
+                         # Per-locale timeout (was 120 for both locales)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -208,9 +214,7 @@ jobs:
           command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Clean simulator state
-        run: |
-          xcrun simctl shutdown all || true
-          xcrun simctl delete unavailable || true
+        run: .github/scripts/cleanup-simulators-robust.sh
 
           # Verify simulator exists (boot on demand by Fastlane)
           echo "Verifying iPad Pro 13-inch (M4) simulator..."
@@ -327,9 +331,7 @@ jobs:
           command -v identify || { echo "❌ identify command not found"; exit 1; }
 
       - name: Clean simulator state
-        run: |
-          xcrun simctl shutdown all || true
-          xcrun simctl delete unavailable || true
+        run: .github/scripts/cleanup-simulators-robust.sh
 
           # Clean up duplicate Watch simulators using robust script
           .github/scripts/cleanup-watch-duplicates.sh || true
