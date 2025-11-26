@@ -97,6 +97,11 @@ jobs:
           timeout_minutes: 45
           max_attempts: 2
           retry_wait_seconds: 30
+          on_retry_command: |
+            echo "🔄 Resetting simulator state before retry..."
+            xcrun simctl shutdown all 2>/dev/null || true
+            pkill -9 Simulator 2>/dev/null || true
+            sleep 3
           command: bundle exec fastlane ios screenshots_iphone
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
@@ -208,6 +213,11 @@ jobs:
           timeout_minutes: 60  # Conservative timeout (actual: ~18min), allows retry buffer
           max_attempts: 2
           retry_wait_seconds: 30
+          on_retry_command: |
+            echo "🔄 Resetting simulator state before retry..."
+            xcrun simctl shutdown all 2>/dev/null || true
+            pkill -9 Simulator 2>/dev/null || true
+            sleep 3
           command: bundle exec fastlane ios screenshots_ipad
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
@@ -311,6 +321,11 @@ jobs:
           timeout_minutes: 45
           max_attempts: 2
           retry_wait_seconds: 30
+          on_retry_command: |
+            echo "🔄 Resetting simulator state before retry..."
+            xcrun simctl shutdown all 2>/dev/null || true
+            pkill -9 Simulator 2>/dev/null || true
+            sleep 3
           command: bundle exec fastlane ios watch_screenshots
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"

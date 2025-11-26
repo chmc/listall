@@ -7,13 +7,13 @@ final class ListAllUITests_Screenshots: XCTestCase {
     var app: XCUIApplication!
 
     /// Timeout for app launch - iPad Pro 13-inch M4 is very slow in CI
-    /// Increased from 60s to 90s based on CI performance analysis
-    /// Analysis: iPad launch can take 60-90s in CI, 60s was causing timeouts
-    private let launchTimeout: TimeInterval = 90
+    /// Optimized to 60s based on pipeline performance improvements
+    /// Analysis: With pre-boot and caching improvements, 60s is sufficient
+    private let launchTimeout: TimeInterval = 60
 
     /// Timeout for UI elements to appear after launch
-    /// Increased from 15s to 20s for iPad Pro large screen rendering
-    private let elementTimeout: TimeInterval = 20
+    /// Optimized to 15s based on pipeline performance improvements
+    private let elementTimeout: TimeInterval = 15
 
     /// Track test start time for timeout budget monitoring
     private var testStartTime: Date?
@@ -70,8 +70,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     /// Launch app with retry logic to handle "Failed to terminate" errors on iPad simulators
     /// This is a known flaky issue where app.launch() internally fails to terminate the previous instance
-    /// Note: maxRetries=2 gives 2×90s=180s launch budget, leaving 120s for test execution within 300s timeout
-    /// Retry delay increased to 15s to give simulator more recovery time (was 5s, caused rapid retries)
+    /// Note: maxRetries=2 gives 2×60s=120s launch budget, leaving 180s for test execution within 300s timeout
+    /// Retry delay optimized to 5s for faster recovery (pipeline improvements enable shorter delay)
     private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) throws -> Bool {
         // Check timeout budget before starting
         let budgetBefore = checkTimeoutBudget()
@@ -82,12 +82,12 @@ final class ListAllUITests_Screenshots: XCTestCase {
         }
 
         for attempt in 1...maxRetries {
-            // Longer pause before retry attempts to let simulator fully stabilize
-            // 15 seconds gives simulator time to clean up processes, release resources
-            // Analysis showed 5s was too short - CI environment needs more recovery time
+            // Pause before retry attempts to let simulator stabilize
+            // 5 seconds optimized for pipeline improvements (caching, pre-boot)
+            // Faster recovery enables quicker retries without stability issues
             if attempt > 1 {
-                print("⏳ Waiting 15 seconds before retry attempt \(attempt) (simulator recovery time)...")
-                sleep(15)
+                print("⏳ Waiting 5 seconds before retry attempt \(attempt) (simulator recovery time)...")
+                sleep(5)
                 // Recreate app instance for retry
                 app = XCUIApplication()
                 setupSnapshot(app)

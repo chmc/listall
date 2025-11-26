@@ -92,6 +92,22 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
   device_name_sanitized = device.gsub(/[^a-zA-Z0-9]/, "")
   total_captured = 0
 
+  # OPTIMIZATION: Build once for all locales (saves ~5-10 min per device)
+  xctestrun_files = Dir.glob(File.join(derived, "Build/Products/*.xctestrun"))
+  if xctestrun_files.empty?
+    UI.header("🔨 Pre-building test products (one-time)")
+    scan(
+      project: "./ListAll/ListAll.xcodeproj",
+      scheme: "ListAll",
+      build_for_testing: true,
+      derived_data_path: derived,
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+    )
+    UI.success("✅ Pre-build complete")
+  else
+    UI.message("📦 Using existing build: #{xctestrun_files.first}")
+  end
+
   locales.each_with_index do |locale, locale_idx|
     is_first = locale_idx == 0 && clear_previous
     UI.header("📸 Generating screenshots for #{device} (#{locale})")
@@ -141,6 +157,7 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
 
     snapshot(
       derived_data_path: derived,
+      test_without_building: true,
       devices: [device],
       languages: [locale],
       clear_previous_screenshots: is_first,
