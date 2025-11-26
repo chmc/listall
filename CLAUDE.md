@@ -219,6 +219,117 @@ UI tests use deterministic test data for screenshots:
 - Network connectivity to App Store Connect
 - Required files (Fastfile, Snapfile, Gemfile)
 
+### CI/CD Development & Testing Tools
+
+**Local Testing** (before pushing):
+```bash
+# Fast validation (1-2s): Syntax checks only
+.github/scripts/test-pipeline-locally.sh --validate-only
+
+# Quick test (10-15s): Environment validation + simulator boot
+.github/scripts/test-pipeline-locally.sh --quick
+
+# Full test (60-90min): Complete screenshot generation
+.github/scripts/test-pipeline-locally.sh --full
+```
+
+**Pre-commit Hook** (optional):
+```bash
+# Install automatic validation on commit
+ln -sf ../../.github/hooks/pre-commit .git/hooks/pre-commit
+```
+
+**Tab Completion** (optional):
+```bash
+# Add to ~/.bashrc or ~/.zshrc:
+source /path/to/ListAll/.github/scripts/completions.bash
+```
+
+### CI/CD Diagnostics & Troubleshooting
+
+**Automated Failure Analysis:**
+```bash
+# Analyze latest run
+.github/scripts/analyze-ci-failure.sh --latest
+
+# Analyze specific run
+.github/scripts/analyze-ci-failure.sh <run-id>
+```
+
+**Manual Troubleshooting:**
+- See `.github/workflows/TROUBLESHOOTING.md` - 22 common failure scenarios
+- See `.github/DEVELOPMENT.md` - Local testing workflow
+- See `.github/scripts/README.md` - Complete tool reference
+
+### CI/CD Quality Assurance
+
+**Screenshot Comparison** (visual regression detection):
+```bash
+.github/scripts/compare-screenshots.sh <baseline-run> <new-run>
+```
+
+**Performance Monitoring:**
+```bash
+# Track latest run
+.github/scripts/track-performance.sh --latest
+
+# View history
+.github/scripts/track-performance.sh --history 10
+```
+
+**Screenshot Validation:**
+```bash
+.github/scripts/validate-screenshots.sh fastlane/screenshots_compat iphone
+.github/scripts/validate-screenshots.sh fastlane/screenshots_compat ipad
+.github/scripts/validate-screenshots.sh fastlane/screenshots/watch_normalized watch
+```
+
+### CI/CD Release & Monitoring
+
+**Release Checklist:**
+```bash
+# After successful pipeline
+.github/scripts/release-checklist.sh --latest 1.2.0
+```
+
+**Pipeline Dashboard:**
+```bash
+# Generate status dashboard (HTML/markdown)
+.github/scripts/generate-dashboard.sh
+```
+
+**Cost Tracking:**
+```bash
+# Monthly CI cost analysis
+.github/scripts/track-ci-cost.sh --month
+```
+
+**Artifact Cleanup:**
+```bash
+# Clean old artifacts (>30 days)
+.github/scripts/cleanup-artifacts.sh --days 30
+```
+
+### CI/CD Infrastructure Helpers
+
+**Simulator Management:**
+```bash
+# Clean simulator state
+.github/scripts/cleanup-simulators-robust.sh
+
+# Remove duplicate Watch simulators
+.github/scripts/cleanup-watch-duplicates.sh
+
+# Find simulator UUID securely
+.github/scripts/find-simulator.sh "iPhone 16 Pro Max" iOS
+```
+
+**Active Run Monitoring:**
+```bash
+# Real-time monitoring with notifications
+.github/scripts/monitor-active-runs.sh
+```
+
 ## Version Management System
 
 ListAll uses semantic versioning (MAJOR.MINOR.PATCH) with centralized version tracking:
@@ -347,9 +458,32 @@ fastlane/
 - Clear simulator data if tests behave inconsistently
 - Watch tests require paired simulators
 
+### CI/CD pipeline failures
+- **Auto-diagnose:** `.github/scripts/analyze-ci-failure.sh --latest`
+- **Manual troubleshooting:** See `.github/workflows/TROUBLESHOOTING.md` (22 common scenarios)
+- **Test locally before pushing:** `.github/scripts/test-pipeline-locally.sh --quick`
+- **Compare screenshots:** `.github/scripts/compare-screenshots.sh <baseline-run> <new-run>`
+
+### Performance degradation
+- **Track trends:** `.github/scripts/track-performance.sh --history 10`
+- **Check latest run:** `.github/scripts/track-performance.sh --latest`
+- **View dashboard:** `.github/scripts/generate-dashboard.sh`
+
 ## Documentation Resources
 
+**Core Documentation:**
 - `README.md` - Quick start guide
 - `documentation/version_management.md` - Complete version management guide
 - `WATCHOS_LOCALIZATION_*.md` - watchOS localization setup
 - `.cursorrules` - Development workflow rules
+- `IMPLEMENTATION_SUMMARY.md` - Pipeline hardening implementation details
+
+**CI/CD Documentation** (2,500+ lines):
+- `.github/README.md` - CI/CD infrastructure overview, tool catalog
+- `.github/DEVELOPMENT.md` - Local testing workflow, debugging tips
+- `.github/QUICK_REFERENCE.md` - One-page cheat sheet for common tasks
+- `.github/workflows/TROUBLESHOOTING.md` - 22 common failure scenarios with solutions
+- `.github/scripts/README.md` - Complete reference for all 15 CI/CD tools
+- `.github/COMPREHENSIVE_RELIABILITY_AUDIT.md` - Detailed analysis of 13 reliability issues
+
+**All CI/CD tools include `--help`** for built-in documentation

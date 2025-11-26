@@ -35,6 +35,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate helper scripts
+        run: |
+          echo "=== Validating helper scripts ==="
+          SCRIPTS=(
+            ".github/scripts/preflight-check.sh"
+            ".github/scripts/cleanup-simulators-robust.sh"
+            ".github/scripts/find-simulator.sh"
+            ".github/scripts/validate-screenshots.sh"
+          )
+
+          ERRORS=0
+          for script in "${SCRIPTS[@]}"; do
+            if [ ! -f "$script" ]; then
+              echo "❌ ERROR: Script not found: $script"
+              ERRORS=$((ERRORS + 1))
+            elif [ ! -x "$script" ]; then
+              echo "⚠️  WARNING: Script not executable, fixing: $script"
+              chmod +x "$script"
+              echo "✅ Fixed permissions: $script"
+            else
+              echo "✅ Valid: $script"
+            fi
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Script validation failed: $ERRORS missing script(s)"
+            exit 1
+          fi
+          echo "✅ All helper scripts validated successfully"
+
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
@@ -57,6 +87,8 @@ jobs:
             ~/Library/Caches/Homebrew/downloads/*imagemagick*
             /usr/local/Cellar/imagemagick
             /usr/local/opt/imagemagick
+            /opt/homebrew/Cellar/imagemagick
+            /opt/homebrew/opt/imagemagick
           key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
           restore-keys: |
             ${{ runner.os }}-imagemagick-
@@ -160,6 +192,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate helper scripts
+        run: |
+          echo "=== Validating helper scripts ==="
+          SCRIPTS=(
+            ".github/scripts/preflight-check.sh"
+            ".github/scripts/cleanup-simulators-robust.sh"
+            ".github/scripts/find-simulator.sh"
+            ".github/scripts/validate-screenshots.sh"
+          )
+
+          ERRORS=0
+          for script in "${SCRIPTS[@]}"; do
+            if [ ! -f "$script" ]; then
+              echo "❌ ERROR: Script not found: $script"
+              ERRORS=$((ERRORS + 1))
+            elif [ ! -x "$script" ]; then
+              echo "⚠️  WARNING: Script not executable, fixing: $script"
+              chmod +x "$script"
+              echo "✅ Fixed permissions: $script"
+            else
+              echo "✅ Valid: $script"
+            fi
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Script validation failed: $ERRORS missing script(s)"
+            exit 1
+          fi
+          echo "✅ All helper scripts validated successfully"
+
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
@@ -182,6 +244,8 @@ jobs:
             ~/Library/Caches/Homebrew/downloads/*imagemagick*
             /usr/local/Cellar/imagemagick
             /usr/local/opt/imagemagick
+            /opt/homebrew/Cellar/imagemagick
+            /opt/homebrew/opt/imagemagick
           key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
           restore-keys: |
             ${{ runner.os }}-imagemagick-
@@ -279,6 +343,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate helper scripts
+        run: |
+          echo "=== Validating helper scripts ==="
+          SCRIPTS=(
+            ".github/scripts/preflight-check.sh"
+            ".github/scripts/cleanup-simulators-robust.sh"
+            ".github/scripts/cleanup-watch-duplicates.sh"
+            ".github/scripts/validate-screenshots.sh"
+          )
+
+          ERRORS=0
+          for script in "${SCRIPTS[@]}"; do
+            if [ ! -f "$script" ]; then
+              echo "❌ ERROR: Script not found: $script"
+              ERRORS=$((ERRORS + 1))
+            elif [ ! -x "$script" ]; then
+              echo "⚠️  WARNING: Script not executable, fixing: $script"
+              chmod +x "$script"
+              echo "✅ Fixed permissions: $script"
+            else
+              echo "✅ Valid: $script"
+            fi
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Script validation failed: $ERRORS missing script(s)"
+            exit 1
+          fi
+          echo "✅ All helper scripts validated successfully"
+
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
@@ -301,6 +395,8 @@ jobs:
             ~/Library/Caches/Homebrew/downloads/*imagemagick*
             /usr/local/Cellar/imagemagick
             /usr/local/opt/imagemagick
+            /opt/homebrew/Cellar/imagemagick
+            /opt/homebrew/opt/imagemagick
           key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
           restore-keys: |
             ${{ runner.os }}-imagemagick-
@@ -469,16 +565,28 @@ jobs:
         run: |
           echo "=== Validating merged screenshot artifacts ==="
 
-          # Count screenshots by locale and device
-          EN_IPHONE=$(find fastlane/screenshots_compat/en-US -name "iPhone*.png" 2>/dev/null | wc -l | tr -d ' ')
-          FI_IPHONE=$(find fastlane/screenshots_compat/fi -name "iPhone*.png" 2>/dev/null | wc -l | tr -d ' ')
-          EN_IPAD=$(find fastlane/screenshots_compat/en-US -name "iPad*.png" 2>/dev/null | wc -l | tr -d ' ')
-          FI_IPAD=$(find fastlane/screenshots_compat/fi -name "iPad*.png" 2>/dev/null | wc -l | tr -d ' ')
+          # Check for 0-byte (corrupt) files
+          echo "Checking for corrupt (0-byte) files..."
+          CORRUPT_FILES=$(find fastlane/screenshots_compat -name "*.png" -size 0 2>/dev/null)
+          if [ -n "$CORRUPT_FILES" ]; then
+            echo "❌ ERROR: Found corrupt (0-byte) screenshot files:"
+            echo "$CORRUPT_FILES"
+            exit 1
+          fi
+          echo "✅ No corrupt files detected"
 
-          echo "iPhone EN: $EN_IPHONE screenshots"
-          echo "iPhone FI: $FI_IPHONE screenshots"
-          echo "iPad EN: $EN_IPAD screenshots"
-          echo "iPad FI: $FI_IPAD screenshots"
+          # Count screenshots by locale and device (only non-empty files)
+          EN_IPHONE=$(find fastlane/screenshots_compat/en-US -name "iPhone*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+          FI_IPHONE=$(find fastlane/screenshots_compat/fi -name "iPhone*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+          EN_IPAD=$(find fastlane/screenshots_compat/en-US -name "iPad*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+          FI_IPAD=$(find fastlane/screenshots_compat/fi -name "iPad*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+
+          echo ""
+          echo "Screenshot counts (non-empty files only):"
+          echo "  iPhone EN: $EN_IPHONE screenshots"
+          echo "  iPhone FI: $FI_IPHONE screenshots"
+          echo "  iPad EN: $EN_IPAD screenshots"
+          echo "  iPad FI: $FI_IPAD screenshots"
 
           # Validate counts (expect 2 screenshots per device-locale)
           EXPECTED=2
@@ -504,12 +612,17 @@ jobs:
             ERRORS=$((ERRORS + 1))
           fi
 
+          # Fail fast if any validation errors found
           if [ $ERRORS -gt 0 ]; then
+            echo ""
             echo "❌ Artifact validation failed: $ERRORS error(s)"
+            echo "Listing all merged files for debugging:"
+            find fastlane/screenshots_compat -name "*.png" -exec ls -lh {} \;
             exit 1
           fi
 
-          echo "✅ All artifacts validated successfully"
+          echo ""
+          echo "✅ All artifacts validated successfully (counts OK, no corrupt files)"
 
       - name: Upload merged screenshots
         uses: actions/upload-artifact@v4

@@ -81,9 +81,9 @@ if ! echo "$DEVICE_UDID" | grep -qE '^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{
     exit 5
 fi
 
-# Verify simulator can actually be booted (check device exists)
-if ! xcrun simctl list devices "$DEVICE_UDID" &>/dev/null; then
-    echo "❌ Error: Simulator $DEVICE_UDID exists in JSON but not bootable" >&2
+# Verify simulator can actually be booted (check device exists in simctl list)
+if ! xcrun simctl list devices available 2>/dev/null | grep -q "$DEVICE_UDID"; then
+    echo "❌ Error: Simulator $DEVICE_UDID exists in JSON but not found in device list" >&2
     exit 6
 fi
 

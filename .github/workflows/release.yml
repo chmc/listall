@@ -27,7 +27,7 @@ permissions:
 jobs:
   # Tests removed - CI pipeline already validates every commit
   # No need to re-run tests during release
-  
+
   beta:
     name: TestFlight (beta)
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
@@ -110,21 +110,21 @@ jobs:
           # Configure git
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          
+
           # Get the new version
           NEW_VERSION=$(cat .version)
-          
+
           # Commit version file and project changes
           git add .version ListAll/ListAll.xcodeproj/project.pbxproj
           git commit -m "Bump version to ${NEW_VERSION}" || echo "No changes to commit"
-          
+
           # Create and push tag
           git tag "v${NEW_VERSION}" || echo "Tag already exists"
-          
+
           # Push changes and tags
           git push origin main || echo "Push failed, possibly no changes"
           git push origin "v${NEW_VERSION}" || echo "Tag push failed"
-        
+
       - name: Debug - List identities in keychain
         if: failure()
         run: |

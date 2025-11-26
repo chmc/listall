@@ -1,0 +1,49 @@
+---
+# yamllint configuration for GitHub Actions workflows
+# GitHub Actions workflows can be verbose, so we relax some rules while
+# maintaining code quality standards.
+
+extends: default
+
+rules:
+  # Allow longer lines - GitHub Actions commands can be verbose
+  line-length:
+    max: 120
+    level: warning
+
+  # Document start (---) is optional for GitHub Actions
+  document-start:
+    present: false
+
+  # Allow 'on' and 'yes/no' for GitHub Actions triggers
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+    check-keys: false
+
+  # Indentation - GitHub Actions commonly uses inconsistent indentation
+  # We'll relax this to avoid false positives
+  indentation:
+    spaces: consistent
+    indent-sequences: consistent
+    check-multi-line-strings: false
+
+  # Trailing spaces should be removed
+  trailing-spaces: enable
+
+  # Brackets - allow some flexibility for readability
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+
+  # Comments - allow some flexibility
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+
+  # Empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 0
