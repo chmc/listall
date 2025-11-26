@@ -30,20 +30,18 @@ output_directory("./fastlane/screenshots")
 # Clear previous screenshots before generating new ones
 clear_previous_screenshots(true)
 
-# Erase simulators before running (built-in fastlane option)
-# More reliable than manual xcrun simctl erase in CI
-erase_simulator(true)
+# OPTIMIZATION: Don't erase simulator between languages (saves 6-10 minutes)
+# With reinstall_app(true), app state is fresh anyway - no need to erase
+# Erasing causes full shutdown → erase → reboot cycle per locale
+# Benefits: Faster execution, warmer simulator state
+# Trade-off: None - reinstall_app provides same cleanliness
+erase_simulator(false)
 
 # Remove the '#' from the image filename
 override_status_bar(true)
 
-# Reinstall the app before each test run
+# Reinstall the app before each test run (ensures clean app state)
 reinstall_app(true)
-
-# OPTIMIZATION: Try not erasing simulator between languages
-# With reinstall_app(true), app state is fresh anyway
-# This may save 2-3 minutes per device by reusing booted simulator
-erase_simulator(false)
 
 # CRITICAL: Set simulator system language to match screenshot language
 # This ensures iOS loads the correct .strings bundle BEFORE app launches

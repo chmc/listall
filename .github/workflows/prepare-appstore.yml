@@ -35,10 +35,27 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Cache Homebrew ImageMagick
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/downloads/*imagemagick*
+            /usr/local/Cellar/imagemagick
+            /usr/local/opt/imagemagick
+          key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-imagemagick-
+
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Install ImageMagick 7 (Homebrew provides 7.x by default)
-          brew install imagemagick
+          # Check if already cached
+          if command -v magick &> /dev/null || command -v convert &> /dev/null; then
+            echo "✅ ImageMagick already installed (from cache)"
+            magick --version || convert --version
+          else
+            echo "📦 Installing ImageMagick..."
+            brew install imagemagick
+          fi
 
           # Verify installation and log version
           if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
@@ -129,10 +146,27 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Cache Homebrew ImageMagick
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/downloads/*imagemagick*
+            /usr/local/Cellar/imagemagick
+            /usr/local/opt/imagemagick
+          key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-imagemagick-
+
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Install ImageMagick 7 (Homebrew provides 7.x by default)
-          brew install imagemagick
+          # Check if already cached
+          if command -v magick &> /dev/null || command -v convert &> /dev/null; then
+            echo "✅ ImageMagick already installed (from cache)"
+            magick --version || convert --version
+          else
+            echo "📦 Installing ImageMagick..."
+            brew install imagemagick
+          fi
 
           # Verify installation and log version
           if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
@@ -223,10 +257,27 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Cache Homebrew ImageMagick
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/downloads/*imagemagick*
+            /usr/local/Cellar/imagemagick
+            /usr/local/opt/imagemagick
+          key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-imagemagick-
+
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Install ImageMagick 7 (Homebrew provides 7.x by default)
-          brew install imagemagick
+          # Check if already cached
+          if command -v magick &> /dev/null || command -v convert &> /dev/null; then
+            echo "✅ ImageMagick already installed (from cache)"
+            magick --version || convert --version
+          else
+            echo "📦 Installing ImageMagick..."
+            brew install imagemagick
+          fi
 
           # Verify installation and log version
           if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
