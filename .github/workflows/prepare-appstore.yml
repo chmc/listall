@@ -12,10 +12,18 @@ permissions:
   contents: read
 
 jobs:
+  # ============================================================================
+  # iPhone Screenshots - Per-Locale Parallelization
+  # Each locale runs as a separate job for faster execution and fault isolation
+  # ============================================================================
   generate-iphone-screenshots:
-    name: Generate iPhone Screenshots
+    name: iPhone Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 90  # Actual: ~22min, buffer for CI slowness and retries (2x attempts × 45min)
+    timeout-minutes: 60  # Per-locale timeout (was 90 for both locales)
+    strategy:
+      matrix:
+        locale: [en-US, fi]
+      fail-fast: false  # Continue other locales if one fails
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,10 +99,10 @@ jobs:
             exit 1
           fi
 
-      - name: Generate iPhone screenshots
+      - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 45
+          timeout_minutes: 30  # Single locale should complete in ~15-20 min
           max_attempts: 2
           retry_wait_seconds: 30
           on_retry_command: |
@@ -102,36 +110,44 @@ jobs:
             xcrun simctl shutdown all 2>/dev/null || true
             pkill -9 Simulator 2>/dev/null || true
             sleep 3
-          command: bundle exec fastlane ios screenshots_iphone
+          command: bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
-      - name: Validate iPhone screenshot dimensions
+      - name: Validate iPhone screenshot dimensions (${{ matrix.locale }})
         if: success()
         run: .github/scripts/validate-screenshots.sh fastlane/screenshots_compat iphone
 
-      - name: Upload iPhone screenshots artifact
+      - name: Upload iPhone screenshots artifact (${{ matrix.locale }})
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-iphone
+          name: screenshots-iphone-${{ matrix.locale }}
           path: fastlane/screenshots_compat/
-          retention-days: 30
+          retention-days: 7  # Shorter retention for intermediate artifacts
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-iphone
+          name: test-results-iphone-${{ matrix.locale }}
           path: |
             ~/Library/Logs/snapshot
             **/Logs/Test/*.xcresult
           retention-days: 7
 
+  # ============================================================================
+  # iPad Screenshots - Per-Locale Parallelization
+  # Each locale runs as a separate job for faster execution and fault isolation
+  # ============================================================================
   generate-ipad-screenshots:
-    name: Generate iPad Screenshots
+    name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 120  # Actual: ~20min (was 84min before pre-boot fixes), generous buffer for CI variability
+    timeout-minutes: 75  # Per-locale timeout (was 120 for both locales)
+    strategy:
+      matrix:
+        locale: [en-US, fi]
+      fail-fast: false  # Continue other locales if one fails
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -207,10 +223,10 @@ jobs:
             exit 1
           fi
 
-      - name: Generate iPad screenshots
+      - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 60  # Conservative timeout (actual: ~18min), allows retry buffer
+          timeout_minutes: 40  # Single locale should complete in ~15-25 min
           max_attempts: 2
           retry_wait_seconds: 30
           on_retry_command: |
@@ -218,32 +234,35 @@ jobs:
             xcrun simctl shutdown all 2>/dev/null || true
             pkill -9 Simulator 2>/dev/null || true
             sleep 3
-          command: bundle exec fastlane ios screenshots_ipad
+          command: bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
-      - name: Validate iPad screenshot dimensions
+      - name: Validate iPad screenshot dimensions (${{ matrix.locale }})
         if: success()
         run: .github/scripts/validate-screenshots.sh fastlane/screenshots_compat ipad
 
-      - name: Upload iPad screenshots artifact
+      - name: Upload iPad screenshots artifact (${{ matrix.locale }})
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-ipad
+          name: screenshots-ipad-${{ matrix.locale }}
           path: fastlane/screenshots_compat/
-          retention-days: 30
+          retention-days: 7  # Shorter retention for intermediate artifacts
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-ipad
+          name: test-results-ipad-${{ matrix.locale }}
           path: |
             ~/Library/Logs/snapshot
             **/Logs/Test/*.xcresult
           retention-days: 7
 
+  # ============================================================================
+  # Watch Screenshots - Single job (Watch is fast, no benefit from splitting)
+  # ============================================================================
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
@@ -361,9 +380,168 @@ jobs:
             **/Logs/Test/*.xcresult
           retention-days: 7
 
+  # ============================================================================
+  # Merge Screenshots - Combines per-locale artifacts into final bundles
+  # ============================================================================
+  merge-screenshots:
+    name: Merge Screenshot Artifacts
+    needs: [generate-iphone-screenshots, generate-ipad-screenshots, generate-watch-screenshots]
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create screenshots_compat directory
+        run: mkdir -p fastlane/screenshots_compat/{en-US,fi}
+
+      - name: Download iPhone EN screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-iphone-en-US
+          path: artifacts/iphone-en/
+
+      - name: Download iPhone FI screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-iphone-fi
+          path: artifacts/iphone-fi/
+
+      - name: Download iPad EN screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-ipad-en-US
+          path: artifacts/ipad-en/
+
+      - name: Download iPad FI screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-ipad-fi
+          path: artifacts/ipad-fi/
+
+      - name: Download Watch screenshots
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshots-watch
+          path: fastlane/screenshots/watch_normalized/
+
+      - name: Merge per-locale screenshots
+        run: |
+          echo "=== Merging per-locale screenshot artifacts ==="
+
+          # Merge iPhone screenshots
+          echo "Merging iPhone EN screenshots..."
+          if [ -d "artifacts/iphone-en/en-US" ]; then
+            cp -v artifacts/iphone-en/en-US/*.png fastlane/screenshots_compat/en-US/ 2>/dev/null || true
+          fi
+
+          echo "Merging iPhone FI screenshots..."
+          if [ -d "artifacts/iphone-fi/fi" ]; then
+            cp -v artifacts/iphone-fi/fi/*.png fastlane/screenshots_compat/fi/ 2>/dev/null || true
+          fi
+
+          # Merge iPad screenshots
+          echo "Merging iPad EN screenshots..."
+          if [ -d "artifacts/ipad-en/en-US" ]; then
+            cp -v artifacts/ipad-en/en-US/*.png fastlane/screenshots_compat/en-US/ 2>/dev/null || true
+          fi
+
+          echo "Merging iPad FI screenshots..."
+          if [ -d "artifacts/ipad-fi/fi" ]; then
+            cp -v artifacts/ipad-fi/fi/*.png fastlane/screenshots_compat/fi/ 2>/dev/null || true
+          fi
+
+          echo ""
+          echo "=== Merged screenshots summary ==="
+          echo "EN (en-US):"
+          ls -la fastlane/screenshots_compat/en-US/ || echo "  (empty)"
+          echo ""
+          echo "FI (fi):"
+          ls -la fastlane/screenshots_compat/fi/ || echo "  (empty)"
+
+      - name: Validate merged artifacts
+        run: |
+          echo "=== Validating merged screenshot artifacts ==="
+
+          # Count screenshots by locale and device
+          EN_IPHONE=$(find fastlane/screenshots_compat/en-US -name "iPhone*.png" 2>/dev/null | wc -l | tr -d ' ')
+          FI_IPHONE=$(find fastlane/screenshots_compat/fi -name "iPhone*.png" 2>/dev/null | wc -l | tr -d ' ')
+          EN_IPAD=$(find fastlane/screenshots_compat/en-US -name "iPad*.png" 2>/dev/null | wc -l | tr -d ' ')
+          FI_IPAD=$(find fastlane/screenshots_compat/fi -name "iPad*.png" 2>/dev/null | wc -l | tr -d ' ')
+
+          echo "iPhone EN: $EN_IPHONE screenshots"
+          echo "iPhone FI: $FI_IPHONE screenshots"
+          echo "iPad EN: $EN_IPAD screenshots"
+          echo "iPad FI: $FI_IPAD screenshots"
+
+          # Validate counts (expect 2 screenshots per device-locale)
+          EXPECTED=2
+          ERRORS=0
+
+          if [ "$EN_IPHONE" -lt "$EXPECTED" ]; then
+            echo "❌ ERROR: iPhone EN has only $EN_IPHONE screenshots (expected $EXPECTED)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$FI_IPHONE" -lt "$EXPECTED" ]; then
+            echo "❌ ERROR: iPhone FI has only $FI_IPHONE screenshots (expected $EXPECTED)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$EN_IPAD" -lt "$EXPECTED" ]; then
+            echo "❌ ERROR: iPad EN has only $EN_IPAD screenshots (expected $EXPECTED)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$FI_IPAD" -lt "$EXPECTED" ]; then
+            echo "❌ ERROR: iPad FI has only $FI_IPAD screenshots (expected $EXPECTED)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Artifact validation failed: $ERRORS error(s)"
+            exit 1
+          fi
+
+          echo "✅ All artifacts validated successfully"
+
+      - name: Upload merged screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-merged
+          path: |
+            fastlane/screenshots_compat/
+            fastlane/screenshots/watch_normalized/
+          retention-days: 30
+
+      - name: Update job summary
+        if: always()
+        run: |
+          echo "## Screenshot Merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "### Status: ✅ SUCCESS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All screenshots successfully merged and validated." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Screenshot Counts:**" >> $GITHUB_STEP_SUMMARY
+            EN_COUNT=$(find fastlane/screenshots_compat/en-US -name '*.png' 2>/dev/null | wc -l | xargs)
+            FI_COUNT=$(find fastlane/screenshots_compat/fi -name '*.png' 2>/dev/null | wc -l | xargs)
+            echo "- EN (en-US): $EN_COUNT screenshots" >> $GITHUB_STEP_SUMMARY
+            echo "- FI (fi): $FI_COUNT screenshots" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Status: ❌ FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Screenshot merge validation failed. Check logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================================================
+  # Upload to App Store Connect
+  # ============================================================================
   upload-to-appstore:
     name: Upload Metadata & Screenshots
-    needs: [generate-iphone-screenshots, generate-ipad-screenshots, generate-watch-screenshots]
+    needs: [merge-screenshots]
     runs-on: macos-14
     timeout-minutes: 30
     env:
@@ -389,26 +567,16 @@ jobs:
           magick --version || convert --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
 
-      - name: Create screenshots_compat directory
-        run: mkdir -p fastlane/screenshots_compat
+      - name: Create screenshots directories
+        run: |
+          mkdir -p fastlane/screenshots_compat
+          mkdir -p fastlane/screenshots/watch_normalized
 
-      - name: Download iPhone screenshots
+      - name: Download merged screenshots
         uses: actions/download-artifact@v4
         with:
-          name: screenshots-iphone
-          path: fastlane/screenshots_compat/
-
-      - name: Download iPad screenshots
-        uses: actions/download-artifact@v4
-        with:
-          name: screenshots-ipad
-          path: fastlane/screenshots_compat/
-
-      - name: Download Watch screenshots
-        uses: actions/download-artifact@v4
-        with:
-          name: screenshots-watch
-          path: fastlane/screenshots/watch_normalized/
+          name: screenshots-merged
+          path: fastlane/
 
       - name: List merged screenshots
         run: |
@@ -432,6 +600,10 @@ jobs:
           echo "- ✅ iPhone (EN + FI): 4 screenshots (1290x2796)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ iPad 13\" (EN + FI): 4 screenshots (2064x2752)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Watch (EN + FI): 10 screenshots (396x484)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pipeline Architecture" >> $GITHUB_STEP_SUMMARY
+          echo "- Per-locale parallelization: 5 parallel jobs (iPhone×2, iPad×2, Watch)" >> $GITHUB_STEP_SUMMARY
+          echo "- Estimated runtime improvement: 50% faster than sequential" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY

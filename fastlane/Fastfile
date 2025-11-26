@@ -731,6 +731,106 @@ platform :ios do
     UI.message("📁 Output: #{compat_dir}")
   end
 
+  desc "Generate iPhone screenshots for a SINGLE locale (for parallel CI jobs)"
+  desc "Usage: bundle exec fastlane ios screenshots_iphone_locale locale:en-US"
+  lane :screenshots_iphone_locale do |options|
+    UI.header("📱 Generating iPhone Screenshots (Single Locale)")
+
+    # Validate locale parameter
+    locale = options[:locale]
+    unless locale
+      UI.user_error!("🚨 Missing required parameter: locale (e.g., locale:en-US)")
+    end
+
+    unless %w[en-US fi].include?(locale)
+      UI.user_error!("🚨 Invalid locale '#{locale}'. Must be 'en-US' or 'fi'")
+    end
+
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+
+    # Clean up old screenshot subdirectories
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+    UI.message("🧹 Cleaning old screenshot subdirectories...")
+    %w[test_output delivery attachments].each do |subdir|
+      subdir_path = File.join(screenshots_dir, subdir)
+      FileUtils.rm_rf(subdir_path) if Dir.exist?(subdir_path)
+    end
+
+    # Generate iPhone screenshots for single locale
+    device = "iPhone 16 Pro Max"
+    count = generate_screenshots_for_device(device, locales: [locale], clear_previous: true)
+
+    if count == 0
+      UI.user_error!("🚨 iPhone screenshot generation failed for #{locale}: No screenshots captured")
+    end
+
+    # Normalize to App Store dimensions (single locale)
+    UI.header("📐 Normalizing iPhone screenshots to App Store dimensions")
+    normalize_device_screenshots(:iphone, locales: [locale])
+
+    # Verify normalized screenshots
+    compat_dir = File.expand_path("screenshots_compat", __dir__)
+    iphone_shots = Dir.glob(File.join(compat_dir, locale, "iPhone*.png")).reject { |f| f.include?("_framed") }
+
+    if iphone_shots.empty?
+      UI.user_error!("🚨 iPhone normalization failed for #{locale}: No normalized screenshots found")
+    end
+
+    UI.success("✅ iPhone screenshots complete for #{locale}: #{iphone_shots.count} normalized screenshots")
+    UI.message("📁 Output: #{compat_dir}/#{locale}/")
+  end
+
+  desc "Generate iPad screenshots for a SINGLE locale (for parallel CI jobs)"
+  desc "Usage: bundle exec fastlane ios screenshots_ipad_locale locale:en-US"
+  lane :screenshots_ipad_locale do |options|
+    UI.header("📱 Generating iPad Screenshots (Single Locale)")
+
+    # Validate locale parameter
+    locale = options[:locale]
+    unless locale
+      UI.user_error!("🚨 Missing required parameter: locale (e.g., locale:en-US)")
+    end
+
+    unless %w[en-US fi].include?(locale)
+      UI.user_error!("🚨 Invalid locale '#{locale}'. Must be 'en-US' or 'fi'")
+    end
+
+    # Setup CI keychain if running in CI (prevents signing hangs)
+    setup_ci if ENV['CI']
+
+    # Clean up old screenshot subdirectories
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+    UI.message("🧹 Cleaning old screenshot subdirectories...")
+    %w[test_output delivery attachments].each do |subdir|
+      subdir_path = File.join(screenshots_dir, subdir)
+      FileUtils.rm_rf(subdir_path) if Dir.exist?(subdir_path)
+    end
+
+    # Generate iPad screenshots for single locale
+    device = "iPad Pro 13-inch (M4)"
+    count = generate_screenshots_for_device(device, locales: [locale], clear_previous: true)
+
+    if count == 0
+      UI.user_error!("🚨 iPad screenshot generation failed for #{locale}: No screenshots captured")
+    end
+
+    # Normalize to App Store dimensions (single locale)
+    UI.header("📐 Normalizing iPad screenshots to App Store dimensions")
+    normalize_device_screenshots(:ipad, locales: [locale])
+
+    # Verify normalized screenshots
+    compat_dir = File.expand_path("screenshots_compat", __dir__)
+    ipad_shots = Dir.glob(File.join(compat_dir, locale, "iPad*.png")).reject { |f| f.include?("_framed") }
+
+    if ipad_shots.empty?
+      UI.user_error!("🚨 iPad normalization failed for #{locale}: No normalized screenshots found")
+    end
+
+    UI.success("✅ iPad screenshots complete for #{locale}: #{ipad_shots.count} normalized screenshots")
+    UI.message("📁 Output: #{compat_dir}/#{locale}/")
+  end
+
   desc "Unified App Store screenshot generation pipeline"
   desc "Generates all screenshots (iPhone, iPad, Watch) with validation and fail-fast checks"
   desc "This is the main entry point for CI/CD pipelines"

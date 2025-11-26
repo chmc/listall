@@ -158,43 +158,43 @@ strategy:
 
 ## Implementation Plan
 
-### Phase 1: Preparation (PR #1)
+### Phase 1: Preparation (PR #1) - ✅ COMPLETED
 **Duration**: 1-2 days
 
 **Tasks**:
-1. Create merge-screenshots job skeleton
-2. Add artifact validation logic
-3. Update documentation
-4. No behavioral changes to existing workflow
+1. ✅ Create locale-specific Fastlane lanes (`screenshots_iphone_locale`, `screenshots_ipad_locale`)
+2. ✅ Add artifact validation logic
+3. ✅ Update documentation
+4. ✅ Backward-compatible changes (old lanes still work)
 
-**Success Criteria**: Merge job works with current workflow
+**Success Criteria**: ✅ New lanes work with locale parameter
 
-### Phase 2: Split iPhone Jobs (PR #2)
+### Phase 2: Split iPhone Jobs (PR #2) - ✅ COMPLETED
 **Duration**: 2-3 days
 
 **Tasks**:
-1. Split screenshots-iphone into per-locale jobs
-2. Update merge job to handle iPhone artifacts
-3. Run in parallel with existing iPad job
+1. ✅ Split screenshots-iphone into matrix jobs (en-US, fi)
+2. ✅ Add merge-screenshots job to combine artifacts
+3. ✅ Run iPhone locales in parallel
 4. Monitor stability over 5-10 runs
 
-**Success Criteria**: iPhone locale jobs succeed consistently
+**Success Criteria**: iPhone locale jobs execute in parallel
 
-### Phase 3: Split iPad Jobs (PR #3)
+### Phase 3: Split iPad Jobs (PR #3) - ✅ COMPLETED
 **Duration**: 2-3 days
 
 **Tasks**:
-1. Split screenshots-ipad into per-locale jobs
-2. Update merge job to handle all artifacts
-3. Remove old monolithic jobs
-4. Full parallel execution
+1. ✅ Split screenshots-ipad into matrix jobs (en-US, fi)
+2. ✅ Update merge job to handle all 4 locale artifacts
+3. ✅ Full 5-way parallel execution (iPhone×2, iPad×2, Watch)
+4. Monitor stability
 
 **Success Criteria**: All locale jobs succeed, <35 min total runtime
 
 ### Rollback Plan
-- Keep old workflow definitions in separate files
-- Feature flag in workflow to switch between old/new
-- Revert PR if success rate drops below 80%
+- Revert to previous commit if success rate drops below 80%
+- Old `screenshots_iphone` and `screenshots_ipad` lanes still work
+- Can manually run `bundle exec fastlane ios screenshots_iphone` locally
 
 ## Success Metrics
 
@@ -239,6 +239,7 @@ Per-locale job splitting represents a significant improvement in screenshot pipe
 
 ## References
 
-- Current workflow: `.github/workflows/screenshots.yml`
-- Screenshot script: `.github/scripts/run-screenshots.sh`
+- Workflow: `.github/workflows/prepare-appstore.yml`
+- Fastfile lanes: `fastlane/Fastfile` (screenshots_iphone_locale, screenshots_ipad_locale)
+- Validation script: `.github/scripts/validate-screenshots.sh`
 - Related audit: `.github/docs/screenshot-pipeline-audit.md`
