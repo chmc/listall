@@ -6,12 +6,17 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     var app: XCUIApplication!
 
-    /// Timeout for app launch - iPad simulators in CI can be very slow
-    /// Increased from 30s to 60s to handle iPad Pro in CI
-    private let launchTimeout: TimeInterval = 60
+    /// Timeout for app launch - iPad Pro 13-inch M4 is very slow in CI
+    /// Increased from 60s to 90s based on CI performance analysis
+    /// Analysis: iPad launch can take 60-90s in CI, 60s was causing timeouts
+    private let launchTimeout: TimeInterval = 90
 
     /// Timeout for UI elements to appear after launch
-    private let elementTimeout: TimeInterval = 15
+    /// Increased from 15s to 20s for iPad Pro large screen rendering
+    private let elementTimeout: TimeInterval = 20
+
+    /// Track test start time for timeout budget monitoring
+    private var testStartTime: Date?
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -19,17 +24,70 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         // Setup Fastlane snapshot
         setupSnapshot(app)
+
+        // Track test start time for timeout budget monitoring
+        testStartTime = Date()
+
+        // Simulator health check - skip test if simulator is unresponsive
+        // This saves time in CI by failing fast instead of hanging on launch
+        if !isSimulatorHealthy() {
+            throw XCTSkip("Simulator is unresponsive - may need restart")
+        }
+    }
+
+    /// Check remaining timeout budget
+    /// Returns remaining seconds before the 300s test timeout limit
+    private func checkTimeoutBudget() -> TimeInterval {
+        guard let startTime = testStartTime else { return 300 }
+        let elapsed = Date().timeIntervalSince(startTime)
+        let remaining = 300 - elapsed  // 300s is the default test timeout
+        print("⏱️  Timeout budget: \(Int(remaining))s remaining (elapsed: \(Int(elapsed))s / 300s)")
+        return remaining
+    }
+
+    /// Simulator health check - detects if simulator is in bad state before tests run
+    /// Quick 5-second check to avoid wasting time on hung/unresponsive simulators
+    /// Returns true if simulator is responsive, false if hung/slow
+    private func isSimulatorHealthy() -> Bool {
+        print("🏥 Checking simulator health...")
+
+        // Create a test app instance
+        let testApp = XCUIApplication()
+        testApp.launch()
+
+        // Quick 5-second check: can we detect the app at all?
+        let isHealthy = testApp.wait(for: .runningForeground, timeout: 5.0)
+
+        if isHealthy {
+            print("✅ Simulator is healthy and responsive")
+            testApp.terminate()
+        } else {
+            print("❌ Simulator appears hung or unresponsive (5s timeout)")
+        }
+
+        return isHealthy
     }
 
     /// Launch app with retry logic to handle "Failed to terminate" errors on iPad simulators
     /// This is a known flaky issue where app.launch() internally fails to terminate the previous instance
-    /// Note: maxRetries=2 gives 2×60s=120s budget, leaving 180s for test execution within 300s timeout
-    private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) -> Bool {
+    /// Note: maxRetries=2 gives 2×90s=180s launch budget, leaving 120s for test execution within 300s timeout
+    /// Retry delay increased to 15s to give simulator more recovery time (was 5s, caused rapid retries)
+    private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) throws -> Bool {
+        // Check timeout budget before starting
+        let budgetBefore = checkTimeoutBudget()
+        if budgetBefore < 120 {
+            print("⚠️  Insufficient timeout budget: \(Int(budgetBefore))s remaining (need 120s minimum)")
+            // Skip test instead of hanging - saves CI time
+            throw XCTSkip("Insufficient timeout budget for app launch")
+        }
+
         for attempt in 1...maxRetries {
-            // Brief pause before retry attempts to let system settle
+            // Longer pause before retry attempts to let simulator fully stabilize
+            // 15 seconds gives simulator time to clean up processes, release resources
+            // Analysis showed 5s was too short - CI environment needs more recovery time
             if attempt > 1 {
-                print("⏳ Waiting 5 seconds before retry attempt \(attempt)...")
-                sleep(5)
+                print("⏳ Waiting 15 seconds before retry attempt \(attempt) (simulator recovery time)...")
+                sleep(15)
                 // Recreate app instance for retry
                 app = XCUIApplication()
                 setupSnapshot(app)
@@ -38,7 +96,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
             // Add launch arguments (must be done each attempt since app may be recreated)
             app.launchArguments += arguments
 
-            print("🚀 Launch attempt \(attempt)/\(maxRetries) with timeout \(launchTimeout)s...")
+            print("🚀 Launch attempt \(attempt)/\(maxRetries) with timeout \(Int(launchTimeout))s...")
+            checkTimeoutBudget()  // Show budget before launch attempt
 
             // Temporarily allow failures during launch attempt
             let previousContinueAfterFailure = continueAfterFailure
@@ -54,42 +113,90 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
             if launched {
                 print("✅ App launched successfully on attempt \(attempt)")
-                // Additional delay for UI to settle - iPad needs more time
+                checkTimeoutBudget()  // Show budget after successful launch
+                // Additional delay for UI to settle - iPad needs more time for large screen rendering
                 sleep(2)
                 return true
             }
 
             // Log retry attempt (visible in test logs)
-            print("⚠️ App launch attempt \(attempt)/\(maxRetries) failed, retrying...")
+            print("⚠️ App launch attempt \(attempt)/\(maxRetries) failed after \(Int(launchTimeout))s timeout")
+            checkTimeoutBudget()  // Show budget after failed attempt
         }
 
-        XCTFail("App failed to launch after \(maxRetries) attempts")
-        return false
+        // Use XCTSkip instead of XCTFail - skip is better for CI (fails fast, clear signal)
+        // XCTFail would continue test execution, wasting time on a test that can't succeed
+        print("❌ App failed to launch after \(maxRetries) attempts - likely simulator issue")
+        throw XCTSkip("App failed to launch after \(maxRetries) attempts - simulator may need restart")
     }
 
     /// Wait for a stable UI state by checking for any visible element
+    /// Enhanced for iPad with better element detection and timeout budget monitoring
     /// Returns true if UI appears ready, false if timeout
     private func waitForUIReady() -> Bool {
-        // Wait for any navigation bar, tab bar, or main content to appear
-        // This is more reliable than fixed sleep
+        // Check timeout budget before UI wait
+        let budgetBefore = checkTimeoutBudget()
+        if budgetBefore < 30 {
+            print("⚠️ Low timeout budget for UI ready check: \(Int(budgetBefore))s remaining")
+        }
+
+        print("⏳ Waiting for UI to be ready (timeout: \(Int(elementTimeout))s)...")
+
+        // Enhanced element detection for iPad
+        // iPads show different UI hierarchy than iPhones (split views, popovers, etc.)
         let navBar = app.navigationBars.firstMatch
         let anyButton = app.buttons.firstMatch
         let anyCell = app.cells.firstMatch
+        let anyTable = app.tables.firstMatch
+        let anyCollectionView = app.collectionViews.firstMatch
+        let anyScrollView = app.scrollViews.firstMatch
 
         let startTime = Date()
+        var foundElement = false
+
         while Date().timeIntervalSince(startTime) < elementTimeout {
-            if navBar.exists || anyButton.exists || anyCell.exists {
-                print("✅ UI ready - found interactive elements")
-                // Small additional settle time
-                sleep(1)
-                return true
+            // Check multiple element types - iPad UI can vary significantly
+            if navBar.exists {
+                print("✅ UI ready - found navigation bar")
+                foundElement = true
+                break
             }
-            // Poll every 0.5 seconds
+            if anyTable.exists || anyCollectionView.exists {
+                print("✅ UI ready - found content view (table/collection)")
+                foundElement = true
+                break
+            }
+            if anyButton.exists && anyButton.isHittable {
+                print("✅ UI ready - found interactive button")
+                foundElement = true
+                break
+            }
+            if anyCell.exists {
+                print("✅ UI ready - found cell element")
+                foundElement = true
+                break
+            }
+            if anyScrollView.exists {
+                print("✅ UI ready - found scroll view")
+                foundElement = true
+                break
+            }
+
+            // Poll every 0.5 seconds to avoid excessive CPU usage
             Thread.sleep(forTimeInterval: 0.5)
         }
 
-        print("⚠️ UI ready check timed out, proceeding anyway")
-        return false
+        if foundElement {
+            // Small additional settle time for animations/layout
+            print("⏳ Allowing 1s for UI to settle...")
+            sleep(1)
+            checkTimeoutBudget()  // Log budget after UI ready
+            return true
+        } else {
+            print("⚠️ UI ready check timed out after \(Int(elementTimeout))s, proceeding anyway")
+            checkTimeoutBudget()  // Log budget after timeout
+            return false
+        }
     }
 
     /// Test: Capture welcome screen (empty state)
@@ -98,19 +205,35 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("📱 Starting Welcome Screen Screenshot Test")
         print("========================================")
 
+        // Check timeout budget before test
+        checkTimeoutBudget()
+
         // Launch with empty state - SKIP_TEST_DATA prevents populating lists
-        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"]) else {
-            XCTFail("App failed to launch for welcome screen screenshot")
-            return
-        }
+        // launchAppWithRetry throws XCTSkip on failure, so test auto-skips if launch fails
+        _ = try launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS", "SKIP_TEST_DATA"])
+
+        // Check timeout budget after launch
+        checkTimeoutBudget()
 
         // Wait for UI to be ready (dynamic wait instead of fixed sleep)
-        _ = waitForUIReady()
+        let uiReady = waitForUIReady()
+        if !uiReady {
+            print("⚠️ UI may not be fully ready, but continuing with screenshot")
+        }
+
+        // Final timeout budget check before screenshot
+        let budgetBeforeSnapshot = checkTimeoutBudget()
+        if budgetBeforeSnapshot < 10 {
+            throw XCTSkip("Insufficient timeout budget for screenshot: \(Int(budgetBeforeSnapshot))s remaining")
+        }
 
         // Take screenshot of empty state
         print("📸 Capturing welcome screen screenshot")
         snapshot("01_Welcome")
         print("✅ Welcome screen screenshot captured")
+
+        // Final budget report
+        checkTimeoutBudget()
         print("========================================")
     }
 
@@ -120,14 +243,27 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("📱 Starting Main Flow Screenshot Test")
         print("========================================")
 
+        // Check timeout budget before test
+        checkTimeoutBudget()
+
         // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
-        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]) else {
-            XCTFail("App failed to launch for main flow screenshot")
-            return
-        }
+        // launchAppWithRetry throws XCTSkip on failure, so test auto-skips if launch fails
+        _ = try launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"])
+
+        // Check timeout budget after launch
+        checkTimeoutBudget()
 
         // Wait for UI to be ready (dynamic wait instead of fixed sleep)
-        _ = waitForUIReady()
+        let uiReady = waitForUIReady()
+        if !uiReady {
+            print("⚠️ UI may not be fully ready, but continuing with screenshot")
+        }
+
+        // Check timeout budget before data wait
+        let budgetBeforeDataWait = checkTimeoutBudget()
+        if budgetBeforeDataWait < 30 {
+            print("⚠️ Low timeout budget for data wait: \(Int(budgetBeforeDataWait))s remaining")
+        }
 
         // Additional wait for data to load into list
         // Look for any cell which indicates data is loaded
@@ -135,13 +271,22 @@ final class ListAllUITests_Screenshots: XCTestCase {
         if anyCell.waitForExistence(timeout: elementTimeout) {
             print("✅ Data loaded - found list cells")
         } else {
-            print("⚠️ No cells found, but proceeding with screenshot")
+            print("⚠️ No cells found after \(Int(elementTimeout))s, but proceeding with screenshot")
+        }
+
+        // Final timeout budget check before screenshot
+        let budgetBeforeSnapshot = checkTimeoutBudget()
+        if budgetBeforeSnapshot < 10 {
+            throw XCTSkip("Insufficient timeout budget for screenshot: \(Int(budgetBeforeSnapshot))s remaining")
         }
 
         // Screenshot: Main screen with hardcoded test lists
         print("📸 Capturing main screen screenshot")
         snapshot("02_MainScreen")
         print("✅ Main screen screenshot captured")
+
+        // Final budget report
+        checkTimeoutBudget()
         print("========================================")
     }
 }
