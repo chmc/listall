@@ -93,6 +93,8 @@ jobs:
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
 
+      - name: Verify iPhone simulator
+        run: |
           # Verify simulator exists (boot on demand by Fastlane)
           echo "Verifying iPhone 16 Pro Max simulator..."
           if DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPhone 16 Pro Max" iOS); then
@@ -216,6 +218,8 @@ jobs:
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
 
+      - name: Verify iPad simulator
+        run: |
           # Verify simulator exists (boot on demand by Fastlane)
           echo "Verifying iPad Pro 13-inch (M4) simulator..."
           if DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPad Pro 13-inch (M4)" iOS); then
@@ -333,8 +337,8 @@ jobs:
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
 
-          # Clean up duplicate Watch simulators using robust script
-          .github/scripts/cleanup-watch-duplicates.sh || true
+      - name: Clean up duplicate Watch simulators
+        run: .github/scripts/cleanup-watch-duplicates.sh || true
 
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
