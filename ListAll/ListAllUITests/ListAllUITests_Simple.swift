@@ -37,7 +37,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("📱 Model: \(device.userInterfaceIdiom == .pad ? "iPad" : "iPhone")")
         print("📱 iOS: \(device.systemVersion)")
         #endif
-        print("📱 XCTest Device: \(XCUIDevice.shared.name)")
+        print("📱 XCTest Device: \(ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] ?? "Unknown")")
         print("📱 Launch Timeout: \(Int(launchTimeout))s")
         print("📱 Test Budget: 580s (xcodebuild max: 600s)")
         print("========================================")
