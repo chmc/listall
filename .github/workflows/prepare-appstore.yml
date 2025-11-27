@@ -101,6 +101,7 @@ jobs:
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
+        continue-on-error: true  # Don't fail job if cleanup has issues - retry logic handles recovery
 
       - name: Verify iPhone simulator
         run: |
@@ -341,6 +342,7 @@ jobs:
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
+        continue-on-error: true  # Don't fail job if cleanup has issues - retry logic handles recovery
 
       - name: Verify iPad simulator
         run: |
@@ -576,6 +578,7 @@ jobs:
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
+        continue-on-error: true  # Don't fail job if cleanup has issues - retry logic handles recovery
 
       - name: Clean up duplicate Watch simulators
         run: .github/scripts/cleanup-watch-duplicates.sh || true

@@ -166,8 +166,11 @@ echo "$ARTIFACTS_JSON" | jq -c '.artifacts[]' | while IFS= read -r artifact; do
 done | tee /tmp/cleanup_output.txt
 
 # Read counters from temp output (since subshell doesn't propagate variables)
-OLD_COUNT=$(grep -c "Would delete:\|Deleting:" /tmp/cleanup_output.txt 2>/dev/null || echo "0")
-DELETED_COUNT=$(grep -c "✓ Deleted" /tmp/cleanup_output.txt 2>/dev/null || echo "0")
+# Note: grep -c returns exit 1 when count is 0, so we use || true and default to 0
+OLD_COUNT=$(grep -c "Would delete:\|Deleting:" /tmp/cleanup_output.txt 2>/dev/null || true)
+OLD_COUNT=${OLD_COUNT:-0}
+DELETED_COUNT=$(grep -c "✓ Deleted" /tmp/cleanup_output.txt 2>/dev/null || true)
+DELETED_COUNT=${DELETED_COUNT:-0}
 rm -f /tmp/cleanup_output.txt
 
 # Get total artifacts count

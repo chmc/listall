@@ -49,7 +49,9 @@ log_timestamp "========================================"
 log_timestamp ""
 log_timestamp "1️⃣ Checking for hung simulator processes..."
 # Look for Simulator.app specifically, not simctl commands
-HUNG_SIMS=$(ps aux | grep "Simulator\.app/Contents/MacOS/Simulator" | grep -v grep | wc -l | xargs)
+# Note: || true prevents pipefail from failing when grep finds no matches (exit 1)
+HUNG_SIMS=$(ps aux | grep "Simulator\.app/Contents/MacOS/Simulator" | grep -v grep | wc -l | xargs || true)
+HUNG_SIMS=${HUNG_SIMS:-0}
 if [ "$HUNG_SIMS" -gt 0 ]; then
   log_timestamp "⚠️  Found $HUNG_SIMS Simulator.app processes"
   ps aux | grep "Simulator\.app/Contents/MacOS/Simulator" | grep -v grep || true
@@ -60,7 +62,8 @@ if [ "$HUNG_SIMS" -gt 0 ]; then
   sleep 3
 
   # Verify processes were killed
-  REMAINING_SIMS=$(ps aux | grep "Simulator\.app/Contents/MacOS/Simulator" | grep -v grep | wc -l | xargs)
+  REMAINING_SIMS=$(ps aux | grep "Simulator\.app/Contents/MacOS/Simulator" | grep -v grep | wc -l | xargs || true)
+  REMAINING_SIMS=${REMAINING_SIMS:-0}
   if [ "$REMAINING_SIMS" -gt 0 ]; then
     log_timestamp "⚠️  Warning: $REMAINING_SIMS Simulator.app processes still running after kill attempt"
   else
@@ -76,7 +79,7 @@ log_timestamp "2️⃣ Shutting down all simulators..."
 if run_with_timeout 30 xcrun simctl shutdown all 2>&1; then
   log_timestamp "✅ Shutdown command completed successfully"
 else
-  local exit_code=$?
+  exit_code=$?
   if [ $exit_code -eq 124 ]; then
     log_timestamp "❌ Shutdown command timed out after 30s - may indicate hung simulators"
   else
@@ -97,19 +100,21 @@ if ! SIMCTL_LIST_OUTPUT=$(run_with_timeout 20 xcrun simctl list devices 2>&1); t
   SIMCTL_LIST_OUTPUT=$(xcrun simctl list devices 2>&1 || echo "FAILED")
 fi
 
-BOOTED=$(echo "$SIMCTL_LIST_OUTPUT" | grep "Booted" | wc -l | xargs)
+BOOTED=$(echo "$SIMCTL_LIST_OUTPUT" | grep "Booted" | wc -l | xargs || true)
+BOOTED=${BOOTED:-0}
 if [ "$BOOTED" -gt 0 ]; then
   log_timestamp "❌ ERROR: $BOOTED simulators still booted after shutdown"
-  echo "$SIMCTL_LIST_OUTPUT" | grep "Booted"
+  echo "$SIMCTL_LIST_OUTPUT" | grep "Booted" || true
   log_timestamp "🔨 Force killing booted simulators..."
   # Get UDIDs of booted simulators and force shutdown
-  echo "$SIMCTL_LIST_OUTPUT" | grep "Booted" | grep -oE '\([A-F0-9-]{36}\)' | tr -d '()' | while read -r udid; do
+  echo "$SIMCTL_LIST_OUTPUT" | grep "Booted" | grep -oE '\([A-F0-9-]{36}\)' | tr -d '()' | while read -r udid || true; do
     log_timestamp "  Shutting down $udid..."
     run_with_timeout 10 xcrun simctl shutdown "$udid" 2>&1 || log_timestamp "  Failed to shutdown $udid"
   done
   sleep 2
   # Final check
-  STILL_BOOTED=$(xcrun simctl list devices 2>&1 | grep "Booted" | wc -l | xargs)
+  STILL_BOOTED=$(xcrun simctl list devices 2>&1 | grep "Booted" | wc -l | xargs || true)
+  STILL_BOOTED=${STILL_BOOTED:-0}
   if [ "$STILL_BOOTED" -gt 0 ]; then
     log_timestamp "❌ CRITICAL: $STILL_BOOTED simulators STILL booted - manual intervention needed"
     exit 1
@@ -147,7 +152,8 @@ fi
 # 6. Log system resources
 log_timestamp ""
 log_timestamp "6️⃣ System resource status:"
-if FREE_PAGES=$(run_with_timeout 5 vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.'); then
+if FREE_PAGES=$(run_with_timeout 5 vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.' || true); then
+  FREE_PAGES=${FREE_PAGES:-0}
   # Convert pages to MB (4096 bytes per page)
   FREE_MB=$((FREE_PAGES * 4096 / 1024 / 1024))
   log_timestamp "  Memory: $FREE_PAGES pages free (~${FREE_MB}MB)"
@@ -169,9 +175,12 @@ log_timestamp "  Load average: $LOAD_AVG"
 log_timestamp ""
 log_timestamp "7️⃣ Available simulators:"
 if SIMCTL_AVAILABLE=$(run_with_timeout 20 xcrun simctl list devices available 2>&1); then
-  IPHONE_COUNT=$(echo "$SIMCTL_AVAILABLE" | grep "iPhone" | wc -l | xargs)
-  IPAD_COUNT=$(echo "$SIMCTL_AVAILABLE" | grep "iPad" | wc -l | xargs)
-  WATCH_COUNT=$(echo "$SIMCTL_AVAILABLE" | grep "Watch" | wc -l | xargs)
+  IPHONE_COUNT=$(echo "$SIMCTL_AVAILABLE" | grep "iPhone" | wc -l | xargs || true)
+  IPHONE_COUNT=${IPHONE_COUNT:-0}
+  IPAD_COUNT=$(echo "$SIMCTL_AVAILABLE" | grep "iPad" | wc -l | xargs || true)
+  IPAD_COUNT=${IPAD_COUNT:-0}
+  WATCH_COUNT=$(echo "$SIMCTL_AVAILABLE" | grep "Watch" | wc -l | xargs || true)
+  WATCH_COUNT=${WATCH_COUNT:-0}
   log_timestamp "  iPhone simulators: $IPHONE_COUNT"
   log_timestamp "  iPad simulators: $IPAD_COUNT"
   log_timestamp "  Watch simulators: $WATCH_COUNT"
