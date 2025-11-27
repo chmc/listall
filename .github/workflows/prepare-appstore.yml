@@ -124,9 +124,17 @@ jobs:
           on_retry_command: |
             echo "🔄 Enhanced simulator recovery before retry..."
 
-            # 1. Force shutdown with timeout (prevent hanging on stuck simulators)
-            if ! timeout 30 xcrun simctl shutdown all 2>/dev/null; then
-                echo "⚠️  Shutdown timed out after 30s, forcing cleanup..."
+            # 1. Graceful shutdown with background timeout (macOS-native, no GNU timeout)
+            echo "Attempting graceful simulator shutdown..."
+            xcrun simctl shutdown all 2>/dev/null &
+            SHUTDOWN_PID=$!
+            ( sleep 30 && kill -9 $SHUTDOWN_PID 2>/dev/null ) &
+            KILLER_PID=$!
+            if wait $SHUTDOWN_PID 2>/dev/null; then
+                kill $KILLER_PID 2>/dev/null || true
+                echo "✅ Graceful shutdown completed"
+            else
+                echo "⚠️  Shutdown timed out or failed, forcing cleanup..."
             fi
 
             # 2. Kill ALL simulator-related processes (including zombies)
@@ -137,13 +145,18 @@ jobs:
             pkill -9 -f "XCUITestRunner" 2>/dev/null || true
             sleep 3
 
-            # 3. Check and restart CoreSimulatorService if hung
+            # 3. Check and restart CoreSimulatorService if hung (macOS-native timeout)
             if pgrep -f "CoreSimulatorService" > /dev/null; then
-                if ! timeout 5 xcrun simctl list devices > /dev/null 2>&1; then
+                xcrun simctl list devices > /dev/null 2>&1 &
+                CHECK_PID=$!
+                ( sleep 5 && kill -9 $CHECK_PID 2>/dev/null ) &
+                KILLER_PID=$!
+                if ! wait $CHECK_PID 2>/dev/null; then
                     echo "⚠️  CoreSimulatorService is hung, restarting..."
                     pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
                     sleep 3
                 fi
+                kill $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
@@ -155,15 +168,9 @@ jobs:
 
             echo "✅ Simulator recovery complete"
           command: |
-            # Run with explicit timeout to catch hung processes
-            timeout 2400 bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }} || {
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 124 ]; then
-                echo "❌ Screenshot generation exceeded 40-minute timeout"
-                exit 1
-              fi
-              exit $EXIT_CODE
-            }
+            # nick-fields/retry provides timeout_minutes protection (40 min)
+            # No GNU timeout needed - action handles timeout natively
+            bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -294,9 +301,17 @@ jobs:
           on_retry_command: |
             echo "🔄 Enhanced simulator recovery before retry..."
 
-            # 1. Force shutdown with timeout (prevent hanging on stuck simulators)
-            if ! timeout 30 xcrun simctl shutdown all 2>/dev/null; then
-                echo "⚠️  Shutdown timed out after 30s, forcing cleanup..."
+            # 1. Graceful shutdown with background timeout (macOS-native, no GNU timeout)
+            echo "Attempting graceful simulator shutdown..."
+            xcrun simctl shutdown all 2>/dev/null &
+            SHUTDOWN_PID=$!
+            ( sleep 30 && kill -9 $SHUTDOWN_PID 2>/dev/null ) &
+            KILLER_PID=$!
+            if wait $SHUTDOWN_PID 2>/dev/null; then
+                kill $KILLER_PID 2>/dev/null || true
+                echo "✅ Graceful shutdown completed"
+            else
+                echo "⚠️  Shutdown timed out or failed, forcing cleanup..."
             fi
 
             # 2. Kill ALL simulator-related processes (including zombies)
@@ -307,13 +322,18 @@ jobs:
             pkill -9 -f "XCUITestRunner" 2>/dev/null || true
             sleep 3
 
-            # 3. Check and restart CoreSimulatorService if hung
+            # 3. Check and restart CoreSimulatorService if hung (macOS-native timeout)
             if pgrep -f "CoreSimulatorService" > /dev/null; then
-                if ! timeout 5 xcrun simctl list devices > /dev/null 2>&1; then
+                xcrun simctl list devices > /dev/null 2>&1 &
+                CHECK_PID=$!
+                ( sleep 5 && kill -9 $CHECK_PID 2>/dev/null ) &
+                KILLER_PID=$!
+                if ! wait $CHECK_PID 2>/dev/null; then
                     echo "⚠️  CoreSimulatorService is hung, restarting..."
                     pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
                     sleep 3
                 fi
+                kill $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
@@ -325,15 +345,9 @@ jobs:
 
             echo "✅ Simulator recovery complete"
           command: |
-            # Run with explicit timeout to catch hung processes
-            timeout 3000 bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }} || {
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 124 ]; then
-                echo "❌ Screenshot generation exceeded 50-minute timeout"
-                exit 1
-              fi
-              exit $EXIT_CODE
-            }
+            # nick-fields/retry provides timeout_minutes protection (50 min)
+            # No GNU timeout needed - action handles timeout natively
+            bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -449,9 +463,17 @@ jobs:
           on_retry_command: |
             echo "🔄 Enhanced simulator recovery before retry..."
 
-            # 1. Force shutdown with timeout (prevent hanging on stuck simulators)
-            if ! timeout 30 xcrun simctl shutdown all 2>/dev/null; then
-                echo "⚠️  Shutdown timed out after 30s, forcing cleanup..."
+            # 1. Graceful shutdown with background timeout (macOS-native, no GNU timeout)
+            echo "Attempting graceful simulator shutdown..."
+            xcrun simctl shutdown all 2>/dev/null &
+            SHUTDOWN_PID=$!
+            ( sleep 30 && kill -9 $SHUTDOWN_PID 2>/dev/null ) &
+            KILLER_PID=$!
+            if wait $SHUTDOWN_PID 2>/dev/null; then
+                kill $KILLER_PID 2>/dev/null || true
+                echo "✅ Graceful shutdown completed"
+            else
+                echo "⚠️  Shutdown timed out or failed, forcing cleanup..."
             fi
 
             # 2. Kill ALL simulator-related processes (including zombies)
@@ -462,13 +484,18 @@ jobs:
             pkill -9 -f "XCUITestRunner" 2>/dev/null || true
             sleep 3
 
-            # 3. Check and restart CoreSimulatorService if hung
+            # 3. Check and restart CoreSimulatorService if hung (macOS-native timeout)
             if pgrep -f "CoreSimulatorService" > /dev/null; then
-                if ! timeout 5 xcrun simctl list devices > /dev/null 2>&1; then
+                xcrun simctl list devices > /dev/null 2>&1 &
+                CHECK_PID=$!
+                ( sleep 5 && kill -9 $CHECK_PID 2>/dev/null ) &
+                KILLER_PID=$!
+                if ! wait $CHECK_PID 2>/dev/null; then
                     echo "⚠️  CoreSimulatorService is hung, restarting..."
                     pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
                     sleep 3
                 fi
+                kill $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
@@ -480,15 +507,9 @@ jobs:
 
             echo "✅ Simulator recovery complete"
           command: |
-            # Run with explicit timeout to catch hung processes
-            timeout 3000 bundle exec fastlane ios watch_screenshots || {
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 124 ]; then
-                echo "❌ Screenshot generation exceeded 50-minute timeout"
-                exit 1
-              fi
-              exit $EXIT_CODE
-            }
+            # nick-fields/retry provides timeout_minutes protection (50 min)
+            # No GNU timeout needed - action handles timeout natively
+            bundle exec fastlane ios watch_screenshots
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
