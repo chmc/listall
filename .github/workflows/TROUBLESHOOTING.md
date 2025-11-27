@@ -122,7 +122,28 @@ xcrun simctl list devices | grep "Apple Watch Series 10 (46mm)"
 
 This was the #1 cause of 140 failures.
 
-#### ❌ Test timeout at 300s or 600s
+#### ❌ Test timeout at 480s (exact) - CRITICAL ISSUE (FIXED 2025-11-27)
+**Symptoms:**
+```
+Test case 'testScreenshots02_MainFlow()' failed (480.000 seconds)
+```
+
+**Root Cause:** Accessibility query deadlock in `waitForLoadingIndicatorToDisappear()`
+- The query `app.otherElements.deviceStatusBars.networkLoadingIndicators.element` hangs indefinitely on iPad simulators
+- iPads more susceptible due to complex UI hierarchies (split views, different status bars)
+- Test 02 loads full data (4 lists, 18+ items) → deeper accessibility tree → higher deadlock probability
+
+**Fix Applied:** `timeWaitingForIdle: 0` in both snapshot() calls
+- Bypasses network loading indicator wait (unnecessary for local-only tests)
+- Eliminates 50% timeout rate on iPad jobs
+- See `.github/workflows/IPAD_TIMEOUT_FIX.md` for full analysis
+
+**If regression occurs:**
+1. Check that `snapshot()` calls still have `timeWaitingForIdle: 0` parameter
+2. Verify SnapshotHelper.swift wasn't reverted
+3. See rollback options in IPAD_TIMEOUT_FIX.md
+
+#### ❌ Test timeout at 300s or 600s (older timeouts)
 **Symptoms:**
 ```
 ⚠️  App launch attempt 1/2 failed, retrying...
@@ -138,8 +159,9 @@ This was the #1 cause of 140 failures.
 **Current fixes (already applied):**
 - ✅ Pre-boot simulators with `xcrun simctl bootstatus -b`
 - ✅ Reduce retries from 3 to 2
-- ✅ Increase test timeouts to 300s/600s
+- ✅ Increase test timeouts to 480s/900s (from 300s/600s)
 - ✅ iPad gets 120min job timeout (was 90min)
+- ✅ Bypass network loading indicator wait (timeWaitingForIdle:0)
 
 **If still timing out:**
 ```bash

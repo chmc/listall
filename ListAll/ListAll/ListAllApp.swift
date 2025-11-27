@@ -45,6 +45,13 @@ struct ListAllApp: App {
 
         // Disable iCloud sync during UI tests to prevent interference
         UserDefaults.standard.set(false, forKey: "iCloudSyncEnabled")
+
+        // CRITICAL FIX: Disable biometric authentication during UI tests
+        // Without this, MainView has opacity:0 when requiresBiometricAuth=true,
+        // causing XCUITest to fail detecting cells (they exist but are invisible).
+        // This was causing iPad screenshot tests to timeout at 480s.
+        // See: .github/workflows/TROUBLESHOOTING.md for details.
+        UserDefaults.standard.set(false, forKey: Constants.UserDefaultsKeys.requiresBiometricAuth)
         
         // Disable tooltips if requested (for clean screenshots)
         if ProcessInfo.processInfo.arguments.contains("DISABLE_TOOLTIPS") {

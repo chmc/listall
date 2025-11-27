@@ -245,8 +245,14 @@ final class ListAllUITests_Screenshots: XCTestCase {
         }
 
         // Take screenshot of empty state
+        // CRITICAL FIX: Use timeWaitingForIdle:0 to bypass network loading indicator wait
+        // The waitForLoadingIndicatorToDisappear() function can hang indefinitely on iPad simulators
+        // when accessibility queries deadlock. Since our tests don't make network requests
+        // (all data is local via UITestDataService), this wait is unnecessary.
+        // We already have waitForUIReady() and waitForExistence() checks, plus SnapshotHelper's
+        // 1-second animation wait, which is sufficient for UI settling.
         print("📸 Capturing welcome screen screenshot")
-        snapshot("01_Welcome")
+        snapshot("01_Welcome", timeWaitingForIdle: 0)
         print("✅ Welcome screen screenshot captured")
 
         // Final budget report
@@ -298,8 +304,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
         }
 
         // Screenshot: Main screen with hardcoded test lists
+        // CRITICAL FIX: Use timeWaitingForIdle:0 to bypass network loading indicator wait
+        // See testScreenshots01_WelcomeScreen comment for rationale
         print("📸 Capturing main screen screenshot")
-        snapshot("02_MainScreen")
+        snapshot("02_MainScreen", timeWaitingForIdle: 0)
         print("✅ Main screen screenshot captured")
 
         // Final budget report
