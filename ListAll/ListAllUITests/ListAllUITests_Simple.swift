@@ -39,7 +39,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
         #endif
         print("📱 XCTest Device: \(ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] ?? "Unknown")")
         print("📱 Launch Timeout: \(Int(launchTimeout))s")
-        print("📱 Test Budget: 580s (xcodebuild max: 600s)")
+        print("📱 Test Budget: 880s (xcodebuild max: 900s)")
         print("========================================")
 
         // Setup Fastlane snapshot
@@ -57,14 +57,15 @@ final class ListAllUITests_Screenshots: XCTestCase {
     }
 
     /// Check remaining timeout budget
-    /// CRITICAL FIX: Align with xcodebuild's -maximum-test-execution-time-allowance of 600s
-    /// Previous 300s budget caused tests to skip prematurely when xcodebuild would have allowed them to continue
-    /// Using 580s (600s - 20s safety margin) to prevent premature test skips
+    /// CRITICAL FIX: Align with xcodebuild's -maximum-test-execution-time-allowance of 900s
+    /// Previous 580s budget caused tests to timeout during retry scenarios
+    /// Using 880s (900s - 20s safety margin) to prevent premature test skips
+    /// This matches the increased timeout budget in Fastfile (480s default, 900s max)
     private func checkTimeoutBudget() -> TimeInterval {
-        guard let startTime = testStartTime else { return 580 }
+        guard let startTime = testStartTime else { return 880 }
         let elapsed = Date().timeIntervalSince(startTime)
-        let remaining = 580 - elapsed  // 580s = 600s xcodebuild timeout - 20s safety margin
-        print("⏱️  Timeout budget: \(Int(remaining))s remaining (elapsed: \(Int(elapsed))s / 580s)")
+        let remaining = 880 - elapsed  // 880s = 900s xcodebuild timeout - 20s safety margin
+        print("⏱️  Timeout budget: \(Int(remaining))s remaining (elapsed: \(Int(elapsed))s / 880s)")
         return remaining
     }
 
@@ -86,25 +87,25 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     /// Launch app with retry logic to handle "Failed to terminate" errors on iPad simulators
     /// This is a known flaky issue where app.launch() internally fails to terminate the previous instance
-    /// Note: maxRetries=2 gives 2×90s=180s launch budget (iPad), leaving 400s for test execution within 580s budget
-    /// iPhone uses 2×60s=120s, leaving 460s for test execution
-    /// Retry delay optimized to 5s for faster recovery (pipeline improvements enable shorter delay)
+    /// Note: maxRetries=2 gives 2×90s=180s launch budget (iPad), leaving 700s for test execution within 880s budget
+    /// iPhone uses 2×60s=120s, leaving 760s for test execution
+    /// Retry delay increased to 10s for better simulator recovery between retries
     private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) throws -> Bool {
         // Check timeout budget before starting
         let budgetBefore = checkTimeoutBudget()
-        if budgetBefore < 120 {
-            print("⚠️  Insufficient timeout budget: \(Int(budgetBefore))s remaining (need 120s minimum)")
+        if budgetBefore < 200 {
+            print("⚠️  Insufficient timeout budget: \(Int(budgetBefore))s remaining (need 200s minimum)")
             // Skip test instead of hanging - saves CI time
             throw XCTSkip("Insufficient timeout budget for app launch")
         }
 
         for attempt in 1...maxRetries {
             // Pause before retry attempts to let simulator stabilize
-            // 5 seconds optimized for pipeline improvements (caching, pre-boot)
-            // Faster recovery enables quicker retries without stability issues
+            // CRITICAL FIX: Increased from 5s to 10s to allow CoreSimulatorService to fully recover
+            // This prevents "connection interrupted" errors on retry attempts
             if attempt > 1 {
-                print("⏳ Waiting 5 seconds before retry attempt \(attempt) (simulator recovery time)...")
-                sleep(5)
+                print("⏳ Waiting 10 seconds before retry attempt \(attempt) (simulator recovery time)...")
+                sleep(10)
                 // Recreate app instance for retry
                 app = XCUIApplication()
                 setupSnapshot(app)

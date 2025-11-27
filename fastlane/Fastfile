@@ -151,9 +151,12 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
     # Run snapshot
     # Note: Many settings (scheme, project, output_directory) are inherited from Snapfile
     # We explicitly pass device-specific overrides here
-    # Test timeout: 300s default (5 min), 600s max (10 min)
-    # Tests may need multiple launch retries (3x60s=180s) plus UI waits plus snapshot
-    xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600"
+    # Test timeout: 480s default (8 min), 900s max (15 min)
+    # CRITICAL FIX: Increased from 300s/600s to handle retry scenarios
+    # Tests with 2 launch retries need: 2×90s (iPad launch) + 2×15s (UI wait) + 2×15s (data wait) + 60s (screenshot/overhead) = 390s
+    # Adding 90s buffer for simulator flakiness = 480s default
+    # Maximum increased to 900s to prevent premature timeout during CoreSimulatorService recovery
+    xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 480 -maximum-test-execution-time-allowance 900"
 
     snapshot(
       derived_data_path: derived,
@@ -1099,7 +1102,10 @@ platform :ios do
         # Use xcargs only for build settings (code signing), not environment variables
         # Environment variables are passed automatically via Ruby ENV above
         # Add test timeout to prevent hung tests from blocking CI for 55+ minutes
-        existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300"
+        # CRITICAL FIX: Aligned with iPhone/iPad main lane timeouts (480s/900s)
+        # Previous 180s/300s was causing iPad fi locale to timeout 100% of time
+        # iPad needs same timeout budget as iPhone since both run the same screenshot tests
+        existing_xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 480 -maximum-test-execution-time-allowance 900"
         
         # CRITICAL FIX: Remove only_testing when using test_without_building
         # When using test_without_building, xcodebuild may not correctly match test identifiers

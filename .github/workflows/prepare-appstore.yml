@@ -26,7 +26,7 @@ jobs:
   generate-iphone-screenshots:
     name: iPhone Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 60  # Per-locale timeout (was 90 for both locales)
+    timeout-minutes: 70  # CRITICAL FIX: Increased from 60 to 70 to accommodate retry logic (2×40=80 with overhead)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -114,8 +114,11 @@ jobs:
           magick --version || convert --version
 
           # Verify we got version 7+
-          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || echo "0")
-          if [ "$MAGICK_MAJOR" -lt 7 ]; then
+          # CRITICAL FIX: Robust version parsing to prevent "integer expression expected" error
+          # Previous version failed when grep returned empty string
+          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+          MAGICK_MAJOR=${MAGICK_MAJOR:-0}  # Default to 0 if empty
+          if [ -n "$MAGICK_MAJOR" ] && [ "$MAGICK_MAJOR" -lt 7 ] 2>/dev/null; then
             echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
           fi
 
@@ -141,14 +144,20 @@ jobs:
       - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 30  # Single locale should complete in ~15-20 min
+          timeout_minutes: 40  # CRITICAL FIX: Increased from 30 to 40 to accommodate new 900s test timeout
           max_attempts: 2
           retry_wait_seconds: 30
           on_retry_command: |
             echo "🔄 Resetting simulator state before retry..."
+            # CRITICAL FIX: Enhanced retry logic for better simulator recovery
             xcrun simctl shutdown all 2>/dev/null || true
             pkill -9 Simulator 2>/dev/null || true
-            sleep 3
+            pkill -9 SimulatorTrampoline 2>/dev/null || true
+            # Clear derived data to prevent stale test state
+            rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
+            # Wait longer for CoreSimulatorService to recover (was 3s, now 10s)
+            echo "⏳ Waiting 10 seconds for CoreSimulatorService recovery..."
+            sleep 10
           command: bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
@@ -182,8 +191,7 @@ jobs:
   generate-ipad-screenshots:
     name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 90  # CRITICAL FIX: Was 75, but retry logic needs 2×40=80 min + overhead
-                         # Per-locale timeout (was 120 for both locales)
+    timeout-minutes: 110  # CRITICAL FIX: Increased from 90 to 110 to accommodate retry logic (2×50=100 with overhead)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -271,8 +279,11 @@ jobs:
           magick --version || convert --version
 
           # Verify we got version 7+
-          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || echo "0")
-          if [ "$MAGICK_MAJOR" -lt 7 ]; then
+          # CRITICAL FIX: Robust version parsing to prevent "integer expression expected" error
+          # Previous version failed when grep returned empty string
+          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+          MAGICK_MAJOR=${MAGICK_MAJOR:-0}  # Default to 0 if empty
+          if [ -n "$MAGICK_MAJOR" ] && [ "$MAGICK_MAJOR" -lt 7 ] 2>/dev/null; then
             echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
           fi
 
@@ -298,14 +309,20 @@ jobs:
       - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 40  # Single locale should complete in ~15-25 min
+          timeout_minutes: 50  # CRITICAL FIX: Increased from 40 to 50 to accommodate new 900s test timeout (iPad is slower)
           max_attempts: 2
           retry_wait_seconds: 30
           on_retry_command: |
             echo "🔄 Resetting simulator state before retry..."
+            # CRITICAL FIX: Enhanced retry logic for better simulator recovery
             xcrun simctl shutdown all 2>/dev/null || true
             pkill -9 Simulator 2>/dev/null || true
-            sleep 3
+            pkill -9 SimulatorTrampoline 2>/dev/null || true
+            # Clear derived data to prevent stale test state
+            rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
+            # Wait longer for CoreSimulatorService to recover (was 3s, now 10s)
+            echo "⏳ Waiting 10 seconds for CoreSimulatorService recovery..."
+            sleep 10
           command: bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
@@ -338,7 +355,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 90  # Actual: ~16min, generous buffer for Watch simulator pairing issues
+    timeout-minutes: 110  # CRITICAL FIX: Increased from 90 to 110 to accommodate retry logic (2×50=100 with overhead)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -422,8 +439,11 @@ jobs:
           magick --version || convert --version
 
           # Verify we got version 7+
-          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || echo "0")
-          if [ "$MAGICK_MAJOR" -lt 7 ]; then
+          # CRITICAL FIX: Robust version parsing to prevent "integer expression expected" error
+          # Previous version failed when grep returned empty string
+          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+          MAGICK_MAJOR=${MAGICK_MAJOR:-0}  # Default to 0 if empty
+          if [ -n "$MAGICK_MAJOR" ] && [ "$MAGICK_MAJOR" -lt 7 ] 2>/dev/null; then
             echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
           fi
 
@@ -439,14 +459,20 @@ jobs:
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 45
+          timeout_minutes: 50  # CRITICAL FIX: Increased from 45 to 50 to accommodate new 900s test timeout
           max_attempts: 2
           retry_wait_seconds: 30
           on_retry_command: |
             echo "🔄 Resetting simulator state before retry..."
+            # CRITICAL FIX: Enhanced retry logic for better simulator recovery
             xcrun simctl shutdown all 2>/dev/null || true
             pkill -9 Simulator 2>/dev/null || true
-            sleep 3
+            pkill -9 SimulatorTrampoline 2>/dev/null || true
+            # Clear derived data to prevent stale test state
+            rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
+            # Wait longer for CoreSimulatorService to recover (was 3s, now 10s)
+            echo "⏳ Waiting 10 seconds for CoreSimulatorService recovery..."
+            sleep 10
           command: bundle exec fastlane ios watch_screenshots
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
