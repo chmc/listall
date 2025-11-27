@@ -52,12 +52,14 @@ localize_simulator(true)
 # to coordinate with the scan(build_for_testing) prebuild step
 
 # Disable code signing for simulator builds (not needed, prevents hangs)
-# Add test timeout to prevent hung tests from blocking CI for 55+ minutes
-# -test-timeouts-enabled YES: Enable test timeouts
-# -default-test-execution-time-allowance 300: 5 minutes default per test (increased from 180s)
-# -maximum-test-execution-time-allowance 600: 10 minutes max per test (hard limit)
-# Note: Tests may need multiple launch retries (3x60s=180s) plus UI waits plus snapshot
-xcargs("CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600")
+# NOTE: Test timeout values are now controlled EXCLUSIVELY by Fastfile
+# This prevents Snapfile's 300s/600s from conflicting with Fastfile's 480s/900s
+# Fastfile uses per-device appropriate timeouts:
+# - iPhone: 480s default / 900s max (sufficient for 2×60s launch + UI waits + screenshots)
+# - iPad: 480s default / 900s max (sufficient for 2×90s launch + UI waits + screenshots)
+# - Watch: 300s default / 600s max (simpler UI, faster execution)
+# DO NOT ADD xcargs HERE - it creates timeout configuration conflicts
+# xcargs removed - controlled exclusively by Fastfile for device-specific customization
 
 # Run devices sequentially to avoid signing deadlocks in CI
 # Concurrent mode causes keychain access conflicts during code signing

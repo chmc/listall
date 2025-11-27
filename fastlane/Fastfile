@@ -176,8 +176,11 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
       # Explicitly set critical options (also in Snapfile, but be explicit)
       override_status_bar: true,
       reinstall_app: true,
-      localize_simulator: true,
-      number_of_retries: 2
+      localize_simulator: true
+      # CRITICAL FIX: number_of_retries removed (was 2)
+      # Rely on GitHub Actions retry action instead - it provides better isolation
+      # Fastlane retries × GitHub Actions retries = exponential attempt multiplication
+      # Single retry layer (GitHub Actions) is more predictable and debuggable
     )
 
     # Verify screenshots were captured

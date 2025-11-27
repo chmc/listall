@@ -6,14 +6,17 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
     var app: XCUIApplication!
 
-    /// Timeout for app launch - iPad Pro 13-inch M4 is very slow in CI
-    /// CRITICAL FIX: iPad needs 90s due to slower cold starts (2-3x slower than iPhone)
-    /// iPhone can use 60s. This prevents iPad launch failures that were happening 100% of the time.
+    /// Timeout for app launch - reduced from 90s/60s to 60s/45s
+    /// CRITICAL FIX: With Snapfile timeout conflict resolved (was 300s/600s, now 480s/900s from Fastfile),
+    /// tests have proper timeout budget. Reducing launch timeouts ensures faster failure detection
+    /// while still accommodating slower CI runners.
+    /// iPad: 60s (was 90s) - still 2x typical launch time
+    /// iPhone: 45s (was 60s) - still 2x typical launch time
     private var launchTimeout: TimeInterval {
         #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .pad ? 90 : 60
+        return UIDevice.current.userInterfaceIdiom == .pad ? 60 : 45
         #else
-        return 60
+        return 45
         #endif
     }
 
@@ -101,11 +104,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         for attempt in 1...maxRetries {
             // Pause before retry attempts to let simulator stabilize
-            // CRITICAL FIX: Increased from 5s to 10s to allow CoreSimulatorService to fully recover
-            // This prevents "connection interrupted" errors on retry attempts
+            // Reduced from 10s to 5s - CoreSimulatorService recovers quickly
             if attempt > 1 {
-                print("⏳ Waiting 10 seconds before retry attempt \(attempt) (simulator recovery time)...")
-                sleep(10)
+                print("⏳ Waiting 5 seconds before retry attempt \(attempt) (simulator recovery time)...")
+                sleep(5)
                 // Recreate app instance for retry
                 app = XCUIApplication()
                 setupSnapshot(app)
@@ -132,8 +134,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
             if launched {
                 print("✅ App launched successfully on attempt \(attempt)")
                 checkTimeoutBudget()  // Show budget after successful launch
-                // Additional delay for UI to settle - iPad needs more time for large screen rendering
-                sleep(2)
+                // UI settling is handled by waitForUIReady() - no additional sleep needed
                 return true
             }
 
@@ -205,9 +206,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
         }
 
         if foundElement {
-            // Small additional settle time for animations/layout
-            print("⏳ Allowing 1s for UI to settle...")
-            sleep(1)
+            // UI is ready - no additional wait needed (reduces per-test overhead by 1s)
             checkTimeoutBudget()  // Log budget after UI ready
             return true
         } else {

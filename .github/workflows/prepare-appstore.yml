@@ -26,7 +26,7 @@ jobs:
   generate-iphone-screenshots:
     name: iPhone Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 70  # CRITICAL FIX: Increased from 60 to 70 to accommodate retry logic (2×40=80 with overhead)
+    timeout-minutes: 90  # CRITICAL FIX: Increased to 90 to safely accommodate 2×40min retries + overhead
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -118,21 +118,52 @@ jobs:
       - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 40  # CRITICAL FIX: Increased from 30 to 40 to accommodate new 900s test timeout
+          timeout_minutes: 40  # Per-attempt timeout (job timeout is 90min for 2 attempts + overhead)
           max_attempts: 2
-          retry_wait_seconds: 30
+          retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
-            echo "🔄 Resetting simulator state before retry..."
-            # CRITICAL FIX: Enhanced retry logic for better simulator recovery
-            xcrun simctl shutdown all 2>/dev/null || true
+            echo "🔄 Enhanced simulator recovery before retry..."
+
+            # 1. Force shutdown with timeout (prevent hanging on stuck simulators)
+            if ! timeout 30 xcrun simctl shutdown all 2>/dev/null; then
+                echo "⚠️  Shutdown timed out after 30s, forcing cleanup..."
+            fi
+
+            # 2. Kill ALL simulator-related processes (including zombies)
             pkill -9 Simulator 2>/dev/null || true
             pkill -9 SimulatorTrampoline 2>/dev/null || true
-            # Clear derived data to prevent stale test state
+            pkill -9 launchd_sim 2>/dev/null || true
+            pkill -9 SimulatorBridge 2>/dev/null || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null || true
+            sleep 3
+
+            # 3. Check and restart CoreSimulatorService if hung
+            if pgrep -f "CoreSimulatorService" > /dev/null; then
+                if ! timeout 5 xcrun simctl list devices > /dev/null 2>&1; then
+                    echo "⚠️  CoreSimulatorService is hung, restarting..."
+                    pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
+                    sleep 3
+                fi
+            fi
+
+            # 4. Clear derived data
             rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
-            # Wait longer for CoreSimulatorService to recover (was 3s, now 10s)
-            echo "⏳ Waiting 10 seconds for CoreSimulatorService recovery..."
-            sleep 10
-          command: bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
+
+            # 5. Wait for system stabilization
+            echo "⏳ Waiting 15 seconds for system recovery..."
+            sleep 15
+
+            echo "✅ Simulator recovery complete"
+          command: |
+            # Run with explicit timeout to catch hung processes
+            timeout 2400 bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }} || {
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 124 ]; then
+                echo "❌ Screenshot generation exceeded 40-minute timeout"
+                exit 1
+              fi
+              exit $EXIT_CODE
+            }
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -165,7 +196,7 @@ jobs:
   generate-ipad-screenshots:
     name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 110  # CRITICAL FIX: Increased from 90 to 110 to accommodate retry logic (2×50=100 with overhead)
+    timeout-minutes: 120  # CRITICAL FIX: Increased to 120 to safely accommodate 2×50min retries + overhead
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -257,21 +288,52 @@ jobs:
       - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 50  # CRITICAL FIX: Increased from 40 to 50 to accommodate new 900s test timeout (iPad is slower)
+          timeout_minutes: 50  # Per-attempt timeout (job timeout is 120min for 2 attempts + overhead)
           max_attempts: 2
-          retry_wait_seconds: 30
+          retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
-            echo "🔄 Resetting simulator state before retry..."
-            # CRITICAL FIX: Enhanced retry logic for better simulator recovery
-            xcrun simctl shutdown all 2>/dev/null || true
+            echo "🔄 Enhanced simulator recovery before retry..."
+
+            # 1. Force shutdown with timeout (prevent hanging on stuck simulators)
+            if ! timeout 30 xcrun simctl shutdown all 2>/dev/null; then
+                echo "⚠️  Shutdown timed out after 30s, forcing cleanup..."
+            fi
+
+            # 2. Kill ALL simulator-related processes (including zombies)
             pkill -9 Simulator 2>/dev/null || true
             pkill -9 SimulatorTrampoline 2>/dev/null || true
-            # Clear derived data to prevent stale test state
+            pkill -9 launchd_sim 2>/dev/null || true
+            pkill -9 SimulatorBridge 2>/dev/null || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null || true
+            sleep 3
+
+            # 3. Check and restart CoreSimulatorService if hung
+            if pgrep -f "CoreSimulatorService" > /dev/null; then
+                if ! timeout 5 xcrun simctl list devices > /dev/null 2>&1; then
+                    echo "⚠️  CoreSimulatorService is hung, restarting..."
+                    pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
+                    sleep 3
+                fi
+            fi
+
+            # 4. Clear derived data
             rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
-            # Wait longer for CoreSimulatorService to recover (was 3s, now 10s)
-            echo "⏳ Waiting 10 seconds for CoreSimulatorService recovery..."
-            sleep 10
-          command: bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
+
+            # 5. Wait for system stabilization
+            echo "⏳ Waiting 15 seconds for system recovery..."
+            sleep 15
+
+            echo "✅ Simulator recovery complete"
+          command: |
+            # Run with explicit timeout to catch hung processes
+            timeout 3000 bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }} || {
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 124 ]; then
+                echo "❌ Screenshot generation exceeded 50-minute timeout"
+                exit 1
+              fi
+              exit $EXIT_CODE
+            }
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -381,21 +443,52 @@ jobs:
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 50  # CRITICAL FIX: Increased from 45 to 50 to accommodate new 900s test timeout
+          timeout_minutes: 50  # Per-attempt timeout (job timeout is 110min for 2 attempts + overhead)
           max_attempts: 2
-          retry_wait_seconds: 30
+          retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
-            echo "🔄 Resetting simulator state before retry..."
-            # CRITICAL FIX: Enhanced retry logic for better simulator recovery
-            xcrun simctl shutdown all 2>/dev/null || true
+            echo "🔄 Enhanced simulator recovery before retry..."
+
+            # 1. Force shutdown with timeout (prevent hanging on stuck simulators)
+            if ! timeout 30 xcrun simctl shutdown all 2>/dev/null; then
+                echo "⚠️  Shutdown timed out after 30s, forcing cleanup..."
+            fi
+
+            # 2. Kill ALL simulator-related processes (including zombies)
             pkill -9 Simulator 2>/dev/null || true
             pkill -9 SimulatorTrampoline 2>/dev/null || true
-            # Clear derived data to prevent stale test state
+            pkill -9 launchd_sim 2>/dev/null || true
+            pkill -9 SimulatorBridge 2>/dev/null || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null || true
+            sleep 3
+
+            # 3. Check and restart CoreSimulatorService if hung
+            if pgrep -f "CoreSimulatorService" > /dev/null; then
+                if ! timeout 5 xcrun simctl list devices > /dev/null 2>&1; then
+                    echo "⚠️  CoreSimulatorService is hung, restarting..."
+                    pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
+                    sleep 3
+                fi
+            fi
+
+            # 4. Clear derived data
             rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
-            # Wait longer for CoreSimulatorService to recover (was 3s, now 10s)
-            echo "⏳ Waiting 10 seconds for CoreSimulatorService recovery..."
-            sleep 10
-          command: bundle exec fastlane ios watch_screenshots
+
+            # 5. Wait for system stabilization
+            echo "⏳ Waiting 15 seconds for system recovery..."
+            sleep 15
+
+            echo "✅ Simulator recovery complete"
+          command: |
+            # Run with explicit timeout to catch hung processes
+            timeout 3000 bundle exec fastlane ios watch_screenshots || {
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 124 ]; then
+                echo "❌ Screenshot generation exceeded 50-minute timeout"
+                exit 1
+              fi
+              exit $EXIT_CODE
+            }
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
