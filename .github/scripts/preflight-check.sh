@@ -1,40 +1,78 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Pre-flight checks for App Store screenshot pipeline
 # Validates environment before starting 90+ minute CI run
 # Exit codes: 0 = all checks passed, 1+ = check failed
 
-echo "🚀 Running pre-flight checks..." >&2
+# Timeout wrapper for hanging commands
+run_with_timeout() {
+    local timeout_secs="${1}"
+    shift
+    local cmd=("$@")
+
+    "${cmd[@]}" &
+    local pid=$!
+
+    local elapsed=0
+    while kill -0 "$pid" 2>/dev/null; do
+        if [ $elapsed -ge "$timeout_secs" ]; then
+            echo "⚠️  Command exceeded ${timeout_secs}s timeout: ${cmd[*]}" >&2
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            return 124
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    wait "$pid"
+    return $?
+}
+
+log_timestamp() {
+    echo "[$(date '+%H:%M:%S')]" "$@"
+}
+
+log_timestamp "🚀 Running pre-flight checks..." >&2
 echo "" >&2
 
 ERRORS=0
 WARNINGS=0
 
 # Check 1: Xcode version
-echo "📱 Checking Xcode..." >&2
+log_timestamp "📱 Checking Xcode..." >&2
 if ! command -v xcodebuild &> /dev/null; then
     echo "❌ xcodebuild not found" >&2
     ERRORS=$((ERRORS + 1))
 else
-    XCODE_VERSION=$(xcodebuild -version | head -1 || echo "Unknown")
-    XCODE_PATH=$(xcode-select -p || echo "Unknown")
-    echo "✅ $XCODE_VERSION" >&2
-    echo "   Path: $XCODE_PATH" >&2
+    # Test xcodebuild with timeout (can hang if Xcode is corrupted)
+    if XCODE_VERSION=$(run_with_timeout 10 xcodebuild -version 2>&1 | head -1); then
+        XCODE_PATH=$(xcode-select -p || echo "Unknown")
+        echo "✅ $XCODE_VERSION" >&2
+        echo "   Path: $XCODE_PATH" >&2
 
-    # Check if required Xcode 16.1 is available
-    if [ ! -d "/Applications/Xcode_16.1.app" ]; then
-        echo "⚠️  Warning: Xcode 16.1 not found at /Applications/Xcode_16.1.app" >&2
-        echo "   Workflow expects this specific version" >&2
-        WARNINGS=$((WARNINGS + 1))
+        # Check if required Xcode 16.1 is available
+        if [ ! -d "/Applications/Xcode_16.1.app" ]; then
+            echo "⚠️  Warning: Xcode 16.1 not found at /Applications/Xcode_16.1.app" >&2
+            echo "   Workflow expects this specific version" >&2
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    else
+        echo "❌ xcodebuild command timed out or failed" >&2
+        echo "   This may indicate Xcode is corrupted or hung" >&2
+        ERRORS=$((ERRORS + 1))
     fi
 fi
 echo "" >&2
 
 # Check 2: Required simulators
-echo "📱 Checking simulators..." >&2
-SIMCTL_OUTPUT=$(xcrun simctl list devices available 2>&1 || echo "ERROR")
-if echo "$SIMCTL_OUTPUT" | grep -q "ERROR"; then
+log_timestamp "📱 Checking simulators..." >&2
+if ! SIMCTL_OUTPUT=$(run_with_timeout 30 xcrun simctl list devices available 2>&1); then
+    echo "❌ Failed to list simulators (timeout after 30s)" >&2
+    echo "   simctl may be hung or CoreSimulatorService unresponsive" >&2
+    ERRORS=$((ERRORS + 1))
+elif echo "$SIMCTL_OUTPUT" | grep -q "ERROR"; then
     echo "❌ Failed to list simulators" >&2
     ERRORS=$((ERRORS + 1))
 else
@@ -63,64 +101,87 @@ fi
 echo "" >&2
 
 # Check 3: ImageMagick (optional - workflow installs it)
-echo "🎨 Checking ImageMagick..." >&2
+log_timestamp "🎨 Checking ImageMagick..." >&2
 if ! command -v convert &> /dev/null && ! command -v magick &> /dev/null; then
     echo "ℹ️  ImageMagick not yet installed (workflow will install it)" >&2
 else
     if command -v magick &> /dev/null; then
-        MAGICK_VERSION=$(magick --version | head -1 || echo "Unknown")
-        echo "✅ $MAGICK_VERSION" >&2
+        if MAGICK_VERSION=$(run_with_timeout 5 magick --version 2>&1 | head -1); then
+            echo "✅ $MAGICK_VERSION" >&2
+        else
+            echo "⚠️  ImageMagick installed but not responsive (timeout)" >&2
+            WARNINGS=$((WARNINGS + 1))
+        fi
     else
-        CONVERT_VERSION=$(convert --version | head -1 || echo "Unknown")
-        echo "✅ $CONVERT_VERSION" >&2
+        if CONVERT_VERSION=$(run_with_timeout 5 convert --version 2>&1 | head -1); then
+            echo "✅ $CONVERT_VERSION" >&2
+        else
+            echo "⚠️  ImageMagick installed but not responsive (timeout)" >&2
+            WARNINGS=$((WARNINGS + 1))
+        fi
     fi
 
     # Check specific commands needed
     if ! command -v identify &> /dev/null; then
         echo "⚠️  Warning: ImageMagick 'identify' command not found" >&2
         WARNINGS=$((WARNINGS + 1))
+    elif ! run_with_timeout 5 identify -version > /dev/null 2>&1; then
+        echo "⚠️  Warning: ImageMagick 'identify' not responsive" >&2
+        WARNINGS=$((WARNINGS + 1))
     fi
 fi
 echo "" >&2
 
 # Check 4: Ruby and Bundler
-echo "💎 Checking Ruby..." >&2
+log_timestamp "💎 Checking Ruby..." >&2
 if ! command -v ruby &> /dev/null; then
     echo "❌ Ruby not installed" >&2
     ERRORS=$((ERRORS + 1))
 else
-    RUBY_VERSION=$(ruby --version || echo "Unknown")
-    echo "✅ $RUBY_VERSION" >&2
+    if RUBY_VERSION=$(run_with_timeout 5 ruby --version 2>&1); then
+        echo "✅ $RUBY_VERSION" >&2
+    else
+        echo "❌ Ruby command timed out" >&2
+        ERRORS=$((ERRORS + 1))
+    fi
 
     if ! command -v bundle &> /dev/null; then
         echo "❌ Bundler not installed" >&2
         ERRORS=$((ERRORS + 1))
     else
-        BUNDLER_VERSION=$(bundle --version || echo "Unknown")
-        echo "✅ $BUNDLER_VERSION" >&2
+        if BUNDLER_VERSION=$(run_with_timeout 5 bundle --version 2>&1); then
+            echo "✅ $BUNDLER_VERSION" >&2
+        else
+            echo "❌ Bundler command timed out" >&2
+            ERRORS=$((ERRORS + 1))
+        fi
     fi
 fi
 echo "" >&2
 
 # Check 5: Disk space
-echo "💾 Checking disk space..." >&2
+log_timestamp "💾 Checking disk space..." >&2
 if command -v df &> /dev/null; then
-    # macOS uses -m for megabytes
-    FREE_SPACE_MB=$(df -m . | tail -1 | awk '{print $4}' || echo "0")
-    FREE_SPACE_GB=$((FREE_SPACE_MB / 1024))
+    # macOS uses -m for megabytes (with timeout to handle hung filesystem)
+    if FREE_SPACE_MB=$(run_with_timeout 10 bash -c "df -m . | tail -1 | awk '{print \$4}'" 2>&1); then
+        FREE_SPACE_GB=$((FREE_SPACE_MB / 1024))
 
-    # Pipeline needs: ~5-10GB for derived data, 1-2GB for xcresult, 1-2GB for screenshots
-    # Minimum: 10GB required, 15GB recommended
-    if [ "$FREE_SPACE_MB" -lt 10240 ]; then
-        echo "❌ Insufficient disk space: ${FREE_SPACE_GB}GB (need at least 10GB)" >&2
-        echo "   Pipeline requires ~5-10GB for derived data + 1-2GB for xcresult + 1-2GB for screenshots" >&2
-        ERRORS=$((ERRORS + 1))
-    elif [ "$FREE_SPACE_MB" -lt 15360 ]; then
-        echo "⚠️  Warning: Low disk space: ${FREE_SPACE_GB}GB (recommended: 15GB+)" >&2
-        echo "   Pipeline may succeed but could run out of space if CI is slower than usual" >&2
-        WARNINGS=$((WARNINGS + 1))
+        # Pipeline needs: ~5-10GB for derived data, 1-2GB for xcresult, 1-2GB for screenshots
+        # Minimum: 10GB required, 15GB recommended
+        if [ "$FREE_SPACE_MB" -lt 10240 ]; then
+            echo "❌ Insufficient disk space: ${FREE_SPACE_GB}GB (need at least 10GB)" >&2
+            echo "   Pipeline requires ~5-10GB for derived data + 1-2GB for xcresult + 1-2GB for screenshots" >&2
+            ERRORS=$((ERRORS + 1))
+        elif [ "$FREE_SPACE_MB" -lt 15360 ]; then
+            echo "⚠️  Warning: Low disk space: ${FREE_SPACE_GB}GB (recommended: 15GB+)" >&2
+            echo "   Pipeline may succeed but could run out of space if CI is slower than usual" >&2
+            WARNINGS=$((WARNINGS + 1))
+        else
+            echo "✅ Disk space: ${FREE_SPACE_GB}GB available" >&2
+        fi
     else
-        echo "✅ Disk space: ${FREE_SPACE_GB}GB available" >&2
+        echo "⚠️  Warning: Cannot check disk space (df timed out - possible hung filesystem)" >&2
+        WARNINGS=$((WARNINGS + 1))
     fi
 else
     echo "⚠️  Warning: Cannot check disk space (df command not found)" >&2
@@ -129,7 +190,7 @@ fi
 echo "" >&2
 
 # Check 6: Required files
-echo "📁 Checking required files..." >&2
+log_timestamp "📁 Checking required files..." >&2
 REQUIRED_FILES=(
     "fastlane/Fastfile"
     "fastlane/Snapfile"
@@ -137,42 +198,44 @@ REQUIRED_FILES=(
     "Gemfile.lock"
 )
 
+FILE_ERRORS=0
 for file in "${REQUIRED_FILES[@]}"; do
     if [ ! -f "$file" ]; then
         echo "❌ Required file missing: $file" >&2
         ERRORS=$((ERRORS + 1))
+        FILE_ERRORS=$((FILE_ERRORS + 1))
     fi
 done
 
-if [ $ERRORS -eq 0 ]; then
+if [ $FILE_ERRORS -eq 0 ]; then
     echo "✅ All required files present" >&2
 fi
 echo "" >&2
 
 # Check 7: Network connectivity (for App Store Connect)
-echo "🌐 Checking network connectivity..." >&2
-if ping -c 1 -W 2 appstoreconnect.apple.com &> /dev/null; then
+log_timestamp "🌐 Checking network connectivity..." >&2
+if run_with_timeout 5 ping -c 1 -W 2 appstoreconnect.apple.com &> /dev/null; then
     echo "✅ Can reach appstoreconnect.apple.com" >&2
-elif ping -c 1 -W 2 apple.com &> /dev/null; then
+elif run_with_timeout 5 ping -c 1 -W 2 apple.com &> /dev/null; then
     echo "✅ Network connectivity OK (apple.com reachable)" >&2
 else
-    echo "⚠️  Warning: Cannot reach apple.com (network may be unavailable)" >&2
+    echo "⚠️  Warning: Cannot reach apple.com (network may be unavailable or ping timed out)" >&2
     WARNINGS=$((WARNINGS + 1))
 fi
 echo "" >&2
 
 # Summary
-echo "════════════════════════════════════" >&2
+log_timestamp "════════════════════════════════════" >&2
 if [ $ERRORS -gt 0 ]; then
-    echo "❌ Pre-flight FAILED: $ERRORS error(s), $WARNINGS warning(s)" >&2
-    echo "   Fix errors above before running pipeline" >&2
+    log_timestamp "❌ Pre-flight FAILED: $ERRORS error(s), $WARNINGS warning(s)" >&2
+    log_timestamp "   Fix errors above before running pipeline" >&2
     exit 1
 elif [ $WARNINGS -gt 0 ]; then
-    echo "⚠️  Pre-flight passed with WARNINGS: $WARNINGS warning(s)" >&2
-    echo "   Pipeline may encounter issues" >&2
+    log_timestamp "⚠️  Pre-flight passed with WARNINGS: $WARNINGS warning(s)" >&2
+    log_timestamp "   Pipeline may encounter issues" >&2
     exit 0
 else
-    echo "✅ All pre-flight checks PASSED" >&2
-    echo "   Environment ready for screenshot generation" >&2
+    log_timestamp "✅ All pre-flight checks PASSED" >&2
+    log_timestamp "   Environment ready for screenshot generation" >&2
     exit 0
 fi

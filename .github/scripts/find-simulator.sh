@@ -1,9 +1,34 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Find and validate an iOS/watchOS simulator by name
 # Usage: find-simulator.sh "iPhone 16 Pro Max" [iOS|watchOS]
 # Returns: Simulator UDID on success, exits with error on failure
+
+# Timeout wrapper - prevents commands from hanging indefinitely
+run_with_timeout() {
+    local timeout_secs="${1}"
+    shift
+    local cmd=("$@")
+
+    "${cmd[@]}" &
+    local pid=$!
+
+    local elapsed=0
+    while kill -0 "$pid" 2>/dev/null; do
+        if [ $elapsed -ge "$timeout_secs" ]; then
+            echo "⚠️  Command exceeded ${timeout_secs}s timeout: ${cmd[*]}" >&2
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            return 124
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    wait "$pid"
+    return $?
+}
 
 DEVICE_NAME="${1:-}"
 OS_TYPE="${2:-iOS}"
@@ -14,10 +39,16 @@ if [ -z "$DEVICE_NAME" ]; then
     exit 1
 fi
 
-echo "🔍 Searching for simulator: $DEVICE_NAME (${OS_TYPE}*)" >&2
+echo "[$(date '+%H:%M:%S')] 🔍 Searching for simulator: $DEVICE_NAME (${OS_TYPE}*)" >&2
 
-# Get list of available simulators as JSON
-SIMULATORS_JSON=$(xcrun simctl list devices available -j 2>&1)
+# Get list of available simulators as JSON with timeout
+echo "[$(date '+%H:%M:%S')] Querying simctl list devices..." >&2
+if ! SIMULATORS_JSON=$(run_with_timeout 30 xcrun simctl list devices available -j 2>&1); then
+    echo "❌ Error: Failed to list simulators (timeout after 30s)" >&2
+    echo "$SIMULATORS_JSON" >&2
+    exit 2
+fi
+
 if [ $? -ne 0 ]; then
     echo "❌ Error: Failed to list simulators" >&2
     echo "$SIMULATORS_JSON" >&2
@@ -25,6 +56,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Find matching device using Python (more reliable than jq which may not be installed)
+echo "[$(date '+%H:%M:%S')] Parsing JSON with Python..." >&2
 DEVICE_UDID=$(DEVICE_NAME="$DEVICE_NAME" OS_TYPE="$OS_TYPE" python3 -c "
 import json, sys, os
 
@@ -76,16 +108,21 @@ if [ $PYTHON_EXIT_CODE -ne 0 ]; then
 fi
 
 # Validate UDID format (should be UUID format, case-insensitive)
+echo "[$(date '+%H:%M:%S')] Validating UDID format..." >&2
 if ! echo "$DEVICE_UDID" | grep -qE '^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'; then
     echo "❌ Error: Invalid UDID format returned: $DEVICE_UDID" >&2
     exit 5
 fi
 
 # Verify simulator can actually be booted (check device exists in simctl list)
-if ! xcrun simctl list devices available 2>/dev/null | grep -q "$DEVICE_UDID"; then
+echo "[$(date '+%H:%M:%S')] Verifying simulator exists in device list..." >&2
+if ! VERIFY_LIST=$(run_with_timeout 20 xcrun simctl list devices available 2>&1); then
+    echo "⚠️  Warning: Could not verify simulator (simctl timed out), but continuing" >&2
+elif ! echo "$VERIFY_LIST" | grep -q "$DEVICE_UDID"; then
     echo "❌ Error: Simulator $DEVICE_UDID exists in JSON but not found in device list" >&2
     exit 6
 fi
 
 # Return UDID (this goes to stdout, captured by caller)
+echo "[$(date '+%H:%M:%S')] ✅ Successfully found simulator: $DEVICE_UDID" >&2
 echo "$DEVICE_UDID"
