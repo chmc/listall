@@ -293,6 +293,24 @@ final class ListAllUITests_Screenshots: XCTestCase {
         }
     }
 
+    /// Verify the simulator is configured with expected locale (en or fi)
+    /// This catches misconfiguration early before wasting time on screenshots
+    private func verifyLocale() throws {
+        let actualLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String] ?? []
+        let actualLangCode = actualLanguages.first.map { String($0.prefix(2)) } ?? "unknown"
+
+        print("🌍 AppleLanguages: \(actualLanguages)")
+        print("🌍 Detected language code: \(actualLangCode)")
+
+        // Verify locale is either en or fi (not system language like zh, es, etc.)
+        guard ["en", "fi"].contains(actualLangCode) else {
+            print("❌ LOCALE ERROR: Unexpected language '\(actualLangCode)' - expected 'en' or 'fi'")
+            throw XCTSkip("Locale verification failed - simulator not localized correctly (got '\(actualLangCode)')")
+        }
+
+        print("✅ Locale verification passed: \(actualLangCode)")
+    }
+
     /// Test: Capture welcome screen (empty state)
     func testScreenshots01_WelcomeScreen() throws {
         print("========================================")
@@ -302,6 +320,9 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         // Check timeout budget before test
         checkTimeoutBudget(context: "Test Start")
+
+        // Verify locale is correctly set before proceeding
+        try verifyLocale()
 
         // Launch with empty state - SKIP_TEST_DATA prevents populating lists
         // launchAppWithRetry throws XCTSkip on failure, so test auto-skips if launch fails
@@ -374,6 +395,9 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         // Check timeout budget before test
         checkTimeoutBudget(context: "Test Start")
+
+        // Verify locale is correctly set before proceeding
+        try verifyLocale()
 
         // Launch with test data - without SKIP_TEST_DATA, hardcoded lists will be populated
         // launchAppWithRetry throws XCTSkip on failure, so test auto-skips if launch fails

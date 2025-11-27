@@ -8,8 +8,7 @@ set -euo pipefail
 echo "🧹 Cleaning duplicate Apple Watch Series 10 (46mm) simulators..." >&2
 
 # Get list of Watch simulators as JSON
-SIMULATORS_JSON=$(xcrun simctl list devices available -j 2>&1)
-if [ $? -ne 0 ]; then
+if ! SIMULATORS_JSON=$(xcrun simctl list devices available -j 2>&1); then
     echo "❌ Error: Failed to list simulators" >&2
     echo "$SIMULATORS_JSON" >&2
     exit 1

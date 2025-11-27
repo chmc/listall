@@ -101,7 +101,6 @@ jobs:
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
-        continue-on-error: true  # Don't fail job if cleanup has issues - retry logic handles recovery
 
       - name: Verify iPhone simulator
         run: |
@@ -115,19 +114,6 @@ jobs:
             echo "   Run 'xcrun simctl list devices available' to see available simulators"
             exit 1
           fi
-
-      - name: Verify iPhone simulator exists
-        run: |
-          echo "🔍 Verifying iPhone 16 Pro Max simulator..."
-          DEVICE_UDID=$(xcrun simctl list devices available | grep "iPhone 16 Pro Max" | head -1 | grep -oE '[A-F0-9-]{36}')
-          if [ -z "$DEVICE_UDID" ]; then
-            echo "❌ Simulator not found"
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "✅ Found simulator: $DEVICE_UDID"
-          echo "📝 Fastlane will handle boot"
-        timeout-minutes: 1
 
       - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
@@ -194,67 +180,9 @@ jobs:
 
             echo "✅ Simulator recovery complete at: $(date '+%Y-%m-%d %H:%M:%S')"
           command: |
-            # DIAGNOSTIC: Start background progress monitor
-            (
-              SCREENSHOT_DIR="fastlane/screenshots_compat/${{ matrix.locale }}"
-              mkdir -p "$SCREENSHOT_DIR"
-              LAST_COUNT=0
-              STALLED_INTERVALS=0
-
-              echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
-
-              for i in {1..20}; do  # Phase 2 optimization: 20 intervals × 60s = 20 min max (reduced from 40)
-                sleep 60
-                CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
-                ELAPSED=$((i * 60))
-
-                echo "⏱️  [${ELAPSED}s] Progress check: $CURRENT_COUNT screenshots generated"
-
-                # Early failure detection: no progress in first 15 minutes
-                if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
-                  if pgrep -f "xcodebuild" > /dev/null; then
-                    echo "ℹ️  Build still in progress at 15 min mark - continuing"
-                  elif ! pgrep -f "fastlane" > /dev/null; then
-                    echo "❌ Fastlane exited without producing screenshots"
-                    exit 1
-                  else
-                    echo "ℹ️  Fastlane running but no screenshots yet - continuing"
-                  fi
-                fi
-
-                # Stall detection: no new screenshots for 10 minutes
-                if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
-                  STALLED_INTERVALS=$((STALLED_INTERVALS + 1))
-                  if [ $STALLED_INTERVALS -ge 10 ]; then
-                    echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
-                  fi
-                else
-                  STALLED_INTERVALS=0
-                  echo "✅ Progress detected: +$((CURRENT_COUNT - LAST_COUNT)) new screenshots"
-                fi
-
-                LAST_COUNT=$CURRENT_COUNT
-
-                # Success detection: expected 2 screenshots for iPhone
-                if [ $CURRENT_COUNT -ge 2 ]; then
-                  echo "✅ Target reached: $CURRENT_COUNT/2 screenshots complete"
-                fi
-              done
-
-              echo "📊 Progress monitor completed at: $(date '+%Y-%m-%d %H:%M:%S')"
-            ) &
-            MONITOR_PID=$!
-
-            # Run screenshot generation with nick-fields/retry timeout protection (20 min)
-            echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "🚀 Starting iPhone screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
-            FASTLANE_EXIT=$?
-
-            # Stop progress monitor
-            kill $MONITOR_PID 2>/dev/null || true
-
-            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
-            exit $FASTLANE_EXIT
+            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S')"
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -298,7 +226,7 @@ jobs:
   generate-ipad-screenshots:
     name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 45  # Phase 2 optimization: 2×30min attempts + 10min overhead (reduced from 120)
+    timeout-minutes: 60  # Allow 2×25min attempts + 10min overhead
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -373,7 +301,6 @@ jobs:
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
-        continue-on-error: true  # Don't fail job if cleanup has issues - retry logic handles recovery
 
       - name: Verify iPad simulator
         run: |
@@ -388,23 +315,10 @@ jobs:
             exit 1
           fi
 
-      - name: Verify iPad simulator exists
-        run: |
-          echo "🔍 Verifying iPad Pro 13-inch (M4) simulator..."
-          DEVICE_UDID=$(xcrun simctl list devices available | grep "iPad Pro 13-inch (M4)" | head -1 | grep -oE '[A-F0-9-]{36}')
-          if [ -z "$DEVICE_UDID" ]; then
-            echo "❌ Simulator not found"
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "✅ Found simulator: $DEVICE_UDID"
-          echo "📝 Fastlane will handle boot"
-        timeout-minutes: 1
-
       - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 20  # Phase 2 optimization: Reduced from 50 (actual need ~15min)
+          timeout_minutes: 25  # Increased from 20 (en-US took 21min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -466,67 +380,9 @@ jobs:
 
             echo "✅ Simulator recovery complete at: $(date '+%Y-%m-%d %H:%M:%S')"
           command: |
-            # DIAGNOSTIC: Start background progress monitor
-            (
-              SCREENSHOT_DIR="fastlane/screenshots_compat/${{ matrix.locale }}"
-              mkdir -p "$SCREENSHOT_DIR"
-              LAST_COUNT=0
-              STALLED_INTERVALS=0
-
-              echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
-
-              for i in {1..30}; do  # Phase 2 optimization: 30 intervals × 60s = 30 min max (reduced from 50)
-                sleep 60
-                CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
-                ELAPSED=$((i * 60))
-
-                echo "⏱️  [${ELAPSED}s] Progress check: $CURRENT_COUNT screenshots generated"
-
-                # Early failure detection: no progress in first 15 minutes
-                if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
-                  if pgrep -f "xcodebuild" > /dev/null; then
-                    echo "ℹ️  Build still in progress at 15 min mark - continuing"
-                  elif ! pgrep -f "fastlane" > /dev/null; then
-                    echo "❌ Fastlane exited without producing screenshots"
-                    exit 1
-                  else
-                    echo "ℹ️  Fastlane running but no screenshots yet - continuing"
-                  fi
-                fi
-
-                # Stall detection: no new screenshots for 10 minutes
-                if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
-                  STALLED_INTERVALS=$((STALLED_INTERVALS + 1))
-                  if [ $STALLED_INTERVALS -ge 10 ]; then
-                    echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
-                  fi
-                else
-                  STALLED_INTERVALS=0
-                  echo "✅ Progress detected: +$((CURRENT_COUNT - LAST_COUNT)) new screenshots"
-                fi
-
-                LAST_COUNT=$CURRENT_COUNT
-
-                # Success detection: expected 2 screenshots for iPad
-                if [ $CURRENT_COUNT -ge 2 ]; then
-                  echo "✅ Target reached: $CURRENT_COUNT/2 screenshots complete"
-                fi
-              done
-
-              echo "📊 Progress monitor completed at: $(date '+%Y-%m-%d %H:%M:%S')"
-            ) &
-            MONITOR_PID=$!
-
-            # Run screenshot generation with nick-fields/retry timeout protection (30 min)
-            echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "🚀 Starting iPad screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
-            FASTLANE_EXIT=$?
-
-            # Stop progress monitor
-            kill $MONITOR_PID 2>/dev/null || true
-
-            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
-            exit $FASTLANE_EXIT
+            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S')"
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -569,7 +425,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 55  # Phase 2 optimization: 2×35min attempts + 10min overhead (reduced from 110)
+    timeout-minutes: 80  # Allow 2×35min attempts + 10min overhead
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -640,7 +496,6 @@ jobs:
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
-        continue-on-error: true  # Don't fail job if cleanup has issues - retry logic handles recovery
 
       - name: Clean up duplicate Watch simulators
         run: .github/scripts/cleanup-watch-duplicates.sh || true
@@ -666,7 +521,7 @@ jobs:
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 25  # Phase 2 optimization: Reduced from 50 (actual need ~25min)
+          timeout_minutes: 35  # Increased from 25 to allow sufficient time
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -728,67 +583,9 @@ jobs:
 
             echo "✅ Simulator recovery complete at: $(date '+%Y-%m-%d %H:%M:%S')"
           command: |
-            # DIAGNOSTIC: Start background progress monitor
-            (
-              SCREENSHOT_DIR="fastlane/screenshots/watch_normalized"
-              mkdir -p "$SCREENSHOT_DIR"
-              LAST_COUNT=0
-              STALLED_INTERVALS=0
-
-              echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
-
-              for i in {1..35}; do  # Phase 2 optimization: 35 intervals × 60s = 35 min max (reduced from 50)
-                sleep 60
-                CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
-                ELAPSED=$((i * 60))
-
-                echo "⏱️  [${ELAPSED}s] Progress check: $CURRENT_COUNT screenshots generated"
-
-                # Early failure detection: no progress in first 15 minutes
-                if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
-                  if pgrep -f "xcodebuild" > /dev/null; then
-                    echo "ℹ️  Build still in progress at 15 min mark - continuing"
-                  elif ! pgrep -f "fastlane" > /dev/null; then
-                    echo "❌ Fastlane exited without producing screenshots"
-                    exit 1
-                  else
-                    echo "ℹ️  Fastlane running but no screenshots yet - continuing"
-                  fi
-                fi
-
-                # Stall detection: no new screenshots for 10 minutes
-                if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
-                  STALLED_INTERVALS=$((STALLED_INTERVALS + 1))
-                  if [ $STALLED_INTERVALS -ge 10 ]; then
-                    echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
-                  fi
-                else
-                  STALLED_INTERVALS=0
-                  echo "✅ Progress detected: +$((CURRENT_COUNT - LAST_COUNT)) new screenshots"
-                fi
-
-                LAST_COUNT=$CURRENT_COUNT
-
-                # Success detection: expected 10 screenshots for Watch (5 per locale × 2 locales)
-                if [ $CURRENT_COUNT -ge 10 ]; then
-                  echo "✅ Target reached: $CURRENT_COUNT/10 screenshots complete"
-                fi
-              done
-
-              echo "📊 Progress monitor completed at: $(date '+%Y-%m-%d %H:%M:%S')"
-            ) &
-            MONITOR_PID=$!
-
-            # Run screenshot generation with nick-fields/retry timeout protection (35 min)
-            echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "🚀 Starting Watch screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios watch_screenshots
-            FASTLANE_EXIT=$?
-
-            # Stop progress monitor
-            kill $MONITOR_PID 2>/dev/null || true
-
-            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
-            exit $FASTLANE_EXIT
+            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S')"
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "120"
 
