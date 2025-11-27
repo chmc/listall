@@ -122,10 +122,11 @@ jobs:
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
-            echo "🔄 Enhanced simulator recovery before retry..."
+            echo "🔄 Enhanced simulator recovery before retry (attempt 2/2)..."
+            echo "⏱️  Retry started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
             # 1. Graceful shutdown with background timeout (macOS-native, no GNU timeout)
-            echo "Attempting graceful simulator shutdown..."
+            echo "[1/5] Attempting graceful simulator shutdown..."
             xcrun simctl shutdown all 2>/dev/null &
             SHUTDOWN_PID=$!
             ( sleep 30 && kill -9 $SHUTDOWN_PID 2>/dev/null ) &
@@ -138,14 +139,18 @@ jobs:
             fi
 
             # 2. Kill ALL simulator-related processes (including zombies)
-            pkill -9 Simulator 2>/dev/null || true
-            pkill -9 SimulatorTrampoline 2>/dev/null || true
-            pkill -9 launchd_sim 2>/dev/null || true
-            pkill -9 SimulatorBridge 2>/dev/null || true
-            pkill -9 -f "XCUITestRunner" 2>/dev/null || true
+            echo "[2/5] Terminating simulator processes..."
+            KILLED_PROCS=0
+            pkill -9 Simulator 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 SimulatorTrampoline 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 launchd_sim 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 SimulatorBridge 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null && ((KILLED_PROCS++)) || true
+            echo "   Terminated $KILLED_PROCS process(es)"
             sleep 3
 
             # 3. Check and restart CoreSimulatorService if hung (macOS-native timeout)
+            echo "[3/5] Checking CoreSimulatorService health..."
             if pgrep -f "CoreSimulatorService" > /dev/null; then
                 xcrun simctl list devices > /dev/null 2>&1 &
                 CHECK_PID=$!
@@ -155,22 +160,80 @@ jobs:
                     echo "⚠️  CoreSimulatorService is hung, restarting..."
                     pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
                     sleep 3
+                else
+                    echo "✅ CoreSimulatorService responsive"
                 fi
                 kill $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
+            echo "[4/5] Clearing derived data..."
+            CLEARED_SIZE=$(du -sh ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null | awk '{print $1}' || echo "0B")
             rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
+            echo "   Cleared: $CLEARED_SIZE"
 
             # 5. Wait for system stabilization
-            echo "⏳ Waiting 15 seconds for system recovery..."
+            echo "[5/5] Waiting 15 seconds for system recovery..."
             sleep 15
 
-            echo "✅ Simulator recovery complete"
+            echo "✅ Simulator recovery complete at: $(date '+%Y-%m-%d %H:%M:%S')"
           command: |
-            # nick-fields/retry provides timeout_minutes protection (40 min)
-            # No GNU timeout needed - action handles timeout natively
+            # DIAGNOSTIC: Start background progress monitor
+            (
+              SCREENSHOT_DIR="fastlane/screenshots_compat/${{ matrix.locale }}"
+              mkdir -p "$SCREENSHOT_DIR"
+              LAST_COUNT=0
+              STALLED_INTERVALS=0
+
+              echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
+
+              for i in {1..40}; do  # 40 intervals × 60s = 40 min max
+                sleep 60
+                CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+                ELAPSED=$((i * 60))
+
+                echo "⏱️  [${ELAPSED}s] Progress check: $CURRENT_COUNT screenshots generated"
+
+                # Early failure detection: no progress in first 15 minutes
+                if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
+                  echo "❌ EARLY FAILURE: No screenshots after 15 minutes - likely stuck"
+                  pkill -9 -f "fastlane" || true
+                  exit 1
+                fi
+
+                # Stall detection: no new screenshots for 10 minutes
+                if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
+                  ((STALLED_INTERVALS++))
+                  if [ $STALLED_INTERVALS -ge 10 ]; then
+                    echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
+                  fi
+                else
+                  STALLED_INTERVALS=0
+                  echo "✅ Progress detected: +$((CURRENT_COUNT - LAST_COUNT)) new screenshots"
+                fi
+
+                LAST_COUNT=$CURRENT_COUNT
+
+                # Success detection: expected 2 screenshots for iPhone
+                if [ $CURRENT_COUNT -ge 2 ]; then
+                  echo "✅ Target reached: $CURRENT_COUNT/2 screenshots complete"
+                fi
+              done
+
+              echo "📊 Progress monitor completed at: $(date '+%Y-%m-%d %H:%M:%S')"
+            ) &
+            MONITOR_PID=$!
+
+            # Run screenshot generation with nick-fields/retry timeout protection (40 min)
+            echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
+            FASTLANE_EXIT=$?
+
+            # Stop progress monitor
+            kill $MONITOR_PID 2>/dev/null || true
+
+            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
+            exit $FASTLANE_EXIT
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -299,10 +362,11 @@ jobs:
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
-            echo "🔄 Enhanced simulator recovery before retry..."
+            echo "🔄 Enhanced simulator recovery before retry (attempt 2/2)..."
+            echo "⏱️  Retry started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
             # 1. Graceful shutdown with background timeout (macOS-native, no GNU timeout)
-            echo "Attempting graceful simulator shutdown..."
+            echo "[1/5] Attempting graceful simulator shutdown..."
             xcrun simctl shutdown all 2>/dev/null &
             SHUTDOWN_PID=$!
             ( sleep 30 && kill -9 $SHUTDOWN_PID 2>/dev/null ) &
@@ -315,14 +379,18 @@ jobs:
             fi
 
             # 2. Kill ALL simulator-related processes (including zombies)
-            pkill -9 Simulator 2>/dev/null || true
-            pkill -9 SimulatorTrampoline 2>/dev/null || true
-            pkill -9 launchd_sim 2>/dev/null || true
-            pkill -9 SimulatorBridge 2>/dev/null || true
-            pkill -9 -f "XCUITestRunner" 2>/dev/null || true
+            echo "[2/5] Terminating simulator processes..."
+            KILLED_PROCS=0
+            pkill -9 Simulator 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 SimulatorTrampoline 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 launchd_sim 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 SimulatorBridge 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null && ((KILLED_PROCS++)) || true
+            echo "   Terminated $KILLED_PROCS process(es)"
             sleep 3
 
             # 3. Check and restart CoreSimulatorService if hung (macOS-native timeout)
+            echo "[3/5] Checking CoreSimulatorService health..."
             if pgrep -f "CoreSimulatorService" > /dev/null; then
                 xcrun simctl list devices > /dev/null 2>&1 &
                 CHECK_PID=$!
@@ -332,22 +400,80 @@ jobs:
                     echo "⚠️  CoreSimulatorService is hung, restarting..."
                     pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
                     sleep 3
+                else
+                    echo "✅ CoreSimulatorService responsive"
                 fi
                 kill $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
+            echo "[4/5] Clearing derived data..."
+            CLEARED_SIZE=$(du -sh ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null | awk '{print $1}' || echo "0B")
             rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
+            echo "   Cleared: $CLEARED_SIZE"
 
             # 5. Wait for system stabilization
-            echo "⏳ Waiting 15 seconds for system recovery..."
+            echo "[5/5] Waiting 15 seconds for system recovery..."
             sleep 15
 
-            echo "✅ Simulator recovery complete"
+            echo "✅ Simulator recovery complete at: $(date '+%Y-%m-%d %H:%M:%S')"
           command: |
-            # nick-fields/retry provides timeout_minutes protection (50 min)
-            # No GNU timeout needed - action handles timeout natively
+            # DIAGNOSTIC: Start background progress monitor
+            (
+              SCREENSHOT_DIR="fastlane/screenshots_compat/${{ matrix.locale }}"
+              mkdir -p "$SCREENSHOT_DIR"
+              LAST_COUNT=0
+              STALLED_INTERVALS=0
+
+              echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
+
+              for i in {1..50}; do  # 50 intervals × 60s = 50 min max
+                sleep 60
+                CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+                ELAPSED=$((i * 60))
+
+                echo "⏱️  [${ELAPSED}s] Progress check: $CURRENT_COUNT screenshots generated"
+
+                # Early failure detection: no progress in first 15 minutes
+                if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
+                  echo "❌ EARLY FAILURE: No screenshots after 15 minutes - likely stuck"
+                  pkill -9 -f "fastlane" || true
+                  exit 1
+                fi
+
+                # Stall detection: no new screenshots for 10 minutes
+                if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
+                  ((STALLED_INTERVALS++))
+                  if [ $STALLED_INTERVALS -ge 10 ]; then
+                    echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
+                  fi
+                else
+                  STALLED_INTERVALS=0
+                  echo "✅ Progress detected: +$((CURRENT_COUNT - LAST_COUNT)) new screenshots"
+                fi
+
+                LAST_COUNT=$CURRENT_COUNT
+
+                # Success detection: expected 2 screenshots for iPad
+                if [ $CURRENT_COUNT -ge 2 ]; then
+                  echo "✅ Target reached: $CURRENT_COUNT/2 screenshots complete"
+                fi
+              done
+
+              echo "📊 Progress monitor completed at: $(date '+%Y-%m-%d %H:%M:%S')"
+            ) &
+            MONITOR_PID=$!
+
+            # Run screenshot generation with nick-fields/retry timeout protection (50 min)
+            echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
+            FASTLANE_EXIT=$?
+
+            # Stop progress monitor
+            kill $MONITOR_PID 2>/dev/null || true
+
+            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
+            exit $FASTLANE_EXIT
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
@@ -461,10 +587,11 @@ jobs:
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
-            echo "🔄 Enhanced simulator recovery before retry..."
+            echo "🔄 Enhanced simulator recovery before retry (attempt 2/2)..."
+            echo "⏱️  Retry started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
             # 1. Graceful shutdown with background timeout (macOS-native, no GNU timeout)
-            echo "Attempting graceful simulator shutdown..."
+            echo "[1/5] Attempting graceful simulator shutdown..."
             xcrun simctl shutdown all 2>/dev/null &
             SHUTDOWN_PID=$!
             ( sleep 30 && kill -9 $SHUTDOWN_PID 2>/dev/null ) &
@@ -477,14 +604,18 @@ jobs:
             fi
 
             # 2. Kill ALL simulator-related processes (including zombies)
-            pkill -9 Simulator 2>/dev/null || true
-            pkill -9 SimulatorTrampoline 2>/dev/null || true
-            pkill -9 launchd_sim 2>/dev/null || true
-            pkill -9 SimulatorBridge 2>/dev/null || true
-            pkill -9 -f "XCUITestRunner" 2>/dev/null || true
+            echo "[2/5] Terminating simulator processes..."
+            KILLED_PROCS=0
+            pkill -9 Simulator 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 SimulatorTrampoline 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 launchd_sim 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 SimulatorBridge 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null && ((KILLED_PROCS++)) || true
+            echo "   Terminated $KILLED_PROCS process(es)"
             sleep 3
 
             # 3. Check and restart CoreSimulatorService if hung (macOS-native timeout)
+            echo "[3/5] Checking CoreSimulatorService health..."
             if pgrep -f "CoreSimulatorService" > /dev/null; then
                 xcrun simctl list devices > /dev/null 2>&1 &
                 CHECK_PID=$!
@@ -494,22 +625,80 @@ jobs:
                     echo "⚠️  CoreSimulatorService is hung, restarting..."
                     pkill -9 -f "CoreSimulatorService" 2>/dev/null || true
                     sleep 3
+                else
+                    echo "✅ CoreSimulatorService responsive"
                 fi
                 kill $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
+            echo "[4/5] Clearing derived data..."
+            CLEARED_SIZE=$(du -sh ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null | awk '{print $1}' || echo "0B")
             rm -rf ~/Library/Developer/Xcode/DerivedData/ListAll-* 2>/dev/null || true
+            echo "   Cleared: $CLEARED_SIZE"
 
             # 5. Wait for system stabilization
-            echo "⏳ Waiting 15 seconds for system recovery..."
+            echo "[5/5] Waiting 15 seconds for system recovery..."
             sleep 15
 
-            echo "✅ Simulator recovery complete"
+            echo "✅ Simulator recovery complete at: $(date '+%Y-%m-%d %H:%M:%S')"
           command: |
-            # nick-fields/retry provides timeout_minutes protection (50 min)
-            # No GNU timeout needed - action handles timeout natively
+            # DIAGNOSTIC: Start background progress monitor
+            (
+              SCREENSHOT_DIR="fastlane/screenshots/watch_normalized"
+              mkdir -p "$SCREENSHOT_DIR"
+              LAST_COUNT=0
+              STALLED_INTERVALS=0
+
+              echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
+
+              for i in {1..50}; do  # 50 intervals × 60s = 50 min max
+                sleep 60
+                CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
+                ELAPSED=$((i * 60))
+
+                echo "⏱️  [${ELAPSED}s] Progress check: $CURRENT_COUNT screenshots generated"
+
+                # Early failure detection: no progress in first 15 minutes
+                if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
+                  echo "❌ EARLY FAILURE: No screenshots after 15 minutes - likely stuck"
+                  pkill -9 -f "fastlane" || true
+                  exit 1
+                fi
+
+                # Stall detection: no new screenshots for 10 minutes
+                if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
+                  ((STALLED_INTERVALS++))
+                  if [ $STALLED_INTERVALS -ge 10 ]; then
+                    echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
+                  fi
+                else
+                  STALLED_INTERVALS=0
+                  echo "✅ Progress detected: +$((CURRENT_COUNT - LAST_COUNT)) new screenshots"
+                fi
+
+                LAST_COUNT=$CURRENT_COUNT
+
+                # Success detection: expected 10 screenshots for Watch (5 per locale × 2 locales)
+                if [ $CURRENT_COUNT -ge 10 ]; then
+                  echo "✅ Target reached: $CURRENT_COUNT/10 screenshots complete"
+                fi
+              done
+
+              echo "📊 Progress monitor completed at: $(date '+%Y-%m-%d %H:%M:%S')"
+            ) &
+            MONITOR_PID=$!
+
+            # Run screenshot generation with nick-fields/retry timeout protection (50 min)
+            echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios watch_screenshots
+            FASTLANE_EXIT=$?
+
+            # Stop progress monitor
+            kill $MONITOR_PID 2>/dev/null || true
+
+            echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
+            exit $FASTLANE_EXIT
         env:
           SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
 
