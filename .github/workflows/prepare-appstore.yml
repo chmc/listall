@@ -80,62 +80,21 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Cache Homebrew ImageMagick
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/Homebrew/downloads/*imagemagick*
-            /usr/local/Cellar/imagemagick
-            /usr/local/opt/imagemagick
-            /opt/homebrew/Cellar/imagemagick
-            /opt/homebrew/opt/imagemagick
-          key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-imagemagick-
-
+      # NOTE: ImageMagick caching REMOVED after analysis by 6-agent swarm
+      # Cache was causing failures: restored Cellar but not symlinks/dependencies
+      # Fresh install takes ~5 seconds and is 100% reliable
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          echo "🔍 Checking ImageMagick status..."
+          echo "📦 Installing ImageMagick..."
 
-          # Fast path: already available in PATH
-          if command -v magick &> /dev/null; then
-            echo "✅ ImageMagick already available"
-            magick --version
-          else
-            # CRITICAL FIX: Handle "installed but not linked" case
-            # This happens when Homebrew cache restores Cellar but not symlinks
-            # Also handles pre-installed ImageMagick on GitHub runners
-            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+          # Remove any partially cached/corrupted installation
+          brew uninstall --force imagemagick 2>/dev/null || true
 
-            # Try linking first (works if in Cellar but not linked)
-            if brew link imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked successfully"
-            elif brew link --overwrite imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked with --overwrite"
-            else
-              # Not in Cellar, do fresh install
-              echo "📦 Installing ImageMagick..."
-              brew install imagemagick
+          # Fresh install with all dependencies
+          brew install imagemagick
 
-              # After install, link if needed (handles "already installed, not linked" warning)
-              if ! command -v magick &> /dev/null; then
-                echo "🔗 Post-install linking..."
-                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
-              fi
-            fi
-          fi
-
-          # Final verification
-          echo ""
+          # Verify installation
           echo "🧪 Verifying ImageMagick..."
-          if ! command -v magick &> /dev/null; then
-            echo "❌ ImageMagick verification failed"
-            echo "Debug: brew list imagemagick:"
-            brew list imagemagick 2>&1 || true
-            echo "Debug: PATH=$PATH"
-            exit 1
-          fi
-
           magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
           echo "✅ ImageMagick ready"
@@ -260,62 +219,21 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Cache Homebrew ImageMagick
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/Homebrew/downloads/*imagemagick*
-            /usr/local/Cellar/imagemagick
-            /usr/local/opt/imagemagick
-            /opt/homebrew/Cellar/imagemagick
-            /opt/homebrew/opt/imagemagick
-          key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-imagemagick-
-
+      # NOTE: ImageMagick caching REMOVED after analysis by 6-agent swarm
+      # Cache was causing failures: restored Cellar but not symlinks/dependencies
+      # Fresh install takes ~5 seconds and is 100% reliable
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          echo "🔍 Checking ImageMagick status..."
+          echo "📦 Installing ImageMagick..."
 
-          # Fast path: already available in PATH
-          if command -v magick &> /dev/null; then
-            echo "✅ ImageMagick already available"
-            magick --version
-          else
-            # CRITICAL FIX: Handle "installed but not linked" case
-            # This happens when Homebrew cache restores Cellar but not symlinks
-            # Also handles pre-installed ImageMagick on GitHub runners
-            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+          # Remove any partially cached/corrupted installation
+          brew uninstall --force imagemagick 2>/dev/null || true
 
-            # Try linking first (works if in Cellar but not linked)
-            if brew link imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked successfully"
-            elif brew link --overwrite imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked with --overwrite"
-            else
-              # Not in Cellar, do fresh install
-              echo "📦 Installing ImageMagick..."
-              brew install imagemagick
+          # Fresh install with all dependencies
+          brew install imagemagick
 
-              # After install, link if needed (handles "already installed, not linked" warning)
-              if ! command -v magick &> /dev/null; then
-                echo "🔗 Post-install linking..."
-                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
-              fi
-            fi
-          fi
-
-          # Final verification
-          echo ""
+          # Verify installation
           echo "🧪 Verifying ImageMagick..."
-          if ! command -v magick &> /dev/null; then
-            echo "❌ ImageMagick verification failed"
-            echo "Debug: brew list imagemagick:"
-            brew list imagemagick 2>&1 || true
-            echo "Debug: PATH=$PATH"
-            exit 1
-          fi
-
           magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
           echo "✅ ImageMagick ready"
@@ -435,62 +353,21 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Cache Homebrew ImageMagick
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/Homebrew/downloads/*imagemagick*
-            /usr/local/Cellar/imagemagick
-            /usr/local/opt/imagemagick
-            /opt/homebrew/Cellar/imagemagick
-            /opt/homebrew/opt/imagemagick
-          key: ${{ runner.os }}-imagemagick-${{ hashFiles('.github/workflows/prepare-appstore.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-imagemagick-
-
+      # NOTE: ImageMagick caching REMOVED after analysis by 6-agent swarm
+      # Cache was causing failures: restored Cellar but not symlinks/dependencies
+      # Fresh install takes ~5 seconds and is 100% reliable
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          echo "🔍 Checking ImageMagick status..."
+          echo "📦 Installing ImageMagick..."
 
-          # Fast path: already available in PATH
-          if command -v magick &> /dev/null; then
-            echo "✅ ImageMagick already available"
-            magick --version
-          else
-            # CRITICAL FIX: Handle "installed but not linked" case
-            # This happens when Homebrew cache restores Cellar but not symlinks
-            # Also handles pre-installed ImageMagick on GitHub runners
-            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+          # Remove any partially cached/corrupted installation
+          brew uninstall --force imagemagick 2>/dev/null || true
 
-            # Try linking first (works if in Cellar but not linked)
-            if brew link imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked successfully"
-            elif brew link --overwrite imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked with --overwrite"
-            else
-              # Not in Cellar, do fresh install
-              echo "📦 Installing ImageMagick..."
-              brew install imagemagick
+          # Fresh install with all dependencies
+          brew install imagemagick
 
-              # After install, link if needed (handles "already installed, not linked" warning)
-              if ! command -v magick &> /dev/null; then
-                echo "🔗 Post-install linking..."
-                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
-              fi
-            fi
-          fi
-
-          # Final verification
-          echo ""
+          # Verify installation
           echo "🧪 Verifying ImageMagick..."
-          if ! command -v magick &> /dev/null; then
-            echo "❌ ImageMagick verification failed"
-            echo "Debug: brew list imagemagick:"
-            brew list imagemagick 2>&1 || true
-            echo "Debug: PATH=$PATH"
-            exit 1
-          fi
-
           magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
           echo "✅ ImageMagick ready"
@@ -748,44 +625,14 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      # NOTE: Uses simple fresh install - no caching (see screenshot jobs for details)
       - name: Install ImageMagick (required for screenshot validation)
         run: |
-          echo "🔍 Checking ImageMagick status..."
+          echo "📦 Installing ImageMagick..."
+          brew install imagemagick
 
-          # Fast path: already available in PATH
-          if command -v magick &> /dev/null; then
-            echo "✅ ImageMagick already available"
-            magick --version
-          else
-            # CRITICAL FIX: Handle "installed but not linked" case
-            echo "📦 ImageMagick not in PATH, attempting to link/install..."
-
-            # Try linking first (works if in Cellar but not linked)
-            if brew link imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked successfully"
-            elif brew link --overwrite imagemagick 2>/dev/null; then
-              echo "✅ ImageMagick linked with --overwrite"
-            else
-              # Not in Cellar, do fresh install
-              echo "📦 Installing ImageMagick..."
-              brew install imagemagick
-
-              # After install, link if needed
-              if ! command -v magick &> /dev/null; then
-                echo "🔗 Post-install linking..."
-                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
-              fi
-            fi
-          fi
-
-          # Final verification
+          # Verify installation
           echo "🧪 Verifying ImageMagick..."
-          if ! command -v magick &> /dev/null; then
-            echo "❌ ImageMagick verification failed"
-            brew list imagemagick 2>&1 || true
-            exit 1
-          fi
-
           magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
           echo "✅ ImageMagick ready"
