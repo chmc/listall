@@ -26,7 +26,7 @@ jobs:
   generate-iphone-screenshots:
     name: iPhone Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 50  # Phase 2 optimization: 2×20min attempts + 10min overhead (reduced from 90)
+    timeout-minutes: 35  # Phase 2 optimization: 2×20min attempts + 10min overhead (reduced from 90)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -150,7 +150,7 @@ jobs:
       - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 20  # Phase 2 optimization: Reduced from 40 (actual need ~10min)
+          timeout_minutes: 15  # Phase 2 optimization: Reduced from 40 (actual need ~10min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -165,6 +165,7 @@ jobs:
             KILLER_PID=$!
             if wait $SHUTDOWN_PID 2>/dev/null; then
                 kill $KILLER_PID 2>/dev/null || true
+                wait $KILLER_PID 2>/dev/null || true
                 echo "✅ Graceful shutdown completed"
             else
                 echo "⚠️  Shutdown timed out or failed, forcing cleanup..."
@@ -173,11 +174,11 @@ jobs:
             # 2. Kill ALL simulator-related processes (including zombies)
             echo "[2/5] Terminating simulator processes..."
             KILLED_PROCS=0
-            pkill -9 Simulator 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 SimulatorTrampoline 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 launchd_sim 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 SimulatorBridge 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 -f "XCUITestRunner" 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 Simulator 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 SimulatorTrampoline 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 launchd_sim 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 SimulatorBridge 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
             echo "   Terminated $KILLED_PROCS process(es)"
             sleep 3
 
@@ -196,6 +197,7 @@ jobs:
                     echo "✅ CoreSimulatorService responsive"
                 fi
                 kill $KILLER_PID 2>/dev/null || true
+                wait $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
@@ -228,14 +230,19 @@ jobs:
 
                 # Early failure detection: no progress in first 15 minutes
                 if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
-                  echo "❌ EARLY FAILURE: No screenshots after 15 minutes - likely stuck"
-                  pkill -9 -f "fastlane" || true
-                  exit 1
+                  if pgrep -f "xcodebuild" > /dev/null; then
+                    echo "ℹ️  Build still in progress at 15 min mark - continuing"
+                  elif ! pgrep -f "fastlane" > /dev/null; then
+                    echo "❌ Fastlane exited without producing screenshots"
+                    exit 1
+                  else
+                    echo "ℹ️  Fastlane running but no screenshots yet - continuing"
+                  fi
                 fi
 
                 # Stall detection: no new screenshots for 10 minutes
                 if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
-                  ((STALLED_INTERVALS++))
+                  STALLED_INTERVALS=$((STALLED_INTERVALS + 1))
                   if [ $STALLED_INTERVALS -ge 10 ]; then
                     echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
                   fi
@@ -309,7 +316,7 @@ jobs:
   generate-ipad-screenshots:
     name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 70  # Phase 2 optimization: 2×30min attempts + 10min overhead (reduced from 120)
+    timeout-minutes: 45  # Phase 2 optimization: 2×30min attempts + 10min overhead (reduced from 120)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -433,7 +440,7 @@ jobs:
       - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 30  # Phase 2 optimization: Reduced from 50 (actual need ~15min)
+          timeout_minutes: 20  # Phase 2 optimization: Reduced from 50 (actual need ~15min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -448,6 +455,7 @@ jobs:
             KILLER_PID=$!
             if wait $SHUTDOWN_PID 2>/dev/null; then
                 kill $KILLER_PID 2>/dev/null || true
+                wait $KILLER_PID 2>/dev/null || true
                 echo "✅ Graceful shutdown completed"
             else
                 echo "⚠️  Shutdown timed out or failed, forcing cleanup..."
@@ -456,11 +464,11 @@ jobs:
             # 2. Kill ALL simulator-related processes (including zombies)
             echo "[2/5] Terminating simulator processes..."
             KILLED_PROCS=0
-            pkill -9 Simulator 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 SimulatorTrampoline 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 launchd_sim 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 SimulatorBridge 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 -f "XCUITestRunner" 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 Simulator 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 SimulatorTrampoline 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 launchd_sim 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 SimulatorBridge 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
             echo "   Terminated $KILLED_PROCS process(es)"
             sleep 3
 
@@ -479,6 +487,7 @@ jobs:
                     echo "✅ CoreSimulatorService responsive"
                 fi
                 kill $KILLER_PID 2>/dev/null || true
+                wait $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
@@ -511,14 +520,19 @@ jobs:
 
                 # Early failure detection: no progress in first 15 minutes
                 if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
-                  echo "❌ EARLY FAILURE: No screenshots after 15 minutes - likely stuck"
-                  pkill -9 -f "fastlane" || true
-                  exit 1
+                  if pgrep -f "xcodebuild" > /dev/null; then
+                    echo "ℹ️  Build still in progress at 15 min mark - continuing"
+                  elif ! pgrep -f "fastlane" > /dev/null; then
+                    echo "❌ Fastlane exited without producing screenshots"
+                    exit 1
+                  else
+                    echo "ℹ️  Fastlane running but no screenshots yet - continuing"
+                  fi
                 fi
 
                 # Stall detection: no new screenshots for 10 minutes
                 if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
-                  ((STALLED_INTERVALS++))
+                  STALLED_INTERVALS=$((STALLED_INTERVALS + 1))
                   if [ $STALLED_INTERVALS -ge 10 ]; then
                     echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
                   fi
@@ -591,7 +605,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 80  # Phase 2 optimization: 2×35min attempts + 10min overhead (reduced from 110)
+    timeout-minutes: 55  # Phase 2 optimization: 2×35min attempts + 10min overhead (reduced from 110)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -667,10 +681,54 @@ jobs:
       - name: Clean up duplicate Watch simulators
         run: .github/scripts/cleanup-watch-duplicates.sh || true
 
+      - name: Verify and pair Watch simulator
+        run: |
+          echo "🏥 Verifying Watch and iPhone simulators..."
+
+          # Find simulators using simple grep
+          WATCH_UDID=$(xcrun simctl list devices available | grep "Apple Watch Series 10 (46mm)" | head -1 | grep -oE '[A-F0-9-]{36}')
+          IPHONE_UDID=$(xcrun simctl list devices available | grep "iPhone 16 Pro Max" | head -1 | grep -oE '[A-F0-9-]{36}')
+
+          if [ -z "$WATCH_UDID" ] || [ -z "$IPHONE_UDID" ]; then
+            echo "❌ Required simulators not found"
+            xcrun simctl list devices available
+            exit 1
+          fi
+
+          echo "✅ Found Watch: $WATCH_UDID"
+          echo "✅ Found iPhone: $IPHONE_UDID"
+
+          # Boot iPhone first (Watch requires paired iPhone)
+          echo "🚀 Booting iPhone simulator..."
+          xcrun simctl boot "$IPHONE_UDID" 2>/dev/null || true
+          sleep 5
+
+          # Pair Watch with iPhone
+          echo "🔗 Pairing Watch with iPhone..."
+          xcrun simctl pair "$WATCH_UDID" "$IPHONE_UDID" 2>/dev/null || echo "⚠️ Already paired"
+
+          # Boot Watch
+          echo "🚀 Booting Watch simulator..."
+          xcrun simctl boot "$WATCH_UDID" 2>/dev/null || true
+
+          # Wait and verify
+          sleep 10
+          if xcrun simctl list devices | grep "$WATCH_UDID" | grep -q "Booted"; then
+            echo "✅ Watch simulator booted successfully"
+          else
+            echo "❌ Watch simulator failed to boot"
+            exit 1
+          fi
+
+          # Shutdown for clean state (Fastlane will re-boot)
+          xcrun simctl shutdown all 2>/dev/null || true
+          echo "✅ Simulators paired and verified"
+        timeout-minutes: 5
+
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 35  # Phase 2 optimization: Reduced from 50 (actual need ~25min)
+          timeout_minutes: 25  # Phase 2 optimization: Reduced from 50 (actual need ~25min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -685,6 +743,7 @@ jobs:
             KILLER_PID=$!
             if wait $SHUTDOWN_PID 2>/dev/null; then
                 kill $KILLER_PID 2>/dev/null || true
+                wait $KILLER_PID 2>/dev/null || true
                 echo "✅ Graceful shutdown completed"
             else
                 echo "⚠️  Shutdown timed out or failed, forcing cleanup..."
@@ -693,11 +752,11 @@ jobs:
             # 2. Kill ALL simulator-related processes (including zombies)
             echo "[2/5] Terminating simulator processes..."
             KILLED_PROCS=0
-            pkill -9 Simulator 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 SimulatorTrampoline 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 launchd_sim 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 SimulatorBridge 2>/dev/null && ((KILLED_PROCS++)) || true
-            pkill -9 -f "XCUITestRunner" 2>/dev/null && ((KILLED_PROCS++)) || true
+            pkill -9 Simulator 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 SimulatorTrampoline 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 launchd_sim 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 SimulatorBridge 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
+            pkill -9 -f "XCUITestRunner" 2>/dev/null && KILLED_PROCS=$((KILLED_PROCS + 1)) || true
             echo "   Terminated $KILLED_PROCS process(es)"
             sleep 3
 
@@ -716,6 +775,7 @@ jobs:
                     echo "✅ CoreSimulatorService responsive"
                 fi
                 kill $KILLER_PID 2>/dev/null || true
+                wait $KILLER_PID 2>/dev/null || true
             fi
 
             # 4. Clear derived data
@@ -748,14 +808,19 @@ jobs:
 
                 # Early failure detection: no progress in first 15 minutes
                 if [ $ELAPSED -eq 900 ] && [ $CURRENT_COUNT -eq 0 ]; then
-                  echo "❌ EARLY FAILURE: No screenshots after 15 minutes - likely stuck"
-                  pkill -9 -f "fastlane" || true
-                  exit 1
+                  if pgrep -f "xcodebuild" > /dev/null; then
+                    echo "ℹ️  Build still in progress at 15 min mark - continuing"
+                  elif ! pgrep -f "fastlane" > /dev/null; then
+                    echo "❌ Fastlane exited without producing screenshots"
+                    exit 1
+                  else
+                    echo "ℹ️  Fastlane running but no screenshots yet - continuing"
+                  fi
                 fi
 
                 # Stall detection: no new screenshots for 10 minutes
                 if [ $CURRENT_COUNT -eq $LAST_COUNT ]; then
-                  ((STALLED_INTERVALS++))
+                  STALLED_INTERVALS=$((STALLED_INTERVALS + 1))
                   if [ $STALLED_INTERVALS -ge 10 ]; then
                     echo "⚠️  WARNING: No progress for 10 minutes (${CURRENT_COUNT} screenshots)"
                   fi

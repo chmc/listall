@@ -19,16 +19,35 @@ class UITestDataService {
     }
     
     /// Generate deterministic test lists based on the current locale
+    /// Uses multi-layer detection to reliably determine language in CI environments
     static func generateTestData() -> [List] {
-        // Debug: Check language detection
         print("🧪 UI Test Data Generation:")
+        print("🧪 Arguments: \(ProcessInfo.processInfo.arguments)")
 
-        // Use LocalizationManager to determine language
-        // LocalizationManager.init() checks AppleLanguages for UI tests (set by ListAllApp.init())
-        let currentLanguage = LocalizationManager.shared.currentLanguage.rawValue
-        print("🧪 LocalizationManager.currentLanguage = \(currentLanguage)")
+        // Detect language from multiple sources (in priority order)
+        // This fixes race conditions where AppleLanguages may not be set yet
+        let languageCode: String
 
-        if currentLanguage == "fi" {
+        // 1. Check FASTLANE_LANGUAGE environment variable (most reliable in CI)
+        if let fastlaneLanguage = ProcessInfo.processInfo.environment["FASTLANE_LANGUAGE"] {
+            languageCode = String(fastlaneLanguage.prefix(2)).lowercased()
+            print("🧪 Language from FASTLANE_LANGUAGE env: \(languageCode)")
+        }
+        // 2. Check AppleLanguages (set by localize_simulator)
+        else if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+                let firstLang = appleLanguages.first {
+            languageCode = String(firstLang.prefix(2)).lowercased()
+            print("🧪 Language from AppleLanguages: \(languageCode)")
+        }
+        // 3. Fallback to LocalizationManager
+        else {
+            languageCode = LocalizationManager.shared.currentLanguage.rawValue
+            print("🧪 Language from LocalizationManager (fallback): \(languageCode)")
+        }
+
+        print("🧪 Final language code = \(languageCode)")
+
+        if languageCode == "fi" {
             print("🧪 Generating FINNISH test data")
             return generateFinnishTestData()
         } else {
