@@ -95,35 +95,50 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Check if already cached
-          if command -v magick &> /dev/null || command -v convert &> /dev/null; then
-            echo "✅ ImageMagick already installed (from cache)"
-            magick --version || convert --version
+          echo "🔍 Checking ImageMagick status..."
+
+          # Fast path: already available in PATH
+          if command -v magick &> /dev/null; then
+            echo "✅ ImageMagick already available"
+            magick --version
           else
-            echo "📦 Installing ImageMagick..."
-            brew install imagemagick
+            # CRITICAL FIX: Handle "installed but not linked" case
+            # This happens when Homebrew cache restores Cellar but not symlinks
+            # Also handles pre-installed ImageMagick on GitHub runners
+            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+
+            # Try linking first (works if in Cellar but not linked)
+            if brew link imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked successfully"
+            elif brew link --overwrite imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked with --overwrite"
+            else
+              # Not in Cellar, do fresh install
+              echo "📦 Installing ImageMagick..."
+              brew install imagemagick
+
+              # After install, link if needed (handles "already installed, not linked" warning)
+              if ! command -v magick &> /dev/null; then
+                echo "🔗 Post-install linking..."
+                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
+              fi
+            fi
           fi
 
-          # Verify installation and log version
-          if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
-            echo "❌ ImageMagick installation failed"
+          # Final verification
+          echo ""
+          echo "🧪 Verifying ImageMagick..."
+          if ! command -v magick &> /dev/null; then
+            echo "❌ ImageMagick verification failed"
+            echo "Debug: brew list imagemagick:"
+            brew list imagemagick 2>&1 || true
+            echo "Debug: PATH=$PATH"
             exit 1
           fi
 
-          echo "ImageMagick version:"
-          magick --version || convert --version
-
-          # Verify we got version 7+
-          # CRITICAL FIX: Robust version parsing to prevent "integer expression expected" error
-          # Previous version failed when grep returned empty string
-          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || true)
-          MAGICK_MAJOR=${MAGICK_MAJOR:-0}  # Default to 0 if empty
-          if [ -n "$MAGICK_MAJOR" ] && [ "$MAGICK_MAJOR" -lt 7 ] 2>/dev/null; then
-            echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
-          fi
-
-          # Verify required commands are available
+          magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
+          echo "✅ ImageMagick ready"
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
@@ -260,35 +275,50 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Check if already cached
-          if command -v magick &> /dev/null || command -v convert &> /dev/null; then
-            echo "✅ ImageMagick already installed (from cache)"
-            magick --version || convert --version
+          echo "🔍 Checking ImageMagick status..."
+
+          # Fast path: already available in PATH
+          if command -v magick &> /dev/null; then
+            echo "✅ ImageMagick already available"
+            magick --version
           else
-            echo "📦 Installing ImageMagick..."
-            brew install imagemagick
+            # CRITICAL FIX: Handle "installed but not linked" case
+            # This happens when Homebrew cache restores Cellar but not symlinks
+            # Also handles pre-installed ImageMagick on GitHub runners
+            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+
+            # Try linking first (works if in Cellar but not linked)
+            if brew link imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked successfully"
+            elif brew link --overwrite imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked with --overwrite"
+            else
+              # Not in Cellar, do fresh install
+              echo "📦 Installing ImageMagick..."
+              brew install imagemagick
+
+              # After install, link if needed (handles "already installed, not linked" warning)
+              if ! command -v magick &> /dev/null; then
+                echo "🔗 Post-install linking..."
+                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
+              fi
+            fi
           fi
 
-          # Verify installation and log version
-          if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
-            echo "❌ ImageMagick installation failed"
+          # Final verification
+          echo ""
+          echo "🧪 Verifying ImageMagick..."
+          if ! command -v magick &> /dev/null; then
+            echo "❌ ImageMagick verification failed"
+            echo "Debug: brew list imagemagick:"
+            brew list imagemagick 2>&1 || true
+            echo "Debug: PATH=$PATH"
             exit 1
           fi
 
-          echo "ImageMagick version:"
-          magick --version || convert --version
-
-          # Verify we got version 7+
-          # CRITICAL FIX: Robust version parsing to prevent "integer expression expected" error
-          # Previous version failed when grep returned empty string
-          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || true)
-          MAGICK_MAJOR=${MAGICK_MAJOR:-0}  # Default to 0 if empty
-          if [ -n "$MAGICK_MAJOR" ] && [ "$MAGICK_MAJOR" -lt 7 ] 2>/dev/null; then
-            echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
-          fi
-
-          # Verify required commands are available
+          magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
+          echo "✅ ImageMagick ready"
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
@@ -420,35 +450,50 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: |
-          # Check if already cached
-          if command -v magick &> /dev/null || command -v convert &> /dev/null; then
-            echo "✅ ImageMagick already installed (from cache)"
-            magick --version || convert --version
+          echo "🔍 Checking ImageMagick status..."
+
+          # Fast path: already available in PATH
+          if command -v magick &> /dev/null; then
+            echo "✅ ImageMagick already available"
+            magick --version
           else
-            echo "📦 Installing ImageMagick..."
-            brew install imagemagick
+            # CRITICAL FIX: Handle "installed but not linked" case
+            # This happens when Homebrew cache restores Cellar but not symlinks
+            # Also handles pre-installed ImageMagick on GitHub runners
+            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+
+            # Try linking first (works if in Cellar but not linked)
+            if brew link imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked successfully"
+            elif brew link --overwrite imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked with --overwrite"
+            else
+              # Not in Cellar, do fresh install
+              echo "📦 Installing ImageMagick..."
+              brew install imagemagick
+
+              # After install, link if needed (handles "already installed, not linked" warning)
+              if ! command -v magick &> /dev/null; then
+                echo "🔗 Post-install linking..."
+                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
+              fi
+            fi
           fi
 
-          # Verify installation and log version
-          if ! command -v magick &> /dev/null && ! command -v convert &> /dev/null; then
-            echo "❌ ImageMagick installation failed"
+          # Final verification
+          echo ""
+          echo "🧪 Verifying ImageMagick..."
+          if ! command -v magick &> /dev/null; then
+            echo "❌ ImageMagick verification failed"
+            echo "Debug: brew list imagemagick:"
+            brew list imagemagick 2>&1 || true
+            echo "Debug: PATH=$PATH"
             exit 1
           fi
 
-          echo "ImageMagick version:"
-          magick --version || convert --version
-
-          # Verify we got version 7+
-          # CRITICAL FIX: Robust version parsing to prevent "integer expression expected" error
-          # Previous version failed when grep returned empty string
-          MAGICK_MAJOR=$(magick --version 2>/dev/null | grep -oE 'Version: [0-9]+' | grep -oE '[0-9]+' | head -1 || true)
-          MAGICK_MAJOR=${MAGICK_MAJOR:-0}  # Default to 0 if empty
-          if [ -n "$MAGICK_MAJOR" ] && [ "$MAGICK_MAJOR" -lt 7 ] 2>/dev/null; then
-            echo "⚠️  Warning: ImageMagick $MAGICK_MAJOR installed, expected 7+"
-          fi
-
-          # Verify required commands are available
+          magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
+          echo "✅ ImageMagick ready"
 
       - name: Clean simulator state
         run: .github/scripts/cleanup-simulators-robust.sh
@@ -705,12 +750,45 @@ jobs:
 
       - name: Install ImageMagick (required for screenshot validation)
         run: |
-          # Pin to major version 7 for API stability
-          brew install imagemagick
+          echo "🔍 Checking ImageMagick status..."
 
-          # Verify installation
-          magick --version || convert --version
+          # Fast path: already available in PATH
+          if command -v magick &> /dev/null; then
+            echo "✅ ImageMagick already available"
+            magick --version
+          else
+            # CRITICAL FIX: Handle "installed but not linked" case
+            echo "📦 ImageMagick not in PATH, attempting to link/install..."
+
+            # Try linking first (works if in Cellar but not linked)
+            if brew link imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked successfully"
+            elif brew link --overwrite imagemagick 2>/dev/null; then
+              echo "✅ ImageMagick linked with --overwrite"
+            else
+              # Not in Cellar, do fresh install
+              echo "📦 Installing ImageMagick..."
+              brew install imagemagick
+
+              # After install, link if needed
+              if ! command -v magick &> /dev/null; then
+                echo "🔗 Post-install linking..."
+                brew link imagemagick 2>/dev/null || brew link --overwrite imagemagick || true
+              fi
+            fi
+          fi
+
+          # Final verification
+          echo "🧪 Verifying ImageMagick..."
+          if ! command -v magick &> /dev/null; then
+            echo "❌ ImageMagick verification failed"
+            brew list imagemagick 2>&1 || true
+            exit 1
+          fi
+
+          magick --version
           command -v identify || { echo "❌ identify command not found"; exit 1; }
+          echo "✅ ImageMagick ready"
 
       - name: Create screenshots directories
         run: |
