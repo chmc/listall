@@ -3694,7 +3694,7 @@ platform :ios do
       project: "./ListAll/ListAll.xcodeproj",
       scheme: "ListAllWatch Watch App",
       testplan: "ListAllWatch Watch App",
-      devices: [watch_device],
+      devices: ["iPhone 16 Pro Max", watch_device],
       languages: ["en-US", "fi"],
       output_directory: "./fastlane/screenshots/watch",
       clear_previous_screenshots: true,
@@ -3709,8 +3709,7 @@ platform :ios do
       only_testing: ["ListAllWatch Watch AppUITests/ListAllWatch_Watch_AppUITests/testWatchScreenshots"],  # Run only Watch screenshot tests
       # Test timeout: 300s default (5 min), 600s max (10 min)
       # Watch tests capture 5 screenshots with navigation - needs more time than iPhone/iPad
-      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
-      number_of_retries: 2  # Retry flaky tests in CI
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600"
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist for EACH locale before processing

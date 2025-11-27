@@ -116,36 +116,18 @@ jobs:
             exit 1
           fi
 
-      - name: Quick simulator health check
+      - name: Verify iPhone simulator exists
         run: |
-          echo "🏥 Verifying simulator responsiveness..."
-          START=$(date +%s)
-
-          # Boot simulator and verify it's responsive
-          DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPhone 16 Pro Max" iOS)
-          xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-
-          # Wait for boot (max 45s)
-          for i in {1..45}; do
-            if xcrun simctl list devices | grep "$DEVICE_UDID" | grep -q "Booted"; then
-              break
-            fi
-            sleep 1
-          done
-
-          BOOT_TIME=$(($(date +%s) - START))
-          echo "⏱️  Simulator boot time: ${BOOT_TIME}s"
-
-          # Fail fast if boot is too slow (indicates runner issues)
-          if [ $BOOT_TIME -gt 60 ]; then
-            echo "::error::Simulator boot took ${BOOT_TIME}s (>60s threshold) - runner may be overloaded"
+          echo "🔍 Verifying iPhone 16 Pro Max simulator..."
+          DEVICE_UDID=$(xcrun simctl list devices available | grep "iPhone 16 Pro Max" | head -1 | grep -oE '[A-F0-9-]{36}')
+          if [ -z "$DEVICE_UDID" ]; then
+            echo "❌ Simulator not found"
+            xcrun simctl list devices available
             exit 1
           fi
-
-          # Shutdown for clean state
-          xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
-          echo "✅ Simulator health check passed (${BOOT_TIME}s boot time)"
-        timeout-minutes: 3
+          echo "✅ Found simulator: $DEVICE_UDID"
+          echo "📝 Fastlane will handle boot"
+        timeout-minutes: 1
 
       - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
@@ -406,36 +388,18 @@ jobs:
             exit 1
           fi
 
-      - name: Quick simulator health check
+      - name: Verify iPad simulator exists
         run: |
-          echo "🏥 Verifying simulator responsiveness..."
-          START=$(date +%s)
-
-          # Boot simulator and verify it's responsive
-          DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPad Pro 13-inch (M4)" iOS)
-          xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-
-          # Wait for boot (max 45s)
-          for i in {1..45}; do
-            if xcrun simctl list devices | grep "$DEVICE_UDID" | grep -q "Booted"; then
-              break
-            fi
-            sleep 1
-          done
-
-          BOOT_TIME=$(($(date +%s) - START))
-          echo "⏱️  Simulator boot time: ${BOOT_TIME}s"
-
-          # Fail fast if boot is too slow (indicates runner issues)
-          if [ $BOOT_TIME -gt 60 ]; then
-            echo "::error::Simulator boot took ${BOOT_TIME}s (>60s threshold) - runner may be overloaded"
+          echo "🔍 Verifying iPad Pro 13-inch (M4) simulator..."
+          DEVICE_UDID=$(xcrun simctl list devices available | grep "iPad Pro 13-inch (M4)" | head -1 | grep -oE '[A-F0-9-]{36}')
+          if [ -z "$DEVICE_UDID" ]; then
+            echo "❌ Simulator not found"
+            xcrun simctl list devices available
             exit 1
           fi
-
-          # Shutdown for clean state
-          xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
-          echo "✅ Simulator health check passed (${BOOT_TIME}s boot time)"
-        timeout-minutes: 3
+          echo "✅ Found simulator: $DEVICE_UDID"
+          echo "📝 Fastlane will handle boot"
+        timeout-minutes: 1
 
       - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
@@ -681,11 +645,10 @@ jobs:
       - name: Clean up duplicate Watch simulators
         run: .github/scripts/cleanup-watch-duplicates.sh || true
 
-      - name: Verify and pair Watch simulator
+      - name: Verify Watch and iPhone simulators exist
         run: |
-          echo "🏥 Verifying Watch and iPhone simulators..."
+          echo "🔍 Verifying required simulators exist..."
 
-          # Find simulators using simple grep
           WATCH_UDID=$(xcrun simctl list devices available | grep "Apple Watch Series 10 (46mm)" | head -1 | grep -oE '[A-F0-9-]{36}')
           IPHONE_UDID=$(xcrun simctl list devices available | grep "iPhone 16 Pro Max" | head -1 | grep -oE '[A-F0-9-]{36}')
 
@@ -697,33 +660,8 @@ jobs:
 
           echo "✅ Found Watch: $WATCH_UDID"
           echo "✅ Found iPhone: $IPHONE_UDID"
-
-          # Boot iPhone first (Watch requires paired iPhone)
-          echo "🚀 Booting iPhone simulator..."
-          xcrun simctl boot "$IPHONE_UDID" 2>/dev/null || true
-          sleep 5
-
-          # Pair Watch with iPhone
-          echo "🔗 Pairing Watch with iPhone..."
-          xcrun simctl pair "$WATCH_UDID" "$IPHONE_UDID" 2>/dev/null || echo "⚠️ Already paired"
-
-          # Boot Watch
-          echo "🚀 Booting Watch simulator..."
-          xcrun simctl boot "$WATCH_UDID" 2>/dev/null || true
-
-          # Wait and verify
-          sleep 10
-          if xcrun simctl list devices | grep "$WATCH_UDID" | grep -q "Booted"; then
-            echo "✅ Watch simulator booted successfully"
-          else
-            echo "❌ Watch simulator failed to boot"
-            exit 1
-          fi
-
-          # Shutdown for clean state (Fastlane will re-boot)
-          xcrun simctl shutdown all 2>/dev/null || true
-          echo "✅ Simulators paired and verified"
-        timeout-minutes: 5
+          echo "📝 Fastlane will handle boot and pairing"
+        timeout-minutes: 1
 
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
@@ -852,7 +790,7 @@ jobs:
             echo "🏁 Screenshot generation completed at: $(date '+%Y-%m-%d %H:%M:%S') (exit code: $FASTLANE_EXIT)"
             exit $FASTLANE_EXIT
         env:
-          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "60"
+          SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "120"
 
       - name: Validate Watch screenshot dimensions
         if: success()
