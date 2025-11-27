@@ -93,9 +93,12 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
   total_captured = 0
 
   # OPTIMIZATION: Build once for all locales (saves ~5-10 min per device)
+  UI.message("⏱️  [PHASE 1/3] Pre-build validation")
   xctestrun_files = Dir.glob(File.join(derived, "Build/Products/*.xctestrun"))
   if xctestrun_files.empty?
     UI.header("🔨 Pre-building test products (one-time)")
+    UI.message("⚙️  This will take 2-4 minutes...")
+    build_start = Time.now
     scan(
       project: "./ListAll/ListAll.xcodeproj",
       scheme: "ListAll",
@@ -103,7 +106,8 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
       derived_data_path: derived,
       xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
     )
-    UI.success("✅ Pre-build complete")
+    build_duration = (Time.now - build_start).round(1)
+    UI.success("✅ Pre-build complete (#{build_duration}s)")
   else
     UI.message("📦 Using existing build: #{xctestrun_files.first}")
   end
@@ -111,6 +115,8 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
   locales.each_with_index do |locale, locale_idx|
     is_first = locale_idx == 0 && clear_previous
     UI.header("📸 Generating screenshots for #{device} (#{locale})")
+    UI.message("⏱️  [PHASE 2/3] Screenshot capture (locale #{locale_idx + 1}/#{locales.count})")
+    locale_start = Time.now
 
     # Set up environment for this run
     language_code = locale.split("-").first
@@ -118,6 +124,7 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
     ENV['FASTLANE_LANGUAGE'] = locale
     ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
     ENV['NSUnbufferedIO'] = 'YES'
+    UI.message("🌍 Language: #{language_code}, Locale: #{locale}, Device: #{device_name_sanitized}")
 
     # Create cache files in simulator directories
     cache_dir = File.join(simulator_host_home, "Library/Caches/tools.fastlane")
@@ -158,6 +165,11 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
     # Maximum increased to 900s to prevent premature timeout during CoreSimulatorService recovery
     xcargs = "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 480 -maximum-test-execution-time-allowance 900"
 
+    UI.message("🎬 Starting UI tests (this will take 4-8 minutes)...")
+    UI.message("   - Test timeout: 480s default / 900s max")
+    UI.message("   - Tests: testScreenshots01_WelcomeScreen, testScreenshots02_MainFlow")
+    snapshot_start = Time.now
+
     snapshot(
       derived_data_path: derived,
       test_without_building: true,
@@ -183,21 +195,34 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
       # Single retry layer (GitHub Actions) is more predictable and debuggable
     )
 
+    snapshot_duration = (Time.now - snapshot_start).round(1)
+    UI.success("✅ UI tests complete (#{snapshot_duration}s)")
+
     # Verify screenshots were captured
+    UI.message("⏱️  [PHASE 3/3] Verification")
     locale_dir = File.join(screenshots_dir, locale)
     device_pattern = device.include?("iPhone") ? "iPhone*.png" : "iPad*.png"
     device_shots = Dir.glob(File.join(locale_dir, device_pattern)).reject { |f| f.include?("_framed") }
 
     if device_shots.count >= expected_per_combination
-      UI.success("✅ Generated #{device_shots.count} screenshots for #{device} (#{locale})")
+      locale_duration = (Time.now - locale_start).round(1)
+      UI.success("✅ Generated #{device_shots.count} screenshots for #{device} (#{locale}) in #{locale_duration}s")
       total_captured += device_shots.count
     elsif device_shots.count > 0
+      UI.error("❌ Expected #{expected_per_combination} screenshots, found #{device_shots.count}")
+      UI.error("📁 Searched in: #{locale_dir}")
+      UI.error("🔍 Pattern: #{device_pattern}")
       UI.user_error!("🚨 Incomplete screenshot generation: #{device} (#{locale}) has only #{device_shots.count}/#{expected_per_combination} screenshots")
     else
+      UI.error("❌ No screenshots found")
+      UI.error("📁 Searched in: #{locale_dir}")
+      UI.error("🔍 Pattern: #{device_pattern}")
+      UI.error("💡 Check logs at: ~/Library/Logs/snapshot/")
       UI.user_error!("🚨 Screenshot generation failed: No screenshots found for #{device} (#{locale})")
     end
   end
 
+  UI.success("🎉 Total screenshots captured: #{total_captured}")
   total_captured
 end
 
@@ -219,9 +244,14 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
   target = target_sizes[device_type]
   device_pattern = device_type == :iphone ? "iPhone" : "iPad"
 
+  UI.message("📐 Normalizing #{device_pattern} screenshots to #{target[:width]}x#{target[:height]}")
+  normalize_start = Time.now
+
   FileUtils.mkdir_p(compat_root)
 
+  total_processed = 0
   locales.each do |locale|
+    UI.message("🔄 Processing locale: #{locale}")
     src = File.join(screenshots_dir, locale)
     dst = File.join(compat_root, locale)
     FileUtils.mkdir_p(dst)
@@ -230,6 +260,7 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
       basename = File.basename(png)
       next if basename.include?("_framed")
       next unless basename =~ /-(01|02|03|04|05)[-_]/
+      total_processed += 1
 
       # Read dimensions with validation
       size_str = `identify -format '%w %h' #{Shellwords.escape(png)} 2>&1`.strip
@@ -292,6 +323,9 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
       end
     end
   end
+
+  normalize_duration = (Time.now - normalize_start).round(1)
+  UI.success("✅ Normalized #{total_processed} screenshots in #{normalize_duration}s")
 end
 
 
@@ -740,6 +774,7 @@ platform :ios do
   desc "Generate iPhone screenshots for a SINGLE locale (for parallel CI jobs)"
   desc "Usage: bundle exec fastlane ios screenshots_iphone_locale locale:en-US"
   lane :screenshots_iphone_locale do |options|
+    lane_start = Time.now
     UI.header("📱 Generating iPhone Screenshots (Single Locale)")
 
     # Validate locale parameter
@@ -752,8 +787,14 @@ platform :ios do
       UI.user_error!("🚨 Invalid locale '#{locale}'. Must be 'en-US' or 'fi'")
     end
 
+    UI.message("📋 Configuration: iPhone 16 Pro Max, Locale: #{locale}")
+    UI.message("⏱️  Expected duration: 5-10 minutes")
+
     # Setup CI keychain if running in CI (prevents signing hangs)
-    setup_ci if ENV['CI']
+    if ENV['CI']
+      UI.message("🔧 Setting up CI keychain...")
+      setup_ci
+    end
 
     # Clean up old screenshot subdirectories
     screenshots_dir = File.expand_path("screenshots", __dir__)
@@ -764,6 +805,9 @@ platform :ios do
     end
 
     # Generate iPhone screenshots for single locale
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.message("STEP 1/3: Capture Screenshots")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     device = "iPhone 16 Pro Max"
     count = generate_screenshots_for_device(device, locales: [locale], clear_previous: true)
 
@@ -772,24 +816,37 @@ platform :ios do
     end
 
     # Normalize to App Store dimensions (single locale)
-    UI.header("📐 Normalizing iPhone screenshots to App Store dimensions")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.message("STEP 2/3: Normalize to App Store Dimensions")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     normalize_device_screenshots(:iphone, locales: [locale])
 
     # Verify normalized screenshots
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.message("STEP 3/3: Final Verification")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     compat_dir = File.expand_path("screenshots_compat", __dir__)
     iphone_shots = Dir.glob(File.join(compat_dir, locale, "iPhone*.png")).reject { |f| f.include?("_framed") }
 
     if iphone_shots.empty?
+      UI.error("❌ No normalized screenshots found")
+      UI.error("📁 Checked directory: #{compat_dir}/#{locale}/")
       UI.user_error!("🚨 iPhone normalization failed for #{locale}: No normalized screenshots found")
     end
 
-    UI.success("✅ iPhone screenshots complete for #{locale}: #{iphone_shots.count} normalized screenshots")
-    UI.message("📁 Output: #{compat_dir}/#{locale}/")
+    lane_duration = (Time.now - lane_start).round(1)
+    UI.success("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.success("✅ COMPLETE: iPhone screenshots for #{locale}")
+    UI.success("   Screenshots: #{iphone_shots.count}")
+    UI.success("   Duration: #{lane_duration}s")
+    UI.success("   Output: #{compat_dir}/#{locale}/")
+    UI.success("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   end
 
   desc "Generate iPad screenshots for a SINGLE locale (for parallel CI jobs)"
   desc "Usage: bundle exec fastlane ios screenshots_ipad_locale locale:en-US"
   lane :screenshots_ipad_locale do |options|
+    lane_start = Time.now
     UI.header("📱 Generating iPad Screenshots (Single Locale)")
 
     # Validate locale parameter
@@ -802,8 +859,14 @@ platform :ios do
       UI.user_error!("🚨 Invalid locale '#{locale}'. Must be 'en-US' or 'fi'")
     end
 
+    UI.message("📋 Configuration: iPad Pro 13-inch (M4), Locale: #{locale}")
+    UI.message("⏱️  Expected duration: 6-12 minutes (iPad takes longer than iPhone)")
+
     # Setup CI keychain if running in CI (prevents signing hangs)
-    setup_ci if ENV['CI']
+    if ENV['CI']
+      UI.message("🔧 Setting up CI keychain...")
+      setup_ci
+    end
 
     # Clean up old screenshot subdirectories
     screenshots_dir = File.expand_path("screenshots", __dir__)
@@ -814,6 +877,9 @@ platform :ios do
     end
 
     # Generate iPad screenshots for single locale
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.message("STEP 1/3: Capture Screenshots")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     device = "iPad Pro 13-inch (M4)"
     count = generate_screenshots_for_device(device, locales: [locale], clear_previous: true)
 
@@ -822,19 +888,31 @@ platform :ios do
     end
 
     # Normalize to App Store dimensions (single locale)
-    UI.header("📐 Normalizing iPad screenshots to App Store dimensions")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.message("STEP 2/3: Normalize to App Store Dimensions")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     normalize_device_screenshots(:ipad, locales: [locale])
 
     # Verify normalized screenshots
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.message("STEP 3/3: Final Verification")
+    UI.message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     compat_dir = File.expand_path("screenshots_compat", __dir__)
     ipad_shots = Dir.glob(File.join(compat_dir, locale, "iPad*.png")).reject { |f| f.include?("_framed") }
 
     if ipad_shots.empty?
+      UI.error("❌ No normalized screenshots found")
+      UI.error("📁 Checked directory: #{compat_dir}/#{locale}/")
       UI.user_error!("🚨 iPad normalization failed for #{locale}: No normalized screenshots found")
     end
 
-    UI.success("✅ iPad screenshots complete for #{locale}: #{ipad_shots.count} normalized screenshots")
-    UI.message("📁 Output: #{compat_dir}/#{locale}/")
+    lane_duration = (Time.now - lane_start).round(1)
+    UI.success("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    UI.success("✅ COMPLETE: iPad screenshots for #{locale}")
+    UI.success("   Screenshots: #{ipad_shots.count}")
+    UI.success("   Duration: #{lane_duration}s")
+    UI.success("   Output: #{compat_dir}/#{locale}/")
+    UI.success("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   end
 
   desc "Unified App Store screenshot generation pipeline"
