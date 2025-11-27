@@ -26,7 +26,7 @@ jobs:
   generate-iphone-screenshots:
     name: iPhone Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 90  # CRITICAL FIX: Increased to 90 to safely accommodate 2×40min retries + overhead
+    timeout-minutes: 50  # Phase 2 optimization: 2×20min attempts + 10min overhead (reduced from 90)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -116,10 +116,41 @@ jobs:
             exit 1
           fi
 
+      - name: Quick simulator health check
+        run: |
+          echo "🏥 Verifying simulator responsiveness..."
+          START=$(date +%s)
+
+          # Boot simulator and verify it's responsive
+          DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPhone 16 Pro Max" iOS)
+          xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+
+          # Wait for boot (max 45s)
+          for i in {1..45}; do
+            if xcrun simctl list devices | grep "$DEVICE_UDID" | grep -q "Booted"; then
+              break
+            fi
+            sleep 1
+          done
+
+          BOOT_TIME=$(($(date +%s) - START))
+          echo "⏱️  Simulator boot time: ${BOOT_TIME}s"
+
+          # Fail fast if boot is too slow (indicates runner issues)
+          if [ $BOOT_TIME -gt 60 ]; then
+            echo "::error::Simulator boot took ${BOOT_TIME}s (>60s threshold) - runner may be overloaded"
+            exit 1
+          fi
+
+          # Shutdown for clean state
+          xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
+          echo "✅ Simulator health check passed (${BOOT_TIME}s boot time)"
+        timeout-minutes: 3
+
       - name: Generate iPhone screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 40  # Per-attempt timeout (job timeout is 90min for 2 attempts + overhead)
+          timeout_minutes: 20  # Phase 2 optimization: Reduced from 40 (actual need ~10min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -188,7 +219,7 @@ jobs:
 
               echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
-              for i in {1..40}; do  # 40 intervals × 60s = 40 min max
+              for i in {1..20}; do  # Phase 2 optimization: 20 intervals × 60s = 20 min max (reduced from 40)
                 sleep 60
                 CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
                 ELAPSED=$((i * 60))
@@ -225,7 +256,7 @@ jobs:
             ) &
             MONITOR_PID=$!
 
-            # Run screenshot generation with nick-fields/retry timeout protection (40 min)
+            # Run screenshot generation with nick-fields/retry timeout protection (20 min)
             echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios screenshots_iphone_locale locale:${{ matrix.locale }}
             FASTLANE_EXIT=$?
@@ -250,6 +281,17 @@ jobs:
           path: fastlane/screenshots_compat/
           retention-days: 7  # Shorter retention for intermediate artifacts
 
+      - name: Upload partial screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: partial-screenshots-${{ matrix.locale }}-${{ github.run_attempt }}
+          path: |
+            fastlane/screenshots_compat/
+            fastlane/screenshots/watch_normalized/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload xcresult and logs for diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -267,7 +309,7 @@ jobs:
   generate-ipad-screenshots:
     name: iPad Screenshots (${{ matrix.locale }})
     runs-on: macos-14
-    timeout-minutes: 120  # CRITICAL FIX: Increased to 120 to safely accommodate 2×50min retries + overhead
+    timeout-minutes: 70  # Phase 2 optimization: 2×30min attempts + 10min overhead (reduced from 120)
     strategy:
       matrix:
         locale: [en-US, fi]
@@ -357,10 +399,41 @@ jobs:
             exit 1
           fi
 
+      - name: Quick simulator health check
+        run: |
+          echo "🏥 Verifying simulator responsiveness..."
+          START=$(date +%s)
+
+          # Boot simulator and verify it's responsive
+          DEVICE_UDID=$(.github/scripts/find-simulator.sh "iPad Pro 13-inch (M4)" iOS)
+          xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+
+          # Wait for boot (max 45s)
+          for i in {1..45}; do
+            if xcrun simctl list devices | grep "$DEVICE_UDID" | grep -q "Booted"; then
+              break
+            fi
+            sleep 1
+          done
+
+          BOOT_TIME=$(($(date +%s) - START))
+          echo "⏱️  Simulator boot time: ${BOOT_TIME}s"
+
+          # Fail fast if boot is too slow (indicates runner issues)
+          if [ $BOOT_TIME -gt 60 ]; then
+            echo "::error::Simulator boot took ${BOOT_TIME}s (>60s threshold) - runner may be overloaded"
+            exit 1
+          fi
+
+          # Shutdown for clean state
+          xcrun simctl shutdown "$DEVICE_UDID" 2>/dev/null || true
+          echo "✅ Simulator health check passed (${BOOT_TIME}s boot time)"
+        timeout-minutes: 3
+
       - name: Generate iPad screenshots (${{ matrix.locale }})
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 50  # Per-attempt timeout (job timeout is 120min for 2 attempts + overhead)
+          timeout_minutes: 30  # Phase 2 optimization: Reduced from 50 (actual need ~15min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -429,7 +502,7 @@ jobs:
 
               echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
-              for i in {1..50}; do  # 50 intervals × 60s = 50 min max
+              for i in {1..30}; do  # Phase 2 optimization: 30 intervals × 60s = 30 min max (reduced from 50)
                 sleep 60
                 CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
                 ELAPSED=$((i * 60))
@@ -466,7 +539,7 @@ jobs:
             ) &
             MONITOR_PID=$!
 
-            # Run screenshot generation with nick-fields/retry timeout protection (50 min)
+            # Run screenshot generation with nick-fields/retry timeout protection (30 min)
             echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios screenshots_ipad_locale locale:${{ matrix.locale }}
             FASTLANE_EXIT=$?
@@ -491,6 +564,17 @@ jobs:
           path: fastlane/screenshots_compat/
           retention-days: 7  # Shorter retention for intermediate artifacts
 
+      - name: Upload partial screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: partial-screenshots-${{ matrix.locale }}-${{ github.run_attempt }}
+          path: |
+            fastlane/screenshots_compat/
+            fastlane/screenshots/watch_normalized/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload xcresult and logs for diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -507,7 +591,7 @@ jobs:
   generate-watch-screenshots:
     name: Generate Watch Screenshots
     runs-on: macos-14
-    timeout-minutes: 110  # CRITICAL FIX: Increased from 90 to 110 to accommodate retry logic (2×50=100 with overhead)
+    timeout-minutes: 80  # Phase 2 optimization: 2×35min attempts + 10min overhead (reduced from 110)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -586,7 +670,7 @@ jobs:
       - name: Generate Watch screenshots
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 50  # Per-attempt timeout (job timeout is 110min for 2 attempts + overhead)
+          timeout_minutes: 35  # Phase 2 optimization: Reduced from 50 (actual need ~25min)
           max_attempts: 2
           retry_wait_seconds: 0  # No extra wait - cleanup script handles recovery
           on_retry_command: |
@@ -655,7 +739,7 @@ jobs:
 
               echo "📊 Progress monitor started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
-              for i in {1..50}; do  # 50 intervals × 60s = 50 min max
+              for i in {1..35}; do  # Phase 2 optimization: 35 intervals × 60s = 35 min max (reduced from 50)
                 sleep 60
                 CURRENT_COUNT=$(find "$SCREENSHOT_DIR" -name "*.png" -size +0 2>/dev/null | wc -l | tr -d ' ')
                 ELAPSED=$((i * 60))
@@ -692,7 +776,7 @@ jobs:
             ) &
             MONITOR_PID=$!
 
-            # Run screenshot generation with nick-fields/retry timeout protection (50 min)
+            # Run screenshot generation with nick-fields/retry timeout protection (35 min)
             echo "🚀 Starting screenshot generation at: $(date '+%Y-%m-%d %H:%M:%S')"
             bundle exec fastlane ios watch_screenshots
             FASTLANE_EXIT=$?
@@ -724,6 +808,17 @@ jobs:
           name: screenshot-report-watch
           path: fastlane/screenshots/watch/screenshots.html
           retention-days: 30
+
+      - name: Upload partial screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: partial-screenshots-watch-${{ github.run_attempt }}
+          path: |
+            fastlane/screenshots_compat/
+            fastlane/screenshots/watch_normalized/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload xcresult and logs for diagnostics
         if: always()

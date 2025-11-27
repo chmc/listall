@@ -327,6 +327,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
             print("📊 Accessibility hierarchy available: \(app.debugDescription.count > 0)")
         }
 
+        // Allow animations to fully settle before screenshot
+        print("⏳ Settling time: 0.3s for animation completion")
+        Thread.sleep(forTimeInterval: 0.3)
+
         // Final timeout budget check before screenshot
         let budgetBeforeSnapshot = checkTimeoutBudget(context: "Pre-Screenshot")
         if budgetBeforeSnapshot < 10 {
@@ -344,6 +348,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("📸 Phase 3: Screenshot Capture")
         let snapshotStart = Date()
         snapshot("01_Welcome", timeWaitingForIdle: 0)
+        print("📸 Screenshot 01_Welcome captured at: \(Date())")
         let snapshotDuration = Date().timeIntervalSince(snapshotStart)
         print("✅ Welcome screen screenshot captured in \(String(format: "%.1f", snapshotDuration))s")
 
@@ -394,6 +399,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
             print("📊 Accessibility hierarchy available: \(app.debugDescription.count > 0)")
         }
 
+        // Allow animations to fully settle before screenshot
+        print("⏳ Settling time: 0.3s for animation completion")
+        Thread.sleep(forTimeInterval: 0.3)
+
         // Check timeout budget before data wait
         let budgetBeforeDataWait = checkTimeoutBudget(context: "Pre-Data-Wait")
         if budgetBeforeDataWait < 30 {
@@ -433,6 +442,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("📸 Phase 4: Screenshot Capture")
         let snapshotStart = Date()
         snapshot("02_MainScreen", timeWaitingForIdle: 0)
+        print("📸 Screenshot 02_MainScreen captured at: \(Date())")
         let snapshotDuration = Date().timeIntervalSince(snapshotStart)
         print("✅ Main screen screenshot captured in \(String(format: "%.1f", snapshotDuration))s")
 
