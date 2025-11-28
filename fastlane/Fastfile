@@ -152,7 +152,8 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
       override_status_bar: true,
       reinstall_app: true,
       localize_simulator: true,
-      number_of_retries: 2
+      number_of_retries: 2,
+      skip_open_summary: true  # Don't open HTML report in browser
     )
 
     # Verify screenshots were captured
@@ -964,6 +965,7 @@ platform :ios do
           # Fastlane parses NSLog("snapshot: ...") entries from logs to automatically extract screenshots
           # Manual extraction code below provides fallback if automatic extraction fails
           result_bundle: false,
+          skip_open_summary: true  # Don't open HTML report in browser
           # Other settings (override_status_bar, reinstall_app, etc.) come from Snapfile defaults
         )
 
@@ -3454,7 +3456,8 @@ platform :ios do
       # Test timeout: 300s default (5 min), 600s max (10 min)
       # Watch tests capture 5 screenshots with navigation - needs more time than iPhone/iPad
       xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
-      number_of_retries: 2  # Retry flaky tests in CI
+      number_of_retries: 2,  # Retry flaky tests in CI
+      skip_open_summary: true  # Don't open HTML report in browser
     )
     
     # 2. Fail-fast check: ensure raw screenshots exist for EACH locale before processing
