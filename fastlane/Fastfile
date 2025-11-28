@@ -3683,25 +3683,26 @@ platform :ios do
     # Clean output directory unless incremental mode
     FileUtils.rm_rf(output_root) unless options[:skip_existing]
 
-    total_results = { processed: 0, skipped: 0, errors: [] }
+    total_framed = 0
+    total_locales = 0
 
     # Frame iPhone/iPad screenshots
     if (devices & [:iphone, :ipad]).any?
       UI.message("Framing iPhone/iPad screenshots...")
 
-      results = FramingHelper.frame_all_locales(
-        input_root,
-        File.join(output_root, 'ios'),
-        locales: locales,
-        add_titles: options.fetch(:add_titles, true),
-        skip_existing: options.fetch(:skip_existing, false)
-      )
+      begin
+        results = FramingHelper.frame_all_locales(
+          input_root,
+          File.join(output_root, 'ios'),
+          verbose: true,
+          skip_if_exists: options.fetch(:skip_existing, false)
+        )
 
-      results.each do |locale, r|
-        total_results[:processed] += r[:processed]
-        total_results[:skipped] += r[:skipped]
-        total_results[:errors] += r[:errors]
-        UI.message("  #{locale}: #{r[:processed]} framed, #{r[:skipped]} skipped")
+        total_framed += results[:total_screenshots]
+        total_locales += results[:locales]
+        UI.message("  iOS: #{results[:total_screenshots]} framed across #{results[:locales]} locale(s)")
+      rescue FramingHelper::FramingError => e
+        UI.error("  iOS framing failed: #{e.message}")
       end
     end
 
@@ -3709,31 +3710,25 @@ platform :ios do
     if devices.include?(:watch)
       UI.message("Framing Apple Watch screenshots...")
 
-      results = FramingHelper.frame_all_locales(
-        watch_input,
-        File.join(output_root, 'watch'),
-        locales: locales,
-        add_titles: options.fetch(:add_titles, true),
-        skip_existing: options.fetch(:skip_existing, false)
-      )
+      begin
+        results = FramingHelper.frame_all_locales(
+          watch_input,
+          File.join(output_root, 'watch'),
+          verbose: true,
+          skip_if_exists: options.fetch(:skip_existing, false)
+        )
 
-      results.each do |locale, r|
-        total_results[:processed] += r[:processed]
-        total_results[:skipped] += r[:skipped]
-        total_results[:errors] += r[:errors]
-        UI.message("  Watch #{locale}: #{r[:processed]} framed")
+        total_framed += results[:total_screenshots]
+        total_locales += results[:locales]
+        UI.message("  Watch: #{results[:total_screenshots]} framed across #{results[:locales]} locale(s)")
+      rescue FramingHelper::FramingError => e
+        UI.error("  Watch framing failed: #{e.message}")
       end
     end
 
-    # Report results
-    if total_results[:errors].any?
-      UI.important("Completed with #{total_results[:errors].count} error(s):")
-      total_results[:errors].each { |e| UI.error("  #{e[:file]}: #{e[:error]}") }
-    end
+    UI.success("Framed #{total_framed} screenshots across #{total_locales} locale(s)")
 
-    UI.success("Framed #{total_results[:processed]} screenshots (#{total_results[:skipped]} skipped)")
-
-    total_results
+    { total_framed: total_framed, total_locales: total_locales }
   end
 
   desc "Run RSpec tests for custom framing implementation"
