@@ -276,10 +276,27 @@ generate_all_screenshots() {
     log_info "Platform: All (iPhone + iPad + Watch)"
     log_info "Screenshots: 9 per locale (18 total)"
     log_info "Estimated time: ~60-90 minutes"
+    log_info "Mode: No device frames (raw normalized screenshots)"
     echo ""
 
-    if ! bundle exec fastlane ios prepare_appstore; then
-        log_error "Full screenshot generation failed"
+    # Generate each platform separately to skip framing
+    # (prepare_appstore lane includes frameit which we don't need)
+
+    log_info "Step 1/3: Generating iPhone screenshots..."
+    if ! bundle exec fastlane ios screenshots_iphone; then
+        log_error "iPhone screenshot generation failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_info "Step 2/3: Generating iPad screenshots..."
+    if ! bundle exec fastlane ios screenshots_ipad; then
+        log_error "iPad screenshot generation failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_info "Step 3/3: Generating Watch screenshots..."
+    if ! bundle exec fastlane ios watch_screenshots; then
+        log_error "Watch screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
