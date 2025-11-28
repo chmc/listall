@@ -79,11 +79,26 @@ Dependencies/
 
 fastlane/report.xml
 fastlane/Preview.html
-fastlane/screenshots/
-fastlane/screenshots_compat/
 fastlane/test_output
 fastlane/derivedDataSnapshot/
 fastlane/derivedDataWatch/
+fastlane/.env
+
+# Screenshot workflow: Local screenshot generation
+# We generate screenshots locally and commit the normalized versions
+# Raw/intermediate screenshots are ignored, normalized ones are tracked
+
+# Ignore raw/intermediate screenshot directories
+fastlane/screenshots/en-US/
+fastlane/screenshots/fi/
+fastlane/screenshots/watch/
+fastlane/screenshots/delivery/
+fastlane/screenshots_compat/delivery/
+
+# KEEP (track) normalized screenshots that should be committed:
+# - screenshots_compat/ contains normalized iPhone/iPad screenshots (1290x2796, 2064x2752)
+# - screenshots/watch_normalized/ contains normalized Watch screenshots (396x484)
+# Note: These directories will be committed to git for App Store deployment
 
 # Code Injection
 #

@@ -1,0 +1,77 @@
+name: Publish to App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version for this release (e.g., 1.2.0)'
+        required: true
+        type: string
+      skip_validation:
+        description: 'Skip screenshot validation'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Upload Metadata & Screenshots
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install ImageMagick (required for screenshot validation)
+        run: brew install imagemagick
+
+      - name: Verify screenshots exist in repository
+        run: |
+          echo "=== Checking committed screenshots ==="
+          echo ""
+          echo "iPhone/iPad screenshots (screenshots_compat):"
+          find fastlane/screenshots_compat -name "*.png" -type f | wc -l | xargs echo "  Total files:"
+          ls -la fastlane/screenshots_compat/en-US/ || { echo "❌ Missing en-US screenshots"; exit 1; }
+          ls -la fastlane/screenshots_compat/fi/ || { echo "❌ Missing fi screenshots"; exit 1; }
+          echo ""
+          echo "Watch screenshots (watch_normalized):"
+          find fastlane/screenshots/watch_normalized -name "*.png" -type f | wc -l | xargs echo "  Total files:"
+          ls -la fastlane/screenshots/watch_normalized/en-US/ || { echo "❌ Missing en-US Watch screenshots"; exit 1; }
+          ls -la fastlane/screenshots/watch_normalized/fi/ || { echo "❌ Missing fi Watch screenshots"; exit 1; }
+
+      - name: Validate screenshot dimensions
+        if: ${{ !inputs.skip_validation }}
+        run: bundle exec fastlane ios validate_delivery_screenshots
+
+      - name: Upload metadata and screenshots to App Store Connect
+        run: bundle exec fastlane release version:${{ inputs.version }}
+
+      - name: Summary
+        run: |
+          echo "## 🎉 App Store Publication Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Screenshots Uploaded (from repository)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ iPhone (EN + FI): 4 screenshots (1290x2796)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ iPad 13\" (EN + FI): 4 screenshots (2064x2752)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Watch (EN + FI): 10 screenshots (396x484)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Review version: **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "3. Select the TestFlight build you want to release" >> $GITHUB_STEP_SUMMARY
+          echo "4. Review the uploaded screenshots and metadata" >> $GITHUB_STEP_SUMMARY
+          echo "5. Submit for review" >> $GITHUB_STEP_SUMMARY
