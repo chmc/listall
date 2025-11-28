@@ -191,19 +191,23 @@ Validate all delivery-ready screenshots (normalized iPhone/iPad + naked Watch)
 [bundle exec] fastlane ios frame_screenshots_custom
 ```
 
-Frame all normalized screenshots with custom device frames (TDD implementation)
+Frame all normalized screenshots with custom device frames
 
-Uses custom implementation with official Apple device frames
+Uses open source frames from jamesjingyi/mockup-device-frames
 
 Options:
+
+  app_store_mode: Scale frames to fit App Store dimensions (default: true)
 
   locales: Array of locales to process (default: ['en-US', 'fi'])
 
   devices: Array of device types [:iphone, :ipad] (default: both)
 
+  background_color: Background color hex (default: '#0E1117')
+
   skip_existing: Skip already framed screenshots for incremental runs (default: false)
 
-Note: Watch screenshots are not framed (no open source frames available)
+Note: Watch screenshots are not framed (use normalized screenshots directly)
 
 ### ios test_framing
 

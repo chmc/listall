@@ -18,7 +18,13 @@ module FramingHelper
     quality: 95,
     gravity: 'center',
     skip_if_exists: false,
-    verbose: false
+    verbose: false,
+    # App Store mode: scale frame to fit within App Store required dimensions
+    # This produces screenshots that Apple will accept for App Store Connect
+    app_store_mode: false,
+    # Padding percentage (0.0-1.0) around scaled device in App Store mode
+    # 0.05 = 5% padding on each side
+    app_store_padding: 0.03
   }.freeze
 
   # Frame a single screenshot with device frame
@@ -303,6 +309,9 @@ module FramingHelper
   # Apple bezels have a transparent center where the screenshot shows through.
   # Composition order: 1) background canvas, 2) screenshot at offset, 3) bezel on top
   #
+  # In App Store mode, the frame and screenshot are scaled down to fit within
+  # Apple's required dimensions, centered on a background.
+  #
   # @param frame_path [String] Path to frame asset (bezel with transparent center)
   # @param screenshot_path [String] Path to screenshot
   # @param output_path [String] Path for output
@@ -310,21 +319,38 @@ module FramingHelper
   # @param options [Hash] Additional options
   # @return [String] Complete ImageMagick command
   def self.build_imagemagick_command(frame_path:, screenshot_path:, output_path:, device_spec:, options:)
-    # Escape all file paths
+    if options[:app_store_mode]
+      build_app_store_command(
+        frame_path: frame_path,
+        screenshot_path: screenshot_path,
+        output_path: output_path,
+        device_spec: device_spec,
+        options: options
+      )
+    else
+      build_standard_command(
+        frame_path: frame_path,
+        screenshot_path: screenshot_path,
+        output_path: output_path,
+        device_spec: device_spec,
+        options: options
+      )
+    end
+  end
+  private_class_method :build_imagemagick_command
+
+  # Build standard framing command (frame at original size)
+  def self.build_standard_command(frame_path:, screenshot_path:, output_path:, device_spec:, options:)
     escaped_frame = Shellwords.escape(frame_path)
     escaped_screenshot = Shellwords.escape(screenshot_path)
     escaped_output = Shellwords.escape(output_path)
 
-    # Get positioning from device spec
     x_offset = device_spec[:screenshot_x]
     y_offset = device_spec[:screenshot_y]
     final_width = device_spec[:final_width]
     final_height = device_spec[:final_height]
     bg_color = options[:background_color]
 
-    # Build command
-    # Pattern: Create canvas -> place screenshot -> overlay bezel (with transparent center)
-    # magick -size WxH xc:'<bg>' <screenshot> -geometry +X+Y -composite <frame> -composite -quality Q <output>
     cmd_parts = [
       'magick',
       "-size #{final_width}x#{final_height}",
@@ -340,7 +366,89 @@ module FramingHelper
 
     cmd_parts.join(' ')
   end
-  private_class_method :build_imagemagick_command
+  private_class_method :build_standard_command
+
+  # Build App Store mode command (scaled to fit App Store dimensions)
+  #
+  # This scales the device frame to fit within App Store required dimensions,
+  # maintaining aspect ratio and centering on the canvas.
+  def self.build_app_store_command(frame_path:, screenshot_path:, output_path:, device_spec:, options:)
+    escaped_frame = Shellwords.escape(frame_path)
+    escaped_screenshot = Shellwords.escape(screenshot_path)
+    escaped_output = Shellwords.escape(output_path)
+
+    # App Store target dimensions
+    target_width = device_spec[:app_store_width]
+    target_height = device_spec[:app_store_height]
+
+    unless target_width && target_height
+      raise ImageMagickError, "App Store dimensions not available for device type: #{device_spec[:type]}"
+    end
+
+    # Frame original dimensions
+    frame_width = device_spec[:final_width]
+    frame_height = device_spec[:final_height]
+
+    # Calculate available space (with padding)
+    padding = options[:app_store_padding] || 0.03
+    available_width = (target_width * (1 - 2 * padding)).to_i
+    available_height = (target_height * (1 - 2 * padding)).to_i
+
+    # Calculate scale factor to fit frame within available space
+    scale_x = available_width.to_f / frame_width
+    scale_y = available_height.to_f / frame_height
+    scale = [scale_x, scale_y].min
+
+    # Scaled frame dimensions
+    scaled_frame_width = (frame_width * scale).to_i
+    scaled_frame_height = (frame_height * scale).to_i
+
+    # Scaled screenshot position (relative to scaled frame)
+    scaled_screenshot_x = (device_spec[:screenshot_x] * scale).to_i
+    scaled_screenshot_y = (device_spec[:screenshot_y] * scale).to_i
+
+    # Scaled screenshot dimensions
+    scaled_screenshot_width = (device_spec[:screenshot_width] * scale).to_i
+    scaled_screenshot_height = (device_spec[:screenshot_height] * scale).to_i
+
+    # Position to center scaled frame on canvas
+    frame_x = (target_width - scaled_frame_width) / 2
+    frame_y = (target_height - scaled_frame_height) / 2
+
+    # Screenshot position on final canvas
+    final_screenshot_x = frame_x + scaled_screenshot_x
+    final_screenshot_y = frame_y + scaled_screenshot_y
+
+    bg_color = options[:background_color]
+
+    # Build command:
+    # 1. Create canvas at App Store dimensions
+    # 2. Scale and place screenshot
+    # 3. Scale and overlay frame
+    # Note: Parentheses must be escaped for shell execution
+    cmd_parts = [
+      'magick',
+      "-size #{target_width}x#{target_height}",
+      "xc:'#{bg_color}'",
+      '\\(',
+      escaped_screenshot,
+      "-resize #{scaled_screenshot_width}x#{scaled_screenshot_height}!",
+      '\\)',
+      "-geometry +#{final_screenshot_x}+#{final_screenshot_y}",
+      '-composite',
+      '\\(',
+      escaped_frame,
+      "-resize #{scaled_frame_width}x#{scaled_frame_height}",
+      '\\)',
+      "-geometry +#{frame_x}+#{frame_y}",
+      '-composite',
+      "-quality #{options[:quality]}",
+      escaped_output
+    ]
+
+    cmd_parts.join(' ')
+  end
+  private_class_method :build_app_store_command
 
   # Verify that output file was created successfully
   #

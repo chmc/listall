@@ -3655,17 +3655,29 @@ platform :ios do
     end
   end
 
-  desc "Frame all normalized screenshots with custom device frames (TDD implementation)"
-  desc "Uses custom implementation with official Apple device frames"
+  desc "Frame all normalized screenshots with custom device frames"
+  desc "Uses open source frames from jamesjingyi/mockup-device-frames"
   desc "Options:"
+  desc "  app_store_mode: Scale frames to fit App Store dimensions (default: true)"
   desc "  locales: Array of locales to process (default: ['en-US', 'fi'])"
   desc "  devices: Array of device types [:iphone, :ipad] (default: both)"
+  desc "  background_color: Background color hex (default: '#0E1117')"
   desc "  skip_existing: Skip already framed screenshots for incremental runs (default: false)"
-  desc "Note: Watch screenshots are not framed (no open source frames available)"
+  desc "Note: Watch screenshots are not framed (use normalized screenshots directly)"
   lane :frame_screenshots_custom do |options|
     require_relative 'lib/framing_helper'
 
-    UI.header("Framing Screenshots with Custom Device Frames")
+    # App Store mode: scale frames to fit within App Store required dimensions
+    # This produces screenshots Apple will accept (exact pixel dimensions)
+    app_store_mode = options.fetch(:app_store_mode, true)
+
+    if app_store_mode
+      UI.header("Framing Screenshots for App Store (Scaled to Fit)")
+      UI.message("Output will match App Store required dimensions exactly")
+    else
+      UI.header("Framing Screenshots (Marketing Mode)")
+      UI.message("Output at full device frame resolution (not for App Store)")
+    end
     UI.message("Using open source frames from jamesjingyi/mockup-device-frames")
 
     # Validate dependencies
@@ -3679,6 +3691,7 @@ platform :ios do
 
     locales = options[:locales] || ['en-US', 'fi']
     devices = options[:devices] || [:iphone, :ipad]
+    background_color = options[:background_color] || '#0E1117'
 
     # Clean output directory unless incremental mode
     FileUtils.rm_rf(output_root) unless options[:skip_existing]
@@ -3695,7 +3708,9 @@ platform :ios do
           input_root,
           File.join(output_root, 'ios'),
           verbose: true,
-          skip_if_exists: options.fetch(:skip_existing, false)
+          skip_if_exists: options.fetch(:skip_existing, false),
+          app_store_mode: app_store_mode,
+          background_color: background_color
         )
 
         total_framed += results[:total_screenshots]
@@ -3707,6 +3722,11 @@ platform :ios do
     end
 
     UI.success("Framed #{total_framed} screenshots across #{total_locales} locale(s)")
+    if app_store_mode
+      UI.success("Screenshots are App Store compliant (exact required dimensions)")
+    else
+      UI.important("Note: These screenshots are NOT App Store compliant (use for marketing only)")
+    end
     UI.important("Note: Watch screenshots are not framed (use normalized screenshots directly)")
 
     { total_framed: total_framed, total_locales: total_locales }

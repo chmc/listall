@@ -17,6 +17,14 @@ require 'json'
 #   # => { device: "iPhone 16 Pro Max", screen_area: {...}, ... }
 #
 module DeviceFrameRegistry
+  # App Store Connect required screenshot dimensions
+  # These are the EXACT pixel dimensions Apple requires for each device category
+  APP_STORE_DIMENSIONS = {
+    iphone_6_7: { width: 1290, height: 2796, name: 'iPhone 6.7"' },
+    ipad_13: { width: 2064, height: 2752, name: 'iPad 13"' },
+    watch: { width: 396, height: 484, name: 'Apple Watch' }
+  }.freeze
+
   # Custom exception raised when frame metadata cannot be found
   class FrameNotFoundError < StandardError; end
 
@@ -157,6 +165,26 @@ module DeviceFrameRegistry
     nil
   end
 
+  # Get App Store target dimensions for a device type
+  #
+  # @param device_type [Symbol] Device type (:iphone, :ipad, :watch)
+  # @return [Hash, nil] App Store dimensions { width:, height:, name: } or nil
+  #
+  # @example
+  #   DeviceFrameRegistry.app_store_dimensions(:iphone)
+  #   # => { width: 1290, height: 2796, name: 'iPhone 6.7"' }
+  #
+  def self.app_store_dimensions(device_type)
+    case device_type
+    when :iphone
+      APP_STORE_DIMENSIONS[:iphone_6_7]
+    when :ipad
+      APP_STORE_DIMENSIONS[:ipad_13]
+    when :watch
+      APP_STORE_DIMENSIONS[:watch]
+    end
+  end
+
   # Enhance device specification with metadata fields
   #
   # Transforms metadata structure into fields expected by FramingHelper.
@@ -168,6 +196,8 @@ module DeviceFrameRegistry
   #
   # @api private
   def self.enhance_device_spec(device_spec, metadata)
+    app_store = app_store_dimensions(device_spec[:type])
+
     device_spec.merge({
       name: metadata[:device],
       screenshot_width: metadata[:screen_area][:width],
@@ -176,7 +206,10 @@ module DeviceFrameRegistry
       screenshot_y: metadata[:screen_area][:y],
       final_width: metadata[:frame_dimensions][:width],
       final_height: metadata[:frame_dimensions][:height],
-      frame_name: device_spec[:frame]
+      frame_name: device_spec[:frame],
+      # App Store target dimensions
+      app_store_width: app_store ? app_store[:width] : nil,
+      app_store_height: app_store ? app_store[:height] : nil
     })
   end
   private_class_method :enhance_device_spec
