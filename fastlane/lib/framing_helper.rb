@@ -347,14 +347,35 @@ module FramingHelper
 
     x_offset = device_spec[:screenshot_x]
     y_offset = device_spec[:screenshot_y]
+    screenshot_width = device_spec[:screenshot_width]
+    screenshot_height = device_spec[:screenshot_height]
     final_width = device_spec[:final_width]
     final_height = device_spec[:final_height]
     bg_color = options[:background_color]
+
+    # Calculate screen fill area - use the exact screen position with corner radius
+    # The frame has rounded corners, so use a rounded rectangle to match
+    # Add significant padding to ensure complete coverage of frame's screen cutout
+    # The padding needs to be large enough to cover the frame's transparent edge areas
+    fill_padding = 40
+    screen_fill_x1 = x_offset - fill_padding
+    screen_fill_y1 = y_offset - fill_padding
+    screen_fill_x2 = x_offset + screenshot_width + fill_padding
+    screen_fill_y2 = y_offset + screenshot_height + fill_padding
+
+    # Get the corner radius from device spec (iPhone has rounded corners)
+    # The corner radius must match the frame's screen cutout curve precisely
+    # Too small = dark edges visible, too large = white extends beyond frame corners
+    base_radius = device_spec[:corner_radius] || 0
+    corner_radius = base_radius > 0 ? (base_radius + fill_padding + 45) : 0
 
     cmd_parts = [
       'magick',
       "-size #{final_width}x#{final_height}",
       "xc:'#{bg_color}'",
+      # Fill screen area with white rounded rectangle to match frame's screen cutout
+      '-fill white',
+      "-draw \"roundrectangle #{screen_fill_x1},#{screen_fill_y1} #{screen_fill_x2},#{screen_fill_y2} #{corner_radius},#{corner_radius}\"",
       escaped_screenshot,
       "-geometry +#{x_offset}+#{y_offset}",
       '-composite',
@@ -423,13 +444,32 @@ module FramingHelper
 
     # Build command:
     # 1. Create canvas at App Store dimensions
-    # 2. Scale and place screenshot
-    # 3. Scale and overlay frame
+    # 2. Fill screen area with white (for iPhone rounded corners)
+    # 3. Scale and place screenshot
+    # 4. Scale and overlay frame
     # Note: Parentheses must be escaped for shell execution
+
+    # Calculate screen fill area - use the exact screen position with corner radius
+    # The frame has rounded corners, so use a rounded rectangle to match
+    # Add significant padding to ensure complete coverage of frame's screen cutout
+    fill_padding = (40 * scale).to_i
+    screen_fill_x1 = final_screenshot_x - fill_padding
+    screen_fill_y1 = final_screenshot_y - fill_padding
+    screen_fill_x2 = final_screenshot_x + scaled_screenshot_width + fill_padding
+    screen_fill_y2 = final_screenshot_y + scaled_screenshot_height + fill_padding
+
+    # Scale the corner radius to match the scaled frame
+    # The corner radius must match the frame's screen cutout curve precisely
+    base_radius = device_spec[:corner_radius] || 0
+    corner_radius = base_radius > 0 ? ((base_radius + 85) * scale).to_i : 0
+
     cmd_parts = [
       'magick',
       "-size #{target_width}x#{target_height}",
       "xc:'#{bg_color}'",
+      # Fill screen area with white rounded rectangle to match frame's screen cutout
+      '-fill white',
+      "-draw \"roundrectangle #{screen_fill_x1},#{screen_fill_y1} #{screen_fill_x2},#{screen_fill_y2} #{corner_radius},#{corner_radius}\"",
       '\\(',
       escaped_screenshot,
       "-resize #{scaled_screenshot_width}x#{scaled_screenshot_height}!",

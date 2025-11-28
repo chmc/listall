@@ -207,6 +207,8 @@ module DeviceFrameRegistry
       final_width: metadata[:frame_dimensions][:width],
       final_height: metadata[:frame_dimensions][:height],
       frame_name: device_spec[:frame],
+      # Corner radius for rounded screen area (iPhone has rounded corners)
+      corner_radius: metadata[:corner_radius] || 0,
       # App Store target dimensions
       app_store_width: app_store ? app_store[:width] : nil,
       app_store_height: app_store ? app_store[:height] : nil
