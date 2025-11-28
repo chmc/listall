@@ -53,13 +53,15 @@ Options:
 
 Deliver metadata/screenshots to App Store (no auto-submit)
 
+Creates new app version if needed. Usage: fastlane release version:1.2.0
+
 ### ios release_dry_run
 
 ```sh
 [bundle exec] fastlane ios release_dry_run
 ```
 
-Dry-run: Verify framed screenshots would be detected by deliver (no upload)
+Dry-run: Verify normalized screenshots would be detected by deliver (no upload)
 
 ### ios asc_dry_run
 
@@ -104,6 +106,30 @@ Validate that all targets have matching versions
 Generate screenshots for App Store
 
 Runs automated UI tests to capture screenshots for all configured devices and locales
+
+### ios screenshots_iphone
+
+```sh
+[bundle exec] fastlane ios screenshots_iphone
+```
+
+Generate iPhone screenshots only
+
+Captures iPhone 16 Pro Max screenshots for EN and FI locales
+
+Outputs normalized screenshots to screenshots_compat/ ready for App Store
+
+### ios screenshots_ipad
+
+```sh
+[bundle exec] fastlane ios screenshots_ipad
+```
+
+Generate iPad screenshots only
+
+Captures iPad Pro 13-inch (M4) screenshots for EN and FI locales
+
+Outputs normalized screenshots to screenshots_compat/ ready for App Store
 
 ### ios prepare_appstore
 
@@ -157,7 +183,7 @@ Validate watch screenshot sizes and naming (uses App Store Connect requirements)
 [bundle exec] fastlane ios validate_delivery_screenshots
 ```
 
-Validate all delivery-ready screenshots (framed iPhone/iPad + naked Watch)
+Validate all delivery-ready screenshots (normalized iPhone/iPad + naked Watch)
 
 ----
 
