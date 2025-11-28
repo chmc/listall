@@ -1,19 +1,19 @@
 {
   "device": "iPad Pro 13-inch M4",
   "screen_area": {
-    "x": 100,
-    "y": 100,
+    "x": 192,
+    "y": 188,
     "width": 2064,
     "height": 2752
   },
   "frame_dimensions": {
-    "width": 2264,
-    "height": 2952
+    "width": 2448,
+    "height": 3132
   },
   "variants": {
     "black": "ipad_pro_13_m4_black.png"
   },
   "default_variant": "black",
   "corner_radius": 25,
-  "notes": "Synthetic frame (dark border) for iPad Pro 13-inch M4. No official Apple bezel available for this screen size. Replace with official bezel when available."
+  "notes": "From jamesjingyi/mockup-device-frames repo (open source). Screenshot centered in transparent screen area."
 }

@@ -1,19 +1,19 @@
 {
   "device": "iPhone 16 Pro Max",
   "screen_area": {
-    "x": 90,
-    "y": 102,
+    "x": 184,
+    "y": 191,
     "width": 1290,
     "height": 2796
   },
   "frame_dimensions": {
-    "width": 1470,
-    "height": 3000
+    "width": 1650,
+    "height": 3178
   },
   "variants": {
     "black": "iphone_16_pro_max_black.png"
   },
   "default_variant": "black",
   "corner_radius": 55,
-  "notes": "Official Apple iPhone 16 Pro Max Black Titanium bezel. Screenshot centered in transparent screen area."
+  "notes": "From jamesjingyi/mockup-device-frames repo (open source). Screenshot centered in transparent screen area."
 }

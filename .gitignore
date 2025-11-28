@@ -265,6 +265,5 @@ coordination/
 
 # Temporary prompt / log files
 hive-mind-prompt-*.txt
-# Device frame assets (acquire from Apple Design Resources)
-fastlane/device_frames/**/*.png
-!fastlane/device_frames/**/.gitkeep
+# Framed screenshot output (generated files)
+fastlane/screenshots_framed/

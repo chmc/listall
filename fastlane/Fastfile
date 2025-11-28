@@ -3659,13 +3659,14 @@ platform :ios do
   desc "Uses custom implementation with official Apple device frames"
   desc "Options:"
   desc "  locales: Array of locales to process (default: ['en-US', 'fi'])"
-  desc "  devices: Array of device types [:iphone, :ipad, :watch] (default: all)"
-  desc "  add_titles: Add text overlays from Framefile.json (default: true)"
+  desc "  devices: Array of device types [:iphone, :ipad] (default: both)"
   desc "  skip_existing: Skip already framed screenshots for incremental runs (default: false)"
+  desc "Note: Watch screenshots are not framed (no open source frames available)"
   lane :frame_screenshots_custom do |options|
     require_relative 'lib/framing_helper'
 
     UI.header("Framing Screenshots with Custom Device Frames")
+    UI.message("Using open source frames from jamesjingyi/mockup-device-frames")
 
     # Validate dependencies
     unless system('which magick > /dev/null 2>&1')
@@ -3674,11 +3675,10 @@ platform :ios do
 
     # Configuration
     input_root = File.expand_path('screenshots_compat', __dir__)
-    watch_input = File.expand_path('screenshots/watch_normalized', __dir__)
     output_root = File.expand_path('screenshots_framed', __dir__)
 
     locales = options[:locales] || ['en-US', 'fi']
-    devices = options[:devices] || [:iphone, :ipad, :watch]
+    devices = options[:devices] || [:iphone, :ipad]
 
     # Clean output directory unless incremental mode
     FileUtils.rm_rf(output_root) unless options[:skip_existing]
@@ -3706,27 +3706,8 @@ platform :ios do
       end
     end
 
-    # Frame Watch screenshots
-    if devices.include?(:watch)
-      UI.message("Framing Apple Watch screenshots...")
-
-      begin
-        results = FramingHelper.frame_all_locales(
-          watch_input,
-          File.join(output_root, 'watch'),
-          verbose: true,
-          skip_if_exists: options.fetch(:skip_existing, false)
-        )
-
-        total_framed += results[:total_screenshots]
-        total_locales += results[:locales]
-        UI.message("  Watch: #{results[:total_screenshots]} framed across #{results[:locales]} locale(s)")
-      rescue FramingHelper::FramingError => e
-        UI.error("  Watch framing failed: #{e.message}")
-      end
-    end
-
     UI.success("Framed #{total_framed} screenshots across #{total_locales} locale(s)")
+    UI.important("Note: Watch screenshots are not framed (use normalized screenshots directly)")
 
     { total_framed: total_framed, total_locales: total_locales }
   end

@@ -199,11 +199,11 @@ Options:
 
   locales: Array of locales to process (default: ['en-US', 'fi'])
 
-  devices: Array of device types [:iphone, :ipad, :watch] (default: all)
-
-  add_titles: Add text overlays from Framefile.json (default: true)
+  devices: Array of device types [:iphone, :ipad] (default: both)
 
   skip_existing: Skip already framed screenshots for incremental runs (default: false)
+
+Note: Watch screenshots are not framed (no open source frames available)
 
 ### ios test_framing
 
