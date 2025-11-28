@@ -225,7 +225,8 @@ cleanup_simulators() {
 
     # Verify no simulators are booted
     local booted_count
-    booted_count=$(xcrun simctl list devices | grep -c "(Booted)" || echo "0")
+    booted_count=$(xcrun simctl list devices | grep -c "(Booted)" 2>/dev/null || true)
+    booted_count="${booted_count:-0}"
 
     if [[ "${booted_count}" -gt 0 ]]; then
         log_warn "Warning: ${booted_count} simulator(s) still showing as booted"
@@ -491,11 +492,14 @@ main() {
     log_info "Locale: ${LOCALE}"
     echo ""
 
-    # Clean simulator state to prevent hangs from previous runs
-    cleanup_simulators
+    # For framed mode, skip cleanup since we need existing screenshots
+    if [[ "${PLATFORM}" != "framed" ]]; then
+        # Clean simulator state to prevent hangs from previous runs
+        cleanup_simulators
 
-    # Clean old screenshots before generating new ones
-    clean_screenshot_directories
+        # Clean old screenshots before generating new ones
+        clean_screenshot_directories
+    fi
 
     # Generate screenshots based on platform
     case "${PLATFORM}" in
