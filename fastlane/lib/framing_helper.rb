@@ -23,8 +23,8 @@ module FramingHelper
     # This produces screenshots that Apple will accept for App Store Connect
     app_store_mode: false,
     # Padding percentage (0.0-1.0) around scaled device in App Store mode
-    # 0.05 = 5% padding on each side
-    app_store_padding: 0.03
+    # 0.0 = no padding, frame fills available width completely
+    app_store_padding: 0.0
   }.freeze
 
   # Frame a single screenshot with device frame
