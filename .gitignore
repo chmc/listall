@@ -87,17 +87,16 @@ fastlane/derivedDataWatch/
 # We generate screenshots locally and commit the normalized versions
 # Raw/intermediate screenshots are ignored, normalized ones are tracked
 
-# Ignore raw/intermediate screenshot directories
-fastlane/screenshots/en-US/
-fastlane/screenshots/fi/
-fastlane/screenshots/watch/
-fastlane/screenshots/delivery/
+# Ignore all raw/intermediate screenshot files
+fastlane/screenshots/*
 fastlane/screenshots_compat/delivery/
 
-# KEEP (track) normalized screenshots that should be committed:
-# - screenshots_compat/ contains normalized iPhone/iPad screenshots (1290x2796, 2064x2752)
-# - screenshots/watch_normalized/ contains normalized Watch screenshots (396x484)
-# Note: These directories will be committed to git for App Store deployment
+# KEEP (track) normalized Watch screenshots (396x484)
+# Note: Use git add -f to initially add watch_normalized/
+!fastlane/screenshots/watch_normalized/
+
+# KEEP (track) normalized iPhone/iPad screenshots (1290x2796, 2064x2752)
+# Note: screenshots_compat/ is outside screenshots/ so it's tracked by default
 
 # Code Injection
 #
