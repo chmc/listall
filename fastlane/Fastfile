@@ -3654,4 +3654,113 @@ platform :ios do
       puts "  • Total: 30 screenshots across EN + FI locales"
     end
   end
+
+  desc "Frame all normalized screenshots with custom device frames (TDD implementation)"
+  desc "Uses custom implementation with official Apple device frames"
+  desc "Options:"
+  desc "  locales: Array of locales to process (default: ['en-US', 'fi'])"
+  desc "  devices: Array of device types [:iphone, :ipad, :watch] (default: all)"
+  desc "  add_titles: Add text overlays from Framefile.json (default: true)"
+  desc "  skip_existing: Skip already framed screenshots for incremental runs (default: false)"
+  lane :frame_screenshots_custom do |options|
+    require_relative 'lib/framing_helper'
+
+    UI.header("Framing Screenshots with Custom Device Frames")
+
+    # Validate dependencies
+    unless system('which magick > /dev/null 2>&1')
+      UI.user_error!("ImageMagick not found. Install with: brew install imagemagick")
+    end
+
+    # Configuration
+    input_root = File.expand_path('screenshots_compat', __dir__)
+    watch_input = File.expand_path('screenshots/watch_normalized', __dir__)
+    output_root = File.expand_path('screenshots_framed', __dir__)
+
+    locales = options[:locales] || ['en-US', 'fi']
+    devices = options[:devices] || [:iphone, :ipad, :watch]
+
+    # Clean output directory unless incremental mode
+    FileUtils.rm_rf(output_root) unless options[:skip_existing]
+
+    total_results = { processed: 0, skipped: 0, errors: [] }
+
+    # Frame iPhone/iPad screenshots
+    if (devices & [:iphone, :ipad]).any?
+      UI.message("Framing iPhone/iPad screenshots...")
+
+      results = FramingHelper.frame_all_locales(
+        input_root,
+        File.join(output_root, 'ios'),
+        locales: locales,
+        add_titles: options.fetch(:add_titles, true),
+        skip_existing: options.fetch(:skip_existing, false)
+      )
+
+      results.each do |locale, r|
+        total_results[:processed] += r[:processed]
+        total_results[:skipped] += r[:skipped]
+        total_results[:errors] += r[:errors]
+        UI.message("  #{locale}: #{r[:processed]} framed, #{r[:skipped]} skipped")
+      end
+    end
+
+    # Frame Watch screenshots
+    if devices.include?(:watch)
+      UI.message("Framing Apple Watch screenshots...")
+
+      results = FramingHelper.frame_all_locales(
+        watch_input,
+        File.join(output_root, 'watch'),
+        locales: locales,
+        add_titles: options.fetch(:add_titles, true),
+        skip_existing: options.fetch(:skip_existing, false)
+      )
+
+      results.each do |locale, r|
+        total_results[:processed] += r[:processed]
+        total_results[:skipped] += r[:skipped]
+        total_results[:errors] += r[:errors]
+        UI.message("  Watch #{locale}: #{r[:processed]} framed")
+      end
+    end
+
+    # Report results
+    if total_results[:errors].any?
+      UI.important("Completed with #{total_results[:errors].count} error(s):")
+      total_results[:errors].each { |e| UI.error("  #{e[:file]}: #{e[:error]}") }
+    end
+
+    UI.success("Framed #{total_results[:processed]} screenshots (#{total_results[:skipped]} skipped)")
+
+    total_results
+  end
+
+  desc "Run RSpec tests for custom framing implementation"
+  desc "Tests device detection, framing logic, and batch processing"
+  lane :test_framing do
+    UI.header("Running Framing Tests")
+
+    spec_files = [
+      'spec/framing_helper_spec.rb',
+      'spec/device_frame_registry_spec.rb'
+    ]
+
+    # Check if spec files exist
+    existing_specs = spec_files.select { |f| File.exist?(File.join(__dir__, f)) }
+
+    if existing_specs.empty?
+      UI.important("No test files found yet. Expected files:")
+      spec_files.each { |f| UI.message("  - fastlane/#{f}") }
+      UI.message("Tests will be available after TDD implementation")
+      return
+    end
+
+    begin
+      sh("cd #{__dir__} && bundle exec rspec #{existing_specs.join(' ')} --format documentation --color")
+      UI.success("All framing tests passed!")
+    rescue => e
+      UI.user_error!("Framing tests failed: #{e.message}")
+    end
+  end
 end
