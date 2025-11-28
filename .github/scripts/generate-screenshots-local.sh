@@ -24,7 +24,7 @@ readonly EXIT_GENERATION_FAILED=2
 readonly EXIT_VALIDATION_FAILED=3
 
 # Default values
-PLATFORM="${1:-}"
+PLATFORM="${1:-all}"
 LOCALE="${2:-all}"
 
 # Colors for output
@@ -80,7 +80,7 @@ Description:
 Arguments:
     PLATFORM    Platform to generate screenshots for
                 Options: iphone, ipad, watch, all
-                Default: none (required)
+                Default: all
 
     LOCALE      Locale to generate screenshots for
                 Options: en-US, fi, all
@@ -332,14 +332,7 @@ main() {
         exit "${EXIT_SUCCESS}"
     fi
 
-    # Validate required platform argument
-    if [[ -z "${PLATFORM}" ]]; then
-        log_error "Missing required argument: PLATFORM"
-        echo ""
-        echo "Usage: ${SCRIPT_NAME} [iphone|ipad|watch|all] [en-US|fi|all]"
-        echo "Run with --help for more information"
-        exit "${EXIT_INVALID_ARGS}"
-    fi
+    # Platform defaults to "all" if not specified
 
     # Validate platform
     if ! validate_platform "${PLATFORM}"; then
