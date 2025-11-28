@@ -194,6 +194,36 @@ validate_locale() {
 }
 
 # =============================================================================
+# Cleanup Functions
+# =============================================================================
+
+clean_screenshot_directories() {
+    log_header "Cleaning Screenshot Directories"
+
+    log_info "Removing old screenshots to prevent stale files..."
+
+    # Clean screenshots_compat (iPhone/iPad normalized)
+    if [[ -d "${PROJECT_ROOT}/fastlane/screenshots_compat" ]]; then
+        rm -rf "${PROJECT_ROOT}/fastlane/screenshots_compat"
+        log_info "Cleaned: fastlane/screenshots_compat/"
+    fi
+
+    # Clean watch_normalized
+    if [[ -d "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized" ]]; then
+        rm -rf "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized"
+        log_info "Cleaned: fastlane/screenshots/watch_normalized/"
+    fi
+
+    # Clean raw screenshot directories
+    rm -rf "${PROJECT_ROOT}/fastlane/screenshots/en-US" 2>/dev/null || true
+    rm -rf "${PROJECT_ROOT}/fastlane/screenshots/fi" 2>/dev/null || true
+    rm -rf "${PROJECT_ROOT}/fastlane/screenshots/watch" 2>/dev/null || true
+
+    log_success "Screenshot directories cleaned"
+    echo ""
+}
+
+# =============================================================================
 # Screenshot Generation Functions
 # =============================================================================
 
@@ -367,6 +397,9 @@ main() {
     log_info "Platform: ${PLATFORM}"
     log_info "Locale: ${LOCALE}"
     echo ""
+
+    # Clean old screenshots before generating new ones
+    clean_screenshot_directories
 
     # Generate screenshots based on platform
     case "${PLATFORM}" in
