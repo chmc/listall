@@ -300,7 +300,10 @@ module FramingHelper
 
   # Build ImageMagick composite command
   #
-  # @param frame_path [String] Path to frame asset
+  # Apple bezels have a transparent center where the screenshot shows through.
+  # Composition order: 1) background canvas, 2) screenshot at offset, 3) bezel on top
+  #
+  # @param frame_path [String] Path to frame asset (bezel with transparent center)
   # @param screenshot_path [String] Path to screenshot
   # @param output_path [String] Path for output
   # @param device_spec [Hash] Device specification
@@ -317,18 +320,20 @@ module FramingHelper
     y_offset = device_spec[:screenshot_y]
     final_width = device_spec[:final_width]
     final_height = device_spec[:final_height]
+    bg_color = options[:background_color]
 
     # Build command
-    # Pattern: magick <frame> <screenshot> -geometry +X+Y -composite -background <color> -gravity <gravity> -extent WxH -quality <quality> <output>
+    # Pattern: Create canvas -> place screenshot -> overlay bezel (with transparent center)
+    # magick -size WxH xc:'<bg>' <screenshot> -geometry +X+Y -composite <frame> -composite -quality Q <output>
     cmd_parts = [
       'magick',
-      escaped_frame,
+      "-size #{final_width}x#{final_height}",
+      "xc:'#{bg_color}'",
       escaped_screenshot,
       "-geometry +#{x_offset}+#{y_offset}",
       '-composite',
-      "-background '#{options[:background_color]}'",
-      "-gravity #{options[:gravity]}",
-      "-extent #{final_width}x#{final_height}",
+      escaped_frame,
+      '-composite',
       "-quality #{options[:quality]}",
       escaped_output
     ]

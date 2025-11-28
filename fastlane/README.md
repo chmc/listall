@@ -185,6 +185,36 @@ Validate watch screenshot sizes and naming (uses App Store Connect requirements)
 
 Validate all delivery-ready screenshots (normalized iPhone/iPad + naked Watch)
 
+### ios frame_screenshots_custom
+
+```sh
+[bundle exec] fastlane ios frame_screenshots_custom
+```
+
+Frame all normalized screenshots with custom device frames (TDD implementation)
+
+Uses custom implementation with official Apple device frames
+
+Options:
+
+  locales: Array of locales to process (default: ['en-US', 'fi'])
+
+  devices: Array of device types [:iphone, :ipad, :watch] (default: all)
+
+  add_titles: Add text overlays from Framefile.json (default: true)
+
+  skip_existing: Skip already framed screenshots for incremental runs (default: false)
+
+### ios test_framing
+
+```sh
+[bundle exec] fastlane ios test_framing
+```
+
+Run RSpec tests for custom framing implementation
+
+Tests device detection, framing logic, and batch processing
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

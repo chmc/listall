@@ -1,20 +1,19 @@
 {
   "device": "iPad Pro 13-inch M4",
   "screen_area": {
-    "x": 95,
-    "y": 95,
+    "x": 100,
+    "y": 100,
     "width": 2064,
     "height": 2752
   },
   "frame_dimensions": {
-    "width": 2254,
-    "height": 2942
+    "width": 2264,
+    "height": 2952
   },
   "variants": {
-    "black": "ipad_pro_13_m4_black.png",
-    "silver": "ipad_pro_13_m4_silver.png"
+    "black": "ipad_pro_13_m4_black.png"
   },
   "default_variant": "black",
   "corner_radius": 25,
-  "notes": "iPad Pro 13-inch (M4) with Ultra Retina XDR display. This is the 2024 model with the new 13-inch screen size (2064x2752). Previously unsupported by Frameit."
+  "notes": "Synthetic frame (dark border) for iPad Pro 13-inch M4. No official Apple bezel available for this screen size. Replace with official bezel when available."
 }
