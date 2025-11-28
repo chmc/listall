@@ -39,12 +39,12 @@ log_header() {
 
 log_success() {
     echo -e "${GREEN}✓${NC} $*"
-    ((PASS_COUNT++))
+    ((PASS_COUNT++)) || true
 }
 
 log_failure() {
     echo -e "${RED}✗${NC} $*"
-    ((FAIL_COUNT++))
+    ((FAIL_COUNT++)) || true
 }
 
 log_info() {
