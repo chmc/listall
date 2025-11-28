@@ -1,0 +1,18 @@
+{
+  "device": "iPad Pro 13-inch (M4)",
+  "screen_area": {
+    "x": 68,
+    "y": 152,
+    "width": 2064,
+    "height": 2752
+  },
+  "frame_dimensions": {
+    "width": 2200,
+    "height": 3056
+  },
+  "variants": {
+    "black": "ipad_pro_13-inch_(m4)_black.png"
+  },
+  "default_variant": "black",
+  "corner_radius": 55
+}
