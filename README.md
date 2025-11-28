@@ -77,12 +77,26 @@ To test Fastlane lanes locally (beta uploads, App Store Connect authentication, 
 - `bundle exec fastlane beta` — Build and upload to TestFlight (requires ASC API key)
   - Add `bump_type:patch|minor|major` to increment version (default: patch)
   - Add `skip_version_bump:true` to use current version without incrementing
-- `bundle exec fastlane release` — Deliver metadata to App Store (requires ASC API key)
+- `bundle exec fastlane release version:X.Y.Z` — Deliver metadata to App Store (requires ASC API key)
 
 #### Authentication
 - `bundle exec fastlane asc_dry_run` — Verify App Store Connect authentication
 
 **Version Management:** ListAll uses semantic versioning (X.Y.Z). See [`documentation/version_management.md`](./documentation/version_management.md) for detailed information about version numbering, bumping strategies, and CI/CD integration.
+
+## App Store Release
+
+1. **Generate screenshots locally:**
+   ```bash
+   .github/scripts/generate-screenshots-local.sh
+   ```
+
+2. **Commit and push** the generated screenshots:
+   - `fastlane/screenshots_compat/` (iPhone/iPad)
+   - `fastlane/screenshots/watch_normalized/` (Watch)
+
+3. **Run the publish workflow:**
+   Go to **Actions** → **Publish to App Store**, enter version number, and run.
 
 ## License
 ListAll is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).  
