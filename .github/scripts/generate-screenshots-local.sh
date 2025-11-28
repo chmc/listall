@@ -74,8 +74,9 @@ Usage:
 
 Description:
     Wrapper script for Fastlane screenshot generation. Generates App Store
-    screenshots locally using iOS/watchOS simulators with proper dimensions
-    and validation.
+    screenshots locally using iOS/watchOS simulators, then applies device
+    frames to iPhone/iPad screenshots for a polished marketing look.
+    Watch screenshots remain unframed.
 
 Arguments:
     PLATFORM    Platform to generate screenshots for
@@ -107,41 +108,42 @@ Examples:
 
 Platform Details:
     iphone  - iPhone 16 Pro Max (6.7" display, 1290x2796)
-              Fastlane lane: screenshots_iphone
-              Screenshots: 2 per locale
-              Estimated time: ~20 minutes
+              Fastlane lane: screenshots_iphone + framing
+              Screenshots: 2 per locale (framed with device bezel)
+              Estimated time: ~25 minutes
 
     ipad    - iPad Pro 13" M4 (13" display, 2064x2752)
-              Fastlane lane: screenshots_ipad
-              Screenshots: 2 per locale
-              Estimated time: ~35 minutes
+              Fastlane lane: screenshots_ipad + framing
+              Screenshots: 2 per locale (framed with device bezel)
+              Estimated time: ~40 minutes
 
     watch   - Apple Watch Series 10 46mm (45mm slot, 396x484)
               Fastlane lane: watch_screenshots
-              Screenshots: 5 per locale
+              Screenshots: 5 per locale (unframed)
               Estimated time: ~20 minutes
 
     all     - All platforms (iPhone + iPad + Watch)
-              Fastlane lane: prepare_appstore
               Screenshots: 9 per locale (18 total)
+              iPhone/iPad: framed with device bezels
+              Watch: unframed
               Estimated time: ~60-90 minutes
 
-    framed  - Add device frames to existing normalized screenshots
+    framed  - Re-apply device frames to existing screenshots
               Fastlane lane: frame_screenshots_custom
-              Requires: Normalized screenshots must exist first
-              Output: Marketing-ready screenshots with device bezels
+              Requires: Screenshots must exist in screenshots_compat/
+              Output: Replaces screenshots with framed versions
               Estimated time: ~2-5 minutes
 
 Output Locations:
-    iPhone/iPad (normalized):
+    iPhone/iPad (framed with device bezels):
         fastlane/screenshots_compat/en-US/
         fastlane/screenshots_compat/fi/
 
-    Watch (normalized):
+    Watch (unframed):
         fastlane/screenshots/watch_normalized/en-US/
         fastlane/screenshots/watch_normalized/fi/
 
-    Raw captures (not committed):
+    Raw captures (temporary, not committed):
         fastlane/screenshots/
 
 Prerequisites:
@@ -244,7 +246,7 @@ clean_screenshot_directories() {
 
     log_info "Removing old screenshots to prevent stale files..."
 
-    # Clean screenshots_compat (iPhone/iPad normalized)
+    # Clean screenshots_compat (iPhone/iPad framed output)
     if [[ -d "${PROJECT_ROOT}/fastlane/screenshots_compat" ]]; then
         rm -rf "${PROJECT_ROOT}/fastlane/screenshots_compat"
         log_info "Cleaned: fastlane/screenshots_compat/"
@@ -256,6 +258,12 @@ clean_screenshot_directories() {
         log_info "Cleaned: fastlane/screenshots/watch_normalized/"
     fi
 
+    # Clean framed screenshots temp directory
+    if [[ -d "${PROJECT_ROOT}/fastlane/screenshots_framed" ]]; then
+        rm -rf "${PROJECT_ROOT}/fastlane/screenshots_framed"
+        log_info "Cleaned: fastlane/screenshots_framed/"
+    fi
+
     # Clean raw screenshot directories
     rm -rf "${PROJECT_ROOT}/fastlane/screenshots/en-US" 2>/dev/null || true
     rm -rf "${PROJECT_ROOT}/fastlane/screenshots/fi" 2>/dev/null || true
@@ -263,6 +271,73 @@ clean_screenshot_directories() {
 
     log_success "Screenshot directories cleaned"
     echo ""
+}
+
+# =============================================================================
+# Framing Functions
+# =============================================================================
+
+# Frame iPhone/iPad screenshots in-place (replace raw with framed)
+# Watch screenshots are NOT framed
+frame_ios_screenshots_inplace() {
+    log_header "Applying Device Frames to iPhone/iPad Screenshots"
+
+    local compat_dir="${PROJECT_ROOT}/fastlane/screenshots_compat"
+    local framed_dir="${PROJECT_ROOT}/fastlane/screenshots_framed/ios"
+
+    # Check that screenshots exist
+    if [[ ! -d "${compat_dir}" ]]; then
+        log_warn "No screenshots found at ${compat_dir}, skipping framing"
+        return 0
+    fi
+
+    # Check for ImageMagick
+    if ! command -v magick &> /dev/null; then
+        log_error "ImageMagick not found. Install with: brew install imagemagick"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_info "Framing screenshots with device bezels..."
+    log_info "Input: fastlane/screenshots_compat/"
+    log_info "Output: Framed images will replace raw images in same location"
+    echo ""
+
+    # Run the framing lane
+    if ! bundle exec fastlane ios frame_screenshots_custom; then
+        log_error "Screenshot framing failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    # Copy framed images back to screenshots_compat, replacing raw
+    log_info "Replacing raw screenshots with framed versions..."
+
+    for locale_dir in "${framed_dir}"/*; do
+        if [[ -d "${locale_dir}" ]]; then
+            local locale
+            locale="$(basename "${locale_dir}")"
+            local target_dir="${compat_dir}/${locale}"
+
+            if [[ -d "${target_dir}" ]]; then
+                for framed_file in "${locale_dir}"/*.png; do
+                    if [[ -f "${framed_file}" ]]; then
+                        local filename
+                        filename="$(basename "${framed_file}")"
+                        cp "${framed_file}" "${target_dir}/${filename}"
+                        log_info "  Replaced: ${locale}/${filename}"
+                    fi
+                done
+            fi
+        fi
+    done
+
+    # Clean up framed directory
+    rm -rf "${PROJECT_ROOT}/fastlane/screenshots_framed"
+    log_info "Cleaned up temporary framed directory"
+
+    log_success "Device frames applied to all iPhone/iPad screenshots"
+    echo ""
+
+    return 0
 }
 
 # =============================================================================
@@ -318,25 +393,28 @@ generate_all_screenshots() {
     log_info "Platform: All (iPhone + iPad + Watch)"
     log_info "Screenshots: 9 per locale (18 total)"
     log_info "Estimated time: ~60-90 minutes"
-    log_info "Mode: No device frames (raw normalized screenshots)"
+    log_info "Mode: iPhone/iPad with device frames, Watch unframed"
     echo ""
 
-    # Generate each platform separately to skip framing
-    # (prepare_appstore lane includes frameit which we don't need)
-
-    log_info "Step 1/3: Generating iPhone screenshots..."
+    log_info "Step 1/4: Generating iPhone screenshots..."
     if ! bundle exec fastlane ios screenshots_iphone; then
         log_error "iPhone screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    log_info "Step 2/3: Generating iPad screenshots..."
+    log_info "Step 2/4: Generating iPad screenshots..."
     if ! bundle exec fastlane ios screenshots_ipad; then
         log_error "iPad screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    log_info "Step 3/3: Generating Watch screenshots..."
+    log_info "Step 3/4: Applying device frames to iPhone/iPad..."
+    if ! frame_ios_screenshots_inplace; then
+        log_error "Screenshot framing failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_info "Step 4/4: Generating Watch screenshots (unframed)..."
     if ! bundle exec fastlane ios watch_screenshots; then
         log_error "Watch screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
@@ -346,36 +424,30 @@ generate_all_screenshots() {
 }
 
 generate_framed_screenshots() {
-    log_info "Mode: Custom Device Framing (Marketing Screenshots)"
-    log_info "Input: Normalized screenshots (must exist)"
-    log_info "Output: Framed screenshots with device bezels"
+    log_info "Mode: Re-apply Device Frames to Existing Screenshots"
+    log_info "Input: Screenshots in fastlane/screenshots_compat/"
+    log_info "Output: Framed versions replace originals in same location"
     log_info "Estimated time: ~2-5 minutes"
     echo ""
 
-    # Check that normalized screenshots exist
+    # Check that screenshots exist
     if [[ ! -d "${PROJECT_ROOT}/fastlane/screenshots_compat" ]]; then
-        log_error "Normalized screenshots not found at fastlane/screenshots_compat/"
-        log_error "Run './generate-screenshots-local.sh all' first to generate normalized screenshots"
+        log_error "Screenshots not found at fastlane/screenshots_compat/"
+        log_error "Run './generate-screenshots-local.sh all' first to generate screenshots"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    if [[ ! -d "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized" ]]; then
-        log_error "Normalized Watch screenshots not found at fastlane/screenshots/watch_normalized/"
-        log_error "Run './generate-screenshots-local.sh all' first to generate normalized screenshots"
-        return "${EXIT_GENERATION_FAILED}"
-    fi
-
-    log_info "Running custom framing pipeline..."
-    if ! bundle exec fastlane ios frame_screenshots_custom; then
+    # Apply framing in-place
+    if ! frame_ios_screenshots_inplace; then
         log_error "Screenshot framing failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
     log_success "Framed screenshots generated"
     echo ""
-    log_info "Output location:"
-    log_info "  fastlane/screenshots_framed/ios/"
-    log_info "  fastlane/screenshots_framed/watch/"
+    log_info "Output location (same as input, replaced in-place):"
+    log_info "  fastlane/screenshots_compat/en-US/"
+    log_info "  fastlane/screenshots_compat/fi/"
 
     return 0
 }
@@ -420,19 +492,19 @@ show_summary() {
     echo ""
 
     if [[ "${platform}" == "watch" ]]; then
-        echo "  Watch (normalized):"
+        echo "  Watch (unframed):"
         echo "    fastlane/screenshots/watch_normalized/en-US/"
         echo "    fastlane/screenshots/watch_normalized/fi/"
     elif [[ "${platform}" == "all" ]]; then
-        echo "  iPhone/iPad (normalized):"
+        echo "  iPhone/iPad (framed with device bezels):"
         echo "    fastlane/screenshots_compat/en-US/"
         echo "    fastlane/screenshots_compat/fi/"
         echo ""
-        echo "  Watch (normalized):"
+        echo "  Watch (unframed):"
         echo "    fastlane/screenshots/watch_normalized/en-US/"
         echo "    fastlane/screenshots/watch_normalized/fi/"
     else
-        echo "  iPhone/iPad (normalized):"
+        echo "  iPhone/iPad (framed with device bezels):"
         echo "    fastlane/screenshots_compat/en-US/"
         echo "    fastlane/screenshots_compat/fi/"
     fi
@@ -506,13 +578,15 @@ main() {
         iphone)
             log_header "iPhone Screenshot Generation"
             generate_iphone_screenshots || exit $?
+            frame_ios_screenshots_inplace || exit $?
             ;;
         ipad)
             log_header "iPad Screenshot Generation"
             generate_ipad_screenshots || exit $?
+            frame_ios_screenshots_inplace || exit $?
             ;;
         watch)
-            log_header "Watch Screenshot Generation"
+            log_header "Watch Screenshot Generation (Unframed)"
             generate_watch_screenshots || exit $?
             ;;
         all)
