@@ -209,43 +209,6 @@ check_bundle_dependencies() {
     fi
 }
 
-# ==============================================================================
-# Credentials Check
-# ==============================================================================
-
-check_credentials() {
-    log_header "App Store Connect Credentials"
-
-    local env_file="${PROJECT_ROOT}/fastlane/.env"
-
-    if [[ ! -f "${env_file}" ]]; then
-        log_failure "fastlane/.env file not found"
-        log_info "  Create via: cp fastlane/.env.template fastlane/.env"
-        log_info "  Then configure ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_BASE64"
-        return
-    fi
-
-    log_success "fastlane/.env file exists"
-
-    # Check required variables are present (not checking values, just presence)
-    if grep -q "^ASC_KEY_ID=" "${env_file}"; then
-        log_success "ASC_KEY_ID configured"
-    else
-        log_failure "ASC_KEY_ID not found in .env file"
-    fi
-
-    if grep -q "^ASC_ISSUER_ID=" "${env_file}"; then
-        log_success "ASC_ISSUER_ID configured"
-    else
-        log_failure "ASC_ISSUER_ID not found in .env file"
-    fi
-
-    if grep -q "^ASC_KEY_BASE64=" "${env_file}"; then
-        log_success "ASC_KEY_BASE64 configured"
-    else
-        log_failure "ASC_KEY_BASE64 not found in .env file"
-    fi
-}
 
 # ==============================================================================
 # Disk Space Check
@@ -305,7 +268,6 @@ main() {
     check_simulators
     check_tools
     check_bundle_dependencies
-    check_credentials
     check_disk_space
 
     # Print summary

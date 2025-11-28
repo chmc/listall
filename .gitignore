@@ -82,7 +82,6 @@ fastlane/Preview.html
 fastlane/test_output
 fastlane/derivedDataSnapshot/
 fastlane/derivedDataWatch/
-fastlane/.env
 
 # Screenshot workflow: Local screenshot generation
 # We generate screenshots locally and commit the normalized versions
