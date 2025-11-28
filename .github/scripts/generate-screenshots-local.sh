@@ -203,6 +203,41 @@ validate_locale() {
 # Cleanup Functions
 # =============================================================================
 
+cleanup_simulators() {
+    log_header "Cleaning Up Simulators"
+
+    log_info "Shutting down all running simulators..."
+    xcrun simctl shutdown all 2>/dev/null || true
+
+    # Wait briefly for shutdown to complete
+    sleep 2
+
+    log_info "Removing unavailable simulators..."
+    xcrun simctl delete unavailable 2>/dev/null || true
+
+    # Kill any hung simulator processes
+    log_info "Terminating any hung simulator processes..."
+    pkill -9 -f "Simulator.app" 2>/dev/null || true
+    pkill -9 -f "simctl" 2>/dev/null || true
+
+    # Wait for processes to terminate
+    sleep 2
+
+    # Verify no simulators are booted
+    local booted_count
+    booted_count=$(xcrun simctl list devices | grep -c "(Booted)" || echo "0")
+
+    if [[ "${booted_count}" -gt 0 ]]; then
+        log_warn "Warning: ${booted_count} simulator(s) still showing as booted"
+        log_info "Attempting force shutdown..."
+        xcrun simctl shutdown all 2>/dev/null || true
+        sleep 2
+    fi
+
+    log_success "Simulator cleanup complete"
+    echo ""
+}
+
 clean_screenshot_directories() {
     log_header "Cleaning Screenshot Directories"
 
@@ -455,6 +490,9 @@ main() {
     log_info "Platform: ${PLATFORM}"
     log_info "Locale: ${LOCALE}"
     echo ""
+
+    # Clean simulator state to prevent hangs from previous runs
+    cleanup_simulators
 
     # Clean old screenshots before generating new ones
     clean_screenshot_directories
