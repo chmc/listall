@@ -1,0 +1,21 @@
+{
+  "device": "iPhone 16 Pro Max",
+  "screen_area": {
+    "x": 85,
+    "y": 155,
+    "width": 1290,
+    "height": 2796
+  },
+  "frame_dimensions": {
+    "width": 1460,
+    "height": 3106
+  },
+  "variants": {
+    "black": "iphone_16_pro_max_black.png",
+    "white": "iphone_16_pro_max_white.png",
+    "natural_titanium": "iphone_16_pro_max_natural_titanium.png"
+  },
+  "default_variant": "black",
+  "corner_radius": 55,
+  "notes": "iPhone 16 Pro Max with 6.7-inch Super Retina XDR display. Screen dimensions match App Store Connect requirements (1290x2796). Frame includes device bezel, Dynamic Island, and rounded corners."
+}

@@ -98,6 +98,10 @@ fastlane/screenshots_compat/delivery/
 # KEEP (track) normalized iPhone/iPad screenshots (1290x2796, 2064x2752)
 # Note: screenshots_compat/ is outside screenshots/ so it's tracked by default
 
+# Framed screenshots (for marketing, generated from normalized screenshots)
+# These are generated artifacts that can be recreated from normalized versions
+fastlane/screenshots_framed/
+
 # Code Injection
 #
 # After new code Injection tools there's a generated folder /iOSInjectionProject
@@ -261,3 +265,6 @@ coordination/
 
 # Temporary prompt / log files
 hive-mind-prompt-*.txt
+# Device frame assets (acquire from Apple Design Resources)
+fastlane/device_frames/**/*.png
+!fastlane/device_frames/**/.gitkeep

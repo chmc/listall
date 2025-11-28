@@ -1,0 +1,21 @@
+{
+  "device": "Apple Watch Series 10 46mm",
+  "screen_area": {
+    "x": 52,
+    "y": 78,
+    "width": 396,
+    "height": 484
+  },
+  "frame_dimensions": {
+    "width": 500,
+    "height": 640
+  },
+  "variants": {
+    "black": "apple_watch_series_10_46mm_black.png",
+    "silver": "apple_watch_series_10_46mm_silver.png",
+    "natural_titanium": "apple_watch_series_10_46mm_natural_titanium.png"
+  },
+  "default_variant": "black",
+  "corner_radius": 45,
+  "notes": "Apple Watch Series 10 46mm with Always-On Retina display. Screen dimensions 396x484 match App Store Connect requirements. Watch face is always-on circular OLED."
+}

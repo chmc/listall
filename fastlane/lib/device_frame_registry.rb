@@ -121,6 +121,66 @@ module DeviceFrameRegistry
     []
   end
 
+  # Find device by screenshot dimensions
+  #
+  # Searches through all device mappings to find a device that matches
+  # the given screenshot dimensions.
+  #
+  # @param width [Integer] Screenshot width in pixels
+  # @param height [Integer] Screenshot height in pixels
+  # @return [Hash, nil] Device specification with enhanced fields or nil if not found
+  #
+  # @example
+  #   spec = DeviceFrameRegistry.find_device_by_dimensions(1290, 2796)
+  #   # => {
+  #   #   type: :iphone,
+  #   #   frame: 'iphone_16_pro_max',
+  #   #   screen_size: [1290, 2796],
+  #   #   name: 'iPhone 16 Pro Max',
+  #   #   screenshot_width: 1290,
+  #   #   screenshot_height: 2796,
+  #   #   screenshot_x: 85,
+  #   #   screenshot_y: 155,
+  #   #   final_width: 1460,
+  #   #   final_height: 3106,
+  #   #   frame_name: 'iphone_16_pro_max'
+  #   # }
+  #
+  def self.find_device_by_dimensions(width, height)
+    DEVICE_MAPPINGS.each do |_pattern, config|
+      if config[:screen_size] == [width, height]
+        # Load metadata and enhance device spec
+        metadata = frame_metadata(config[:frame])
+        return enhance_device_spec(config.dup, metadata)
+      end
+    end
+    nil
+  end
+
+  # Enhance device specification with metadata fields
+  #
+  # Transforms metadata structure into fields expected by FramingHelper.
+  # Bridges the gap between metadata.json format and code expectations.
+  #
+  # @param device_spec [Hash] Base device specification from DEVICE_MAPPINGS
+  # @param metadata [Hash] Metadata loaded from JSON file
+  # @return [Hash] Enhanced device specification with all required fields
+  #
+  # @api private
+  def self.enhance_device_spec(device_spec, metadata)
+    device_spec.merge({
+      name: metadata[:device],
+      screenshot_width: metadata[:screen_area][:width],
+      screenshot_height: metadata[:screen_area][:height],
+      screenshot_x: metadata[:screen_area][:x],
+      screenshot_y: metadata[:screen_area][:y],
+      final_width: metadata[:frame_dimensions][:width],
+      final_height: metadata[:frame_dimensions][:height],
+      frame_name: device_spec[:frame]
+    })
+  end
+  private_class_method :enhance_device_spec
+
   # Resolve the path to a frame's metadata file
   #
   # @param frame_name [String] Frame identifier (e.g., 'iphone_16_pro_max')
@@ -128,8 +188,14 @@ module DeviceFrameRegistry
   #
   # @api private
   def self.metadata_path_for(frame_name)
-    # Extract device type from frame name (e.g., 'iphone' from 'iphone_16_pro_max')
-    device_type = frame_name.split('_').first
+    # Extract device type from frame name
+    # Handle special case: 'apple_watch_*' -> 'watch'
+    device_type = if frame_name.start_with?('apple_watch')
+                    'watch'
+                  else
+                    frame_name.split('_').first
+                  end
+
     File.expand_path("../device_frames/#{device_type}/metadata.json", __dir__)
   end
   private_class_method :metadata_path_for
