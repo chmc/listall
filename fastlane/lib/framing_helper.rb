@@ -221,14 +221,30 @@ module FramingHelper
 
   # Resolve the full path to a frame asset
   #
-  # @param frame_name [String] Name of the frame asset
+  # @param frame_name [String] Name of the frame asset (e.g., 'iphone_16_pro_max')
   # @param variant [Symbol] Frame variant (:light or :dark)
   # @return [String] Full path to frame asset
   def self.resolve_frame_asset(frame_name, variant)
-    # Frame assets are stored in fastlane/frames/
-    frames_dir = File.join(File.dirname(__dir__), 'frames')
-    variant_suffix = variant == :dark ? '_dark' : ''
-    File.join(frames_dir, "#{frame_name}#{variant_suffix}.png")
+    # Frame assets are stored in fastlane/device_frames/{device_type}/
+    # Extract device type from frame name (e.g., 'iphone' from 'iphone_16_pro_max')
+    device_type = if frame_name.start_with?('apple_watch')
+                    'watch'
+                  else
+                    frame_name.split('_').first
+                  end
+
+    # Map variant to filename suffix
+    # Metadata uses 'black' as default, we need to map :light -> black
+    variant_suffix = case variant
+                     when :dark
+                       '_dark'
+                     when :light, :black
+                       '_black'
+                     else
+                       "_#{variant}"
+                     end
+
+    File.join(File.dirname(__dir__), 'device_frames', device_type, "#{frame_name}#{variant_suffix}.png")
   end
   private_class_method :resolve_frame_asset
 

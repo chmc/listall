@@ -79,7 +79,7 @@ Description:
 
 Arguments:
     PLATFORM    Platform to generate screenshots for
-                Options: iphone, ipad, watch, all
+                Options: iphone, ipad, watch, all, framed
                 Default: all
 
     LOCALE      Locale to generate screenshots for
@@ -126,6 +126,12 @@ Platform Details:
               Screenshots: 9 per locale (18 total)
               Estimated time: ~60-90 minutes
 
+    framed  - Add device frames to existing normalized screenshots
+              Fastlane lane: frame_screenshots_custom
+              Requires: Normalized screenshots must exist first
+              Output: Marketing-ready screenshots with device bezels
+              Estimated time: ~2-5 minutes
+
 Output Locations:
     iPhone/iPad (normalized):
         fastlane/screenshots_compat/en-US/
@@ -171,7 +177,7 @@ validate_platform() {
     local platform="$1"
 
     case "${platform}" in
-        iphone|ipad|watch|all)
+        iphone|ipad|watch|all|framed)
             return 0
             ;;
         *)
@@ -303,6 +309,41 @@ generate_all_screenshots() {
     return 0
 }
 
+generate_framed_screenshots() {
+    log_info "Mode: Custom Device Framing (Marketing Screenshots)"
+    log_info "Input: Normalized screenshots (must exist)"
+    log_info "Output: Framed screenshots with device bezels"
+    log_info "Estimated time: ~2-5 minutes"
+    echo ""
+
+    # Check that normalized screenshots exist
+    if [[ ! -d "${PROJECT_ROOT}/fastlane/screenshots_compat" ]]; then
+        log_error "Normalized screenshots not found at fastlane/screenshots_compat/"
+        log_error "Run './generate-screenshots-local.sh all' first to generate normalized screenshots"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    if [[ ! -d "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized" ]]; then
+        log_error "Normalized Watch screenshots not found at fastlane/screenshots/watch_normalized/"
+        log_error "Run './generate-screenshots-local.sh all' first to generate normalized screenshots"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_info "Running custom framing pipeline..."
+    if ! bundle exec fastlane ios frame_screenshots_custom; then
+        log_error "Screenshot framing failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_success "Framed screenshots generated"
+    echo ""
+    log_info "Output location:"
+    log_info "  fastlane/screenshots_framed/ios/"
+    log_info "  fastlane/screenshots_framed/watch/"
+
+    return 0
+}
+
 # =============================================================================
 # Validation
 # =============================================================================
@@ -385,7 +426,7 @@ main() {
     if ! validate_platform "${PLATFORM}"; then
         log_error "Invalid platform: ${PLATFORM}"
         echo ""
-        echo "Valid platforms: iphone, ipad, watch, all"
+        echo "Valid platforms: iphone, ipad, watch, all, framed"
         echo "Run with --help for more information"
         exit "${EXIT_INVALID_ARGS}"
     fi
@@ -435,6 +476,15 @@ main() {
         all)
             log_header "All Platforms Screenshot Generation"
             generate_all_screenshots || exit $?
+            ;;
+        framed)
+            log_header "Custom Screenshot Framing"
+            generate_framed_screenshots || exit $?
+            # Skip validation for framed mode (different dimensions)
+            END_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
+            readonly END_TIME
+            log_success "Framed screenshot generation complete"
+            exit "${EXIT_SUCCESS}"
             ;;
     esac
 
