@@ -143,15 +143,23 @@ class TestDataManager: ObservableObject {
         let listEntity = ListEntity(context: context)
         listEntity.id = list.id
         listEntity.name = list.name
-        listEntity.orderNumber = Int32(list.orderNumber)
+
+        // FIX: Calculate next orderNumber (max + 1) to ensure unique sequential ordering
+        let maxOrderNumber = lists.map { $0.orderNumber }.max() ?? -1
+        let nextOrderNumber = maxOrderNumber + 1
+        listEntity.orderNumber = Int32(nextOrderNumber)
+
         listEntity.createdAt = list.createdAt
         listEntity.modifiedAt = list.modifiedAt
         listEntity.isArchived = false
-        
+
         saveData()
-        // Add to local array and sort instead of reloading
-        lists.append(list)
-        lists.sort { $0.orderNumber < $1.orderNumber }
+
+        // Update the list struct with the assigned orderNumber before appending
+        var updatedList = list
+        updatedList.orderNumber = nextOrderNumber
+        lists.append(updatedList)
+        // No need to sort - new list goes to end with highest orderNumber
     }
     
     func updateList(_ list: List) {
@@ -1142,7 +1150,8 @@ class TestMainViewModel: ObservableObject {
     }
     
     private func loadLists() {
-        lists = dataManager.lists
+        // FIX: Sort by orderNumber to ensure correct ordering after reorder operations
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
     }
     
     func loadArchivedLists() {
@@ -1382,11 +1391,16 @@ class TestMainViewModel: ObservableObject {
     
     func moveList(from source: IndexSet, to destination: Int) {
         lists.move(fromOffsets: source, toOffset: destination)
-        
-        // Update order numbers for all lists
+
+        // Update order numbers AND modifiedAt for proper sync
         for (index, list) in lists.enumerated() {
             var updatedList = list
-            updatedList.orderNumber = Int(index)
+            let oldOrderNumber = updatedList.orderNumber
+            updatedList.orderNumber = index
+            // FIX: Only update modifiedAt for lists whose order actually changed
+            if oldOrderNumber != index {
+                updatedList.updateModifiedDate()
+            }
             dataManager.updateList(updatedList)
             lists[index] = updatedList
         }

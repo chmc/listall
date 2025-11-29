@@ -401,15 +401,23 @@ class DataManager: ObservableObject {
         let listEntity = ListEntity(context: context)
         listEntity.id = list.id
         listEntity.name = list.name
-        listEntity.orderNumber = Int32(list.orderNumber)
+
+        // FIX: Calculate next orderNumber (max + 1) to ensure unique sequential ordering
+        let maxOrderNumber = lists.map { $0.orderNumber }.max() ?? -1
+        let nextOrderNumber = maxOrderNumber + 1
+        listEntity.orderNumber = Int32(nextOrderNumber)
+
         listEntity.createdAt = list.createdAt
         listEntity.modifiedAt = list.modifiedAt
         listEntity.isArchived = false
-        
+
         saveData()
-        // Add to local array and sort instead of reloading
-        lists.append(list)
-        lists.sort { $0.orderNumber < $1.orderNumber }
+
+        // Update the list struct with the assigned orderNumber before appending
+        var updatedList = list
+        updatedList.orderNumber = nextOrderNumber
+        lists.append(updatedList)
+        // No need to sort - new list goes to end with highest orderNumber
     }
     
     func updateList(_ list: List) {
@@ -435,31 +443,42 @@ class DataManager: ObservableObject {
     }
     
     func updateListsOrder(_ newOrder: [List]) {
-        // Batch update all list order numbers in a single operation
-        // This is more efficient than calling updateList() for each list separately
+        // FIX: Batch fetch all entities ONCE instead of N separate fetches (O(n) vs O(n²))
         let context = coreDataManager.viewContext
-        
-        for list in newOrder {
-            let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
-            request.predicate = NSPredicate(format: "id == %@", list.id as CVarArg)
-            
-            do {
-                let results = try context.fetch(request)
-                if let listEntity = results.first {
-                    listEntity.orderNumber = Int32(list.orderNumber)
-                    listEntity.modifiedAt = list.modifiedAt
+
+        // Fetch ALL list entities in a single query
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        let listIds = newOrder.map { $0.id }
+        request.predicate = NSPredicate(format: "id IN %@", listIds)
+
+        do {
+            let allEntities = try context.fetch(request)
+
+            // Create lookup dictionary for O(1) access
+            var entityById: [UUID: ListEntity] = [:]
+            for entity in allEntities {
+                if let id = entity.id {
+                    entityById[id] = entity
                 }
-            } catch {
-                print("Failed to update list order for \(list.name): \(error)")
             }
+
+            // Update all entities in memory (O(n))
+            for list in newOrder {
+                if let entity = entityById[list.id] {
+                    entity.orderNumber = Int32(list.orderNumber)
+                    entity.modifiedAt = list.modifiedAt
+                }
+            }
+        } catch {
+            print("Failed to batch update list order: \(error)")
         }
-        
+
         // Save once after all updates
         saveData()
-        
+
         // CRITICAL: Ensure Core Data has processed all changes before continuing
         context.processPendingChanges()
-        
+
         // Update local array to match
         lists = newOrder
     }

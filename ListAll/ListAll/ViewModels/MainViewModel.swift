@@ -441,25 +441,30 @@ class MainViewModel: ObservableObject {
     func moveList(from source: IndexSet, to destination: Int) {
         // Standard SwiftUI pattern: use move directly
         lists.move(fromOffsets: source, toOffset: destination)
-        
-        // Update order numbers based on new positions
+
+        // Update order numbers AND modifiedAt for proper sync
+        // FIX: Only update modifiedAt for lists whose order actually changed (per Critical Review)
         for (index, list) in lists.enumerated() {
             var updatedList = list
-            updatedList.orderNumber = Int(index)
+            let oldOrderNumber = updatedList.orderNumber
+            updatedList.orderNumber = index
+            // Only update modifiedAt if orderNumber actually changed
+            if oldOrderNumber != index {
+                updatedList.updateModifiedDate()
+            }
             lists[index] = updatedList
         }
-        
+
         // Batch update all lists at once - saves to Core Data and syncs DataManager
         dataManager.updateListsOrder(lists)
-        
-        // CRITICAL FIX: Reload from DataManager to ensure UI and data layer are in sync
-        // After updateListsOrder(), DataManager.lists contains the properly ordered array
-        // We must use this as the source of truth to ensure the UI reflects the correct order
-        lists = dataManager.lists
-        
-        // Send updated data to paired device
-        WatchConnectivityService.shared.sendListsData(dataManager.lists)
-        
+
+        // FIX: Don't reload from DataManager - causes race condition
+        // We already have the correct order in lists array, and updateListsOrder() synchronizes it
+        // Removed: lists = dataManager.lists
+
+        // Send updated data to paired device (use lists, not dataManager.lists)
+        WatchConnectivityService.shared.sendListsData(lists)
+
         // Trigger haptic feedback
         hapticManager.dragDropped()
     }
