@@ -1,8 +1,6 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![CI](https://github.com/chmc/listall/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chmc/listall/actions/workflows/ci.yml)
 
-TB
-
 ## Quick Start
 
 ### Version Management
