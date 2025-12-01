@@ -46,19 +46,43 @@ class CoreDataManager: ObservableObject {
         let appGroupID = "group.io.github.chmc.ListAll"
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
             let storeURL = containerURL.appendingPathComponent("ListAll.sqlite")
-            
+            print("📦 CoreDataManager: App Groups container accessible")
+            print("📦 CoreDataManager: Store URL = \(storeURL.path)")
+
             // Migrate from old location if needed (iOS only - first time after App Groups was added)
             #if os(iOS)
             migrateToAppGroupsIfNeeded(newStoreURL: storeURL)
             #endif
-            
+
             storeDescription.url = storeURL
+        } else {
+            // FALLBACK: When App Groups fails (e.g., Debug builds without proper entitlements),
+            // use app's Documents directory as fallback to ensure data persists
+            print("⚠️ CoreDataManager: App Groups container NOT accessible for '\(appGroupID)'")
+            print("⚠️ CoreDataManager: Falling back to Documents directory (Debug builds only)")
+
+            if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let fallbackURL = documentsURL.appendingPathComponent("ListAll.sqlite")
+                storeDescription.url = fallbackURL
+                print("⚠️ CoreDataManager: Fallback store URL = \(fallbackURL.path)")
+            } else {
+                // Ultimate fallback: keep default URL but log error
+                print("❌ CoreDataManager: CRITICAL - Could not access Documents directory!")
+                if let defaultURL = storeDescription.url {
+                    print("❌ CoreDataManager: Using default URL = \(defaultURL.path)")
+                }
+            }
         }
         
         // Enable automatic migration
         storeDescription.shouldMigrateStoreAutomatically = true
         storeDescription.shouldInferMappingModelAutomatically = true
-        
+
+        // CRITICAL: Enable persistent history tracking for ALL builds (Debug + Release)
+        // This prevents "Read Only mode" error when switching between Debug and Release builds
+        // NSPersistentCloudKitContainer automatically enables this, so Debug builds must match
+        storeDescription.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+
         // Enable CloudKit sync (activated with paid developer account)
         // Note: Only enable for iOS Release builds - watchOS and Debug builds don't support CloudKit
         // CRITICAL: CloudKit requires proper code signing which isn't available in Debug/simulator builds
@@ -156,13 +180,16 @@ class CoreDataManager: ObservableObject {
     
     func save() {
         let context = persistentContainer.viewContext
-        
+
         if context.hasChanges {
             do {
                 try context.save()
+                print("💾 CoreDataManager: Context saved successfully")
             } catch {
-                print("Failed to save context: \(error)")
+                print("❌ CoreDataManager: Failed to save context: \(error)")
             }
+        } else {
+            print("💾 CoreDataManager: No changes to save")
         }
     }
     
