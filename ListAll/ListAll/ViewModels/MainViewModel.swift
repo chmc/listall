@@ -38,11 +38,6 @@ class MainViewModel: ObservableObject {
     // Watch sync properties
     @Published var isSyncingFromWatch = false
 
-    /// Flag to block notification-triggered reloads during list drag-drop.
-    /// MainView has .onReceive observers (.itemDataChanged, etc.) that call loadLists().
-    /// These fire during Core Data save, causing SwiftUI to reload mid-drag animation.
-    /// ListView has NO such observers, which is why Items drag-drop works perfectly.
-    var isReorderingLists = false
 
     init() {
         setupWatchConnectivityObserver()
@@ -226,17 +221,7 @@ class MainViewModel: ObservableObject {
         showingArchivedLists ? archivedLists : lists
     }
 
-    /// Computed property for ForEach - mirrors Items' filteredItems pattern.
-    /// This provides a layer of indirection that SwiftUI handles correctly during drag-drop.
-    var activeLists: [List] {
-        lists.sorted { $0.orderNumber < $1.orderNumber }
-    }
-
     func loadLists() {
-        // CRITICAL: Skip reload during list reordering to prevent SwiftUI double-move bug.
-        // MainView's .onReceive(.itemDataChanged) triggers this during Core Data save.
-        guard !isReorderingLists else { return }
-
         isLoading = true
         errorMessage = nil
 
@@ -247,8 +232,9 @@ class MainViewModel: ObservableObject {
             // Load archived lists
             archivedLists = dataManager.loadArchivedLists()
         } else {
-            // Get active lists from DataManager (already sorted by orderNumber in loadData)
-            lists = dataManager.lists
+            // Get active lists from DataManager and sort ONCE here
+            // This matches the watch pattern - direct @Published array assignment, not computed property
+            lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
         }
 
         isLoading = false
@@ -456,73 +442,37 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
-        // CRITICAL: Set flag BEFORE any operations to block notification-triggered reloads.
-        // MainView has .onReceive(.itemDataChanged) that calls loadLists() during Core Data save.
-        // This causes SwiftUI to see a data change mid-drag, causing the "double move" bug.
-        // ListView has NO such observers, which is why Items drag-drop works perfectly.
-        isReorderingLists = true
+        // ITEMS PATTERN: Exactly mirrors how ListViewModel.moveItems works
+        // Items drag-drop works perfectly, so we copy that pattern exactly.
 
-        guard let activeSourceIndex = source.first else {
-            isReorderingLists = false
+        guard let sourceIndex = source.first else { return }
+
+        // Guard against invalid indices
+        guard sourceIndex < lists.count else { return }
+
+        // Calculate actual destination index (SwiftUI .onMove provides "insert before" index)
+        let actualDestIndex = destination > sourceIndex ? destination - 1 : destination
+
+        guard actualDestIndex >= 0, actualDestIndex < lists.count, sourceIndex != actualDestIndex else {
             return
         }
 
-        // Get the list being moved from activeLists (the ForEach source - computed property)
-        let movedList = activeLists[activeSourceIndex]
+        // ITEMS PATTERN: Call reorder function (like dataRepository.reorderItems)
+        reorderLists(from: sourceIndex, to: actualDestIndex)
 
-        // Calculate destination in activeLists
-        let activeDestIndex = destination > activeSourceIndex ? destination - 1 : destination
-        let destinationList = activeDestIndex < activeLists.count ? activeLists[activeDestIndex] : activeLists.last
-
-        // Map activeLists indices to lists indices (by finding list.id)
-        guard let actualSourceIndex = lists.firstIndex(where: { $0.id == movedList.id }) else {
-            isReorderingLists = false
-            return
-        }
-
-        let actualDestIndex: Int
-        if let destList = destinationList,
-           let destIndex = lists.firstIndex(where: { $0.id == destList.id }) {
-            actualDestIndex = destIndex
-        } else {
-            actualDestIndex = lists.count - 1
-        }
-
-        // Guard against no-op moves
-        guard actualSourceIndex != actualDestIndex else {
-            isReorderingLists = false
-            return
-        }
-
-        // Step 1: Reorder in Core Data (mirrors dataRepository.reorderItems)
-        reorderListsInCoreData(from: actualSourceIndex, to: actualDestIndex)
-
-        // Step 2: Reload from Core Data (with flag temporarily cleared)
-        isReorderingLists = false
+        // ITEMS PATTERN: Reload from Core Data (like loadItems())
         loadLists()
-        isReorderingLists = true
 
-        // Step 3: Send to Watch
-        WatchConnectivityService.shared.sendListsData(dataManager.lists)
-
-        // Trigger haptic feedback
+        // Trigger haptic feedback (like hapticManager.dragDropped())
         hapticManager.dragDropped()
-
-        // Clear flag after delay to allow any pending notifications to be blocked.
-        // Core Data posts notifications asynchronously, so we need to keep the flag
-        // set long enough to block those notification-triggered loadLists() calls.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.isReorderingLists = false
-        }
     }
 
-    /// Reorder lists in Core Data without touching @Published lists
-    /// Mirrors how DataRepository.reorderItems works for Items
-    private func reorderListsInCoreData(from sourceIndex: Int, to destinationIndex: Int) {
+    /// Reorder lists in Core Data - mirrors DataRepository.reorderItems exactly
+    private func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
         // Get current lists (mirrors dataRepository getting items from dataManager)
-        let currentLists = lists
+        let currentLists = dataManager.lists
 
-        // Ensure indices are valid
+        // Ensure indices are valid (mirrors DataRepository.reorderItems validation)
         guard sourceIndex >= 0,
               destinationIndex >= 0,
               sourceIndex < currentLists.count,
@@ -531,27 +481,20 @@ class MainViewModel: ObservableObject {
             return
         }
 
-        // Create a mutable copy and reorder
+        // Create a mutable copy and reorder (mirrors DataRepository.reorderItems)
         var reorderedLists = currentLists
         let movedList = reorderedLists.remove(at: sourceIndex)
         reorderedLists.insert(movedList, at: destinationIndex)
 
-        // Update order numbers in Core Data directly (without updating DataManager.lists)
-        // This mirrors how DataRepository.reorderItems works for Items
-        let context = CoreDataManager.shared.viewContext
-        for (index, list) in reorderedLists.enumerated() {
-            let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
-            request.predicate = NSPredicate(format: "id == %@", list.id as CVarArg)
-
-            if let results = try? context.fetch(request),
-               let entity = results.first {
-                entity.orderNumber = Int32(index)
-                entity.modifiedAt = Date()
-            }
+        // Update order numbers and save each list (mirrors DataRepository.reorderItems)
+        for (index, var list) in reorderedLists.enumerated() {
+            list.orderNumber = index
+            list.updateModifiedDate()
+            dataManager.updateList(list)
         }
 
-        // Save once after all updates
-        try? context.save()
+        // Send updated data to paired device (mirrors DataRepository.reorderItems)
+        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     // MARK: - Multi-Selection Methods
