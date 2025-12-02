@@ -77,11 +77,22 @@ struct MainView: View {
                             }
                         } else {
                         SwiftUI.List {
-                            ForEach(viewModel.displayedLists) { list in
-                                ListRowView(list: list, mainViewModel: viewModel)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            // ITEMS PATTERN: Use computed property for ForEach (like Items uses filteredItems)
+                            // This provides indirection that SwiftUI handles correctly during drag-drop.
+                            // The comment below was WRONG - Items uses filteredItems (computed) and works!
+                            if viewModel.showingArchivedLists {
+                                ForEach(viewModel.archivedLists) { list in
+                                    ListRowView(list: list, mainViewModel: viewModel)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                }
+                                // No .onMove for archived lists
+                            } else {
+                                ForEach(viewModel.activeLists) { list in
+                                    ListRowView(list: list, mainViewModel: viewModel)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                }
+                                .onMove(perform: viewModel.moveList)
                             }
-                            .onMove(perform: viewModel.showingArchivedLists ? nil : viewModel.moveList)
                         }
                         .environment(\.editMode, $editMode)
                         .listStyle(.plain)

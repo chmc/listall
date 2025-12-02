@@ -366,10 +366,10 @@ class CoreDataManager: ObservableObject {
 // MARK: - Legacy Data Manager (for backward compatibility)
 class DataManager: ObservableObject {
     static let shared = DataManager()
-    
+
     @Published var lists: [List] = []
     private let coreDataManager = CoreDataManager.shared
-    
+
     private init() {
         loadData()
         
@@ -387,7 +387,7 @@ class DataManager: ObservableObject {
     }
     
     // MARK: - Remote Change Handling
-    
+
     @objc private func handleRemoteChange(_ notification: Notification) {
         // Reload data from Core Data to reflect changes made by other process
         loadData()

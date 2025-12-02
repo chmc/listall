@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - List Model
-struct List: Identifiable, Codable, Equatable, Hashable {
+struct List: Identifiable, Codable {
     var id: UUID
     var name: String
     var orderNumber: Int
@@ -9,7 +9,7 @@ struct List: Identifiable, Codable, Equatable, Hashable {
     var modifiedAt: Date
     var isArchived: Bool
     var items: [Item]
-    
+
     init(name: String) {
         self.id = UUID()
         self.name = name
@@ -18,6 +18,22 @@ struct List: Identifiable, Codable, Equatable, Hashable {
         self.modifiedAt = Date()
         self.isArchived = false
         self.items = []
+    }
+}
+
+// MARK: - Stable Identity for SwiftUI Drag-and-Drop
+// CRITICAL: Hash and equality must be based ONLY on stable ID, not mutable properties like orderNumber.
+// If orderNumber is included in hash, SwiftUI thinks the item changed identity during drag,
+// causing the "jump back" bug where lists revert to original positions.
+extension List: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)  // Only hash the stable ID
+    }
+}
+
+extension List: Equatable {
+    static func == (lhs: List, rhs: List) -> Bool {
+        lhs.id == rhs.id  // Only compare IDs for identity
     }
 }
 

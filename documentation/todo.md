@@ -1051,6 +1051,13 @@
   - Internal linking structure
   - External links with rel attributes
 
+## Bug: Main screen lists drag and drop ordering is messed up
+- ❌ Long press list to drag lists to another order 
+- ❌ When list is dropped it seems to be correct place
+- ❌ If user does manual pull to refresh operation, lists order is correct
+- ❌ but then list moves to wrong place and lists order gets messed up
+- ❌ TIP: Items drag and drop ordering works correctly, no problems
+
 ###########################################################
 
 ## 
