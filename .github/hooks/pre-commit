@@ -1,0 +1,25 @@
+#!/bin/bash
+# Git pre-commit hook for ListAll
+# Regenerates code ontology when Swift files change
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+ONTOLOGY_SCRIPT="$REPO_ROOT/.github/scripts/build-ontology.sh"
+ONTOLOGY_FILE="$REPO_ROOT/code_ontology.jsonl"
+
+# Check if ontology script exists
+if [[ ! -x "$ONTOLOGY_SCRIPT" ]]; then
+    echo "Warning: build-ontology.sh not found or not executable, skipping ontology generation"
+    exit 0
+fi
+
+# Check if any Swift files are being committed
+SWIFT_CHANGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.swift$' || true)
+
+if [[ -n "$SWIFT_CHANGED" ]]; then
+    echo "Swift files changed, regenerating code ontology..."
+    "$ONTOLOGY_SCRIPT" "$ONTOLOGY_FILE"
+fi
+
+exit 0
