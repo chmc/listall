@@ -63,7 +63,36 @@ class DataRepository: ObservableObject {
     func getList(by id: UUID) -> List? {
         return dataManager.lists.first { $0.id == id }
     }
-    
+
+    func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
+        // Get current lists
+        let currentLists = dataManager.lists
+
+        // Ensure indices are valid
+        guard sourceIndex >= 0,
+              destinationIndex >= 0,
+              sourceIndex < currentLists.count,
+              destinationIndex < currentLists.count,
+              sourceIndex != destinationIndex else {
+            return
+        }
+
+        // Create a mutable copy and reorder
+        var reorderedLists = currentLists
+        let movedList = reorderedLists.remove(at: sourceIndex)
+        reorderedLists.insert(movedList, at: destinationIndex)
+
+        // Update order numbers and save each list
+        for (index, var list) in reorderedLists.enumerated() {
+            list.orderNumber = index
+            list.updateModifiedDate()
+            dataManager.updateList(list)
+        }
+
+        // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
+    }
+
     // MARK: - Item Operations
     
     func createItem(in list: List, title: String, description: String = "", quantity: Int = 1) -> Item {

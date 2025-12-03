@@ -4,130 +4,57 @@
 
 Lists drag-and-drop reordering showed wrong order after dropping, while Items drag-and-drop worked perfectly. The list would appear to drop in the correct position, but then jump to the wrong position.
 
-**Key observation**: Watch app showed the correct order, proving Core Data was saving correctly. The bug was purely in the iOS UI layer.
+**Key observation**: Watch app showed the correct order immediately after drag-drop, proving the data was correct. Manual sync operation also fixed the order. The bug was a race condition in the iOS reload logic.
 
 ## Symptoms
 
 1. Long press list to drag to another position
 2. Drop appears correct momentarily
 3. List jumps to wrong position
-4. Pull-to-refresh shows correct order (data is correct)
-5. Watch app shows correct order (Core Data is correct)
+4. Manual sync shows correct order (Core Data is correct)
+5. Watch app shows correct order immediately (data is correct)
 
 ## Root Cause
 
-Two issues were found by comparing the WORKING Items implementation with the BROKEN Lists implementation:
+Race condition in `MainViewModel.moveList()`:
 
-### Issue 1: Missing Section Wrapper in ForEach
-
-**ListView (WORKS):**
 ```swift
-SwiftUI.List {
-    Section {  // <-- ForEach inside Section
-        ForEach(viewModel.filteredItems) { item in
-            ItemRowView(...)
-        }
-        .onMove(perform: viewModel.moveItems)
-    }
-}
-```
+// BROKEN - Race condition
+func moveList(from source: IndexSet, to destination: Int) {
+    // Step 1: Update Core Data and in-memory lists
+    reorderLists(from: sourceIndex, to: actualDestIndex)
 
-**MainView (BROKEN):**
-```swift
-SwiftUI.List {
-    // No Section wrapper!
-    ForEach(viewModel.lists) { list in
-        ListRowView(...)
-    }
-    .onMove(perform: viewModel.moveList)
-}
-```
+    // Step 2: Reload from Core Data - BUG HERE!
+    loadLists()  // <-- Calls dataManager.loadData() which reloads from Core Data
+                 //     BEFORE persistence is fully complete
 
-SwiftUI's List uses Sections internally to manage drag-and-drop state. Without the Section wrapper, the drag-and-drop behavior is inconsistent.
-
-### Issue 2: Overcomplicated ViewModel Logic
-
-**ListViewModel.moveItems (WORKS) - Simple pattern:**
-```swift
-func moveItems(from source: IndexSet, to destination: Int) {
-    guard let sourceIndex = source.first else { return }
-    // ... validation ...
-
-    // Step 1: Update Core Data
-    reorderItems(from: actualSourceIndex, to: actualDestIndex)
-
-    // Step 2: Reload from Core Data
-    loadItems()
-
-    // Step 3: Haptic feedback
     hapticManager.dragDropped()
 }
-```
 
-**MainViewModel.moveList (BROKEN) - Overcomplicated:**
-```swift
-func moveList(from source: IndexSet, to destination: Int) {
-    isReorderingLists = true  // Blocking flag
-
-    // Direct @Published array manipulation
-    lists = reorderedLists.enumerated().map { ... }
-
-    // Then save to Core Data
-    persistListOrderToCoreData()
-
-    // Async delay to clear flag
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-        self?.isReorderingLists = false
-    }
+func loadLists() {
+    dataManager.loadData()  // <-- This reloads from Core Data, reading STALE data
+    lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
 }
 ```
 
-The broken implementation tried to:
-1. Block notification-triggered reloads with a flag
-2. Directly mutate the @Published array
-3. Then save to Core Data
-4. Use async delays to manage state
+**The race condition**:
+1. `reorderLists()` updates Core Data via `dataManager.updateList()` for each list
+2. `dataManager.updateList()` ALSO updates the in-memory `lists` array (line 463-465 in CoreDataManager.swift)
+3. `loadLists()` calls `dataManager.loadData()` which reloads EVERYTHING from Core Data
+4. If Core Data hasn't fully committed, `loadData()` reads **stale data**
+5. UI shows wrong order
 
-This created race conditions and confused SwiftUI's internal drag-and-drop state management.
+**Why Watch worked**: Watch received data via `sendListsData(dataManager.lists)` which reads the **in-memory** `lists` array that was already updated - it doesn't reload from Core Data.
 
 ## The Fix
 
-### Fix 1: Add Section Wrapper
+### 1. Add `reorderLists()` to DataRepository (DRY Principle)
+
+Items had `DataRepository.reorderItems()` but Lists bypassed the repository pattern. Added matching method:
 
 ```swift
-SwiftUI.List {
-    Section {  // <-- Add Section wrapper
-        ForEach(viewModel.lists) { list in
-            ListRowView(...)
-        }
-        .onMove(perform: viewModel.moveList)
-    }
-}
-```
-
-### Fix 2: Simplify ViewModel to Match Items Pattern
-
-```swift
-func moveList(from source: IndexSet, to destination: Int) {
-    guard let sourceIndex = source.first else { return }
-    guard sourceIndex < lists.count else { return }
-
-    let actualDestIndex = destination > sourceIndex ? destination - 1 : destination
-    guard actualDestIndex >= 0, actualDestIndex < lists.count, sourceIndex != actualDestIndex else {
-        return
-    }
-
-    // Step 1: Update Core Data (like dataRepository.reorderItems)
-    reorderLists(from: sourceIndex, to: actualDestIndex)
-
-    // Step 2: Reload from Core Data (like loadItems())
-    loadLists()
-
-    // Step 3: Haptic feedback
-    hapticManager.dragDropped()
-}
-
-private func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
+// DataRepository.swift
+func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
     let currentLists = dataManager.lists
 
     guard sourceIndex >= 0,
@@ -142,55 +69,78 @@ private func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
     let movedList = reorderedLists.remove(at: sourceIndex)
     reorderedLists.insert(movedList, at: destinationIndex)
 
-    // Update order numbers and save each list
     for (index, var list) in reorderedLists.enumerated() {
         list.orderNumber = index
         list.updateModifiedDate()
-        dataManager.updateList(list)
+        dataManager.updateList(list)  // Updates Core Data AND in-memory array
     }
 
-    // Send to Watch
-    WatchConnectivityService.shared.sendListsData(dataManager.lists)
+    watchConnectivityService.sendListsData(dataManager.lists)
 }
 ```
 
+### 2. Update MainViewModel to Avoid Race Condition
+
+```swift
+// MainViewModel.swift
+private let dataRepository = DataRepository()
+
+func moveList(from source: IndexSet, to destination: Int) {
+    guard let sourceIndex = source.first else { return }
+    guard sourceIndex < lists.count else { return }
+
+    let actualDestIndex = destination > sourceIndex ? destination - 1 : destination
+    guard actualDestIndex >= 0, actualDestIndex < lists.count, sourceIndex != actualDestIndex else {
+        return
+    }
+
+    // Use DataRepository (DRY - same pattern as items)
+    dataRepository.reorderLists(from: sourceIndex, to: actualDestIndex)
+
+    // Read in-memory data directly - DON'T call loadLists() which triggers loadData()
+    lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+
+    hapticManager.dragDropped()
+}
+```
+
+**Key insight**: `dataManager.updateList()` updates BOTH Core Data AND the in-memory `lists` array. Reading `dataManager.lists` directly gets the fresh in-memory data without reloading from Core Data.
+
+## Why This Works
+
+1. `dataRepository.reorderLists()` calls `dataManager.updateList()` for each list
+2. `updateList()` saves to Core Data AND updates `lists[index] = list` in memory
+3. Reading `dataManager.lists.sorted()` gets the fresh in-memory data
+4. No `loadData()` call = no Core Data reload = no race condition
+
 ## Key Learnings
 
-### 1. When Something Works, Copy It Exactly
-The Items drag-and-drop worked perfectly. Instead of inventing new solutions, the fix was to copy the Items pattern exactly - both UI structure and ViewModel logic.
+### 1. In-Memory vs Core Data Reload
+`dataManager.updateList()` updates both Core Data AND the in-memory array. Reading the in-memory array directly is safe and avoids race conditions with Core Data persistence.
 
-### 2. Section Wrapper Matters for SwiftUI List
-SwiftUI's List uses Sections for internal state management. ForEach with .onMove should be inside a Section for consistent behavior.
+### 2. loadData() Is Expensive and Risky
+`loadData()` reloads everything from Core Data. If called immediately after updates, it may read stale data. Only call it when you need fresh data from disk (e.g., after Watch sync).
 
-### 3. Simple Beats Clever
-The broken implementation used:
-- Blocking flags
-- Direct @Published array manipulation
-- Async delays
-- Complex state management
+### 3. Follow DRY - Use Repository Pattern
+Items used `DataRepository.reorderItems()`, Lists bypassed the repository. Both should use the same pattern:
+- Repository handles: validation, reordering, Core Data update, Watch sync
+- ViewModel handles: index calculation, UI update, haptic feedback
 
-The working implementation uses:
-- Update Core Data first
-- Reload from Core Data
-- Let SwiftUI handle the rest
+### 4. Watch Sync as Debugging Tool
+When Watch shows correct data but iOS doesn't, the data layer is correct - look for UI/reload timing issues.
 
-### 4. Don't Fight SwiftUI
-The broken code tried to manually control when SwiftUI could see data changes. The working code lets SwiftUI handle the state transition naturally.
-
-### 5. Compare Working vs Broken Code Line-by-Line
-The bug was found by doing a detailed line-by-line comparison of:
-- ListView.swift (WORKS) vs MainView.swift (BROKEN)
-- ListViewModel.swift (WORKS) vs MainViewModel.swift (BROKEN)
-
-This revealed both the missing Section wrapper and the overcomplicated ViewModel logic.
+### 5. Compare Working vs Broken Implementations
+The fix was found by comparing Items (working) vs Lists (broken):
+- Items: Uses DataRepository, doesn't call `loadData()` after reorder
+- Lists: Bypassed repository, called `loadLists()` which triggered `loadData()`
 
 ## Files Changed
 
-- `ListAll/ListAll/Views/MainView.swift` - Added Section wrapper around ForEach
-- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Simplified moveList() to match Items pattern
+- `ListAll/ListAll/Services/DataRepository.swift` - Added `reorderLists()` method
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Use DataRepository, avoid `loadData()` call
 
 ## Related Files (Working Reference)
 
-- `ListAll/ListAll/Views/ListView.swift` - Working Items UI
-- `ListAll/ListAll/ViewModels/ListViewModel.swift` - Working Items ViewModel
-- `ListAll/ListAll/Services/DataRepository.swift` - reorderItems() reference implementation
+- `ListAll/ListAll/ViewModels/ListViewModel.swift` - Working Items ViewModel with `reorderItems()`
+- `ListAll/ListAll/Services/DataRepository.swift` - `reorderItems()` reference implementation
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - `updateList()` updates in-memory array (lines 463-465)

@@ -31,6 +31,7 @@ class MainViewModel: ObservableObject {
     @Published var showArchivedNotification = false
     
     private let dataManager = DataManager.shared
+    private let dataRepository = DataRepository()
     private var archiveNotificationTimer: Timer?
     private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
     private let hapticManager = HapticManager.shared
@@ -442,9 +443,6 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
-        // ITEMS PATTERN: Exactly mirrors how ListViewModel.moveItems works
-        // Items drag-drop works perfectly, so we copy that pattern exactly.
-
         guard let sourceIndex = source.first else { return }
 
         // Guard against invalid indices
@@ -457,44 +455,15 @@ class MainViewModel: ObservableObject {
             return
         }
 
-        // ITEMS PATTERN: Call reorder function (like dataRepository.reorderItems)
-        reorderLists(from: sourceIndex, to: actualDestIndex)
+        // Use DataRepository for reordering (DRY: same pattern as items)
+        dataRepository.reorderLists(from: sourceIndex, to: actualDestIndex)
 
-        // ITEMS PATTERN: Reload from Core Data (like loadItems())
-        loadLists()
+        // Update local array directly to avoid race condition with Core Data reload
+        // This ensures UI reflects the change immediately
+        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
 
-        // Trigger haptic feedback (like hapticManager.dragDropped())
+        // Trigger haptic feedback
         hapticManager.dragDropped()
-    }
-
-    /// Reorder lists in Core Data - mirrors DataRepository.reorderItems exactly
-    private func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
-        // Get current lists (mirrors dataRepository getting items from dataManager)
-        let currentLists = dataManager.lists
-
-        // Ensure indices are valid (mirrors DataRepository.reorderItems validation)
-        guard sourceIndex >= 0,
-              destinationIndex >= 0,
-              sourceIndex < currentLists.count,
-              destinationIndex < currentLists.count,
-              sourceIndex != destinationIndex else {
-            return
-        }
-
-        // Create a mutable copy and reorder (mirrors DataRepository.reorderItems)
-        var reorderedLists = currentLists
-        let movedList = reorderedLists.remove(at: sourceIndex)
-        reorderedLists.insert(movedList, at: destinationIndex)
-
-        // Update order numbers and save each list (mirrors DataRepository.reorderItems)
-        for (index, var list) in reorderedLists.enumerated() {
-            list.orderNumber = index
-            list.updateModifiedDate()
-            dataManager.updateList(list)
-        }
-
-        // Send updated data to paired device (mirrors DataRepository.reorderItems)
-        WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
     
     // MARK: - Multi-Selection Methods

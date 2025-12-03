@@ -1,5 +1,58 @@
 # AI Changelog
 
+## 2025-12-03 - Fix Lists Drag-and-Drop Ordering Bug ✅ COMPLETED
+
+### Summary
+Fixed a bug where lists drag-and-drop caused incorrect ordering on iOS, while Watch showed correct order. The fix follows DRY principles by using DataRepository pattern (same as items).
+
+### The Problem
+**User Request**: "Lists drag and drop makes list order incorrect, but manual sync operation fixes the order. Watch has correct order right after drag and drop."
+
+**Root Cause**: Race condition in `MainViewModel.moveList()`:
+1. `reorderLists()` updated Core Data and in-memory `dataManager.lists`
+2. `loadLists()` was called immediately after, which triggered `dataManager.loadData()`
+3. `loadData()` reloaded from Core Data before persistence completed, reading stale data
+4. Watch received correct data directly from in-memory `dataManager.lists`
+
+### Implementation Details
+
+#### 1. Added `reorderLists()` to DataRepository (DRY)
+**File**: `ListAll/ListAll/Services/DataRepository.swift`
+
+Added new method following the same pattern as existing `reorderItems()`:
+- Gets current lists from dataManager
+- Validates indices
+- Reorders in-memory array
+- Updates orderNumber and modifiedAt for each list
+- Saves to Core Data via `dataManager.updateList()`
+- Sends updated data to Watch
+
+#### 2. Updated MainViewModel to Use DataRepository
+**File**: `ListAll/ListAll/ViewModels/MainViewModel.swift`
+
+**Changes**:
+- Added `private let dataRepository = DataRepository()`
+- Simplified `moveList()` from 55 lines to 23 lines
+- Removed duplicate private `reorderLists()` method
+- Now calls `dataRepository.reorderLists()` (same as items)
+- Reads from `dataManager.lists.sorted()` instead of calling `loadLists()` to avoid race condition
+
+**Why this fixes the bug**:
+- `dataManager.updateList()` updates both Core Data AND in-memory `lists` array
+- Reading `dataManager.lists` directly after reorder gets the fresh in-memory data
+- Avoids calling `loadData()` which caused the race condition
+
+### Files Changed
+- `ListAll/ListAll/Services/DataRepository.swift` - Added `reorderLists()` method
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Use DataRepository, remove duplicate code
+
+### Testing
+- iOS build: ✅ SUCCEEDED
+- watchOS build: ✅ SUCCEEDED
+- All tests: ✅ PASSED
+
+---
+
 ## 2025-01-XX - Screenshot Extraction Fixes ✅ COMPLETED
 
 ### Summary
