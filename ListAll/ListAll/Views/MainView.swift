@@ -139,6 +139,7 @@ struct MainView: View {
                     .hidden()
                     }
                     .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
+                    .navigationBarTitleDisplayMode(.large)
                     .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         HStack(spacing: Theme.Spacing.md) {
@@ -293,7 +294,6 @@ struct MainView: View {
                 }
             }
             .navigationViewStyle(.stack)  // Force stack style on iPad for screenshots (prevents split-view)
-            .navigationBarTitleDisplayMode(.large)
         .onAppear {
             viewModel.loadLists()
             Task {
