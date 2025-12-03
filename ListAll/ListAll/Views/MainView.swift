@@ -28,20 +28,6 @@ struct MainView: View {
             NavigationView {
                 ZStack {
                     VStack(spacing: 0) {
-                        // Watch Sync Indicator (subtle)
-                        if viewModel.isSyncingFromWatch {
-                            HStack(spacing: 6) {
-                                Image(systemName: "applewatch")
-                                    .font(.system(size: 12))
-                                Text(String(localized: "Syncing with Watch..."))
-                                    .font(.caption)
-                            }
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-                            .padding(.vertical, 4)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
-                        
                         // Main Content
                         if viewModel.isLoading {
                             ProgressView("Loading lists...")
@@ -294,6 +280,25 @@ struct MainView: View {
                 }
             }
             .navigationViewStyle(.stack)  // Force stack style on iPad for screenshots (prevents split-view)
+            .overlay(alignment: .top) {
+                // Watch Sync Indicator - as overlay to avoid affecting navigation bar layout
+                if viewModel.isSyncingFromWatch {
+                    HStack(spacing: 6) {
+                        Image(systemName: "applewatch")
+                            .font(.system(size: 12))
+                        Text(String(localized: "Syncing with Watch..."))
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(8)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.isSyncingFromWatch)
+                }
+            }
         .onAppear {
             viewModel.loadLists()
             Task {
