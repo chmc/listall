@@ -1,4 +1,4 @@
-name: Prepare App Store Release
+name: Prepare App Store Release (not in use)
 
 on:
   workflow_dispatch:
