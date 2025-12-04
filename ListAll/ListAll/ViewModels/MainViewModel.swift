@@ -443,24 +443,42 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
-        guard let sourceIndex = source.first else { return }
+        // DRY: Exact same pattern as ListViewModel.moveSingleItem()
+        // CRITICAL: Use the same array (lists) for all operations, not dataManager.lists
 
-        // Guard against invalid indices
-        guard sourceIndex < lists.count else { return }
+        guard let uiSourceIndex = source.first else { return }
+        guard uiSourceIndex < lists.count else { return }
 
-        // Calculate actual destination index (SwiftUI .onMove provides "insert before" index)
-        let actualDestIndex = destination > sourceIndex ? destination - 1 : destination
+        // Get the actual list being dragged (from UI array)
+        let movedList = lists[uiSourceIndex]
 
-        guard actualDestIndex >= 0, actualDestIndex < lists.count, sourceIndex != actualDestIndex else {
-            return
+        // Calculate destination in UI array (same as items: filteredDestIndex)
+        let uiDestIndex = destination > uiSourceIndex ? destination - 1 : destination
+
+        // Get the destination list (same pattern as items: destinationItem)
+        let destinationList = uiDestIndex < lists.count ? lists[uiDestIndex] : lists.last
+
+        // Find actual indices in the SAME array we're using for UI (same as items uses `items`)
+        // CRITICAL: Use `lists` not `dataManager.lists` - they must be the same array!
+        guard let actualSourceIndex = lists.firstIndex(where: { $0.id == movedList.id }) else { return }
+
+        let actualDestIndex: Int
+        if let destList = destinationList,
+           let destIndex = lists.firstIndex(where: { $0.id == destList.id }) {
+            actualDestIndex = destIndex
+        } else {
+            // Moving to end
+            actualDestIndex = lists.count - 1
         }
 
-        // Use DataRepository for reordering (DRY: same pattern as items)
-        dataRepository.reorderLists(from: sourceIndex, to: actualDestIndex)
+        // Skip if no actual movement needed
+        guard actualSourceIndex != actualDestIndex else { return }
 
-        // Update local array directly to avoid race condition with Core Data reload
-        // This ensures UI reflects the change immediately
-        lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        // Use DataRepository for reordering (DRY: same pattern as items)
+        dataRepository.reorderLists(from: actualSourceIndex, to: actualDestIndex)
+
+        // DRY: Same pattern as ListViewModel.reorderItems() - fresh fetch from Core Data
+        lists = dataManager.getLists()
 
         // Trigger haptic feedback
         hapticManager.dragDropped()

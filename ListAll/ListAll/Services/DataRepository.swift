@@ -65,8 +65,9 @@ class DataRepository: ObservableObject {
     }
 
     func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
-        // Get current lists
-        let currentLists = dataManager.lists
+        // DRY: Same pattern as reorderItems() - use fresh fetch from Core Data
+        // CRITICAL: Use getLists() not dataManager.lists to match items pattern
+        let currentLists = dataManager.getLists()
 
         // Ensure indices are valid
         guard sourceIndex >= 0,

@@ -1,46 +1,83 @@
 # AI Changelog
 
-## 2025-12-03 - Fix Lists Drag-and-Drop Ordering Bug ✅ COMPLETED
+## 2025-12-04 - Fix Lists Drag-and-Drop: Complete DRY Fix ✅ COMPLETED
 
 ### Summary
-Fixed a bug where lists drag-and-drop caused incorrect ordering on iOS, while Watch showed correct order. The fix follows DRY principles by using DataRepository pattern (same as items).
+Fixed lists drag-and-drop to work exactly like items. Multiple iterations were needed to achieve full DRY compliance:
+1. First fix: ID-based index lookup (fixed nearby list moving)
+2. Second fix: Use same array consistently (fixed one-position offset)
+3. Third fix: Fresh Core Data fetch in repository (matches items pattern exactly)
 
 ### The Problem
-**User Request**: "Lists drag and drop makes list order incorrect, but manual sync operation fixes the order. Watch has correct order right after drag and drop."
+**User Request**: "Lists drag and drop makes list order incorrect. Dragged list drops one position wrong. Manual sync fixes order. Items drag-and-drop works correctly - they should have same implementation."
 
-**Root Cause**: Race condition in `MainViewModel.moveList()`:
-1. `reorderLists()` updated Core Data and in-memory `dataManager.lists`
-2. `loadLists()` was called immediately after, which triggered `dataManager.loadData()`
-3. `loadData()` reloaded from Core Data before persistence completed, reading stale data
-4. Watch received correct data directly from in-memory `dataManager.lists`
+**Root Causes (Fixed Incrementally)**:
+1. Raw indices instead of ID-based lookup → nearby list moved
+2. Using different arrays (`lists` vs `dataManager.lists`) → one position offset
+3. Repository using cached `dataManager.lists` instead of fresh fetch → index mismatch
 
 ### Implementation Details
 
-#### 1. Added `reorderLists()` to DataRepository (DRY)
-**File**: `ListAll/ListAll/Services/DataRepository.swift`
-
-Added new method following the same pattern as existing `reorderItems()`:
-- Gets current lists from dataManager
-- Validates indices
-- Reorders in-memory array
-- Updates orderNumber and modifiedAt for each list
-- Saves to Core Data via `dataManager.updateList()`
-- Sends updated data to Watch
-
-#### 2. Updated MainViewModel to Use DataRepository
+#### 1. ID-Based Index Lookup in moveList() (DRY: Same as Items)
 **File**: `ListAll/ListAll/ViewModels/MainViewModel.swift`
 
-**Changes**:
-- Added `private let dataRepository = DataRepository()`
-- Simplified `moveList()` from 55 lines to 23 lines
-- Removed duplicate private `reorderLists()` method
-- Now calls `dataRepository.reorderLists()` (same as items)
-- Reads from `dataManager.lists.sorted()` instead of calling `loadLists()` to avoid race condition
+Uses the same array (`lists`) for all operations, matching how items uses `items`:
+```swift
+func moveList(from source: IndexSet, to destination: Int) {
+    guard let uiSourceIndex = source.first else { return }
 
-**Why this fixes the bug**:
-- `dataManager.updateList()` updates both Core Data AND in-memory `lists` array
-- Reading `dataManager.lists` directly after reorder gets the fresh in-memory data
-- Avoids calling `loadData()` which caused the race condition
+    // Get items from UI array (same as items: filteredItems)
+    let movedList = lists[uiSourceIndex]
+    let uiDestIndex = destination > uiSourceIndex ? destination - 1 : destination
+    let destinationList = uiDestIndex < lists.count ? lists[uiDestIndex] : lists.last
+
+    // Find indices in SAME array (same as items uses `items`)
+    guard let actualSourceIndex = lists.firstIndex(where: { $0.id == movedList.id }) else { return }
+    let actualDestIndex = lists.firstIndex(where: { $0.id == destinationList?.id })
+
+    dataRepository.reorderLists(from: actualSourceIndex, to: actualDestIndex)
+    lists = dataManager.getLists()
+}
+```
+
+#### 2. Fresh Core Data Fetch in reorderLists() (DRY: Same as reorderItems)
+**File**: `ListAll/ListAll/Services/DataRepository.swift`
+
+Changed from cached `dataManager.lists` to fresh `dataManager.getLists()`:
+```swift
+func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
+    // DRY: Same pattern as reorderItems() - use fresh fetch
+    let currentLists = dataManager.getLists()  // Was: dataManager.lists
+    // ... rest same as items
+}
+```
+
+#### 3. Added getLists() Method to DataManager (DRY: Mirrors getItems())
+**File**: `ListAll/ListAll/Models/CoreData/CoreDataManager.swift`
+
+Fresh Core Data fetch sorted by orderNumber, matching `getItems(forListId:)`.
+
+### Files Changed
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - ID-based lookup using consistent array
+- `ListAll/ListAll/Services/DataRepository.swift` - Fresh fetch in `reorderLists()`
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Added `getLists()` method
+
+### Key Learnings
+1. **Use same array consistently**: Don't mix UI array (`lists`) with data array (`dataManager.lists`)
+2. **Fresh fetch in repository**: Repository should fetch fresh data, not use cached arrays
+3. **ID-based lookup**: Never trust raw indices from SwiftUI - always find by ID
+4. **DRY means EXACT same pattern**: Items worked because every layer used fresh fetches
+
+### Testing
+- iOS build: ✅ SUCCEEDED
+- watchOS build: ✅ SUCCEEDED
+
+---
+
+## 2025-12-03 - Fix Lists Drag-and-Drop Ordering Bug (Partial Fix)
+
+### Summary
+First attempt to fix lists drag-and-drop. Added DataRepository pattern (same as items) and avoided race condition by not calling `loadLists()`. This was later found to be insufficient - the real fix required ID-based index lookup (see 2025-12-04 entry).
 
 ### Files Changed
 - `ListAll/ListAll/Services/DataRepository.swift` - Added `reorderLists()` method

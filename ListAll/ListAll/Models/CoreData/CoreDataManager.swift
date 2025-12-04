@@ -420,7 +420,25 @@ class DataManager: ObservableObject {
     func saveData() {
         coreDataManager.save()
     }
-    
+
+    /// Fresh fetch of active lists from Core Data, sorted by orderNumber
+    /// Use this after reordering to get the latest state without affecting the cached lists array
+    /// This mirrors the getItems(forListId:) pattern for consistency (DRY)
+    func getLists() -> [List] {
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
+        request.relationshipKeyPathsForPrefetching = ["items"]
+
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            return listEntities.map { $0.toList() }
+        } catch {
+            print("❌ Failed to fetch lists: \(error)")
+            return []
+        }
+    }
+
     // MARK: - List Operations
     
     func addList(_ list: List) {
