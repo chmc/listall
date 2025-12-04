@@ -443,35 +443,28 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
-        // DRY: Use EXACT same pattern as ListViewModel.moveItems()
-        // This ensures consistent behavior between list and item drag-and-drop
+        // CRITICAL FIX: Pass IDs to DataRepository, not indices
+        // This avoids index mismatch between ViewModel's cached array and fresh Core Data fetch
+        // The "freeze" effect happens when loadLists() re-renders from fresh data
 
         guard let sourceIndex = source.first else { return }
 
-        // Get the actual list being dragged
+        // Get the list being dragged from our cached array
         let movedList = lists[sourceIndex]
 
-        // Calculate destination index using the same logic as items
-        // SwiftUI's destination has complex "insert before" semantics
+        // Calculate destination in our cached array using SwiftUI's semantics
+        // SwiftUI destination means "insert before this index"
         let destIndex = destination > sourceIndex ? destination - 1 : destination
         let destinationList = destIndex < lists.count ? lists[destIndex] : lists.last
 
-        // Find the actual indices in the full lists array using ID-based lookup
-        // (This matches moveSingleItem's pattern exactly)
-        guard let actualSourceIndex = lists.firstIndex(where: { $0.id == movedList.id }) else { return }
+        // Pass LIST IDs to DataRepository - it will find correct indices in fresh Core Data
+        // This is the key fix: DataRepository works with fresh data, we pass IDs not stale indices
+        dataRepository.reorderListById(
+            movingListId: movedList.id,
+            toBeforeListId: destinationList?.id
+        )
 
-        let actualDestIndex: Int
-        if let destList = destinationList,
-           let destIdx = lists.firstIndex(where: { $0.id == destList.id }) {
-            actualDestIndex = destIdx
-        } else {
-            actualDestIndex = lists.count - 1
-        }
-
-        // Use DataRepository.reorderLists() - matches items using reorderItems()
-        dataRepository.reorderLists(from: actualSourceIndex, to: actualDestIndex)
-
-        // Refresh the list (causes the "freeze" effect that confirms persistence)
+        // Refresh from Core Data (causes the "freeze" effect that confirms persistence)
         loadLists()
 
         // Trigger haptic feedback

@@ -64,21 +64,31 @@ class DataRepository: ObservableObject {
         return dataManager.lists.first { $0.id == id }
     }
 
-    func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
-        // DRY: Same pattern as reorderItems() - use fresh fetch from Core Data
-        // CRITICAL: Use getLists() not dataManager.lists to match items pattern
+    /// Reorders lists by ID - finds actual indices in fresh Core Data fetch
+    /// This avoids index mismatch between ViewModel's cached array and Core Data
+    func reorderListById(movingListId: UUID, toBeforeListId: UUID?) {
+        // CRITICAL: Fetch fresh data from Core Data to get correct indices
         let currentLists = dataManager.getLists()
 
-        // Ensure indices are valid
-        guard sourceIndex >= 0,
-              destinationIndex >= 0,
-              sourceIndex < currentLists.count,
-              destinationIndex < currentLists.count,
-              sourceIndex != destinationIndex else {
+        // Find the source index in fresh data
+        guard let sourceIndex = currentLists.firstIndex(where: { $0.id == movingListId }) else {
             return
         }
 
-        // Create a mutable copy and reorder
+        // Find the destination index in fresh data
+        let destinationIndex: Int
+        if let beforeId = toBeforeListId,
+           let destIdx = currentLists.firstIndex(where: { $0.id == beforeId }) {
+            destinationIndex = destIdx
+        } else {
+            // Moving to end
+            destinationIndex = currentLists.count - 1
+        }
+
+        // Don't reorder if same position
+        guard sourceIndex != destinationIndex else { return }
+
+        // Create a mutable copy and reorder using remove/insert pattern
         var reorderedLists = currentLists
         let movedList = reorderedLists.remove(at: sourceIndex)
         reorderedLists.insert(movedList, at: destinationIndex)
@@ -91,6 +101,32 @@ class DataRepository: ObservableObject {
         }
 
         // Send updated data to paired device
+        watchConnectivityService.sendListsData(dataManager.lists)
+    }
+
+    @available(*, deprecated, message: "Use reorderListById instead to avoid index mismatch bugs")
+    func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
+        // Legacy index-based method - kept for backward compatibility
+        let currentLists = dataManager.getLists()
+
+        guard sourceIndex >= 0,
+              destinationIndex >= 0,
+              sourceIndex < currentLists.count,
+              destinationIndex < currentLists.count,
+              sourceIndex != destinationIndex else {
+            return
+        }
+
+        var reorderedLists = currentLists
+        let movedList = reorderedLists.remove(at: sourceIndex)
+        reorderedLists.insert(movedList, at: destinationIndex)
+
+        for (index, var list) in reorderedLists.enumerated() {
+            list.orderNumber = index
+            list.updateModifiedDate()
+            dataManager.updateList(list)
+        }
+
         watchConnectivityService.sendListsData(dataManager.lists)
     }
 
