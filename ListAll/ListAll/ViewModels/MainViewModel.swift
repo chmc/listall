@@ -443,42 +443,36 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
-        // DRY: Exact same pattern as ListViewModel.moveSingleItem()
-        // CRITICAL: Use the same array (lists) for all operations, not dataManager.lists
+        // DRY: Use EXACT same pattern as ListViewModel.moveItems()
+        // This ensures consistent behavior between list and item drag-and-drop
 
-        guard let uiSourceIndex = source.first else { return }
-        guard uiSourceIndex < lists.count else { return }
+        guard let sourceIndex = source.first else { return }
 
-        // Get the actual list being dragged (from UI array)
-        let movedList = lists[uiSourceIndex]
+        // Get the actual list being dragged
+        let movedList = lists[sourceIndex]
 
-        // Calculate destination in UI array (same as items: filteredDestIndex)
-        let uiDestIndex = destination > uiSourceIndex ? destination - 1 : destination
+        // Calculate destination index using the same logic as items
+        // SwiftUI's destination has complex "insert before" semantics
+        let destIndex = destination > sourceIndex ? destination - 1 : destination
+        let destinationList = destIndex < lists.count ? lists[destIndex] : lists.last
 
-        // Get the destination list (same pattern as items: destinationItem)
-        let destinationList = uiDestIndex < lists.count ? lists[uiDestIndex] : lists.last
-
-        // Find actual indices in the SAME array we're using for UI (same as items uses `items`)
-        // CRITICAL: Use `lists` not `dataManager.lists` - they must be the same array!
+        // Find the actual indices in the full lists array using ID-based lookup
+        // (This matches moveSingleItem's pattern exactly)
         guard let actualSourceIndex = lists.firstIndex(where: { $0.id == movedList.id }) else { return }
 
         let actualDestIndex: Int
         if let destList = destinationList,
-           let destIndex = lists.firstIndex(where: { $0.id == destList.id }) {
-            actualDestIndex = destIndex
+           let destIdx = lists.firstIndex(where: { $0.id == destList.id }) {
+            actualDestIndex = destIdx
         } else {
-            // Moving to end
             actualDestIndex = lists.count - 1
         }
 
-        // Skip if no actual movement needed
-        guard actualSourceIndex != actualDestIndex else { return }
-
-        // Use DataRepository for reordering (DRY: same pattern as items)
+        // Use DataRepository.reorderLists() - matches items using reorderItems()
         dataRepository.reorderLists(from: actualSourceIndex, to: actualDestIndex)
 
-        // DRY: Same pattern as ListViewModel.reorderItems() - fresh fetch from Core Data
-        lists = dataManager.getLists()
+        // Refresh the list (causes the "freeze" effect that confirms persistence)
+        loadLists()
 
         // Trigger haptic feedback
         hapticManager.dragDropped()

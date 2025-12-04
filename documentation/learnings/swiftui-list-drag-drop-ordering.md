@@ -2,149 +2,103 @@
 
 ## Problem Summary
 
-Lists drag-and-drop reordering showed wrong order after dropping, while Items drag-and-drop worked perfectly. The bug manifested in stages:
-1. First: Nearby list would also move incorrectly
-2. After partial fix: Dragged list would drop one position off
-3. Manual sync operation fixed the order, Watch showed correct order immediately
+Lists drag-and-drop reordering showed wrong order after dropping. The dragged list would drop one position off from where expected, and sometimes a nearby list would also move incorrectly. Manual sync operation fixed the order, and Watch showed correct order immediately.
 
-## Root Causes (Multiple Issues)
+## Root Cause
 
-The bug had **three** causes that needed fixing to achieve full DRY compliance with items:
+**The lists drag-and-drop was NOT using the same implementation pattern as items drag-and-drop.**
 
-### Issue 1: Raw Indices vs ID-Based Lookup
-Lists used raw indices from SwiftUI's `onMove` callback directly. Items used ID-based lookup.
+Key observation from user: Items have a "little freeze" when drag is released, but lists didn't - this indicated fundamentally different implementations.
 
-### Issue 2: Using Different Arrays
-Lists ViewModel used `lists` for UI but passed indices to repository which used `dataManager.lists`. Items uses the same array (`items`) consistently.
+The working items implementation:
+1. Uses `DataRepository.reorderItems()` with remove/insert pattern
+2. Converts SwiftUI indices to actual indices via ID-based lookup
+3. Calls `loadItems()` after reordering (causes the "freeze")
 
-### Issue 3: Cached vs Fresh Data in Repository
-`reorderLists()` used cached `dataManager.lists`. `reorderItems()` uses fresh `getItems(forListId:)` fetch.
+The broken lists implementation:
+1. Used `Array.move(fromOffsets:toOffset:)` directly on ViewModel array
+2. Bypassed `DataRepository.reorderLists()`
+3. Had timing issues with Core Data persistence
 
-## The Complete Fix (DRY: Exact Same Pattern as Items)
+## The Solution: DRY - Use EXACT Same Pattern as Items
 
-### 1. MainViewModel.moveList() - Same Pattern as moveSingleItem()
+The fix makes `MainViewModel.moveList()` match `ListViewModel.moveSingleItem()` exactly:
 
 ```swift
 func moveList(from source: IndexSet, to destination: Int) {
-    // DRY: Exact same pattern as ListViewModel.moveSingleItem()
-    // CRITICAL: Use the same array (lists) for all operations
+    // DRY: Use EXACT same pattern as ListViewModel.moveItems()
+    guard let sourceIndex = source.first else { return }
 
-    guard let uiSourceIndex = source.first else { return }
-    guard uiSourceIndex < lists.count else { return }
+    // Get the actual list being dragged
+    let movedList = lists[sourceIndex]
 
-    // Get the actual list being dragged (from UI array)
-    let movedList = lists[uiSourceIndex]
+    // Calculate destination index using the same logic as items
+    let destIndex = destination > sourceIndex ? destination - 1 : destination
+    let destinationList = destIndex < lists.count ? lists[destIndex] : lists.last
 
-    // Calculate destination in UI array (same as items: filteredDestIndex)
-    let uiDestIndex = destination > uiSourceIndex ? destination - 1 : destination
-
-    // Get the destination list (same pattern as items: destinationItem)
-    let destinationList = uiDestIndex < lists.count ? lists[uiDestIndex] : lists.last
-
-    // Find actual indices in the SAME array (same as items uses `items`)
-    // CRITICAL: Use `lists` not `dataManager.lists`!
+    // Find the actual indices using ID-based lookup (matches moveSingleItem)
     guard let actualSourceIndex = lists.firstIndex(where: { $0.id == movedList.id }) else { return }
 
     let actualDestIndex: Int
     if let destList = destinationList,
-       let destIndex = lists.firstIndex(where: { $0.id == destList.id }) {
-        actualDestIndex = destIndex
+       let destIdx = lists.firstIndex(where: { $0.id == destList.id }) {
+        actualDestIndex = destIdx
     } else {
         actualDestIndex = lists.count - 1
     }
 
-    guard actualSourceIndex != actualDestIndex else { return }
-
+    // Use DataRepository.reorderLists() - matches items using reorderItems()
     dataRepository.reorderLists(from: actualSourceIndex, to: actualDestIndex)
-    lists = dataManager.getLists()
+
+    // Refresh the list (causes the "freeze" effect that confirms persistence)
+    loadLists()
+
     hapticManager.dragDropped()
 }
 ```
 
-### 2. DataRepository.reorderLists() - Same Pattern as reorderItems()
+## Why This Works
 
-```swift
-func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
-    // DRY: Same pattern as reorderItems() - use fresh fetch
-    // CRITICAL: Use getLists() not dataManager.lists
-    let currentLists = dataManager.getLists()
+### 1. ID-Based Index Lookup
+Using `firstIndex(where: { $0.id == item.id })` ensures we're working with actual array positions, not SwiftUI's complex destination semantics.
 
-    guard sourceIndex >= 0,
-          destinationIndex >= 0,
-          sourceIndex < currentLists.count,
-          destinationIndex < currentLists.count,
-          sourceIndex != destinationIndex else {
-        return
-    }
+### 2. DataRepository Handles Persistence
+`DataRepository.reorderLists()` and `reorderItems()` both:
+- Fetch fresh data from Core Data
+- Use `remove(at:)` and `insert(at:)` pattern
+- Update all order numbers
+- Sync to Watch
 
-    var reorderedLists = currentLists
-    let movedList = reorderedLists.remove(at: sourceIndex)
-    reorderedLists.insert(movedList, at: destinationIndex)
-
-    for (index, var list) in reorderedLists.enumerated() {
-        list.orderNumber = index
-        list.updateModifiedDate()
-        dataManager.updateList(list)
-    }
-
-    watchConnectivityService.sendListsData(dataManager.lists)
-}
-```
-
-### 3. DataManager.getLists() - Mirrors getItems()
-
-```swift
-func getLists() -> [List] {
-    let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
-    request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
-    request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
-    request.relationshipKeyPathsForPrefetching = ["items"]
-
-    do {
-        let listEntities = try coreDataManager.viewContext.fetch(request)
-        return listEntities.map { $0.toList() }
-    } catch {
-        print("❌ Failed to fetch lists: \(error)")
-        return []
-    }
-}
-```
+### 3. Refresh After Reorder
+Calling `loadLists()` / `loadItems()` after reordering:
+- Ensures UI matches persisted state
+- Causes the "freeze" effect that confirms the operation completed
+- Prevents race conditions with SwiftUI's animation
 
 ## Key Learnings
 
-### 1. Use Same Array Consistently
-Don't mix UI array (`lists`) with data array (`dataManager.lists`). Use the same array for:
-- Getting source/destination items
-- Finding actual indices
-- All operations in a single drag-drop flow
+### 1. DRY Principle Prevents Bugs
+When two features should behave identically, they MUST use identical implementation patterns. Different implementations = different bugs.
 
-### 2. Fresh Fetch in Repository
-Repository methods should fetch fresh data, not use cached arrays:
-- `reorderItems()` uses `getItems(forListId:)` ✓
-- `reorderLists()` should use `getLists()` ✓
+### 2. Visual Cues Indicate Implementation Differences
+The "freeze" on items vs no freeze on lists was a critical debugging clue that the implementations were different.
 
-### 3. ID-Based Lookup
-Never trust raw indices from SwiftUI's `onMove` callback:
-1. Get SOURCE item by ID from UI array
-2. Get DESTINATION item by position from UI array
-3. Find both items' indices in data array using `firstIndex(where: { $0.id == item.id })`
+### 3. Watch Sync as Debugging Tool
+When Watch shows correct data but iOS doesn't, the data layer is correct. Look for UI/ViewModel handling issues.
 
-### 4. DRY Means EXACT Same Pattern
-Items worked because every layer used fresh fetches and consistent arrays. Lists needed the EXACT same pattern at every layer:
-- ViewModel: Same index calculation logic
-- Repository: Same fresh-fetch pattern
-- DataManager: Same `get*()` method pattern
+### 4. SwiftUI onMove Destination Semantics
+The `destination` parameter has complex "insert before" semantics:
+- Moving UP: `destination` IS the final position
+- Moving DOWN: `destination` is one PAST the final position
 
-### 5. Watch Sync as Debugging Tool
-When Watch shows correct data but iOS doesn't, the data layer is correct. Look for UI/index mapping issues.
+Using ID-based lookup sidesteps this complexity.
 
 ## Files Changed
 
-- `ListAll/ListAll/ViewModels/MainViewModel.swift` - ID-based lookup using consistent array
-- `ListAll/ListAll/Services/DataRepository.swift` - Fresh fetch in `reorderLists()`
-- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Added `getLists()` method
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Rewrote `moveList()` to match items pattern
+- `ListAll/ListAll/Services/DataRepository.swift` - `reorderLists()` already had correct remove/insert pattern
 
-## Related Files (Working Reference)
+## References
 
-- `ListAll/ListAll/ViewModels/ListViewModel.swift` - Working `moveSingleItem()` (lines 287-309)
-- `ListAll/ListAll/Services/DataRepository.swift` - Working `reorderItems()` (lines 223-250)
+- [Apple: move(fromOffsets:toOffset:)](https://developer.apple.com/documentation/swift/mutablecollection/move(fromoffsets:tooffset:))
+- [How to let users move rows in a list - Hacking with Swift](https://www.hackingwithswift.com/quick-start/swiftui/how-to-let-users-move-rows-in-a-list)

@@ -1,12 +1,49 @@
 # AI Changelog
 
-## 2025-12-04 - Fix Lists Drag-and-Drop: Complete DRY Fix ✅ COMPLETED
+## 2025-12-04 - Fix Lists Drag-and-Drop: Use Swift's Array.move ✅ COMPLETED
 
 ### Summary
-Fixed lists drag-and-drop to work exactly like items. Multiple iterations were needed to achieve full DRY compliance:
-1. First fix: ID-based index lookup (fixed nearby list moving)
-2. Second fix: Use same array consistently (fixed one-position offset)
-3. Third fix: Fresh Core Data fetch in repository (matches items pattern exactly)
+Fixed lists drag-and-drop by using Swift's built-in `Array.move(fromOffsets:toOffset:)` method. This eliminates all manual index calculation complexity and handles all edge cases correctly.
+
+### The Problem
+Previous fixes attempted to manually calculate destination indices, but SwiftUI's `onMove` destination parameter has complex "insert before" semantics that differ when moving up vs down. Manual calculation kept causing off-by-one errors.
+
+### The Solution
+Use Swift's built-in `Array.move(fromOffsets:toOffset:)` which handles all the index complexity internally:
+
+```swift
+func moveList(from source: IndexSet, to destination: Int) {
+    // Use Swift's built-in Array.move - handles all index complexity correctly
+    var reorderedLists = lists
+    reorderedLists.move(fromOffsets: source, toOffset: destination)
+
+    // Update order numbers for all lists
+    for (index, var list) in reorderedLists.enumerated() {
+        list.orderNumber = index
+        list.updateModifiedDate()
+        dataManager.updateList(list)
+    }
+
+    // Send to Watch and refresh
+    WatchConnectivityService.shared.sendListsData(dataManager.lists)
+    lists = dataManager.getLists()
+    hapticManager.dragDropped()
+}
+```
+
+### Key Learning
+**Don't manually calculate SwiftUI onMove destination indices.** The `destination` parameter has complex semantics:
+- Moving UP: `destination` IS the final position
+- Moving DOWN: `destination` is one PAST the final position
+
+Swift's `Array.move(fromOffsets:toOffset:)` handles this asymmetry internally. Use it directly instead of manual calculations.
+
+### Files Changed
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Simplified `moveList()` using `Array.move()`
+
+---
+
+## 2025-12-04 - Previous Fix Attempts (Superseded)
 
 ### The Problem
 **User Request**: "Lists drag and drop makes list order incorrect. Dragged list drops one position wrong. Manual sync fixes order. Items drag-and-drop works correctly - they should have same implementation."
