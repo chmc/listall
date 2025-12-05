@@ -196,7 +196,7 @@ func testAppLaunches() {
 
 ---
 
-### Task 1.5: Update Matchfile for macOS Signing
+### Task 1.5: [COMPLETED] Update Matchfile for macOS Signing
 **TDD**: Verify signing configuration
 
 **Steps**:
@@ -1276,7 +1276,7 @@ ListAll/
 
 | Phase | Status | Tasks Completed |
 |-------|--------|-----------------|
-| Phase 1: Project Setup | In Progress | 4/5 |
+| Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Not Started | 0/3 |
 | Phase 3: Services Layer | Not Started | 0/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |

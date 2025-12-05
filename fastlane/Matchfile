@@ -7,7 +7,8 @@ type("appstore") # The default type, can be: appstore, adhoc, enterprise or deve
 # Bundle identifiers to manage
 app_identifier([
 	"io.github.chmc.ListAll",
-	"io.github.chmc.ListAll.watchkitapp"
+	"io.github.chmc.ListAll.watchkitapp",
+	"io.github.chmc.ListAllMac"
 ])
 
 # app_identifier(["tools.fastlane.app", "tools.fastlane.app2"])
