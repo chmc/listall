@@ -24,6 +24,31 @@ class CoreDataManager: ObservableObject {
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
+        // CRITICAL: Check if running in test environment - use in-memory store to avoid permission dialogs
+        let isTestEnvironment = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
+        if isTestEnvironment {
+            print("🧪 CoreDataManager: Test environment detected - using IN-MEMORY store")
+            let container = NSPersistentContainer(name: "ListAll")
+
+            // Configure in-memory store for tests
+            let description = NSPersistentStoreDescription()
+            description.type = NSInMemoryStoreType
+            description.url = URL(fileURLWithPath: "/dev/null")
+            container.persistentStoreDescriptions = [description]
+
+            container.loadPersistentStores { _, error in
+                if let error = error as NSError? {
+                    fatalError("Failed to load in-memory store: \(error), \(error.userInfo)")
+                }
+            }
+
+            container.viewContext.automaticallyMergesChangesFromParent = true
+            container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+
+            return container
+        }
+
         // Using NSPersistentCloudKitContainer for CloudKit sync (activated with paid developer account)
         // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
         // CRITICAL: Disable CloudKit for Debug builds (simulators) to prevent crashes
@@ -49,12 +74,12 @@ class CoreDataManager: ObservableObject {
         let container = NSPersistentCloudKitContainer(name: "ListAll")
         print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Release build - CloudKit ENABLED)")
         #endif
-        
+
         // Configure store description for migration
         guard let storeDescription = container.persistentStoreDescriptions.first else {
             fatalError("Failed to retrieve a persistent store description.")
         }
-        
+
         // Configure App Groups shared container URL
         let appGroupID = "group.io.github.chmc.ListAll"
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {

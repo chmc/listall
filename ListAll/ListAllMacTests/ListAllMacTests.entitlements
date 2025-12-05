@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Enable App Sandbox for test target -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- CRITICAL: Grant access to App Groups container to prevent permission dialogs -->
+	<!-- Without this, each unsigned test build triggers "wants to access other apps' data" dialog -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.io.github.chmc.ListAll</string>
+	</array>
+
+	<!-- Allow temporary files and cache access -->
+	<key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
+	<array>
+		<string>/private/tmp</string>
+	</array>
+
+	<!-- Disable during test runs to prevent debugger issues -->
+	<key>com.apple.security.get-task-allow</key>
+	<true/>
+</dict>
+</plist>
