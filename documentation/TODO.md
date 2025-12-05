@@ -567,7 +567,7 @@ func testImportFromJSON() {
 
 ---
 
-### Task 3.7: Adapt SharingService for macOS
+### Task 3.7: [COMPLETED] Adapt SharingService for macOS
 **TDD**: Write sharing tests
 
 **Steps**:
@@ -583,6 +583,27 @@ func testShareToPasteboard() {
     XCTAssertEqual(NSPasteboard.general.string(forType: .string), "Test")
 }
 ```
+
+**Completed**:
+- Added conditional imports: `#if canImport(UIKit)` / `#elseif canImport(AppKit)`
+- Added `import Combine` for ObservableObject conformance
+- Added cross-platform `copyToClipboard(text:)` method using NSPasteboard on macOS
+- Added `copyListToClipboard(_:options:)` method for list sharing
+- Added macOS-specific methods (in `#if canImport(AppKit)` block):
+  - `availableSharingServices(for:)` - Get available NSSharingService instances
+  - `share(content:using:)` - Share via specific service
+  - `createSharingServicePicker(for:format:options:)` - Create NSSharingServicePicker
+- Added SharingService.swift to ListAllMac target membership
+- Created SharingServiceMacTests with 31 passing tests:
+  - Share format enum tests
+  - Share options tests (default, minimal, custom)
+  - Share result model tests
+  - NSPasteboard clipboard operations tests
+  - NSSharingService availability tests
+  - URL parsing tests for deep links
+  - SharingService class and method signature verification
+  - Date formatting tests
+  - Temporary file handling tests
 
 ---
 

@@ -1,6 +1,11 @@
 import Foundation
-import UIKit
+import Combine
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 // MARK: - Share Format
 
@@ -342,4 +347,105 @@ class SharingService: ObservableObject {
     func clearError() {
         shareError = nil
     }
+
+    // MARK: - Clipboard Operations
+
+    /// Copies text content to the system clipboard
+    /// - Parameter text: The text to copy
+    /// - Returns: True if copy was successful, false otherwise
+    func copyToClipboard(text: String) -> Bool {
+        #if canImport(UIKit)
+        UIPasteboard.general.string = text
+        return true
+        #elseif canImport(AppKit)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        return pasteboard.setString(text, forType: .string)
+        #else
+        return false
+        #endif
+    }
+
+    /// Copies a list's content to the clipboard in plain text format
+    /// - Parameters:
+    ///   - list: The list to copy
+    ///   - options: Share options for customization
+    /// - Returns: True if copy was successful, false otherwise
+    func copyListToClipboard(_ list: List, options: ShareOptions = .default) -> Bool {
+        guard let result = shareList(list, format: .plainText, options: options),
+              let textContent = result.content as? NSString else {
+            return false
+        }
+        return copyToClipboard(text: textContent as String)
+    }
+
+    #if canImport(AppKit)
+    // MARK: - macOS-Specific Sharing
+
+    /// Returns available sharing services for the given content
+    /// - Parameter content: The content to share (String or URL)
+    /// - Returns: Array of available NSSharingService instances
+    func availableSharingServices(for content: Any) -> [NSSharingService] {
+        var items: [Any] = []
+
+        if let text = content as? String {
+            items.append(text)
+        } else if let url = content as? URL {
+            items.append(url)
+        } else if let nsString = content as? NSString {
+            items.append(nsString)
+        }
+
+        guard !items.isEmpty else { return [] }
+
+        return NSSharingService.sharingServices(forItems: items)
+    }
+
+    /// Shares content using a specific sharing service
+    /// - Parameters:
+    ///   - content: The content to share
+    ///   - service: The sharing service to use
+    /// - Returns: True if sharing was initiated, false otherwise
+    func share(content: Any, using service: NSSharingService) -> Bool {
+        var items: [Any] = []
+
+        if let text = content as? String {
+            items.append(text)
+        } else if let url = content as? URL {
+            items.append(url)
+        } else if let nsString = content as? NSString {
+            items.append(nsString)
+        }
+
+        guard !items.isEmpty else { return false }
+
+        service.perform(withItems: items)
+        return true
+    }
+
+    /// Creates a sharing service picker for the given list
+    /// - Parameters:
+    ///   - list: The list to share
+    ///   - format: The format to share in
+    ///   - options: Share options for customization
+    /// - Returns: NSSharingServicePicker configured for the list, or nil if creation fails
+    func createSharingServicePicker(for list: List, format: ShareFormat = .plainText, options: ShareOptions = .default) -> NSSharingServicePicker? {
+        guard let result = shareList(list, format: format, options: options) else {
+            return nil
+        }
+
+        var items: [Any] = []
+        if let text = result.content as? String {
+            items.append(text)
+        } else if let nsString = result.content as? NSString {
+            items.append(nsString as String)
+        } else if let url = result.content as? URL {
+            items.append(url)
+        }
+
+        guard !items.isEmpty else { return nil }
+
+        return NSSharingServicePicker(items: items)
+    }
+    #endif
 }
