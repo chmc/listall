@@ -219,7 +219,7 @@ func testAppLaunches() {
 
 ## Phase 2: Core Data & Models
 
-### Task 2.1: Verify Core Data Stack Works on macOS
+### Task 2.1: [COMPLETED] Verify Core Data Stack Works on macOS
 **TDD**: Write Core Data initialization tests
 
 **Steps**:
@@ -240,6 +240,12 @@ func testCoreDataManagerInitializesOnMacOS() {
     XCTAssertNotNil(manager.viewContext)
 }
 ```
+
+**Completed**:
+- Verified `CoreDataManager.swift` has macOS-specific compiler directives (lines 34-42)
+- Created `ListAllMac/ListAllMac.entitlements` with App Groups, CloudKit, and sandbox entitlements
+- Configured Xcode project to use entitlements for both Debug and Release configurations
+- Core Data stack uses shared App Group container `group.io.github.chmc.ListAll`
 
 ---
 
@@ -1277,7 +1283,7 @@ ListAll/
 | Phase | Status | Tasks Completed |
 |-------|--------|-----------------|
 | Phase 1: Project Setup | Completed | 5/5 |
-| Phase 2: Core Data & Models | Not Started | 0/3 |
+| Phase 2: Core Data & Models | In Progress | 1/3 |
 | Phase 3: Services Layer | Not Started | 0/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |
 | Phase 5: macOS Views | Not Started | 0/11 |
