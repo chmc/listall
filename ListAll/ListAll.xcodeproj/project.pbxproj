@@ -132,6 +132,7 @@
 				Services/DataRepository.swift,
 				Services/ExportService.swift,
 				Services/ImageService.swift,
+				Services/ImportService.swift,
 				"Utils/Extensions/String+Extensions.swift",
 				Utils/Helpers/ValidationHelper.swift,
 				Utils/LocalizationManager.swift,

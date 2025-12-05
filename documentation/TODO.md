@@ -532,7 +532,7 @@ func testExportToDocuments() {
 
 ---
 
-### Task 3.6: Adapt ImportService for macOS
+### Task 3.6: [COMPLETED] Adapt ImportService for macOS
 **TDD**: Write import tests
 
 **Steps**:
@@ -548,6 +548,22 @@ func testImportFromJSON() {
     XCTAssertTrue(result.success)
 }
 ```
+
+**Completed**:
+- Added `import Combine` for ObservableObject conformance on macOS
+- Added ImportService.swift to ListAllMac target membership
+- Created ImportServiceMacTests with 37 passing tests:
+  - Import options tests (default, replace, append presets)
+  - Import error handling tests (5 error types)
+  - Import result and preview model tests
+  - Conflict detail type tests
+  - Import progress calculation tests
+  - JSON parsing and validation tests
+  - Plain text format detection tests (bullets, checkboxes, numbered items, quantities)
+  - ImportService class existence and method signature verification
+  - Data roundtrip encoding/decoding tests
+- Note: ImportService is Foundation-based, no iOS-specific code needed adaptation
+- File picker (NSOpenPanel) integration will be handled at the view layer
 
 ---
 
