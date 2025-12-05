@@ -2,6 +2,13 @@
 
 This document provides a comprehensive, task-by-task plan for creating the ListAll macOS app with full feature parity to iOS, automated CI/CD release pipeline, and TDD principles.
 
+## Task Status Convention
+
+Mark task titles with status indicators:
+- **In Progress**: `### Task X.X: [IN PROGRESS] Task Title`
+- **Completed**: `### Task X.X: [COMPLETED] Task Title`
+- **Not Started**: No prefix (default)
+
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
@@ -46,7 +53,7 @@ Following the existing iOS/watchOS pattern:
 
 ## Phase 1: Project Setup & Architecture
 
-### Task 1.1: Create macOS Target in Xcode Project
+### Task 1.1: [COMPLETED] Create macOS Target in Xcode Project
 **TDD**: Write test to verify macOS target builds successfully
 
 **Steps**:
