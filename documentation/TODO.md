@@ -363,7 +363,7 @@ func testImageCompression() {
 
 ---
 
-### Task 3.2: Create MacBiometricAuthService
+### Task 3.2: [COMPLETED] Create MacBiometricAuthService
 **TDD**: Write Touch ID tests for macOS
 
 **Steps**:
@@ -395,6 +395,22 @@ func testBiometricTypeDetection() {
     // Test returns valid biometric type
 }
 ```
+
+**Completed**:
+- Created `ListAllMac/Services/MacBiometricAuthService.swift` with full Touch ID and password fallback support
+- Implemented macOS-specific `MacBiometricType` enum with `.none` and `.touchID` cases
+- Added async/await authentication method alongside callback-based method
+- Created 18 unit tests in `ListAllMacTests.swift` (MacBiometricAuthServiceTests class):
+  - Singleton pattern tests
+  - Initial state tests
+  - Biometric type detection tests (biometricType, isTouchIDAvailable, isDeviceAuthenticationAvailable)
+  - MacBiometricType enum tests (displayName, iconName, isAvailable)
+  - Reset authentication tests
+  - Published property tests (authentication state, error state)
+  - Authentication flow tests (completion handler, async method)
+  - Thread safety tests
+  - Platform-specific tests
+  - ObservableObject conformance tests
 
 ---
 
@@ -1326,7 +1342,7 @@ ListAll/
 |-------|--------|-----------------|
 | Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Completed | 3/3 |
-| Phase 3: Services Layer | In Progress | 1/7 |
+| Phase 3: Services Layer | In Progress | 2/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |
 | Phase 5: macOS Views | Not Started | 0/11 |
 | Phase 6: Advanced Features | Not Started | 0/6 |
