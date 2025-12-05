@@ -1275,3 +1275,11 @@ struct ZoomableScrollView: UIViewRepresentable {
 - **Time Investment**: ~30 minutes to audit all services and add guards
 
 - **Lesson**: When preparing for multi-platform development, audit your codebase systematically by layer (data, business logic, UI). Most well-architected iOS apps can share 80-90% of code with watchOS by wrapping only UI-specific and hardware-specific code in platform guards. The key is keeping your data models and business logic framework-agnostic from the start.
+
+---
+
+## SwiftUI List Drag-Drop with Watch Sync (December 2025)
+
+See detailed documentation in [/documentation/learnings/swiftui-list-drag-drop-ordering.md](learnings/swiftui-list-drag-drop-ordering.md)
+
+**Summary**: Multi-layer bug with 4 separate issues (wrong algorithm, cache staleness, SwiftUI ForEach caching, Watch sync ping-pong) that combined to make list drag-drop appear broken while items worked fine.

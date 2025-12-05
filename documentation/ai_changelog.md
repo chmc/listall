@@ -1,5 +1,68 @@
 # AI Changelog
 
+## 2025-12-05 - Fix SwiftUI Display Order After Drag-Drop ✅ COMPLETED
+
+### Summary
+Fixed critical SwiftUI rendering bug where lists appeared in wrong visual order after drag-drop, even though Core Data had correct orderNumber values. The fix adds explicit sorting in the displayedLists computed property to force SwiftUI re-evaluation.
+
+### The Problem
+After dragging and dropping a list, the Core Data had correct orderNumber values, but SwiftUI UI showed wrong visual order:
+
+**Data (from logs) - CORRECT:**
+```
+AFTER: ["Ostokset(order:0)", "Sovellusideat(order:1)", "ListAll(order:2)", "Matkapohja(order:3)", "Grillaus(order:4)"]
+```
+
+**UI (from screenshot) - WRONG:**
+- Position 3: Grillaus (should be Matkapohja)
+- Position 4: Matkapohja (should be Grillaus)
+
+The data was correct, but SwiftUI ForEach rendered elements in wrong positions.
+
+### Root Cause
+The displayedLists computed property returned the raw array without sorting:
+
+```swift
+var displayedLists: [List] {
+    showingArchivedLists ? archivedLists : lists
+}
+```
+
+During drag-and-drop animations, SwiftUI's ForEach can cache element positions. Even though we reassign lists = sorted(...), SwiftUI doesn't detect this as a "new" array if the List objects have the same .id values. Without explicit sorting in the computed property, SwiftUI's change detection doesn't guarantee a fresh sort.
+
+### The Solution
+Add explicit sorting in displayedLists to force SwiftUI re-evaluation:
+
+```swift
+var displayedLists: [List] {
+    // CRITICAL FIX: ALWAYS sort by orderNumber to force SwiftUI re-evaluation
+    // Even though lists array is sorted, SwiftUI ForEach can cache old positions during drag
+    // This explicit sort ensures the computed property returns a NEW array with correct order
+    let source = showingArchivedLists ? archivedLists : lists
+    return source.sorted { $0.orderNumber < $1.orderNumber }
+}
+```
+
+### Why This Works
+1. **Forces new array creation**: sorted() always returns a new array, not the same reference
+2. **SwiftUI change detection**: ForEach sees a "different" array (new object reference) and re-evaluates element positions
+3. **Consistent ordering**: Every time displayedLists is accessed, it returns elements in orderNumber order
+4. **Same pattern as ListView**: Matches the working filteredItems pattern in ListViewModel.swift
+
+### Key Learning
+**Never trust "should be sorted" in computed properties used by SwiftUI ForEach.** Always enforce sorting at the point of use. SwiftUI's change detection during animations can cache stale positions, causing visual order to diverge from data order.
+
+**Pattern**: Computed properties that feed ForEach should ALWAYS apply sorting/filtering explicitly, even if the backing array "should" already be sorted.
+
+### Files Changed
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Added explicit sorting in displayedLists
+- `SWIFTUI_DISPLAY_ORDER_FIX.md` - Detailed analysis document
+
+### Testing
+Created test_display_order_fix.swift with 3 test cases verifying displayedLists always returns correctly sorted array.
+
+---
+
 ## 2025-12-04 - Fix Lists Drag-and-Drop: Use Swift's Array.move ✅ COMPLETED
 
 ### Summary

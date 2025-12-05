@@ -24,11 +24,12 @@ final class SyncCommunicationTests: XCTestCase {
         }
     }
     
+    @MainActor
     override func setUp() {
         super.setUp()
         dataManager = DataManager.shared
         mainViewModel = MainViewModel()
-        
+
         // Clean up any existing data
         for list in dataManager.lists {
             dataManager.deleteList(withId: list.id)

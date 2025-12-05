@@ -16,6 +16,7 @@ struct MainView: View {
     @State private var showingSettings = false
     @State private var editMode: EditMode = .inactive
     @State private var showingDeleteConfirmation = false
+
     @State private var showingShareFormatPicker = false
     @State private var showingShareSheet = false
     @State private var selectedShareFormat: ShareFormat = .plainText
@@ -63,25 +64,27 @@ struct MainView: View {
                             }
                         } else {
                         SwiftUI.List {
-                            // ITEMS PATTERN: ForEach inside Section (matches ListView exactly)
+                            // CRITICAL: Use viewModel.displayedLists computed property (same pattern as ListView.filteredItems)
+                            // Computed property forces SwiftUI to re-evaluate from @Published backing storage
+                            // This prevents drag animation desync after reordering
                             Section {
-                                if viewModel.showingArchivedLists {
-                                    ForEach(viewModel.archivedLists) { list in
-                                        ListRowView(list: list, mainViewModel: viewModel)
-                                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                    }
-                                    // No .onMove for archived lists
-                                } else {
-                                    ForEach(viewModel.lists) { list in
-                                        ListRowView(list: list, mainViewModel: viewModel)
-                                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                    }
-                                    .onMove(perform: viewModel.moveList)
+                                ForEach(viewModel.displayedLists) { list in
+                                    ListRowView(list: list, mainViewModel: viewModel)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                                 }
+                                .onDelete { indexSet in
+                                    // Archive lists (same as swipe-to-delete)
+                                    for index in indexSet {
+                                        let list = viewModel.displayedLists[index]
+                                        viewModel.archiveList(list)
+                                    }
+                                }
+                                .onMove(perform: viewModel.moveList)
                             }
                         }
                         .environment(\.editMode, $editMode)
                         .listStyle(.plain)
+                        .id(viewModel.listsReorderTrigger) // CRITICAL: Force rebuild on reorder
                         .padding(.top, 8)
                         .refreshable {
                             // Sync with CloudKit
@@ -181,10 +184,15 @@ struct MainView: View {
                                     // Normal mode: Show Edit button (only for active lists)
                                     if !viewModel.showingArchivedLists {
                                         Button(action: {
+                                            print("🟢 Edit button pressed in MainView")
+                                            print("   Current editMode: \(editMode)")
+                                            print("   Current isInSelectionMode: \(viewModel.isInSelectionMode)")
                                             withAnimation {
                                                 viewModel.enterSelectionMode()
                                                 editMode = .active
                                             }
+                                            print("   New editMode: \(editMode)")
+                                            print("   New isInSelectionMode: \(viewModel.isInSelectionMode)")
                                         }) {
                                             Image(systemName: "pencil")
                                         }
@@ -326,6 +334,12 @@ struct MainView: View {
                 }
             }
             #endif
+        }
+        .onChange(of: editMode) { newEditMode in
+            // CRITICAL: Track edit mode to block sync during potential drag operations
+            // isDragging in ViewModel is only set when drop completes, but we need to
+            // block sync from the moment edit mode is active (when drag becomes possible)
+            viewModel.setEditModeActive(newEditMode.isEditing)
         }
         .onChange(of: scenePhase) { newPhase in
             // Restore navigation when app becomes active

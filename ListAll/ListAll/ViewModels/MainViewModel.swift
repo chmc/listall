@@ -16,7 +16,10 @@ enum ValidationError: LocalizedError {
     }
 }
 
+@MainActor
 class MainViewModel: ObservableObject {
+    // Direct @Published array - same pattern as ListViewModel.items
+    // Sort happens at assignment time, not via computed property
     @Published var lists: [List] = []
     @Published var archivedLists: [List] = []
     @Published var showingArchivedLists = false
@@ -25,20 +28,29 @@ class MainViewModel: ObservableObject {
     @Published var selectedLists: Set<UUID> = []
     @Published var isInSelectionMode = false
     @Published var selectedListForNavigation: List?
-    
+
     // Archive notification properties
     @Published var recentlyArchivedList: List?
     @Published var showArchivedNotification = false
-    
+
+    // Force ForEach refresh on reorder - increment this to break SwiftUI animation identity
+    @Published var listsReorderTrigger: Int = 0
+
     private let dataManager = DataManager.shared
     private let dataRepository = DataRepository()
     private var archiveNotificationTimer: Timer?
     private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
     private let hapticManager = HapticManager.shared
-    
+
     // Watch sync properties
     @Published var isSyncingFromWatch = false
 
+    // CRITICAL: Track active drag operations to prevent reload during drag
+    // isDragging = set when moveList() is called (drop completes)
+    // isEditModeActive = set when edit mode is active (drag becomes possible)
+    // We block sync if EITHER is true to prevent corruption during entire drag operation
+    private var isDragging = false
+    private var isEditModeActive = false
 
     init() {
         setupWatchConnectivityObserver()
@@ -93,17 +105,33 @@ class MainViewModel: ObservableObject {
         guard let receivedLists = notification.userInfo?["lists"] as? [List] else {
             return
         }
-        
+
+        // CRITICAL: If we're in edit mode OR actively dragging, IGNORE this sync completely
+        // Edit mode = user CAN drag (sync would corrupt state during drag)
+        // isDragging = drop is being processed
+        //
+        // IMPORTANT: Don't defer/re-post! The Watch data is STALE (from before our drag).
+        // Our drag already sent the CORRECT new order to Watch, so we should ignore
+        // the Watch's response containing OLD data. Re-posting would cause the "one sync behind" bug.
+        if isDragOperationInProgress {
+            print("⚠️ Watch sync received during edit mode/drag - IGNORING stale Watch data")
+            return
+        }
+
         // Show sync indicator
         isSyncingFromWatch = true
-        
-        // Update Core Data with received lists
-        updateCoreDataWithLists(receivedLists)
-        
-        // Reload UI
+
+        // CRITICAL FIX: Build a map of our LOCAL lists with their current modifiedAt timestamps
+        // This prevents Watch sync from overwriting drag-drop changes we just made
+        let localListsById = Dictionary(uniqueKeysWithValues: lists.map { ($0.id, $0) })
+
+        // Update Core Data with received lists (using local list timestamps for comparison)
+        updateCoreDataWithLists(receivedLists, localListsById: localListsById)
+
+        // Reload UI from Core Data
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.loadLists()
-            
+
             // Hide sync indicator after brief delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.isSyncingFromWatch = false
@@ -111,49 +139,46 @@ class MainViewModel: ObservableObject {
         }
     }
     
-    private func updateCoreDataWithLists(_ receivedLists: [List]) {
+    private func updateCoreDataWithLists(_ receivedLists: [List], localListsById: [UUID: List] = [:]) {
         for receivedList in receivedLists {
-            // Check if list already exists in local database
-            if let existingList = dataManager.lists.first(where: { $0.id == receivedList.id }) {
-                // CRITICAL FIX: Always sync orderNumber regardless of modifiedAt timestamp
-                // List ordering is critical and should always be kept in sync
-                var needsOrderUpdate = false
-                if receivedList.orderNumber != existingList.orderNumber {
-                    needsOrderUpdate = true
-                }
-                
-                // Update list metadata if received version is newer OR if order changed
-                if receivedList.modifiedAt > existingList.modifiedAt || needsOrderUpdate {
+            // CRITICAL FIX: Use our LOCAL ViewModel lists for comparison, not dataManager.lists
+            // Our local lists have the most recent drag-drop changes that may not be in Core Data yet
+            let localList = localListsById[receivedList.id]
+            let existingList = localList ?? dataManager.lists.first(where: { $0.id == receivedList.id })
+
+            if let existingList = existingList {
+                // CRITICAL FIX: Only update if received version is STRICTLY newer
+                // This prevents Watch sync from overwriting drag-drop changes we just made
+                // The drag-drop updates modifiedAt, so our local version will be newer
+                if receivedList.modifiedAt > existingList.modifiedAt {
                     dataManager.updateList(receivedList)
                 }
-                
-                // CRITICAL FIX: Always update items, regardless of list's modifiedAt
-                // This ensures item additions, deletions, and property changes (like isCrossedOut) always sync
-                // Item-level conflict resolution (checking each item's modifiedAt) handles conflicts correctly
+
+                // Always update items (item-level conflict resolution handles individual item timestamps)
                 updateItemsForList(receivedList, existingList: existingList)
             } else {
                 // Add new list
                 dataManager.addList(receivedList)
-                
+
                 // Add all items for this new list
                 for item in receivedList.items {
                     dataManager.addItem(item, to: receivedList.id)
                 }
             }
         }
-        
+
         // Remove lists that no longer exist on Watch (except archived ones)
         // CRITICAL: Only remove lists if we actually received data (not an empty sync)
         if !receivedLists.isEmpty {
             let receivedListIds = Set(receivedLists.map { $0.id })
             let localActiveListIds = Set(dataManager.lists.filter { !$0.isArchived }.map { $0.id })
             let listsToRemove = localActiveListIds.subtracting(receivedListIds)
-            
+
             for listIdToRemove in listsToRemove {
                 dataManager.deleteList(withId: listIdToRemove)
             }
         }
-        
+
         // CRITICAL: Reload all data from Core Data ONCE after all changes
         dataManager.loadData()
     }
@@ -203,15 +228,16 @@ class MainViewModel: ObservableObject {
     /// Manual sync - request data from Watch and send our data to Watch
     func manualSync() {
         isSyncingFromWatch = true
-        
-        // Send our data to Watch
-        let watchConnectivity = WatchConnectivityService.shared
-        watchConnectivity.sendListsData(dataManager.lists)
-        
-        // Reload local data (in case Watch sent us data)
+
+        // CRITICAL FIX: Reload local data FIRST to ensure we send the latest state to Watch
+        // This prevents race condition where drag-and-drop changes are overwritten by stale cached data
         dataManager.loadData()
         loadLists()
-        
+
+        // Send our FRESH data to Watch
+        let watchConnectivity = WatchConnectivityService.shared
+        watchConnectivity.sendListsData(dataManager.lists)
+
         // Hide sync indicator after delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.isSyncingFromWatch = false
@@ -219,10 +245,40 @@ class MainViewModel: ObservableObject {
     }
     
     var displayedLists: [List] {
-        showingArchivedLists ? archivedLists : lists
+        // CRITICAL FIX: ALWAYS sort by orderNumber to force SwiftUI re-evaluation
+        // Even though lists array is sorted, SwiftUI ForEach can cache old positions during drag
+        // This explicit sort ensures the computed property returns a NEW array with correct order
+        let source = showingArchivedLists ? archivedLists : lists
+        return source.sorted { $0.orderNumber < $1.orderNumber }
+    }
+
+    // MARK: - Edit Mode Tracking (for drag-drop sync protection)
+
+    /// Called by MainView when edit mode changes
+    /// This blocks sync during the ENTIRE time edit mode is active, not just during drop
+    func setEditModeActive(_ active: Bool) {
+        isEditModeActive = active
+        if active {
+            print("🔄 Edit mode ACTIVE - sync blocked until edit mode exits")
+        } else {
+            print("🔄 Edit mode INACTIVE - sync re-enabled")
+        }
+    }
+
+    /// Check if any drag-related operation is in progress
+    private var isDragOperationInProgress: Bool {
+        isDragging || isEditModeActive
     }
 
     func loadLists() {
+        // CRITICAL: Never reload during active drag operations
+        // Reloading replaces the array SwiftUI is animating, breaking drag-drop
+        // Block if EITHER isDragging (drop in progress) OR isEditModeActive (drag possible)
+        if isDragOperationInProgress {
+            print("⚠️ loadLists() called during drag/edit mode - SKIPPING to preserve drag animation")
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 
@@ -233,9 +289,25 @@ class MainViewModel: ObservableObject {
             // Load archived lists
             archivedLists = dataManager.loadArchivedLists()
         } else {
-            // Get active lists from DataManager and sort ONCE here
-            // This matches the watch pattern - direct @Published array assignment, not computed property
-            lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+            // Get active lists from DataManager and sort by orderNumber
+            let newLists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+
+            // OPTIMIZATION: Only update if order actually changed
+            // This prevents unnecessary SwiftUI re-renders that could desync with drag state
+            let currentIds = lists.map { $0.id }
+            let newIds = newLists.map { $0.id }
+            if currentIds != newIds {
+                print("📋 loadLists: Order changed, updating lists array")
+                lists = newLists
+            } else {
+                // Just update the list objects in place without changing array order
+                // This preserves ForEach's index mapping
+                for (index, newList) in newLists.enumerated() {
+                    if index < lists.count {
+                        lists[index] = newList
+                    }
+                }
+            }
         }
 
         isLoading = false
@@ -268,7 +340,7 @@ class MainViewModel: ObservableObject {
         archivedLists.removeAll { $0.id == list.id }
         // Reload active lists to include restored list
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
@@ -277,13 +349,13 @@ class MainViewModel: ObservableObject {
         dataManager.deleteList(withId: list.id) // This archives the list
         // Remove from active lists
         lists.removeAll { $0.id == list.id }
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
-        
+
         // Show archive notification
         showArchiveNotification(for: list)
-        
+
         // Trigger haptic feedback
         hapticManager.listArchived()
     }
@@ -315,16 +387,16 @@ class MainViewModel: ObservableObject {
     
     func undoArchive() {
         guard let list = recentlyArchivedList else { return }
-        
+
         // Restore the list
         dataManager.restoreList(withId: list.id)
-        
+
         // Hide notification immediately BEFORE reloading lists
         hideArchiveNotification()
-        
+
         // Reload active lists to include restored list
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
@@ -338,49 +410,49 @@ class MainViewModel: ObservableObject {
     
     func addList(name: String) throws -> List {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmedName.isEmpty else {
             throw ValidationError.emptyName
         }
-        
+
         guard trimmedName.count <= 100 else {
             throw ValidationError.nameTooLong
         }
-        
+
         let newList = List(name: trimmedName)
         dataManager.addList(newList)
-        
+
         // Refresh lists from dataManager (which already added the list)
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
-        
+
         // Trigger haptic feedback
         hapticManager.listCreated()
-        
+
         return newList
     }
     
     func deleteList(_ list: List) {
         dataManager.deleteList(withId: list.id)
         lists.removeAll { $0.id == list.id }
-        
+
         // Trigger haptic feedback
         hapticManager.listDeleted()
     }
     
     func updateList(_ list: List, name: String) throws {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmedName.isEmpty else {
             throw ValidationError.emptyName
         }
-        
+
         guard trimmedName.count <= 100 else {
             throw ValidationError.nameTooLong
         }
-        
+
         var updatedList = list
         updatedList.name = trimmedName
         updatedList.updateModifiedDate()
@@ -388,7 +460,7 @@ class MainViewModel: ObservableObject {
         if let index = lists.firstIndex(where: { $0.id == list.id }) {
             lists[index] = updatedList
         }
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
@@ -396,20 +468,20 @@ class MainViewModel: ObservableObject {
     func duplicateList(_ list: List) throws {
         // Create a duplicate name with "Copy" suffix
         let duplicateName = generateDuplicateName(for: list.name)
-        
+
         guard duplicateName.count <= 100 else {
             throw ValidationError.nameTooLong
         }
-        
+
         // Create new list with duplicate name
         let duplicatedList = List(name: duplicateName)
-        
+
         // Get items from the original list
         let originalItems = dataManager.getItems(forListId: list.id)
-        
+
         // Add the duplicated list first
         dataManager.addList(duplicatedList)
-        
+
         // Duplicate all items from the original list
         for originalItem in originalItems {
             var duplicatedItem = originalItem
@@ -417,13 +489,13 @@ class MainViewModel: ObservableObject {
             duplicatedItem.listId = duplicatedList.id // Associate with new list
             duplicatedItem.createdAt = Date()
             duplicatedItem.modifiedAt = Date()
-            
+
             dataManager.addItem(duplicatedItem, to: duplicatedList.id)
         }
-        
+
         // Refresh lists from dataManager (which already added the list)
         lists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }
@@ -443,32 +515,94 @@ class MainViewModel: ObservableObject {
     }
     
     func moveList(from source: IndexSet, to destination: Int) {
-        // CRITICAL FIX: Pass IDs to DataRepository, not indices
-        // This avoids index mismatch between ViewModel's cached array and fresh Core Data fetch
-        // The "freeze" effect happens when loadLists() re-renders from fresh data
+        // CRITICAL: Use EXACT same pattern as ListViewModel.moveSingleItem()
+        // The key is: calculate destination using (destination - 1) when moving down,
+        // find the destination ITEM by ID, then call DataRepository with those indices.
 
         guard let sourceIndex = source.first else { return }
 
-        // Get the list being dragged from our cached array
-        let movedList = lists[sourceIndex]
+        // Mark as actively dragging to block any interference
+        isDragging = true
 
-        // Calculate destination in our cached array using SwiftUI's semantics
-        // SwiftUI destination means "insert before this index"
-        let destIndex = destination > sourceIndex ? destination - 1 : destination
-        let destinationList = destIndex < lists.count ? lists[destIndex] : lists.last
+        // Get the displayed array (what ForEach is rendering)
+        let displayed = displayedLists
 
-        // Pass LIST IDs to DataRepository - it will find correct indices in fresh Core Data
-        // This is the key fix: DataRepository works with fresh data, we pass IDs not stale indices
-        dataRepository.reorderListById(
-            movingListId: movedList.id,
-            toBeforeListId: destinationList?.id
-        )
+        // Get the backing array for logging
+        let workingArray = showingArchivedLists ? archivedLists : lists
 
-        // Refresh from Core Data (causes the "freeze" effect that confirms persistence)
-        loadLists()
+        print("🔄 moveList: source=\(sourceIndex), destination=\(destination)")
+        print("🔄 BEFORE: \(workingArray.map { "\($0.name)(order:\($0.orderNumber))" })")
 
-        // Trigger haptic feedback
+        // Validate source index
+        guard sourceIndex < displayed.count else {
+            print("❌ ERROR: sourceIndex \(sourceIndex) out of bounds")
+            isDragging = false
+            return
+        }
+
+        // Get the dragged list from displayed array
+        let draggedList = displayed[sourceIndex]
+
+        // EXACT PATTERN FROM ListViewModel.moveSingleItem():
+        // Calculate destination in displayed array using (destination - 1) when moving down
+        let displayedDestIndex = destination > sourceIndex ? destination - 1 : destination
+        let destinationList = displayedDestIndex < displayed.count ? displayed[displayedDestIndex] : displayed.last
+
+        // Find actual indices in backing array by ID
+        guard let actualSourceIndex = workingArray.firstIndex(where: { $0.id == draggedList.id }) else {
+            print("❌ ERROR: Could not find dragged list '\(draggedList.name)' in backing array")
+            isDragging = false
+            return
+        }
+
+        let actualDestIndex: Int
+        if let destList = destinationList,
+           let destIndex = workingArray.firstIndex(where: { $0.id == destList.id }) {
+            actualDestIndex = destIndex
+        } else {
+            // Moving to end
+            actualDestIndex = workingArray.count - 1
+        }
+
+        print("🔄 Mapped: actualSource=\(actualSourceIndex) (\(draggedList.name)), actualDest=\(actualDestIndex) (\(destinationList?.name ?? "end"))")
+
+        // Skip if no actual movement needed
+        guard actualSourceIndex != actualDestIndex else {
+            print("🔄 No movement needed - source equals destination")
+            isDragging = false
+            return
+        }
+
+        // CRITICAL: Use DataRepository.reorderLists() which uses remove()+insert() pattern
+        // This is the EXACT same approach as ListViewModel.reorderItems()
+        // NOTE: reorderLists() now calls dataManager.loadData() before returning,
+        // so dataManager.lists cache is already fresh when we read it here
+        dataRepository.reorderLists(from: actualSourceIndex, to: actualDestIndex)
+
+        // Reload lists directly from dataManager (bypass loadLists() which is blocked by isDragging)
+        // This matches ListViewModel.reorderItems() -> loadItems() pattern
+        // Cache is already fresh from reorderLists(), so we can read directly
+        let updatedLists = dataManager.lists.sorted { $0.orderNumber < $1.orderNumber }
+        if showingArchivedLists {
+            archivedLists = updatedLists.filter { $0.isArchived }
+        } else {
+            lists = updatedLists.filter { !$0.isArchived }
+        }
+
+        print("🔄 AFTER: \(lists.map { "\($0.name)(order:\($0.orderNumber))" })")
+
+        // CRITICAL FIX: Increment trigger to force SwiftUI ForEach to rebuild
+        // This breaks the animation identity and forces re-render from updated array
+        listsReorderTrigger += 1
+
+        // Haptic feedback
         hapticManager.dragDropped()
+
+        // Clear dragging flag after animation settles
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.isDragging = false
+            print("🔄 Drag completed - sync re-enabled")
+        }
     }
     
     // MARK: - Multi-Selection Methods
@@ -495,7 +629,7 @@ class MainViewModel: ObservableObject {
         }
         lists.removeAll { selectedLists.contains($0.id) }
         selectedLists.removeAll()
-        
+
         // Send updated data to paired device
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
     }

@@ -13,10 +13,14 @@ extension Notification.Name {
 // MARK: - Core Data Manager
 class CoreDataManager: ObservableObject {
     static let shared = CoreDataManager()
-    
+
     // Debouncing timer for remote changes
     private var remoteChangeDebounceTimer: Timer?
     private let remoteChangeDebounceInterval: TimeInterval = 0.5 // 500ms debounce
+
+    // CRITICAL: Track local saves to prevent treating them as "remote" changes
+    // This prevents drag-drop operations from triggering reload loops
+    private var isLocalSave = false
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
@@ -147,7 +151,15 @@ class CoreDataManager: ObservableObject {
     }
     
     @objc private func handlePersistentStoreRemoteChange(_ notification: Notification) {
-        
+
+        // CRITICAL: Ignore local saves - only process true remote changes
+        // Local saves (from drag-drop, item edits) should NOT trigger reload loops
+        if isLocalSave {
+            print("💾 CoreDataManager: Ignoring local save notification (not a remote change)")
+            isLocalSave = false  // Reset flag
+            return
+        }
+
         // Ensure we're on the main thread for UI safety
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
@@ -155,7 +167,9 @@ class CoreDataManager: ObservableObject {
             }
             return
         }
-        
+
+        print("🌐 CoreDataManager: Detected REMOTE change from another process")
+
         // Debounce rapid changes to prevent excessive reloads
         remoteChangeDebounceTimer?.invalidate()
         remoteChangeDebounceTimer = Timer.scheduledTimer(withTimeInterval: remoteChangeDebounceInterval, repeats: false) { [weak self] _ in
@@ -183,10 +197,13 @@ class CoreDataManager: ObservableObject {
 
         if context.hasChanges {
             do {
+                // CRITICAL: Mark this as a local save to prevent treating it as remote change
+                isLocalSave = true
                 try context.save()
-                print("💾 CoreDataManager: Context saved successfully")
+                print("💾 CoreDataManager: Context saved successfully (local save)")
             } catch {
                 print("❌ CoreDataManager: Failed to save context: \(error)")
+                isLocalSave = false  // Reset on error
             }
         } else {
             print("💾 CoreDataManager: No changes to save")
@@ -524,8 +541,9 @@ class DataManager: ObservableObject {
         // CRITICAL: Ensure Core Data has processed all changes before continuing
         context.processPendingChanges()
 
-        // Update local array to match
-        lists = newOrder
+        // DON'T update local array here - let caller explicitly call loadData() to refresh
+        // This prevents race conditions where cached array gets out of sync with Core Data
+        // lists = newOrder  // REMOVED - caller must call loadData() explicitly
     }
     
     func synchronizeLists(_ newOrder: [List]) {

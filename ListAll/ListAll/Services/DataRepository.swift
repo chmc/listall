@@ -75,20 +75,21 @@ class DataRepository: ObservableObject {
             return
         }
 
-        // Find the destination index in fresh data
+        // CRITICAL FIX: Find destination index in ORIGINAL array BEFORE removing source
+        // The ViewModel already applied destination-1 adjustment, so we use this index AS-IS
+        // This matches the working items reorder pattern exactly
         let destinationIndex: Int
         if let beforeId = toBeforeListId,
            let destIdx = currentLists.firstIndex(where: { $0.id == beforeId }) {
+            // Insert at this position (already adjusted by ViewModel)
             destinationIndex = destIdx
         } else {
             // Moving to end
-            destinationIndex = currentLists.count - 1
+            destinationIndex = currentLists.count
         }
 
-        // Don't reorder if same position
-        guard sourceIndex != destinationIndex else { return }
-
-        // Create a mutable copy and reorder using remove/insert pattern
+        // Now perform the reorder: remove then insert at the ORIGINAL index
+        // No further adjustment needed - the ViewModel's dest-1 accounts for the removal
         var reorderedLists = currentLists
         let movedList = reorderedLists.remove(at: sourceIndex)
         reorderedLists.insert(movedList, at: destinationIndex)
@@ -104,30 +105,48 @@ class DataRepository: ObservableObject {
         watchConnectivityService.sendListsData(dataManager.lists)
     }
 
-    @available(*, deprecated, message: "Use reorderListById instead to avoid index mismatch bugs")
+    /// Reorders lists using integer indices - matches reorderItems pattern exactly
     func reorderLists(from sourceIndex: Int, to destinationIndex: Int) {
-        // Legacy index-based method - kept for backward compatibility
+        // Get current lists (same data source that ViewModel used to calculate indices)
         let currentLists = dataManager.getLists()
+        print("📂 reorderLists: from=\(sourceIndex), to=\(destinationIndex)")
+        print("📂 currentLists BEFORE: \(currentLists.map { "\($0.name)(order:\($0.orderNumber))" })")
 
+        // Validate indices
         guard sourceIndex >= 0,
               destinationIndex >= 0,
               sourceIndex < currentLists.count,
               destinationIndex < currentLists.count,
               sourceIndex != destinationIndex else {
+            print("📂 reorderLists: INVALID indices, skipping")
             return
         }
 
+        // EXACT same pattern as reorderItems: remove then insert
         var reorderedLists = currentLists
         let movedList = reorderedLists.remove(at: sourceIndex)
+        print("📂 Removed '\(movedList.name)' from index \(sourceIndex)")
         reorderedLists.insert(movedList, at: destinationIndex)
+        print("📂 Inserted '\(movedList.name)' at index \(destinationIndex)")
+        print("📂 reorderedLists AFTER move: \(reorderedLists.map { $0.name })")
 
+        // Update order numbers and save
         for (index, var list) in reorderedLists.enumerated() {
             list.orderNumber = index
             list.updateModifiedDate()
             dataManager.updateList(list)
         }
+        print("📂 Updated orderNumbers and saved to Core Data")
 
+        // CRITICAL FIX: Reload cache from Core Data BEFORE sending to Watch
+        // The updateList() calls above may have corrupted the cache by updating lists at their OLD indices
+        // This ensures we send the CORRECT reordered data to Watch
+        dataManager.loadData()
+        print("📂 Reloaded dataManager.lists cache from Core Data after reorder")
+
+        // Send to Watch (now using fresh cache that reflects Core Data state)
         watchConnectivityService.sendListsData(dataManager.lists)
+        print("📂 Sent reordered lists to Watch")
     }
 
     // MARK: - Item Operations
