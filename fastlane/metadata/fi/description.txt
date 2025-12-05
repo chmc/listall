@@ -65,3 +65,6 @@ MITÄ KÄYTTÄJÄT RAKASTAVAT:
 
 Olivatpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe joustavin listojen hallintasovellus iOS:lle!
 
+AVOIN LÄHDEKOODI
+ListAll on avoimen lähdekoodin sovellus ja ilmainen. Voit tarkastella koodia, osallistua kehitykseen tai luoda oman versiosi osoitteessa https://github.com/chmc/listall
+
