@@ -609,7 +609,7 @@ func testShareToPasteboard() {
 
 ## Phase 4: ViewModels
 
-### Task 4.1: Verify MainViewModel Works on macOS
+### Task 4.1: [COMPLETED] Verify MainViewModel Works on macOS
 **TDD**: Write ViewModel state tests
 
 **Steps**:
@@ -635,6 +635,39 @@ func testMainViewModelListOperations() {
     XCTAssertTrue(vm.lists.contains(where: { $0.name == "Test" }))
 }
 ```
+
+**Completed**:
+- Added `#if os(iOS)` conditionals to MainViewModel.swift for WatchConnectivity code:
+  - `import WatchConnectivity` - iOS only
+  - `setupWatchConnectivityObserver()` - iOS only
+  - `handleWatchSyncNotification()` - iOS only
+  - `handleWatchListsData()` - iOS only
+  - `updateCoreDataWithLists()` - iOS only
+  - `updateItemsForList()` - iOS only
+  - `refreshFromWatch()` - iOS only
+  - `manualSync()` - Platform-specific implementation (iOS syncs with Watch, macOS reloads from Core Data)
+- Wrapped all `WatchConnectivityService.shared.sendListsData()` calls with `#if os(iOS)`:
+  - `restoreList()`, `archiveList()`, `undoArchive()`, `addList()`, `updateList()`, `duplicateList()`, `deleteSelectedLists()`
+- Added macOS support to HapticManager.swift:
+  - Wrapped `import UIKit` with `#if os(iOS)`
+  - Created simplified `HapticFeedbackType` enum for macOS (no UIKit types)
+  - All haptic methods are no-ops on macOS
+  - Added `import Combine` for ObservableObject conformance
+- Added MainViewModel.swift, HapticManager.swift, Constants.swift, SampleDataService.swift to ListAllMac target
+- Created 30 unit tests in `ListAllMacTests.swift` (MainViewModelMacTests class):
+  - Platform verification tests
+  - MainViewModel existence and ObservableObject conformance tests
+  - ValidationError enum tests
+  - List name validation tests (empty, whitespace, valid, too long, max length)
+  - List model creation tests
+  - HapticManager macOS tests (singleton, isEnabled, convenience methods)
+  - HapticFeedbackType enum tests
+  - Duplicate name generation tests
+  - Archive notification tests
+  - Selection mode tests
+  - Order number sorting tests
+  - macOS platform compatibility tests
+  - Documentation test
 
 ---
 
@@ -1438,8 +1471,8 @@ ListAll/
 |-------|--------|-----------------|
 | Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Completed | 3/3 |
-| Phase 3: Services Layer | In Progress | 5/7 |
-| Phase 4: ViewModels | Not Started | 0/4 |
+| Phase 3: Services Layer | Completed | 7/7 |
+| Phase 4: ViewModels | In Progress | 1/4 |
 | Phase 5: macOS Views | Not Started | 0/11 |
 | Phase 6: Advanced Features | Not Started | 0/6 |
 | Phase 7: Testing | Not Started | 0/4 |

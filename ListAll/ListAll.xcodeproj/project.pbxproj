@@ -133,10 +133,14 @@
 				Services/ExportService.swift,
 				Services/ImageService.swift,
 				Services/ImportService.swift,
+				Services/SampleDataService.swift,
 				Services/SharingService.swift,
+				Utils/Constants.swift,
 				"Utils/Extensions/String+Extensions.swift",
+				Utils/HapticManager.swift,
 				Utils/Helpers/ValidationHelper.swift,
 				Utils/LocalizationManager.swift,
+				ViewModels/MainViewModel.swift,
 			);
 			target = 45C804B92EE2E484006D0E88 /* ListAllMac */;
 		};
