@@ -317,7 +317,7 @@ func testItemModelCreation() {
 
 ## Phase 3: Services Layer
 
-### Task 3.1: Adapt ImageService for macOS
+### Task 3.1: [COMPLETED] Adapt ImageService for macOS
 **TDD**: Write image processing tests for both UIImage and NSImage
 
 **Steps**:
@@ -343,6 +343,23 @@ func testImageCompression() {
     XCTAssertNotNil(compressed)
 }
 ```
+
+**Completed**:
+- ImageService.swift already had complete macOS implementation using NSImage (lines 481-850)
+- Added `import Combine` to fix ObservableObject conformance
+- Added ImageService.swift to ListAllMac target membership exceptions in project.pbxproj
+- Created 42 comprehensive unit tests in `ListAllMacTests.swift` (ImageServiceTests class):
+  - Image processing: processImageForStorage, compression, resizeImageForStorage, resizeImage
+  - Compression: compressImageData, compressImageDataProgressive
+  - Thumbnails: createThumbnail from NSImage/Data, caching, clearThumbnailCache
+  - ItemImage management: createItemImage, addImageToItem, removeImageFromItem, reorderImages
+  - Validation: validateImageData (valid/invalid/oversized), validateImageSize
+  - Image format detection: JPEG, PNG, unknown formats
+  - File size formatting: bytes, KB, MB
+  - Error handling: processImage success, ImageError descriptions
+  - SwiftUI integration: swiftUIImage, swiftUIThumbnail
+  - Configuration validation
+  - Performance tests: image processing, thumbnail creation
 
 ---
 
@@ -1309,7 +1326,7 @@ ListAll/
 |-------|--------|-----------------|
 | Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Completed | 3/3 |
-| Phase 3: Services Layer | Not Started | 0/7 |
+| Phase 3: Services Layer | In Progress | 1/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |
 | Phase 5: macOS Views | Not Started | 0/11 |
 | Phase 6: Advanced Features | Not Started | 0/6 |

@@ -481,6 +481,7 @@ extension ImageService {
 #elseif os(macOS)
 import AppKit
 import SwiftUI
+import Combine
 
 // MARK: - Image Processing Service (macOS)
 // macOS-specific implementation using NSImage instead of UIImage
