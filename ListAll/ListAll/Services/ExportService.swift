@@ -1,6 +1,9 @@
 import Foundation
+import Combine
 #if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
 #endif
 
 // MARK: - Export Format
@@ -204,47 +207,114 @@ class ExportService: ObservableObject {
     }
     
     // MARK: - Clipboard Export
-    
+
     /// Copies export data to clipboard
     /// - Parameters:
     ///   - format: The export format (json, csv, plainText)
     ///   - options: Export options for customization
     /// - Returns: True if copy was successful, false otherwise
     func copyToClipboard(format: ExportFormat, options: ExportOptions = .default) -> Bool {
-        #if canImport(UIKit)
-        let pasteboard = UIPasteboard.general
-        
+        let stringToCopy: String?
+
         switch format {
         case .json:
             guard let jsonData = exportToJSON(options: options),
                   let jsonString = String(data: jsonData, encoding: .utf8) else {
                 return false
             }
-            pasteboard.string = jsonString
-            return true
-            
+            stringToCopy = jsonString
+
         case .csv:
-            guard let csvString = exportToCSV(options: options) else {
-                return false
-            }
-            pasteboard.string = csvString
-            return true
-            
+            stringToCopy = exportToCSV(options: options)
+
         case .plainText:
-            guard let plainText = exportToPlainText(options: options) else {
-                return false
-            }
-            pasteboard.string = plainText
-            return true
+            stringToCopy = exportToPlainText(options: options)
         }
+
+        guard let string = stringToCopy else {
+            return false
+        }
+
+        #if canImport(UIKit)
+        UIPasteboard.general.string = string
+        return true
+        #elseif canImport(AppKit)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        return pasteboard.setString(string, forType: .string)
         #else
-        // For macOS or other platforms without UIKit
         return false
         #endif
     }
     
+    // MARK: - File Export
+
+    /// Returns the default export directory URL
+    /// On macOS, uses the Documents directory within the sandbox
+    /// On iOS, uses the Documents directory
+    var defaultExportDirectory: URL {
+        #if os(macOS)
+        // Use sandbox-friendly Documents directory on macOS
+        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            return documentsURL
+        }
+        return FileManager.default.temporaryDirectory
+        #else
+        // iOS/watchOS uses Documents directory
+        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            return documentsURL
+        }
+        return FileManager.default.temporaryDirectory
+        #endif
+    }
+
+    /// Exports data to a file in the specified format
+    /// - Parameters:
+    ///   - format: The export format
+    ///   - directory: The directory to save to (defaults to Documents)
+    ///   - options: Export options for customization
+    /// - Returns: URL of the exported file if successful, nil otherwise
+    func exportToFile(format: ExportFormat, directory: URL? = nil, options: ExportOptions = .default) -> URL? {
+        let targetDirectory = directory ?? defaultExportDirectory
+        let timestamp = formatDateForFilename(Date())
+        let fileName: String
+        let data: Data?
+
+        switch format {
+        case .json:
+            fileName = "ListAll-Export-\(timestamp).json"
+            data = exportToJSON(options: options)
+        case .csv:
+            fileName = "ListAll-Export-\(timestamp).csv"
+            data = exportToCSV(options: options)?.data(using: .utf8)
+        case .plainText:
+            fileName = "ListAll-Export-\(timestamp).txt"
+            data = exportToPlainText(options: options)?.data(using: .utf8)
+        }
+
+        guard let exportData = data else {
+            return nil
+        }
+
+        let fileURL = targetDirectory.appendingPathComponent(fileName)
+
+        do {
+            try exportData.write(to: fileURL)
+            return fileURL
+        } catch {
+            return nil
+        }
+    }
+
+    /// Formats date for use in filename
+    private func formatDateForFilename(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+        return formatter.string(from: date)
+    }
+
     // MARK: - Helper Methods
-    
+
     /// Filters lists based on export options
     private func filterLists(_ lists: [List], options: ExportOptions) -> [List] {
         if options.includeArchivedLists {

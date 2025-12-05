@@ -130,6 +130,7 @@
 				Services/CloudKitService.swift,
 				Services/DataMigrationService.swift,
 				Services/DataRepository.swift,
+				Services/ExportService.swift,
 				Services/ImageService.swift,
 				"Utils/Extensions/String+Extensions.swift",
 				Utils/Helpers/ValidationHelper.swift,

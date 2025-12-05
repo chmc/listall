@@ -493,7 +493,7 @@ func testCloudKitSyncStatus() {
 
 ---
 
-### Task 3.5: Adapt ExportService for macOS
+### Task 3.5: [COMPLETED] Adapt ExportService for macOS
 **TDD**: Write export tests for macOS file system
 
 **Steps**:
@@ -509,6 +509,26 @@ func testExportToDocuments() {
     XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
 }
 ```
+
+**Completed**:
+- Added `import Combine` for ObservableObject conformance
+- Added `import AppKit` conditional import for macOS
+- Updated `copyToClipboard` method to use NSPasteboard on macOS
+- Added `defaultExportDirectory` property (Documents or temp directory)
+- Added `exportToFile(format:directory:options:)` method for file export
+- Added `formatDateForFilename` helper method
+- Added ExportService.swift to ListAllMac target membership
+- Created 22 comprehensive unit tests in `ListAllMacTests.swift` (ExportServiceMacTests class):
+  - Platform verification tests
+  - Export format enum tests
+  - Export options tests (default, minimal, custom)
+  - NSPasteboard clipboard tests (JSON, CSV, plain text)
+  - File system tests (temp directory, file writing)
+  - Export data model tests (ExportData, ListExportData, ItemExportData, ItemImageExportData)
+  - Codable conformance tests
+  - ObservableObject conformance tests
+  - Platform compatibility tests
+- Note: Tests avoid DataRepository instantiation to prevent macOS sandbox permission dialogs
 
 ---
 
@@ -1381,7 +1401,7 @@ ListAll/
 |-------|--------|-----------------|
 | Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Completed | 3/3 |
-| Phase 3: Services Layer | In Progress | 4/7 |
+| Phase 3: Services Layer | In Progress | 5/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |
 | Phase 5: macOS Views | Not Started | 0/11 |
 | Phase 6: Advanced Features | Not Started | 0/6 |
