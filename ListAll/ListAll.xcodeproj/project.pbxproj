@@ -101,16 +101,22 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		451D22502EA54063004688D4 /* ListAllWatch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "ListAllWatch Watch App";
 			sourceTree = "<group>";
 		};
 		451D225E2EA54064004688D4 /* ListAllWatch Watch AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "ListAllWatch Watch AppTests";
 			sourceTree = "<group>";
 		};
 		451D22682EA54064004688D4 /* ListAllWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "ListAllWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
@@ -124,11 +130,15 @@
 		};
 		F1E5F98C2E78695F0007B178 /* ListAllTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = ListAllTests;
 			sourceTree = "<group>";
 		};
 		F1E5F9962E78695F0007B178 /* ListAllUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = ListAllUITests;
 			sourceTree = "<group>";
 		};
@@ -347,6 +357,7 @@
 				TargetAttributes = {
 					451D224E2EA54063004688D4 = {
 						CreatedOnToolsVersion = 26.0.1;
+						ProvisioningStyle = Manual;
 					};
 					451D225A2EA54064004688D4 = {
 						CreatedOnToolsVersion = 26.0.1;
@@ -358,6 +369,7 @@
 					};
 					F1E5F97B2E78695B0007B178 = {
 						CreatedOnToolsVersion = 16.4;
+						ProvisioningStyle = Manual;
 					};
 					F1E5F9882E78695F0007B178 = {
 						CreatedOnToolsVersion = 16.4;
@@ -518,9 +530,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "ListAllWatch Watch App/ListAllWatch Watch App.entitlements";
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CODE_SIGN_IDENTITY = "Apple Distribution: Aleksi Sutela (M9BR5FY93A)";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -534,7 +546,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -559,7 +571,7 @@
 				CODE_SIGN_ENTITLEMENTS = "ListAllWatch Watch App/ListAllWatch Watch App.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Distribution: Aleksi Sutela (M9BR5FY93A)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -573,7 +585,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "d6168d14-bb94-4831-8080-59695b5b8855";
@@ -596,10 +608,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -619,10 +631,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "d6168d14-bb94-4831-8080-59695b5b8855";
@@ -643,10 +655,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -665,10 +677,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.chmc.ListAllWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "d6168d14-bb94-4831-8080-59695b5b8855";
@@ -814,9 +826,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ListAll/ListAll.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CODE_SIGN_IDENTITY = "Apple Distribution: Aleksi Sutela (M9BR5FY93A)";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -835,7 +847,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -853,7 +865,7 @@
 				CODE_SIGN_ENTITLEMENTS = ListAll/ListAll.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: Aleksi Sutela (M9BR5FY93A)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -872,7 +884,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAll;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "cebe93cc-95cc-483c-8696-ad4347c38353";
@@ -888,11 +900,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -907,11 +919,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "cebe93cc-95cc-483c-8696-ad4347c38353";
@@ -927,10 +939,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -944,10 +956,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "cebe93cc-95cc-483c-8696-ad4347c38353";
