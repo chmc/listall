@@ -448,7 +448,7 @@ func testDataRepositoryCRUD() {
 
 ---
 
-### Task 3.4: Verify CloudKitService Works on macOS
+### Task 3.4: [COMPLETED] Verify CloudKitService Works on macOS
 **TDD**: Write sync tests (mock CloudKit)
 
 **Steps**:
@@ -463,6 +463,33 @@ func testCloudKitSyncStatus() {
     XCTAssertEqual(service.syncStatus, .idle)
 }
 ```
+
+**Completed**:
+- CloudKitService.swift already included in ListAllMac target membership (no platform-specific directives needed)
+- macOS entitlements fully configured in `ListAllMac.entitlements`:
+  - `com.apple.security.app-sandbox`: true
+  - `com.apple.security.network.client`: true (required for CloudKit network access)
+  - `com.apple.security.application-groups`: group.io.github.chmc.ListAll
+  - `com.apple.developer.icloud-container-identifiers`: iCloud.io.github.chmc.ListAll
+  - `com.apple.developer.icloud-services`: CloudKit
+  - `com.apple.developer.ubiquity-container-identifiers`: iCloud.io.github.chmc.ListAll
+- Created 26 comprehensive unit tests in `ListAllMacTests.swift` (CloudKitServiceMacTests class):
+  - Service initialization: testCloudKitServiceInitializesOnMacOS, testCloudKitServiceObservableObject
+  - Account status: testCloudKitAccountStatusCheck, testCloudKitSyncStatusUpdatesOnMacOS
+  - Sync operations: testCloudKitSyncWithoutAccountOnMacOS, testCloudKitSyncWithAvailableAccountOnMacOS, testCloudKitForceSyncOnMacOS
+  - Offline scenarios: testCloudKitOfflineOperationQueuingOnMacOS, testCloudKitProcessPendingOperationsOnMacOS
+  - Error handling: testCloudKitErrorHandlingOnMacOS
+  - Sync progress: testCloudKitSyncProgressOnMacOS
+  - Conflict resolution: testCloudKitConflictResolutionOnMacOS
+  - Data export: testCloudKitDataExportOnMacOS
+  - Enum tests: testSyncStatusEnumValues, testConflictResolutionStrategyEnum
+  - Published properties: testIsSyncingPublished, testSyncStatusPublished, testLastSyncDatePublished, testSyncErrorPublished, testSyncProgressPublished, testPendingOperationsPublished
+  - Entitlements: testMacOSEntitlementsConfiguration
+  - Periodic sync: testPeriodicSyncStartStopOnMacOS
+  - Platform compatibility: testRunningOnMacOS, testCloudKitPlatformCompatibility
+  - Documentation: testDocumentCloudKitConfigurationForMacOS
+- Note: CloudKit disabled in Debug builds (uses NSPersistentContainer), enabled in Release builds (uses NSPersistentCloudKitContainer)
+- Tests work WITHOUT requiring actual CloudKit capabilities - gracefully handle unavailable account scenarios
 
 ---
 
@@ -1354,7 +1381,7 @@ ListAll/
 |-------|--------|-----------------|
 | Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Completed | 3/3 |
-| Phase 3: Services Layer | In Progress | 3/7 |
+| Phase 3: Services Layer | In Progress | 4/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |
 | Phase 5: macOS Views | Not Started | 0/11 |
 | Phase 6: Advanced Features | Not Started | 0/6 |
