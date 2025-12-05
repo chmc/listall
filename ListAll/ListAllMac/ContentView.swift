@@ -8,62 +8,62 @@
 import SwiftUI
 import CoreData
 
+/// Placeholder ContentView for macOS target.
+/// This will be replaced with MacMainView in a later task (Task 5.1).
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)],
         animation: .default)
-    private var items: FetchedResults<Item>
+    private var lists: FetchedResults<ListEntity>
 
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
+        NavigationSplitView {
+            SwiftUI.List {
+                ForEach(lists) { list in
                     NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
+                        if let name = list.name {
+                            Text("List: \(name)")
+                        } else {
+                            Text("Unnamed List")
+                        }
                     } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+                        if let name = list.name {
+                            Text(name)
+                        } else {
+                            Text("Unnamed List")
+                        }
                     }
                 }
-                .onDelete(perform: deleteItems)
             }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .toolbar {
                 ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                    Button(action: addList) {
+                        Label("Add List", systemImage: "plus")
                     }
                 }
             }
-            Text("Select an item")
+        } detail: {
+            Text("Select a list")
         }
+        .frame(minWidth: 800, minHeight: 600)
     }
 
-    private func addItem() {
+    private func addList() {
         withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
+            let newList = ListEntity(context: viewContext)
+            newList.id = UUID()
+            newList.name = "New List"
+            newList.createdAt = Date()
+            newList.modifiedAt = Date()
+            newList.orderNumber = Int32(lists.count)
+            newList.isArchived = false
 
             do {
                 try viewContext.save()
             } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
                 let nsError = error as NSError
                 fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
             }
@@ -71,13 +71,7 @@ struct ContentView: View {
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
-
 #Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    ContentView()
+        .environment(\.managedObjectContext, CoreDataManager.shared.viewContext)
 }

@@ -5,11 +5,14 @@ import Combine
 class DataRepository: ObservableObject {
     private let coreDataManager = CoreDataManager.shared
     private let dataManager = DataManager.shared
+    #if os(iOS)
     private let watchConnectivityService = WatchConnectivityService.shared
-    
+    #endif
+
     // MARK: - Initialization
-    
+
     init() {
+        #if os(iOS)
         // Observe incoming sync notifications from paired device
         NotificationCenter.default.addObserver(
             self,
@@ -17,6 +20,16 @@ class DataRepository: ObservableObject {
             name: NSNotification.Name("WatchConnectivitySyncReceived"),
             object: nil
         )
+        #endif
+    }
+
+    // MARK: - Watch Connectivity Helper
+
+    /// Sends updated lists data to paired Watch device (iOS only)
+    private func syncToWatch() {
+        #if os(iOS)
+        watchConnectivityService.sendListsData(dataManager.lists)
+        #endif
     }
     
     deinit {
@@ -30,7 +43,7 @@ class DataRepository: ObservableObject {
         dataManager.addList(newList)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
         
         return newList
     }
@@ -39,7 +52,7 @@ class DataRepository: ObservableObject {
         dataManager.deleteList(withId: list.id)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func updateList(_ list: List, name: String) {
@@ -49,7 +62,7 @@ class DataRepository: ObservableObject {
         dataManager.updateList(updatedList)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func getAllLists() -> [List] {
@@ -102,7 +115,7 @@ class DataRepository: ObservableObject {
         }
 
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
 
     /// Reorders lists using integer indices - matches reorderItems pattern exactly
@@ -145,7 +158,7 @@ class DataRepository: ObservableObject {
         print("📂 Reloaded dataManager.lists cache from Core Data after reorder")
 
         // Send to Watch (now using fresh cache that reflects Core Data state)
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
         print("📂 Sent reordered lists to Watch")
     }
 
@@ -168,10 +181,10 @@ class DataRepository: ObservableObject {
                 uncrossedItem.isCrossedOut = false
                 uncrossedItem.updateModifiedDate()
                 dataManager.updateItem(uncrossedItem)
-                
+
                 // Send updated data to paired device
-                watchConnectivityService.sendListsData(dataManager.lists)
-                
+                syncToWatch()
+
                 return uncrossedItem
             } else {
                 // Item already exists and is not crossed out - just return it
@@ -187,7 +200,7 @@ class DataRepository: ObservableObject {
         dataManager.addItem(newItem, to: list.id)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
         
         return newItem
     }
@@ -222,15 +235,15 @@ class DataRepository: ObservableObject {
         dataManager.addItem(newItem, to: listId)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func deleteItem(_ item: Item) {
         if let listId = item.listId {
             dataManager.deleteItem(withId: item.id, from: listId)
-            
+
             // Send updated data to paired device
-            watchConnectivityService.sendListsData(dataManager.lists)
+            syncToWatch()
         }
     }
     
@@ -243,7 +256,7 @@ class DataRepository: ObservableObject {
         dataManager.updateItem(updatedItem)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     /// Updates an item with all its properties including images
@@ -251,7 +264,7 @@ class DataRepository: ObservableObject {
         dataManager.updateItem(item)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func toggleItemCrossedOut(_ item: Item) {
@@ -260,7 +273,7 @@ class DataRepository: ObservableObject {
         dataManager.updateItem(updatedItem)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func getItems(for list: List) -> [Item] {
@@ -302,7 +315,7 @@ class DataRepository: ObservableObject {
         }
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func reorderMultipleItems(in list: List, itemsToMove: [Item], to insertionIndex: Int) {
@@ -343,7 +356,7 @@ class DataRepository: ObservableObject {
         }
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func updateItemOrderNumbers(for list: List, items: [Item]) {
@@ -354,7 +367,7 @@ class DataRepository: ObservableObject {
         }
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func moveItem(_ item: Item, to destinationList: List) {
@@ -376,7 +389,7 @@ class DataRepository: ObservableObject {
         dataManager.addItem(movedItem, to: destinationList.id)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     func copyItem(_ item: Item, to destinationList: List) {
@@ -404,7 +417,7 @@ class DataRepository: ObservableObject {
         dataManager.addItem(copiedItem, to: destinationList.id)
         
         // Send updated data to paired device
-        watchConnectivityService.sendListsData(dataManager.lists)
+        syncToWatch()
     }
     
     // MARK: - Image Operations
