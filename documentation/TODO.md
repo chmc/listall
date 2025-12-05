@@ -149,7 +149,7 @@ func testPlatformDirectivesCompile() {
 
 ---
 
-### Task 1.4: Create macOS App Entry Point
+### Task 1.4: [COMPLETED] Create macOS App Entry Point
 **TDD**: Write app launch test
 
 **Steps**:
@@ -187,6 +187,12 @@ func testAppLaunches() {
     XCTAssertTrue(app.windows.count > 0)
 }
 ```
+
+**Files created/updated**:
+- `ListAllMac/ListAllMacApp.swift` - Updated with DataManager, AppCommands, Settings scene, and UI test setup
+- `ListAllMac/Commands/AppCommands.swift` - macOS menu commands (New List, New Item, Archive, Duplicate, etc.)
+- `ListAllMac/Views/MacMainView.swift` - Main view with NavigationSplitView, sidebar, and detail views
+- `ListAllMac/Views/MacSettingsView.swift` - Settings view with General, Sync, Data, and About tabs
 
 ---
 
@@ -1270,7 +1276,7 @@ ListAll/
 
 | Phase | Status | Tasks Completed |
 |-------|--------|-----------------|
-| Phase 1: Project Setup | In Progress | 2/5 |
+| Phase 1: Project Setup | In Progress | 4/5 |
 | Phase 2: Core Data & Models | Not Started | 0/3 |
 | Phase 3: Services Layer | Not Started | 0/7 |
 | Phase 4: ViewModels | Not Started | 0/4 |
