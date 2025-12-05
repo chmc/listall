@@ -3,6 +3,8 @@ import Foundation
 import UIKit
 #elseif os(watchOS)
 import WatchKit
+#elseif os(macOS)
+import AppKit
 #endif
 
 struct ValidationHelper {
@@ -82,6 +84,10 @@ struct ValidationHelper {
         }
         #elseif os(watchOS)
         guard UIImage(data: imageData) != nil else {
+            return .failure("Invalid image format")
+        }
+        #elseif os(macOS)
+        guard NSImage(data: imageData) != nil else {
             return .failure("Invalid image format")
         }
         #endif

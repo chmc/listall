@@ -107,7 +107,7 @@ func testSharedModelsAvailableOnMacOS() {
 
 ---
 
-### Task 1.3: Platform-Specific Compiler Directives
+### Task 1.3: [COMPLETED] Platform-Specific Compiler Directives
 **TDD**: Write conditional compilation tests
 
 **Steps**:
@@ -139,6 +139,13 @@ func testPlatformDirectivesCompile() {
     #endif
 }
 ```
+
+**Files updated**:
+- `ImageService.swift` - Added complete macOS implementation using NSImage
+- `ItemImage.swift` - Added macOS support with NSImage and jpegData helper
+- `ValidationHelper.swift` - Added macOS case for image validation
+- `DataRepository.swift` - Updated compiler directive for compressImage
+- `CoreDataManager.swift` - Added macOS cases for CloudKit and container setup
 
 ---
 

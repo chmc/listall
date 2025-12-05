@@ -31,6 +31,15 @@ class CoreDataManager: ObservableObject {
         #if os(watchOS)
         let container = NSPersistentContainer(name: "ListAll")
         print("📦 CoreDataManager: Using NSPersistentContainer (watchOS)")
+        #elseif os(macOS)
+        // macOS: Use CloudKit-enabled container for Release builds, plain container for Debug
+        #if DEBUG
+        let container = NSPersistentContainer(name: "ListAll")
+        print("📦 CoreDataManager: Using NSPersistentContainer (macOS Debug build - CloudKit DISABLED)")
+        #else
+        let container = NSPersistentCloudKitContainer(name: "ListAll")
+        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (macOS Release build - CloudKit ENABLED)")
+        #endif
         #elseif DEBUG
         // Use plain NSPersistentContainer for Debug builds (no CloudKit)
         let container = NSPersistentContainer(name: "ListAll")
@@ -53,8 +62,8 @@ class CoreDataManager: ObservableObject {
             print("📦 CoreDataManager: App Groups container accessible")
             print("📦 CoreDataManager: Store URL = \(storeURL.path)")
 
-            // Migrate from old location if needed (iOS only - first time after App Groups was added)
-            #if os(iOS)
+            // Migrate from old location if needed (iOS/macOS only - first time after App Groups was added)
+            #if os(iOS) || os(macOS)
             migrateToAppGroupsIfNeeded(newStoreURL: storeURL)
             #endif
 
@@ -88,9 +97,9 @@ class CoreDataManager: ObservableObject {
         storeDescription.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
 
         // Enable CloudKit sync (activated with paid developer account)
-        // Note: Only enable for iOS Release builds - watchOS and Debug builds don't support CloudKit
+        // Note: Only enable for iOS/macOS Release builds - watchOS and Debug builds don't support CloudKit
         // CRITICAL: CloudKit requires proper code signing which isn't available in Debug/simulator builds
-        #if os(iOS) && !DEBUG
+        #if (os(iOS) || os(macOS)) && !DEBUG
         let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
         storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
         print("📦 CoreDataManager: CloudKit container options configured")

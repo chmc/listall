@@ -4,7 +4,7 @@ import UIKit
 import SwiftUI
 import PhotosUI
 
-// MARK: - Image Processing Service
+// MARK: - Image Processing Service (iOS)
 // Note: This service is iOS-only due to UIKit and PhotosUI dependencies
 // watchOS does not support image capture, picking, or complex image processing
 class ImageService: ObservableObject {
@@ -478,4 +478,372 @@ extension ImageService {
         return Image(uiImage: thumbnail)
     }
 }
-#endif // os(iOS)
+#elseif os(macOS)
+import AppKit
+import SwiftUI
+
+// MARK: - Image Processing Service (macOS)
+// macOS-specific implementation using NSImage instead of UIImage
+class ImageService: ObservableObject {
+
+    // MARK: - Singleton
+    static let shared = ImageService()
+
+    // MARK: - Configuration
+    struct Configuration {
+        // Industry-standard image compression settings
+        static let maxImageSize: Int = 512 * 1024 // 512KB
+        static let thumbnailSize: CGSize = CGSize(width: 150, height: 150)
+        static let compressionQuality: CGFloat = 0.75
+        static let maxImageDimension: CGFloat = 1200
+        static let maxCacheSize: Int = 50
+
+        // Progressive compression settings
+        static let progressiveQualityLevels: [CGFloat] = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+        static let minCompressionQuality: CGFloat = 0.1
+        static let maxThumbnailSize: Int = 50 * 1024 // 50KB for thumbnails
+    }
+
+    // MARK: - Thumbnail Cache
+    private var thumbnailCache = NSCache<NSString, NSImage>()
+
+    private init() {
+        // Configure cache
+        thumbnailCache.countLimit = Configuration.maxCacheSize
+        thumbnailCache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+    }
+
+    // MARK: - Image Processing
+
+    /// Processes an NSImage for storage - resizes and compresses
+    func processImageForStorage(_ image: NSImage) -> Data? {
+        // Resize image
+        let resizedImage = resizeImageForStorage(image)
+
+        // Compress as JPEG
+        return compressImageDataProgressive(resizedImage, maxSize: Configuration.maxImageSize)
+    }
+
+    /// Resizes an image for storage
+    func resizeImageForStorage(_ image: NSImage) -> NSImage {
+        let size = image.size
+        let maxDimension = Configuration.maxImageDimension
+
+        // Check if resizing is needed
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let aspectRatio = size.width / size.height
+        var newSize: CGSize
+
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+
+        // Create resized image
+        let newImage = NSImage(size: newSize)
+        newImage.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(in: NSRect(origin: .zero, size: newSize),
+                   from: NSRect(origin: .zero, size: size),
+                   operation: .copy,
+                   fraction: 1.0)
+        newImage.unlockFocus()
+
+        return newImage
+    }
+
+    /// Resizes an image to fit within maximum dimensions while maintaining aspect ratio
+    func resizeImage(_ image: NSImage, maxDimension: CGFloat) -> NSImage {
+        let size = image.size
+
+        // Check if resizing is needed
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let aspectRatio = size.width / size.height
+        var newSize: CGSize
+
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+
+        // Create resized image
+        let newImage = NSImage(size: newSize)
+        newImage.lockFocus()
+        image.draw(in: NSRect(origin: .zero, size: newSize),
+                   from: NSRect(origin: .zero, size: size),
+                   operation: .copy,
+                   fraction: 1.0)
+        newImage.unlockFocus()
+
+        return newImage
+    }
+
+    /// Compresses image data to fit within size limit
+    func compressImageData(_ data: Data, maxSize: Int) -> Data? {
+        guard let image = NSImage(data: data) else { return data }
+
+        var compressionQuality: CGFloat = Configuration.compressionQuality
+        var compressedData = jpegData(from: image, compressionQuality: compressionQuality)
+
+        // Reduce quality until size is acceptable
+        while let currentData = compressedData,
+              currentData.count > maxSize && compressionQuality > 0.1 {
+            compressionQuality -= 0.1
+            compressedData = jpegData(from: image, compressionQuality: compressionQuality)
+        }
+
+        return compressedData ?? data
+    }
+
+    /// Progressive compression with multiple quality levels
+    func compressImageDataProgressive(_ image: NSImage, maxSize: Int) -> Data? {
+        // Try each quality level until we find one that fits
+        for quality in Configuration.progressiveQualityLevels {
+            if let data = jpegData(from: image, compressionQuality: quality),
+               data.count <= maxSize {
+                return data
+            }
+        }
+
+        // If no quality level works, use the minimum
+        return jpegData(from: image, compressionQuality: Configuration.minCompressionQuality)
+    }
+
+    /// Creates JPEG data from NSImage
+    private func jpegData(from image: NSImage, compressionQuality: CGFloat) -> Data? {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmapRep = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+
+        return bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: compressionQuality])
+    }
+
+    /// Creates a thumbnail from an image
+    func createThumbnail(from image: NSImage, size: CGSize = Configuration.thumbnailSize) -> NSImage {
+        let newImage = NSImage(size: size)
+        newImage.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .medium
+        image.draw(in: NSRect(origin: .zero, size: size),
+                   from: NSRect(origin: .zero, size: image.size),
+                   operation: .copy,
+                   fraction: 1.0)
+        newImage.unlockFocus()
+        return newImage
+    }
+
+    /// Creates a thumbnail from image data with caching
+    func createThumbnail(from data: Data, size: CGSize = Configuration.thumbnailSize) -> NSImage? {
+        // Create cache key from data hash and size
+        let cacheKey = "\(data.hashValue)_\(Int(size.width))x\(Int(size.height))" as NSString
+
+        // Check cache first
+        if let cachedThumbnail = thumbnailCache.object(forKey: cacheKey) {
+            return cachedThumbnail
+        }
+
+        // Generate thumbnail if not cached
+        guard let image = NSImage(data: data) else { return nil }
+        let thumbnail = createThumbnail(from: image, size: size)
+
+        // Store in cache
+        thumbnailCache.setObject(thumbnail, forKey: cacheKey)
+
+        return thumbnail
+    }
+
+    /// Clears the thumbnail cache
+    func clearThumbnailCache() {
+        thumbnailCache.removeAllObjects()
+    }
+
+    // MARK: - ItemImage Management
+
+    /// Creates an ItemImage from an NSImage
+    func createItemImage(from image: NSImage, itemId: UUID? = nil) -> ItemImage? {
+        guard let processedData = processImageForStorage(image) else {
+            return nil
+        }
+
+        let itemImage = ItemImage(imageData: processedData, itemId: itemId)
+        return itemImage
+    }
+
+    /// Adds an image to an item
+    func addImageToItem(_ item: inout Item, image: NSImage) -> Bool {
+        guard let itemImage = createItemImage(from: image, itemId: item.id) else {
+            return false
+        }
+
+        // Set order number
+        var newItemImage = itemImage
+        newItemImage.orderNumber = item.images.count
+
+        // Add to item
+        item.images.append(newItemImage)
+        item.updateModifiedDate()
+
+        return true
+    }
+
+    /// Removes an image from an item by ID
+    func removeImageFromItem(_ item: inout Item, imageId: UUID) -> Bool {
+        guard let index = item.images.firstIndex(where: { $0.id == imageId }) else {
+            return false
+        }
+
+        item.images.remove(at: index)
+
+        // Reorder remaining images
+        for i in 0..<item.images.count {
+            item.images[i].orderNumber = i
+        }
+
+        item.updateModifiedDate()
+        return true
+    }
+
+    /// Reorders images within an item
+    func reorderImages(in item: inout Item, from sourceIndex: Int, to destinationIndex: Int) -> Bool {
+        guard sourceIndex >= 0 && sourceIndex < item.images.count &&
+              destinationIndex >= 0 && destinationIndex < item.images.count &&
+              sourceIndex != destinationIndex else {
+            return false
+        }
+
+        let movedImage = item.images.remove(at: sourceIndex)
+        item.images.insert(movedImage, at: destinationIndex)
+
+        // Update order numbers
+        for i in 0..<item.images.count {
+            item.images[i].orderNumber = i
+        }
+
+        item.updateModifiedDate()
+        return true
+    }
+
+    // MARK: - Image Validation
+
+    /// Validates image data
+    func validateImageData(_ data: Data) -> Bool {
+        guard NSImage(data: data) != nil else { return false }
+        guard data.count <= Configuration.maxImageSize * 2 else { return false }
+        guard getImageFormat(from: data) != nil else { return false }
+        return true
+    }
+
+    /// Validates image file size
+    func validateImageSize(_ data: Data) -> (isValid: Bool, actualSize: Int, maxSize: Int, recommendation: String?) {
+        let actualSize = data.count
+        let maxSize = Configuration.maxImageSize
+        let isValid = actualSize <= maxSize
+
+        var recommendation: String? = nil
+        if !isValid {
+            let reductionPercent = Int((1.0 - Double(maxSize) / Double(actualSize)) * 100)
+            recommendation = "Image is \(formatFileSize(actualSize)). Reduce size by \(reductionPercent)% to meet \(formatFileSize(maxSize)) limit."
+        }
+
+        return (isValid, actualSize, maxSize, recommendation)
+    }
+
+    // MARK: - Image Format Utilities
+
+    /// Gets the image format from data
+    func getImageFormat(from data: Data) -> String? {
+        guard data.count >= 4 else { return nil }
+
+        let bytes = data.prefix(4).map { $0 }
+
+        if bytes[0] == 0xFF && bytes[1] == 0xD8 {
+            return "JPEG"
+        } else if bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 {
+            return "PNG"
+        } else if bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 {
+            return "GIF"
+        } else if bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 {
+            return "WebP"
+        }
+
+        return "Unknown"
+    }
+
+    /// Formats file size for display
+    func formatFileSize(_ bytes: Int) -> String {
+        if bytes < 1024 {
+            return "\(bytes) B"
+        } else if bytes < 1024 * 1024 {
+            return String(format: "%.1f KB", Double(bytes) / 1024.0)
+        } else {
+            return String(format: "%.1f MB", Double(bytes) / (1024.0 * 1024.0))
+        }
+    }
+
+    // MARK: - Error Handling
+
+    enum ImageError: Error, LocalizedError {
+        case invalidImageData
+        case imageTooLarge
+        case processingFailed
+        case unsupportedFormat
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidImageData:
+                return "Invalid image data"
+            case .imageTooLarge:
+                return "Image is too large"
+            case .processingFailed:
+                return "Failed to process image"
+            case .unsupportedFormat:
+                return "Unsupported image format"
+            }
+        }
+    }
+
+    /// Processes image with error handling
+    func processImage(_ image: NSImage) -> Result<Data, ImageError> {
+        guard let processedData = processImageForStorage(image) else {
+            return .failure(.processingFailed)
+        }
+
+        let validation = validateImageSize(processedData)
+        guard validation.isValid else {
+            return .failure(.imageTooLarge)
+        }
+
+        return .success(processedData)
+    }
+}
+
+// MARK: - SwiftUI Integration
+extension ImageService {
+
+    /// Creates a SwiftUI Image from ItemImage
+    func swiftUIImage(from itemImage: ItemImage) -> Image? {
+        guard let imageData = itemImage.imageData,
+              let nsImage = NSImage(data: imageData) else { return nil }
+        return Image(nsImage: nsImage)
+    }
+
+    /// Creates a SwiftUI Image thumbnail from ItemImage
+    func swiftUIThumbnail(from itemImage: ItemImage, size: CGSize = Configuration.thumbnailSize) -> Image? {
+        guard let imageData = itemImage.imageData,
+              let thumbnail = createThumbnail(from: imageData, size: size) else {
+            return nil
+        }
+        return Image(nsImage: thumbnail)
+    }
+}
+#endif // os(iOS) or os(macOS)

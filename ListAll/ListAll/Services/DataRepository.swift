@@ -424,7 +424,7 @@ class DataRepository: ObservableObject {
     
     func addImage(to item: Item, imageData: Data) -> ItemImage {
         var itemImage = ItemImage(imageData: imageData, itemId: item.id)
-        #if canImport(UIKit) && !os(watchOS)
+        #if (canImport(UIKit) && !os(watchOS)) || os(macOS)
         itemImage.compressImage()
         #endif
         
