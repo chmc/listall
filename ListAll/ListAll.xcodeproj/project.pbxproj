@@ -141,6 +141,8 @@
 				Utils/HapticManager.swift,
 				Utils/Helpers/ValidationHelper.swift,
 				Utils/LocalizationManager.swift,
+				Utils/Theme.swift,
+				ViewModels/ListViewModel.swift,
 				ViewModels/MainViewModel.swift,
 			);
 			target = 45C804B92EE2E484006D0E88 /* ListAllMac */;

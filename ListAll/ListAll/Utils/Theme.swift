@@ -1,13 +1,23 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 struct Theme {
-    
+
     // MARK: - Colors
     struct Colors {
         static let primary = Color("AccentColor")
         static let secondary = Color.secondary
+        #if os(iOS)
         static let background = Color(UIColor.systemBackground)
         static let groupedBackground = Color(UIColor.systemGroupedBackground)
+        #elseif os(macOS)
+        static let background = Color(NSColor.windowBackgroundColor)
+        static let groupedBackground = Color(NSColor.controlBackgroundColor)
+        #endif
         static let success = Color.green
         static let warning = Color.orange
         static let error = Color.red

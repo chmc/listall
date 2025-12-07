@@ -2,6 +2,9 @@ import Foundation
 // import CoreData // Removed CoreData import
 import SwiftUI
 import Combine
+#if os(iOS)
+import WatchConnectivity
+#endif
 
 class ListViewModel: ObservableObject {
     @Published var items: [Item] = []
@@ -47,7 +50,9 @@ class ListViewModel: ObservableObject {
         // self.viewContext = coreDataManager.container.viewContext // Removed CoreData initialization
         loadUserPreferences()
         loadItems()
+        #if os(iOS)
         setupWatchConnectivityObserver()
+        #endif
     }
     
     deinit {
@@ -56,8 +61,9 @@ class ListViewModel: ObservableObject {
         deleteUndoTimer?.invalidate()
     }
     
+    #if os(iOS)
     // MARK: - Watch Connectivity Integration
-    
+
     private func setupWatchConnectivityObserver() {
         // Listen for old sync notifications (backward compatibility)
         NotificationCenter.default.addObserver(
@@ -66,7 +72,7 @@ class ListViewModel: ObservableObject {
             name: NSNotification.Name("WatchConnectivitySyncReceived"),
             object: nil
         )
-        
+
         // CRITICAL FIX: Listen for new lists data notifications
         // This ensures the list view updates in real-time when watch sends data
         NotificationCenter.default.addObserver(
@@ -76,32 +82,33 @@ class ListViewModel: ObservableObject {
             object: nil
         )
     }
-    
+
     @objc private func handleWatchSyncNotification(_ notification: Notification) {
         refreshItemsFromWatch()
     }
-    
+
     @objc private func handleWatchListsData(_ notification: Notification) {
         // MainViewModel has already updated Core Data at this point
         // We just need to reload items for this list from the updated data
         refreshItemsFromWatch()
     }
-    
+
     func refreshItemsFromWatch() {
         // Show sync indicator briefly
         isSyncingFromWatch = true
-        
+
         // Reload items from DataManager (which already has the updated data from Core Data)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.loadItems()
-            
+
             // Hide sync indicator after brief delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.isSyncingFromWatch = false
             }
         }
     }
-    
+    #endif
+
     func loadItems() {
         isLoading = true
         errorMessage = nil
@@ -172,11 +179,13 @@ class ListViewModel: ObservableObject {
             showUndoForCompletedItem(refreshedItem)
         }
         
+        #if os(iOS)
         // CRITICAL: Sync change to watchOS immediately
         // When user completes/uncompletes an item on iOS, watchOS needs to know about it
-        
+
         // Send updated lists to watchOS via WatchConnectivity
         WatchConnectivityService.shared.sendListsData(dataManager.lists)
+        #endif
     }
     
     // MARK: - Undo Complete Functionality

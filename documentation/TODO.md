@@ -786,7 +786,7 @@ func testDataSyncsBetweeniOSAndMacOS() {
 
 ---
 
-### Task 4.3: Verify ListViewModel Works on macOS
+### Task 4.3: [COMPLETED] Verify ListViewModel Works on macOS
 **TDD**: Write item management tests
 
 **Steps**:
@@ -802,6 +802,36 @@ func testListViewModelFiltering() {
     XCTAssertTrue(vm.filteredItems.allSatisfy { $0.isCompleted })
 }
 ```
+
+**Completed**:
+- Added `#if os(iOS)` conditionals to ListViewModel.swift for WatchConnectivity code:
+  - `import WatchConnectivity` - iOS only (lines 5-7)
+  - `setupWatchConnectivityObserver()` call in init - iOS only (lines 53-55)
+  - All Watch Connectivity methods wrapped in `#if os(iOS)` (lines 64-110):
+    - `setupWatchConnectivityObserver()`
+    - `handleWatchSyncNotification()`
+    - `handleWatchListsData()`
+    - `refreshItemsFromWatch()`
+  - `WatchConnectivityService.shared.sendListsData()` call in `toggleItemCrossedOut()` - iOS only (lines 182-188)
+- Added Theme.swift macOS support with NSColor equivalents for UIColor
+- Added ListViewModel.swift and Theme.swift to ListAllMac target membership
+- Created 49 unit tests in `ListAllMacTests.swift` (ListViewModelMacTests class):
+  - Platform verification tests
+  - ListViewModel existence and ObservableObject conformance tests
+  - Item model validation tests (title, quantity, description)
+  - Item model creation tests
+  - ItemSortOption enum tests (values, displayName, systemImage)
+  - ItemFilterOption enum tests (values, displayName)
+  - SortDirection enum tests (values, displayName)
+  - Sorting logic tests (orderNumber, title, quantity, reversed)
+  - Filtering logic tests (active, completed, all, hasDescription)
+  - Search logic tests (by title, by description, case-insensitive, empty)
+  - Selection mode tests (set operations, select all, toggle)
+  - Undo logic tests (timer constant, completed item tracking, deleted item tracking)
+  - User preferences tests (default sort, filter, direction, showCrossedOutItems)
+  - macOS platform compatibility tests (no WatchConnectivity, HapticManager)
+  - Order number tests (sorting, reassignment)
+  - Documentation test
 
 ---
 
@@ -1587,7 +1617,7 @@ ListAll/
 | Phase 1: Project Setup | Completed | 5/5 |
 | Phase 2: Core Data & Models | Completed | 3/3 |
 | Phase 3: Services Layer | Completed | 7/7 |
-| Phase 4: ViewModels | In Progress | 2/5 |
+| Phase 4: ViewModels | In Progress | 3/5 |
 | Phase 5: macOS Views | Not Started | 0/11 |
 | Phase 6: Advanced Features | Not Started | 0/6 |
 | Phase 7: Testing | Not Started | 0/4 |
