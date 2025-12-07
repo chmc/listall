@@ -61,6 +61,9 @@ class MainViewModel: ObservableObject {
         setupWatchConnectivityObserver()
         #endif
 
+        // Setup Core Data remote change observer for CloudKit sync (all platforms)
+        setupCoreDataRemoteChangeObserver()
+
         // CRITICAL ORDER:
         // 1. Load lists first time
         loadLists()
@@ -270,6 +273,32 @@ class MainViewModel: ObservableObject {
         }
     }
     #endif
+
+    // MARK: - Core Data Remote Change (CloudKit Sync)
+    // Universal observer for CloudKit sync - works on iOS and macOS
+
+    private func setupCoreDataRemoteChangeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCoreDataRemoteChange(_:)),
+            name: .coreDataRemoteChange,
+            object: nil
+        )
+    }
+
+    @objc private func handleCoreDataRemoteChange(_ notification: Notification) {
+        // CRITICAL: Same logic as Watch sync - ignore during drag operations
+        // This prevents the "sync ping-pong" bug described in learnings/swiftui-list-drag-drop-ordering.md
+        if isDragging || isEditModeActive {
+            print("⚠️ Core Data remote change received during edit mode/drag - IGNORING stale data")
+            return
+        }
+
+        print("🌐 Core Data remote change detected - reloading lists from CloudKit")
+
+        // Reload lists from DataManager (which already reloaded from Core Data)
+        loadLists()
+    }
 
     var displayedLists: [List] {
         // CRITICAL FIX: ALWAYS sort by orderNumber to force SwiftUI re-evaluation

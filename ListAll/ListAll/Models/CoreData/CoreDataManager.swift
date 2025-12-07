@@ -27,6 +27,9 @@ class CoreDataManager: ObservableObject {
         // CRITICAL: Check if running in test environment - use in-memory store to avoid permission dialogs
         let isTestEnvironment = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
+        // CRITICAL: Check if running UI tests - use separate SQLite database for isolation
+        let isUITest = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+
         if isTestEnvironment {
             print("🧪 CoreDataManager: Test environment detected - using IN-MEMORY store")
             let container = NSPersistentContainer(name: "ListAll")
@@ -49,30 +52,23 @@ class CoreDataManager: ObservableObject {
             return container
         }
 
-        // Using NSPersistentCloudKitContainer for CloudKit sync (activated with paid developer account)
+        // INDUSTRY STANDARD: Always use NSPersistentCloudKitContainer for CloudKit sync
+        // CloudKit has TWO separate environments (Development vs Production) - they are isolated
+        // - Debug builds automatically use Development environment (sandbox data)
+        // - Release builds automatically use Production environment (live data)
+        // This enables cross-device sync during development (iOS ↔ macOS) with complete data isolation
         // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
-        // CRITICAL: Disable CloudKit for Debug builds (simulators) to prevent crashes
-        // CloudKit requires proper code signing and credentials which aren't available in unsigned simulator builds
         #if os(watchOS)
         let container = NSPersistentContainer(name: "ListAll")
-        print("📦 CoreDataManager: Using NSPersistentContainer (watchOS)")
-        #elseif os(macOS)
-        // macOS: Use CloudKit-enabled container for Release builds, plain container for Debug
+        print("📦 CoreDataManager: Using NSPersistentContainer (watchOS - CloudKit disabled due to portal issues)")
+        #else
+        // iOS and macOS: Always use CloudKit container for both Debug and Release
+        let container = NSPersistentCloudKitContainer(name: "ListAll")
         #if DEBUG
-        let container = NSPersistentContainer(name: "ListAll")
-        print("📦 CoreDataManager: Using NSPersistentContainer (macOS Debug build - CloudKit DISABLED)")
+        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Debug - Development environment)")
         #else
-        let container = NSPersistentCloudKitContainer(name: "ListAll")
-        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (macOS Release build - CloudKit ENABLED)")
+        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Release - Production environment)")
         #endif
-        #elseif DEBUG
-        // Use plain NSPersistentContainer for Debug builds (no CloudKit)
-        let container = NSPersistentContainer(name: "ListAll")
-        print("📦 CoreDataManager: Using NSPersistentContainer (Debug build - CloudKit DISABLED)")
-        #else
-        // Use CloudKit-enabled container for Release builds only
-        let container = NSPersistentCloudKitContainer(name: "ListAll")
-        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Release build - CloudKit ENABLED)")
         #endif
 
         // Configure store description for migration
@@ -83,9 +79,14 @@ class CoreDataManager: ObservableObject {
         // Configure App Groups shared container URL
         let appGroupID = "group.io.github.chmc.ListAll"
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            let storeURL = containerURL.appendingPathComponent("ListAll.sqlite")
+            // Use separate database file for UI tests to isolate test data from production data
+            let databaseFileName = isUITest ? "ListAll-UITests.sqlite" : "ListAll.sqlite"
+            let storeURL = containerURL.appendingPathComponent(databaseFileName)
             print("📦 CoreDataManager: App Groups container accessible")
             print("📦 CoreDataManager: Store URL = \(storeURL.path)")
+            if isUITest {
+                print("🧪 CoreDataManager: UI test mode detected - using SEPARATE database for isolation")
+            }
 
             // Migrate from old location if needed (iOS/macOS only - first time after App Groups was added)
             #if os(iOS) || os(macOS)
@@ -100,9 +101,14 @@ class CoreDataManager: ObservableObject {
             print("⚠️ CoreDataManager: Falling back to Documents directory (Debug builds only)")
 
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                let fallbackURL = documentsURL.appendingPathComponent("ListAll.sqlite")
+                // Use separate database file for UI tests to isolate test data from production data
+                let databaseFileName = isUITest ? "ListAll-UITests.sqlite" : "ListAll.sqlite"
+                let fallbackURL = documentsURL.appendingPathComponent(databaseFileName)
                 storeDescription.url = fallbackURL
                 print("⚠️ CoreDataManager: Fallback store URL = \(fallbackURL.path)")
+                if isUITest {
+                    print("🧪 CoreDataManager: UI test mode detected - using SEPARATE database for isolation")
+                }
             } else {
                 // Ultimate fallback: keep default URL but log error
                 print("❌ CoreDataManager: CRITICAL - Could not access Documents directory!")
@@ -121,15 +127,22 @@ class CoreDataManager: ObservableObject {
         // NSPersistentCloudKitContainer automatically enables this, so Debug builds must match
         storeDescription.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
 
-        // Enable CloudKit sync (activated with paid developer account)
-        // Note: Only enable for iOS/macOS Release builds - watchOS and Debug builds don't support CloudKit
-        // CRITICAL: CloudKit requires proper code signing which isn't available in Debug/simulator builds
-        #if (os(iOS) || os(macOS)) && !DEBUG
+        // CRITICAL: Enable remote change notifications - MUST BE SET BEFORE loadPersistentStores
+        // This is required for NSPersistentStoreRemoteChange notifications to fire
+        storeDescription.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+
+        // Enable CloudKit sync for ALL iOS/macOS builds (Debug uses Development environment, Release uses Production)
+        // Note: watchOS CloudKit is disabled due to persistent portal configuration issues
+        #if os(iOS) || os(macOS)
         let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
         storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
-        print("📦 CoreDataManager: CloudKit container options configured")
+        #if DEBUG
+        print("📦 CoreDataManager: CloudKit container options configured (Development environment)")
+        #else
+        print("📦 CoreDataManager: CloudKit container options configured (Production environment)")
         #endif
-        
+        #endif
+
         container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
                 // If migration fails, try to delete and recreate the store
@@ -140,11 +153,31 @@ class CoreDataManager: ObservableObject {
                 }
             }
         }
-        
+
+        // Initialize CloudKit schema in Debug builds (Development environment)
+        // This ensures the schema is pushed to CloudKit Development environment
+        // Note: Only do this on iOS/macOS where CloudKit is enabled
+        #if DEBUG && (os(iOS) || os(macOS))
+        do {
+            try container.initializeCloudKitSchema(options: [])
+            print("📦 CoreDataManager: CloudKit schema initialized for Development environment")
+        } catch {
+            // Schema initialization can fail on simulators without iCloud login - this is expected
+            print("📦 CoreDataManager: CloudKit schema initialization skipped: \(error.localizedDescription)")
+        }
+        #endif
+
         // Configure view context
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
-        
+
+        // macOS-specific: Set query generation to ensure fetches return current data
+        // This helps with real-time sync issues where UI doesn't update when CloudKit syncs
+        #if os(macOS)
+        try? container.viewContext.setQueryGenerationFrom(.current)
+        print("📦 CoreDataManager: macOS query generation set to .current")
+        #endif
+
         return container
     }()
     
@@ -175,13 +208,38 @@ class CoreDataManager: ObservableObject {
     // MARK: - Remote Change Notifications
     
     private func setupRemoteChangeNotifications() {
-        // Observe remote changes from other processes (e.g., watchOS app)
+        // Observe remote changes from other processes (e.g., watchOS app, CloudKit sync)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handlePersistentStoreRemoteChange(_:)),
             name: .NSPersistentStoreRemoteChange,
             object: persistentContainer.persistentStoreCoordinator
         )
+
+        // Observe CloudKit sync events (iOS 14+, macOS 11+) for sync status/errors
+        #if os(iOS) || os(macOS)
+        if #available(iOS 14.0, macOS 11.0, *) {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleCloudKitEvent(_:)),
+                name: NSPersistentCloudKitContainer.eventChangedNotification,
+                object: persistentContainer
+            )
+            print("📦 CoreDataManager: CloudKit event notification observer added")
+        }
+        #endif
+
+        // macOS-specific: Observe background context saves (CloudKit imports happen on background context)
+        // This catches CloudKit changes even when the app is frontmost and active
+        #if os(macOS)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleContextDidSave(_:)),
+            name: .NSManagedObjectContextDidSave,
+            object: nil  // Observe ALL contexts, not just viewContext
+        )
+        print("📦 CoreDataManager: macOS background context save observer added")
+        #endif
     }
     
     @objc private func handlePersistentStoreRemoteChange(_ notification: Notification) {
@@ -216,14 +274,87 @@ class CoreDataManager: ObservableObject {
         viewContext.perform {
             self.viewContext.refreshAllObjects()
         }
-        
+
         // Post notification for DataManager and ViewModels to reload their data
         NotificationCenter.default.post(
             name: .coreDataRemoteChange,
             object: nil
         )
     }
-    
+
+    // MARK: - macOS Background Context Handling
+
+    #if os(macOS)
+    /// Handles saves from background contexts (including CloudKit import context)
+    /// This ensures macOS UI updates in real-time even when the app is frontmost
+    @objc private func handleContextDidSave(_ notification: Notification) {
+        guard let savedContext = notification.object as? NSManagedObjectContext else { return }
+
+        // Only process saves from OTHER contexts (background CloudKit import)
+        // Skip our own viewContext saves to avoid loops
+        guard savedContext != viewContext else {
+            print("💾 CoreDataManager: Ignoring viewContext save (local)")
+            return
+        }
+
+        // This is a background context save - likely from CloudKit import
+        print("🌐 CoreDataManager: Background context saved (likely CloudKit import) - triggering UI refresh")
+
+        // Ensure we're on main thread for UI updates
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+
+            // Force viewContext to refresh all objects from the store
+            self.viewContext.perform {
+                self.viewContext.refreshAllObjects()
+            }
+
+            // Post notification to trigger UI refresh in DataManager and views
+            NotificationCenter.default.post(
+                name: .coreDataRemoteChange,
+                object: nil
+            )
+        }
+    }
+    #endif
+
+    // MARK: - CloudKit Event Handling
+
+    #if os(iOS) || os(macOS)
+    @available(iOS 14.0, macOS 11.0, *)
+    @objc private func handleCloudKitEvent(_ notification: Notification) {
+        guard let cloudEvent = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
+                as? NSPersistentCloudKitContainer.Event else {
+            return
+        }
+
+        let eventType = cloudEvent.type
+
+        if cloudEvent.endDate == nil {
+            print("☁️ CloudKit event STARTED: \(eventType)")
+        } else {
+            if cloudEvent.succeeded {
+                print("✅ CloudKit event SUCCEEDED: \(eventType)")
+                // Post notification to trigger UI refresh after successful import
+                if eventType == .import {
+                    DispatchQueue.main.async { [weak self] in
+                        // macOS: Be more aggressive - always refresh objects on import
+                        // This ensures UI updates even when app is frontmost
+                        #if os(macOS)
+                        self?.viewContext.perform {
+                            self?.viewContext.refreshAllObjects()
+                        }
+                        #endif
+                        NotificationCenter.default.post(name: .coreDataRemoteChange, object: nil)
+                    }
+                }
+            } else if let error = cloudEvent.error {
+                print("❌ CloudKit event FAILED: \(eventType) - \(error.localizedDescription)")
+            }
+        }
+    }
+    #endif
+
     // MARK: - Core Data Operations
     
     func save() {
@@ -451,14 +582,35 @@ class DataManager: ObservableObject {
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
-        
+
         // CRITICAL: Eagerly fetch items relationship to avoid empty items arrays
         request.relationshipKeyPathsForPrefetching = ["items"]
-        
+
         do {
             let listEntities = try coreDataManager.viewContext.fetch(request)
-            
-            lists = listEntities.map { $0.toList() }
+            let newLists = listEntities.map { $0.toList() }
+
+            // CRITICAL FIX: Update @Published property SYNCHRONOUSLY on main thread
+            // Using DispatchQueue.main.async with [weak self] BREAKS SwiftUI observation on macOS!
+            // The async dispatch causes the change to happen in a deferred RunLoop cycle,
+            // which SwiftUI's change detection may miss entirely.
+            //
+            // Solution: If on main thread, update synchronously. If not, dispatch and update synchronously.
+            // Also: Call objectWillChange.send() explicitly BEFORE the change for reliable observation.
+            let updateLists = { [self] in
+                // Explicitly notify SwiftUI BEFORE the change (required for reliable observation)
+                self.objectWillChange.send()
+                self.lists = newLists
+                print("📱 DataManager: Updated lists array with \(newLists.count) lists (synchronous)")
+            }
+
+            if Thread.isMainThread {
+                updateLists()
+            } else {
+                DispatchQueue.main.sync {
+                    updateLists()
+                }
+            }
         } catch {
             print("❌ Failed to fetch lists: \(error)")
             // Fallback to sample data

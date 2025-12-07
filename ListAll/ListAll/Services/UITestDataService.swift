@@ -1,14 +1,37 @@
 import Foundation
+import CoreData
 
 /// Service for providing deterministic test data for UI tests
 /// This ensures consistent screenshots and predictable test behavior
 class UITestDataService {
-    
+
     /// Check if the app is running in UI test mode
+    /// UI tests set this launch argument to trigger test data population
     static var isUITesting: Bool {
         return ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
     }
-    
+
+    /// Check if we're using an isolated test database by inspecting the actual store URL
+    /// UI tests use a separate SQLite file (ListAll-UITests.sqlite) to isolate test data
+    /// from production data. Unit tests use in-memory stores (/dev/null).
+    static var isUsingIsolatedDatabase: Bool {
+        guard let storeURL = CoreDataManager.shared.persistentContainer.persistentStoreDescriptions.first?.url else {
+            return false
+        }
+
+        // Check for in-memory store (unit tests use /dev/null)
+        if storeURL.absoluteString.contains("/dev/null") {
+            return true
+        }
+
+        // Check for UI test database file
+        if storeURL.lastPathComponent.contains("UITests") {
+            return true
+        }
+
+        return false
+    }
+
     /// Check if we should use a specific seed for deterministic data
     static var testSeed: Int? {
         if let seedString = ProcessInfo.processInfo.environment["UITEST_SEED"],

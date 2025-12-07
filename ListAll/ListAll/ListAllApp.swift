@@ -6,8 +6,12 @@ import CoreData
 struct ListAllApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let dataManager = DataManager.shared
-    
+
     init() {
+        // CRITICAL: Force CoreDataManager initialization FIRST to ensure UITEST_MODE is detected
+        // before any data operations. The isUITest flag is evaluated during lazy initialization.
+        _ = CoreDataManager.shared.persistentContainer
+
         // Setup deterministic data for UI tests
         setupUITestEnvironment()
     }
@@ -30,6 +34,7 @@ struct ListAllApp: App {
         }
 
         print("🧪 UI Test mode detected - setting up deterministic test data")
+        print("🧪 CoreDataManager will use ISOLATED database (ListAll-UITests.sqlite) - production data is safe")
 
         // CRITICAL: AppleLanguages is already set by Fastlane's localize_simulator(true)
         // before app launch. We should NOT override it here.
@@ -45,14 +50,14 @@ struct ListAllApp: App {
 
         // Disable iCloud sync during UI tests to prevent interference
         UserDefaults.standard.set(false, forKey: "iCloudSyncEnabled")
-        
+
         // Disable tooltips if requested (for clean screenshots)
         if ProcessInfo.processInfo.arguments.contains("DISABLE_TOOLTIPS") {
             print("🧪 Disabling feature tips for UI tests")
             // Mark all tooltips as already shown so they won't appear
             let allTooltipKeys = [
                 "tooltip_add_list",
-                "tooltip_item_suggestions", 
+                "tooltip_item_suggestions",
                 "tooltip_search",
                 "tooltip_sort_filter",
                 "tooltip_swipe_actions",
@@ -60,8 +65,10 @@ struct ListAllApp: App {
             ]
             UserDefaults.standard.set(allTooltipKeys, forKey: "shownTooltips")
         }
-        
+
         // Clear existing data to ensure clean state
+        // NOTE: This only clears the UI test database (ListAll-UITests.sqlite), not production data
+        // CoreDataManager automatically uses a separate database file when UITEST_MODE is detected
         clearAllData()
         
         // Only populate test data if not skipped (for empty state screenshots)
@@ -74,14 +81,26 @@ struct ListAllApp: App {
     }
     
     /// Clear all existing data from the data store
+    /// SAFETY: This method verifies we're using the isolated test database before clearing
     private func clearAllData() {
         let coreDataManager = CoreDataManager.shared
         let context = coreDataManager.viewContext
-        
+
+        // CRITICAL SAFETY CHECK: Verify we're using the test database before clearing
+        if let storeURL = coreDataManager.persistentContainer.persistentStoreDescriptions.first?.url {
+            let storeFileName = storeURL.lastPathComponent
+            guard storeFileName.contains("UITests") || storeURL.absoluteString.contains("/dev/null") else {
+                print("🛑 SAFETY: Refusing to clear data - not using test database!")
+                print("🛑 Current database: \(storeFileName)")
+                fatalError("Attempted to clear production data during UI tests. Database file: \(storeFileName)")
+            }
+            print("✅ Safety verified: Using test database '\(storeFileName)'")
+        }
+
         // Delete all existing lists (which will cascade delete items and images)
         let listRequest: NSFetchRequest<NSFetchRequestResult> = ListEntity.fetchRequest()
         let listDeleteRequest = NSBatchDeleteRequest(fetchRequest: listRequest)
-        
+
         do {
             try context.execute(listDeleteRequest)
             try context.save()
