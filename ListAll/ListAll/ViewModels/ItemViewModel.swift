@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 class ItemViewModel: ObservableObject {
     @Published var item: Item
