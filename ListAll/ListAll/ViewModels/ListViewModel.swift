@@ -53,6 +53,35 @@ class ListViewModel: ObservableObject {
         #if os(iOS)
         setupWatchConnectivityObserver()
         #endif
+
+        // CRITICAL: Observe CloudKit remote changes (synced from other devices)
+        // This ensures items refresh in real-time when macOS or other devices sync changes
+        setupRemoteChangeObserver()
+    }
+
+    private func setupRemoteChangeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRemoteChange(_:)),
+            name: .coreDataRemoteChange,
+            object: nil
+        )
+    }
+
+    @objc private func handleRemoteChange(_ notification: Notification) {
+        // CRITICAL: @objc selectors can be called from any thread - ensure main thread
+        // Without this guard, @Published property updates happen on background thread,
+        // causing SwiftUI to silently ignore the changes
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleRemoteChange(notification)
+            }
+            return
+        }
+
+        // Reload items from Core Data to reflect changes made by other devices
+        print("🌐 ListViewModel: Received Core Data remote change - refreshing items for list '\(list.name)'")
+        loadItems()
     }
     
     deinit {

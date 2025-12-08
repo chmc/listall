@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import UniformTypeIdentifiers
 
 /// Main view for macOS app with sidebar navigation.
 /// This is the macOS equivalent of iOS ContentView, using NavigationSplitView
@@ -160,6 +161,9 @@ private struct MacSidebarView: View {
     let onCreateList: () -> Void
     let onDeleteList: (List) -> Void
 
+    // DataRepository for drag-and-drop operations
+    private let dataRepository = DataRepository()
+
     // Compute lists directly from @Published source for proper reactivity
     private var displayedLists: [List] {
         if showingArchivedLists {
@@ -184,12 +188,19 @@ private struct MacSidebarView: View {
                                 .font(.caption)
                         }
                     }
+                    // MARK: Drag-and-Drop Support
+                    .draggable(list) // Enable dragging lists to reorder
+                    .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
+                        // Handle items dropped on this list (move item to different list)
+                        handleItemDrop(droppedItems, to: list)
+                    }
                     .contextMenu {
                         Button("Delete") {
                             onDeleteList(list)
                         }
                     }
                 }
+                .onMove(perform: moveList) // Handle list reordering
             } header: {
                 HStack {
                     Text(showingArchivedLists ? "Archived Lists" : "Lists")
@@ -214,6 +225,58 @@ private struct MacSidebarView: View {
             }
         }
     }
+
+    // MARK: - Drag-and-Drop Handlers
+
+    /// Handle item drop on a list in the sidebar (moves item to that list)
+    private func handleItemDrop(_ droppedItems: [ItemTransferData], to targetList: List) -> Bool {
+        var didMoveAny = false
+
+        for itemData in droppedItems {
+            // Skip if item is already in the target list
+            guard itemData.sourceListId != targetList.id else { continue }
+
+            // Find the item in DataManager
+            let items = dataManager.getItems(forListId: itemData.sourceListId ?? UUID())
+            guard let item = items.first(where: { $0.id == itemData.itemId }) else { continue }
+
+            // Move item to the target list
+            dataRepository.moveItem(item, to: targetList)
+            didMoveAny = true
+            print("📦 Moved item '\(item.title)' to list '\(targetList.name)'")
+        }
+
+        if didMoveAny {
+            dataManager.loadData()
+        }
+
+        return didMoveAny
+    }
+
+    /// Handle list reordering via drag-and-drop
+    private func moveList(from source: IndexSet, to destination: Int) {
+        guard !showingArchivedLists else { return } // Don't reorder archived lists
+
+        // Get current order
+        var reorderedLists = displayedLists
+
+        // Perform the move
+        reorderedLists.move(fromOffsets: source, toOffset: destination)
+
+        // Update order numbers - must modify array elements directly (value types!)
+        for index in reorderedLists.indices {
+            reorderedLists[index].orderNumber = index
+            reorderedLists[index].modifiedAt = Date()
+        }
+
+        print("📦 Reordering lists: \(reorderedLists.map { "\($0.name):\($0.orderNumber)" })")
+
+        // Persist the new order
+        dataManager.updateListsOrder(reorderedLists)
+        dataManager.loadData()
+
+        print("📦 Reordered lists via drag-and-drop")
+    }
 }
 
 // MARK: - List Detail View
@@ -227,6 +290,9 @@ private struct MacListDetailView: View {
     @State private var showingEditItemSheet = false
     @State private var selectedItem: Item?
     @State private var showingEditListSheet = false
+
+    // DataRepository for drag-and-drop operations
+    private let dataRepository = DataRepository()
 
     // CRITICAL: Compute current list and items directly from @Published source
     // Using @State copy breaks SwiftUI observation chain on macOS
@@ -269,7 +335,7 @@ private struct MacListDetailView: View {
             Divider()
 
             if items.isEmpty {
-                // Empty state for list with no items
+                // Empty state for list with no items - also accepts drops
                 VStack(spacing: 16) {
                     Image(systemName: "tray")
                         .font(.system(size: 48))
@@ -279,26 +345,40 @@ private struct MacListDetailView: View {
                         .font(.title3)
                         .foregroundColor(.secondary)
 
+                    Text("Drag items here or add a new one")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
                     Button("Add First Item") {
                         showingAddItemSheet = true
                     }
                     .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
+                    handleItemDrop(droppedItems)
+                }
             } else {
                 // Items list with MacItemRowView
-                SwiftUI.List(items) { item in
-                    MacItemRowView(
-                        item: item,
-                        onToggle: { toggleItem(item) },
-                        onEdit: {
-                            selectedItem = item
-                            showingEditItemSheet = true
-                        },
-                        onDelete: { deleteItem(item) }
-                    )
+                SwiftUI.List {
+                    ForEach(items) { item in
+                        MacItemRowView(
+                            item: item,
+                            onToggle: { toggleItem(item) },
+                            onEdit: {
+                                selectedItem = item
+                                showingEditItemSheet = true
+                            },
+                            onDelete: { deleteItem(item) }
+                        )
+                        .draggable(item) // Enable dragging items
+                    }
+                    .onMove(perform: moveItem) // Handle item reordering within list
                 }
                 .listStyle(.inset)
+                .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
+                    handleItemDrop(droppedItems)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -386,6 +466,60 @@ private struct MacListDetailView: View {
         guard var updatedList = currentList else { return }
         updatedList.name = name
         dataManager.updateList(updatedList)
+    }
+
+    // MARK: - Drag-and-Drop Handlers
+
+    /// Handle item drop on this list's detail view (moves item from another list)
+    private func handleItemDrop(_ droppedItems: [ItemTransferData]) -> Bool {
+        var didMoveAny = false
+
+        for itemData in droppedItems {
+            // Skip if item is already in this list
+            guard itemData.sourceListId != list.id else { continue }
+
+            // Find the item in DataManager
+            let sourceItems = dataManager.getItems(forListId: itemData.sourceListId ?? UUID())
+            guard let item = sourceItems.first(where: { $0.id == itemData.itemId }) else { continue }
+            guard let targetList = currentList else { continue }
+
+            // Move item to this list
+            dataRepository.moveItem(item, to: targetList)
+            didMoveAny = true
+            print("📦 Moved item '\(item.title)' to list '\(targetList.name)'")
+        }
+
+        if didMoveAny {
+            dataManager.loadData()
+        }
+
+        return didMoveAny
+    }
+
+    /// Handle item reordering within this list via drag-and-drop
+    private func moveItem(from source: IndexSet, to destination: Int) {
+        // Get current order
+        var reorderedItems = items
+
+        // Perform the move
+        reorderedItems.move(fromOffsets: source, toOffset: destination)
+
+        // Update order numbers - must modify array elements directly (value types!)
+        for index in reorderedItems.indices {
+            reorderedItems[index].orderNumber = index
+            reorderedItems[index].modifiedAt = Date()
+        }
+
+        print("📦 Reordering items: \(reorderedItems.map { "\($0.title):\($0.orderNumber)" })")
+
+        // Persist the new order using DataRepository
+        if let targetList = currentList {
+            dataRepository.updateItemOrderNumbers(for: targetList, items: reorderedItems)
+        }
+
+        dataManager.loadData()
+
+        print("📦 Reordered items within list via drag-and-drop")
     }
 }
 

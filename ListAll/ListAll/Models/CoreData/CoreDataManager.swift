@@ -265,16 +265,18 @@ class CoreDataManager: ObservableObject {
         }
         #endif
 
-        // macOS-specific: Observe background context saves (CloudKit imports happen on background context)
+        // iOS + macOS: Observe background context saves (CloudKit imports happen on background context)
         // This catches CloudKit changes even when the app is frontmost and active
-        #if os(macOS)
+        // CRITICAL for iOS: Without this, iOS only receives NSPersistentStoreRemoteChange which may not
+        // fire reliably when the app is foregrounded. Background context saves are more reliable.
+        #if os(iOS) || os(macOS)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleContextDidSave(_:)),
             name: .NSManagedObjectContextDidSave,
             object: nil  // Observe ALL contexts, not just viewContext
         )
-        print("📦 CoreDataManager: macOS background context save observer added")
+        print("📦 CoreDataManager: Background context save observer added (CloudKit import detection)")
         #endif
     }
     
@@ -306,23 +308,27 @@ class CoreDataManager: ObservableObject {
     }
     
     private func processRemoteChange() {
-        // Refresh view context to pull in changes from other processes
-        viewContext.perform {
-            self.viewContext.refreshAllObjects()
-        }
+        // CRITICAL: We're already on the main thread (from handlePersistentStoreRemoteChange dispatch)
+        // DO NOT use viewContext.perform { } here - it re-dispatches to background queue!
+        // This would cause notifications to fire on background thread, breaking @Published updates.
 
-        // Post notification for DataManager and ViewModels to reload their data
+        // Refresh view context synchronously on main thread
+        viewContext.refreshAllObjects()
+
+        // Post notification ON MAIN THREAD for DataManager and ViewModels to reload
         NotificationCenter.default.post(
             name: .coreDataRemoteChange,
             object: nil
         )
     }
 
-    // MARK: - macOS Background Context Handling
+    // MARK: - Background Context Handling (CloudKit Import Detection)
 
-    #if os(macOS)
+    #if os(iOS) || os(macOS)
     /// Handles saves from background contexts (including CloudKit import context)
-    /// This ensures macOS UI updates in real-time even when the app is frontmost
+    /// This ensures UI updates in real-time when CloudKit syncs changes from other devices
+    /// CRITICAL for iOS: NSPersistentStoreRemoteChange notifications may not fire reliably
+    /// when the app is foregrounded. Observing background context saves is more reliable.
     @objc private func handleContextDidSave(_ notification: Notification) {
         guard let savedContext = notification.object as? NSManagedObjectContext else { return }
 
@@ -340,12 +346,14 @@ class CoreDataManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            // Force viewContext to refresh all objects from the store
-            self.viewContext.perform {
-                self.viewContext.refreshAllObjects()
-            }
+            // CRITICAL: DO NOT use viewContext.perform { } here - we're already on main thread!
+            // viewContext.perform re-dispatches to background queue, causing notifications
+            // to fire on background thread, which breaks @Published property updates in SwiftUI.
 
-            // Post notification to trigger UI refresh in DataManager and views
+            // Refresh view context synchronously on main thread
+            self.viewContext.refreshAllObjects()
+
+            // Post notification ON MAIN THREAD for DataManager and views to reload
             NotificationCenter.default.post(
                 name: .coreDataRemoteChange,
                 object: nil
@@ -374,13 +382,16 @@ class CoreDataManager: ObservableObject {
                 // Post notification to trigger UI refresh after successful import
                 if eventType == .import {
                     DispatchQueue.main.async { [weak self] in
-                        // macOS: Be more aggressive - always refresh objects on import
-                        // This ensures UI updates even when app is frontmost
-                        #if os(macOS)
-                        self?.viewContext.perform {
-                            self?.viewContext.refreshAllObjects()
-                        }
-                        #endif
+                        guard let self = self else { return }
+
+                        // CRITICAL: DO NOT use viewContext.perform { } here - we're already on main thread!
+                        // viewContext.perform re-dispatches to background queue, causing notifications
+                        // to fire on background thread, which breaks @Published property updates in SwiftUI.
+
+                        // Refresh view context synchronously on main thread
+                        self.viewContext.refreshAllObjects()
+
+                        // Post notification ON MAIN THREAD
                         NotificationCenter.default.post(name: .coreDataRemoteChange, object: nil)
                     }
                 }
@@ -640,6 +651,16 @@ class DataManager: ObservableObject {
     // MARK: - Remote Change Handling
 
     @objc private func handleRemoteChange(_ notification: Notification) {
+        // CRITICAL: @objc selectors can be called from any thread - ensure main thread
+        // WITHOUT this guard, loadData() may attempt @Published updates from background thread,
+        // causing SwiftUI to silently ignore changes (iOS CloudKit sync appears "delayed")
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleRemoteChange(notification)
+            }
+            return
+        }
+
         // Reload data from Core Data to reflect changes made by other process
         loadData()
     }

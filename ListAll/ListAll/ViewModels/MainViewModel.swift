@@ -110,10 +110,26 @@ class MainViewModel: ObservableObject {
     }
 
     @objc private func handleWatchSyncNotification(_ notification: Notification) {
+        // CRITICAL: @objc selectors can be called from any thread - ensure main thread
+        // @MainActor attribute does NOT protect @objc selectors from background thread calls
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleWatchSyncNotification(notification)
+            }
+            return
+        }
         refreshFromWatch()
     }
 
     @objc private func handleWatchListsData(_ notification: Notification) {
+        // CRITICAL: @objc selectors can be called from any thread - ensure main thread
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleWatchListsData(notification)
+            }
+            return
+        }
+
         guard let receivedLists = notification.userInfo?["lists"] as? [List] else {
             return
         }
@@ -287,6 +303,17 @@ class MainViewModel: ObservableObject {
     }
 
     @objc private func handleCoreDataRemoteChange(_ notification: Notification) {
+        // CRITICAL: @objc selectors can be called from any thread - ensure main thread
+        // @MainActor attribute does NOT protect @objc selectors from background thread calls
+        // Without this guard, @Published property updates happen on background thread,
+        // causing SwiftUI to silently ignore the changes (iOS sync bug!)
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleCoreDataRemoteChange(notification)
+            }
+            return
+        }
+
         // CRITICAL: Same logic as Watch sync - ignore during drag operations
         // This prevents the "sync ping-pong" bug described in learnings/swiftui-list-drag-drop-ordering.md
         if isDragging || isEditModeActive {

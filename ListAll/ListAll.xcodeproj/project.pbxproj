@@ -124,8 +124,10 @@
 				"Models/CoreData/ListEntity+Extensions.swift",
 				"Models/CoreData/UserDataEntity+Extensions.swift",
 				Models/Item.swift,
+				"Models/Item+Transferable.swift",
 				Models/ItemImage.swift,
 				Models/List.swift,
+				"Models/List+Transferable.swift",
 				Models/UserData.swift,
 				Services/CloudKitService.swift,
 				Services/DataMigrationService.swift,
@@ -925,6 +927,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ListAllMac/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -960,6 +963,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ListAllMac/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

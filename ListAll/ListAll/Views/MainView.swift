@@ -383,6 +383,13 @@ struct MainView: View {
                 await conflictManager.checkForConflicts()
             }
         }
+        // CRITICAL: Observe Core Data remote changes (CloudKit sync from other devices)
+        // This ensures iOS UI updates in real-time when macOS or other devices sync changes
+        // Without this, iOS only refreshes when app goes to background and returns
+        .onReceive(NotificationCenter.default.publisher(for: .coreDataRemoteChange)) { _ in
+            print("🌐 iOS: Received Core Data remote change notification - refreshing UI")
+            viewModel.loadLists()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .dataImported)) { _ in
             // Refresh lists after import
             viewModel.loadLists()

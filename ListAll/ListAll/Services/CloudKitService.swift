@@ -210,10 +210,20 @@ class CloudKitService: ObservableObject {
     }
     
     private func handleCloudKitEvent(_ notification: Notification) {
+        // CRITICAL: CloudKit notifications can fire on background threads despite queue: .main
+        // @Published property updates MUST happen on main thread or SwiftUI silently ignores them
+        // This is the root cause of iOS CloudKit sync appearing "delayed" until app restart
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleCloudKitEvent(notification)
+            }
+            return
+        }
+
         guard let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey] as? NSPersistentCloudKitContainer.Event else {
             return
         }
-        
+
         if let error = event.error {
             syncError = error.localizedDescription
             syncStatus = .error(error.localizedDescription)
@@ -224,6 +234,15 @@ class CloudKitService: ObservableObject {
     }
     
     private func handleRemoteChange() {
+        // CRITICAL: Notification can fire on background threads despite queue: .main
+        // Ensure we're on main thread before any potential UI-related work
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleRemoteChange()
+            }
+            return
+        }
+
         // Handle remote changes from CloudKit
         // The Core Data stack will automatically merge changes
     }

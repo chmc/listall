@@ -1272,7 +1272,7 @@ Made DataRepository and DataManager lazy in multiple files to prevent eager Core
 
 ## Phase 6: Advanced Features
 
-### Task 6.1: Implement Drag-and-Drop Between Windows
+### Task 6.1: [COMPLETED] Implement Drag-and-Drop Between Windows
 **TDD**: Write multi-window drag tests
 
 **Steps**:
@@ -1286,6 +1286,32 @@ func testDragItemBetweenLists() {
     // Test item moves correctly
 }
 ```
+
+**Completed**:
+- Created `Item+Transferable.swift` with `Transferable` protocol conformance and `UTType.listAllItem`
+- Created `List+Transferable.swift` with `Transferable` protocol conformance and `UTType.listAllList`
+- Implemented `ItemTransferData` and `ListTransferData` structs for lightweight ID-based transfers
+- Updated `MacSidebarView` with:
+  - `.draggable(list)` for list reordering
+  - `.dropDestination(for: ItemTransferData.self)` to accept items dropped on lists
+  - `.onMove(perform: moveList)` for list reordering via drag-and-drop
+- Updated `MacListDetailView` with:
+  - `.draggable(item)` on `MacItemRowView` for item dragging
+  - `.dropDestination(for: ItemTransferData.self)` to accept items from other lists
+  - `.onMove(perform: moveItem)` for item reordering within list
+- Created `ListAllMac/Info.plist` with `UTExportedTypeDeclarations` for custom UTTypes
+- Added new Transferable files to macOS target membership in project.pbxproj
+- Uses existing `DataRepository.moveItem(_:to:)` method for cross-list moves
+- Uses existing `DataRepository.updateItemOrderNumbers(for:items:)` for reordering
+
+**Files created**:
+- `ListAll/ListAll/Models/Item+Transferable.swift`
+- `ListAll/ListAll/Models/List+Transferable.swift`
+- `ListAll/ListAllMac/Info.plist`
+
+**Files modified**:
+- `ListAll/ListAllMac/Views/MacMainView.swift` - Added drag-and-drop modifiers and handlers
+- `ListAll/ListAll.xcodeproj/project.pbxproj` - Added new files to macOS target membership
 
 ---
 
@@ -1798,10 +1824,10 @@ ListAll/
 | Phase 3: Services Layer | Completed | 7/7 |
 | Phase 4: ViewModels | Completed | 5/5 |
 | Phase 5: macOS Views | Completed | 11/11 |
-| Phase 6: Advanced Features | Not Started | 0/7 |
+| Phase 6: Advanced Features | In Progress | 1/7 |
 | Phase 7: Testing | Not Started | 0/4 |
 | Phase 8: CI/CD | Not Started | 0/5 |
 | Phase 9: App Store | Not Started | 0/5 |
 | Phase 10: Polish & Launch | Not Started | 0/7 |
 
-**Total Tasks: 57** (31 completed in Phases 1-5)
+**Total Tasks: 57** (32 completed in Phases 1-6)

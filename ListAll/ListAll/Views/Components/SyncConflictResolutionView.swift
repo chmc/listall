@@ -170,61 +170,69 @@ struct SyncConflictResolutionView: View {
     }()
 }
 
+// CRITICAL: Mark as @MainActor to ensure all @Published property updates happen on main thread
+// Without this, async methods called from Task { } blocks update @Published on background threads,
+// causing SwiftUI to silently ignore the changes (iOS CloudKit sync bug!)
+@MainActor
 class SyncConflictManager: ObservableObject {
     @Published var conflicts: [NSManagedObject] = []
     @Published var showingConflictResolution = false
     @Published var currentConflict: NSManagedObject?
-    
+
     private let cloudKitService: CloudKitService
-    
+
     init(cloudKitService: CloudKitService) {
         self.cloudKitService = cloudKitService
     }
-    
+
     func checkForConflicts() async {
         // Check for objects with conflicts
         let context = CoreDataManager.shared.viewContext
         let entities = ["ListEntity", "ItemEntity", "ItemImageEntity", "UserDataEntity"]
-        
+
         // Fetch object IDs (which are Sendable) instead of managed objects
+        // Use nonisolated context.perform to run on background thread
         let conflictObjectIDs: [NSManagedObjectID] = await context.perform {
             var objectIDs: [NSManagedObjectID] = []
-            
+
             for entityName in entities {
                 let request = NSFetchRequest<NSManagedObject>(entityName: entityName)
                 request.predicate = NSPredicate(format: "ckServerChangeToken != nil")
-                
+
                 do {
                     let objects = try context.fetch(request)
                     objectIDs.append(contentsOf: objects.map { $0.objectID })
                 } catch {
                 }
             }
-            
+
             return objectIDs
         }
-        
+
         // Fetch actual objects on main thread using the IDs
+        // @MainActor ensures this runs on main thread, so @Published updates are safe
         let foundConflicts: [NSManagedObject] = conflictObjectIDs.compactMap { objectID in
             try? context.existingObject(with: objectID)
         }
-        
+
+        // These updates are now guaranteed to happen on main thread due to @MainActor
         self.conflicts = foundConflicts
         if !foundConflicts.isEmpty {
             self.currentConflict = foundConflicts.first
             self.showingConflictResolution = true
         }
     }
-    
+
     func resolveConflict(with strategy: CloudKitService.ConflictResolutionStrategy) async {
         guard let conflict = currentConflict else { return }
-        
+
         await cloudKitService.resolveConflictWithStrategy(strategy, for: conflict)
-        
+
+        // These updates are now guaranteed to happen on main thread due to @MainActor
         if let index = conflicts.firstIndex(of: conflict) {
             conflicts.remove(at: index)
         }
-        
+
         if conflicts.isEmpty {
             showingConflictResolution = false
             currentConflict = nil
