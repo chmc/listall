@@ -1425,20 +1425,8 @@ func testServicesMenuCreatesItem() {
 
 ---
 
-### Task 6.4: Implement Spotlight Integration
-**TDD**: Write Spotlight indexing tests
-
-**Steps**:
-1. Index lists and items with Core Spotlight
-2. Support Spotlight search results
-3. Handle Spotlight result activation
-
-**Test criteria**:
-```swift
-func testSpotlightIndexing() {
-    // Test items appear in Spotlight
-}
-```
+### Task 6.4: ~~Implement Spotlight Integration~~ (Moved to Phase 10)
+**Status**: Deferred to Phase 10.8 as optional feature
 
 ---
 
@@ -1824,6 +1812,73 @@ App Store requires:
 
 ---
 
+### Task 10.8: Implement Spotlight Integration (Optional)
+**TDD**: Write Spotlight indexing tests
+
+**Priority**: Low - Optional feature, disabled by default
+
+**User Setting**:
+- Add "Enable Spotlight Indexing" toggle in Settings → General
+- Default value: `false` (disabled)
+- When enabled, indexes lists and items for Spotlight search
+- When disabled, no Spotlight indexing occurs (saves battery/resources)
+
+**Steps**:
+1. Add `enableSpotlightIndexing` UserDefaults key (default: false)
+2. Add toggle in MacSettingsView General tab
+3. Create SpotlightService with conditional indexing:
+   ```swift
+   class SpotlightService {
+       static let shared = SpotlightService()
+
+       var isEnabled: Bool {
+           UserDefaults.standard.bool(forKey: "enableSpotlightIndexing")
+       }
+
+       func indexItem(_ item: Item) {
+           guard isEnabled else { return }
+           // Index with Core Spotlight
+       }
+
+       func removeItem(_ item: Item) {
+           guard isEnabled else { return }
+           // Remove from index
+       }
+
+       func reindexAll() {
+           guard isEnabled else { return }
+           // Full reindex
+       }
+
+       func clearIndex() {
+           // Always allow clearing
+       }
+   }
+   ```
+4. Index lists and items with Core Spotlight when enabled
+5. Support Spotlight search results
+6. Handle Spotlight result activation (deep link to item)
+7. Clear index when setting is disabled
+
+**Test criteria**:
+```swift
+func testSpotlightIndexingDisabledByDefault() {
+    XCTAssertFalse(UserDefaults.standard.bool(forKey: "enableSpotlightIndexing"))
+}
+
+func testSpotlightIndexingWhenEnabled() {
+    UserDefaults.standard.set(true, forKey: "enableSpotlightIndexing")
+    // Test items appear in Spotlight
+}
+
+func testSpotlightIndexingSkippedWhenDisabled() {
+    UserDefaults.standard.set(false, forKey: "enableSpotlightIndexing")
+    // Verify no indexing occurs
+}
+```
+
+---
+
 ## Appendix A: File Structure
 
 ```
@@ -1900,10 +1955,12 @@ ListAll/
 | Phase 3: Services Layer | Completed | 7/7 |
 | Phase 4: ViewModels | Completed | 5/5 |
 | Phase 5: macOS Views | Completed | 11/11 |
-| Phase 6: Advanced Features | In Progress | 3/7 |
+| Phase 6: Advanced Features | In Progress | 3/6 |
 | Phase 7: Testing | Not Started | 0/4 |
 | Phase 8: CI/CD | Not Started | 0/5 |
 | Phase 9: App Store | Not Started | 0/5 |
-| Phase 10: Polish & Launch | Not Started | 0/7 |
+| Phase 10: Polish & Launch | Not Started | 0/8 |
 
 **Total Tasks: 57** (34 completed in Phases 1-6)
+
+**Note**: Task 6.4 (Spotlight Integration) moved to Phase 10.8 as optional feature (disabled by default)
