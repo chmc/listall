@@ -31,18 +31,22 @@ class CoreDataManager: ObservableObject {
         let isUITest = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
 
         if isTestEnvironment {
-            print("🧪 CoreDataManager: Test environment detected - using IN-MEMORY store")
+            print("🧪 CoreDataManager: Test environment detected - using SQLite to /dev/null")
             let container = NSPersistentContainer(name: "ListAll")
 
-            // Configure in-memory store for tests
+            // BEST PRACTICE: Use SQLite store writing to /dev/null
+            // This provides full SQLite feature support (cascading deletes, constraints, etc.)
+            // while still being effectively in-memory for test isolation
+            // Source: Apple WWDC recommendations, Donny Wals, Brian Coyner
             let description = NSPersistentStoreDescription()
-            description.type = NSInMemoryStoreType
             description.url = URL(fileURLWithPath: "/dev/null")
+            // Note: type defaults to NSSQLiteStoreType - don't set NSInMemoryStoreType
+            // Setting both is contradictory and can cause issues
             container.persistentStoreDescriptions = [description]
 
             container.loadPersistentStores { _, error in
                 if let error = error as NSError? {
-                    fatalError("Failed to load in-memory store: \(error), \(error.userInfo)")
+                    fatalError("Failed to load test store: \(error), \(error.userInfo)")
                 }
             }
 
@@ -204,10 +208,42 @@ class CoreDataManager: ObservableObject {
         NotificationCenter.default.removeObserver(self)
         remoteChangeDebounceTimer?.invalidate()
     }
-    
+
+    // MARK: - Test Support
+
+    #if DEBUG
+    /// Reset singleton state for test isolation
+    /// WARNING: Only call from test tearDown() - NOT safe for production use
+    /// This helps prevent cross-test contamination when tests share the singleton
+    static func resetForTesting() {
+        // Only reset in test environment
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil else {
+            print("⚠️ CoreDataManager.resetForTesting() called outside test environment - ignoring")
+            return
+        }
+
+        // Remove all notification observers
+        NotificationCenter.default.removeObserver(shared)
+
+        // Cancel any pending timers
+        shared.remoteChangeDebounceTimer?.invalidate()
+        shared.remoteChangeDebounceTimer = nil
+
+        // Reset Core Data context to clear cached objects
+        shared.viewContext.reset()
+
+        // Re-setup notifications for next test
+        shared.setupRemoteChangeNotifications()
+
+        print("🧪 CoreDataManager: Reset for testing completed")
+    }
+    #endif
+
     // MARK: - Remote Change Notifications
     
-    private func setupRemoteChangeNotifications() {
+    /// Setup remote change notification observers
+    /// Note: Made internal (not private) to allow reset from test support methods
+    func setupRemoteChangeNotifications() {
         // Observe remote changes from other processes (e.g., watchOS app, CloudKit sync)
         NotificationCenter.default.addObserver(
             self,
@@ -567,7 +603,40 @@ class DataManager: ObservableObject {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
+
+    // MARK: - Test Support
+
+    #if DEBUG
+    /// Reset singleton state for test isolation
+    /// WARNING: Only call from test tearDown() - NOT safe for production use
+    static func resetForTesting() {
+        // Only reset in test environment
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil else {
+            print("⚠️ DataManager.resetForTesting() called outside test environment - ignoring")
+            return
+        }
+
+        // Remove notification observers
+        NotificationCenter.default.removeObserver(shared)
+
+        // Clear cached data
+        shared.lists = []
+
+        // Reset underlying Core Data manager
+        CoreDataManager.resetForTesting()
+
+        // Re-register for notifications
+        NotificationCenter.default.addObserver(
+            shared,
+            selector: #selector(shared.handleRemoteChange(_:)),
+            name: .coreDataRemoteChange,
+            object: nil
+        )
+
+        print("🧪 DataManager: Reset for testing completed")
+    }
+    #endif
+
     // MARK: - Remote Change Handling
 
     @objc private func handleRemoteChange(_ notification: Notification) {

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+import Combine
 
 /// ViewModel responsible for managing export operations and UI state
 class ExportViewModel: ObservableObject {

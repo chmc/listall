@@ -142,6 +142,8 @@
 				Utils/Helpers/ValidationHelper.swift,
 				Utils/LocalizationManager.swift,
 				Utils/Theme.swift,
+				ViewModels/ExportViewModel.swift,
+				ViewModels/ImportViewModel.swift,
 				ViewModels/ItemViewModel.swift,
 				ViewModels/ListViewModel.swift,
 				ViewModels/MainViewModel.swift,

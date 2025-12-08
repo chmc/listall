@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+import Combine
 
 /// Import source type
 enum ImportSource {

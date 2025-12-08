@@ -222,6 +222,12 @@ private struct MacListDetailView: View {
     let list: List  // Original list from selection (may become stale)
     @EnvironmentObject var dataManager: DataManager
 
+    // State for item management
+    @State private var showingAddItemSheet = false
+    @State private var showingEditItemSheet = false
+    @State private var selectedItem: Item?
+    @State private var showingEditListSheet = false
+
     // CRITICAL: Compute current list and items directly from @Published source
     // Using @State copy breaks SwiftUI observation chain on macOS
     // This ensures the view updates immediately when CloudKit syncs remote changes
@@ -234,6 +240,7 @@ private struct MacListDetailView: View {
     /// Get items directly from DataManager for proper reactivity
     private var items: [Item] {
         dataManager.getItems(forListId: list.id)
+            .sorted { $0.orderNumber < $1.orderNumber }
     }
 
     /// Display name from current data (falls back to original if list not found)
@@ -242,33 +249,409 @@ private struct MacListDetailView: View {
     }
 
     var body: some View {
-        VStack {
-            Text(displayName)
-                .font(.largeTitle)
-                .padding()
+        VStack(spacing: 0) {
+            // Header with list name and actions
+            HStack {
+                Text(displayName)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                Button(action: { showingEditListSheet = true }) {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .help("Edit List")
+            }
+            .padding()
+
+            Divider()
 
             if items.isEmpty {
-                Text("No items in this list")
-                    .foregroundColor(.secondary)
-                    .padding()
-            } else {
-                SwiftUI.List(items) { item in
-                    HStack {
-                        Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(item.isCrossedOut ? .green : .secondary)
-                        Text(item.title)
-                            .strikethrough(item.isCrossedOut)
-                        if item.quantity > 1 {
-                            Text("x\(item.quantity)")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
-                        }
+                // Empty state for list with no items
+                VStack(spacing: 16) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+
+                    Text("No items in this list")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+
+                    Button("Add First Item") {
+                        showingAddItemSheet = true
                     }
+                    .buttonStyle(.borderedProminent)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Items list with MacItemRowView
+                SwiftUI.List(items) { item in
+                    MacItemRowView(
+                        item: item,
+                        onToggle: { toggleItem(item) },
+                        onEdit: {
+                            selectedItem = item
+                            showingEditItemSheet = true
+                        },
+                        onDelete: { deleteItem(item) }
+                    )
+                }
+                .listStyle(.inset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(displayName)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showingAddItemSheet = true }) {
+                    Label("Add Item", systemImage: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddItemSheet) {
+            MacAddItemSheet(
+                listId: list.id,
+                onSave: { title, quantity, description in
+                    addItem(title: title, quantity: quantity, description: description)
+                    showingAddItemSheet = false
+                },
+                onCancel: { showingAddItemSheet = false }
+            )
+        }
+        .sheet(isPresented: $showingEditItemSheet) {
+            if let item = selectedItem {
+                MacEditItemSheet(
+                    item: item,
+                    onSave: { title, quantity, description in
+                        updateItem(item, title: title, quantity: quantity, description: description)
+                        showingEditItemSheet = false
+                        selectedItem = nil
+                    },
+                    onCancel: {
+                        showingEditItemSheet = false
+                        selectedItem = nil
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showingEditListSheet) {
+            MacEditListSheet(
+                list: currentList ?? list,
+                onSave: { name in
+                    updateListName(name)
+                    showingEditListSheet = false
+                },
+                onCancel: { showingEditListSheet = false }
+            )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewItem"))) { _ in
+            showingAddItemSheet = true
+        }
+    }
+
+    // MARK: - Item Actions
+
+    private func toggleItem(_ item: Item) {
+        var updatedItem = item
+        updatedItem.isCrossedOut.toggle()
+        updatedItem.modifiedAt = Date()
+        dataManager.updateItem(updatedItem)
+    }
+
+    private func addItem(title: String, quantity: Int, description: String?) {
+        var newItem = Item(title: title, listId: list.id)
+        newItem.quantity = quantity
+        newItem.itemDescription = description
+        newItem.orderNumber = items.count
+        dataManager.addItem(newItem, to: list.id)
+        dataManager.loadData()
+    }
+
+    private func updateItem(_ item: Item, title: String, quantity: Int, description: String?) {
+        var updatedItem = item
+        updatedItem.title = title
+        updatedItem.quantity = quantity
+        updatedItem.itemDescription = description
+        updatedItem.modifiedAt = Date()
+        dataManager.updateItem(updatedItem)
+    }
+
+    private func deleteItem(_ item: Item) {
+        dataManager.deleteItem(withId: item.id, from: list.id)
+    }
+
+    private func updateListName(_ name: String) {
+        guard var updatedList = currentList else { return }
+        updatedList.name = name
+        dataManager.updateList(updatedList)
+    }
+}
+
+// MARK: - Item Row View
+
+private struct MacItemRowView: View {
+    let item: Item
+    let onToggle: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Checkbox button
+            Button(action: onToggle) {
+                Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundColor(item.isCrossedOut ? .green : .secondary)
+            }
+            .buttonStyle(.plain)
+
+            // Item content
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(item.title)
+                        .font(.body)
+                        .strikethrough(item.isCrossedOut)
+                        .foregroundColor(item.isCrossedOut ? .secondary : .primary)
+
+                    if item.quantity > 1 {
+                        Text("×\(item.quantity)")
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.2))
+                            .cornerRadius(4)
+                    }
+
+                    if !item.images.isEmpty {
+                        Image(systemName: "photo")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if let description = item.itemDescription, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            // Hover actions
+            if isHovering {
+                HStack(spacing: 8) {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit Item")
+
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Delete Item")
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .onTapGesture(count: 2) {
+            onEdit()
+        }
+        .contextMenu {
+            Button("Edit") { onEdit() }
+            Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
+            Divider()
+            Button("Delete", role: .destructive) { onDelete() }
+        }
+    }
+}
+
+// MARK: - Add Item Sheet
+
+private struct MacAddItemSheet: View {
+    let listId: UUID
+    let onSave: (String, Int, String?) -> Void
+    let onCancel: () -> Void
+
+    @State private var title = ""
+    @State private var quantity = 1
+    @State private var description = ""
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Add Item")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 12) {
+                TextField("Item Name", text: $title)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Text("Quantity:")
+                    Stepper(value: $quantity, in: 1...999) {
+                        Text("\(quantity)")
+                            .frame(width: 40)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Notes (optional):")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextEditor(text: $description)
+                        .frame(height: 60)
+                        .border(Color.secondary.opacity(0.3))
+                }
+            }
+            .frame(width: 300)
+
+            HStack(spacing: 16) {
+                Button("Cancel") {
+                    onCancel()
+                }
+                .keyboardShortcut(.escape)
+
+                Button("Add") {
+                    onSave(title, quantity, description.isEmpty ? nil : description)
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(30)
+        .frame(minWidth: 400)
+    }
+}
+
+// MARK: - Edit Item Sheet
+
+private struct MacEditItemSheet: View {
+    let item: Item
+    let onSave: (String, Int, String?) -> Void
+    let onCancel: () -> Void
+
+    @State private var title: String
+    @State private var quantity: Int
+    @State private var description: String
+
+    init(item: Item, onSave: @escaping (String, Int, String?) -> Void, onCancel: @escaping () -> Void) {
+        self.item = item
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _title = State(initialValue: item.title)
+        _quantity = State(initialValue: item.quantity)
+        _description = State(initialValue: item.itemDescription ?? "")
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Edit Item")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 12) {
+                TextField("Item Name", text: $title)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Text("Quantity:")
+                    Stepper(value: $quantity, in: 1...999) {
+                        Text("\(quantity)")
+                            .frame(width: 40)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Notes (optional):")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextEditor(text: $description)
+                        .frame(height: 60)
+                        .border(Color.secondary.opacity(0.3))
+                }
+            }
+            .frame(width: 300)
+
+            HStack(spacing: 16) {
+                Button("Cancel") {
+                    onCancel()
+                }
+                .keyboardShortcut(.escape)
+
+                Button("Save") {
+                    onSave(title, quantity, description.isEmpty ? nil : description)
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(30)
+        .frame(minWidth: 400)
+    }
+}
+
+// MARK: - Edit List Sheet
+
+private struct MacEditListSheet: View {
+    let list: List
+    let onSave: (String) -> Void
+    let onCancel: () -> Void
+
+    @State private var name: String
+
+    init(list: List, onSave: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
+        self.list = list
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _name = State(initialValue: list.name)
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Edit List")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            TextField("List Name", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 300)
+                .onSubmit {
+                    if !name.isEmpty {
+                        onSave(name)
+                    }
+                }
+
+            HStack(spacing: 16) {
+                Button("Cancel") {
+                    onCancel()
+                }
+                .keyboardShortcut(.escape)
+
+                Button("Save") {
+                    onSave(name)
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(30)
+        .frame(minWidth: 350)
     }
 }
 

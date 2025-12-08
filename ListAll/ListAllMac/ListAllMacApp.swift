@@ -10,9 +10,27 @@ import CoreData
 
 @main
 struct ListAllMacApp: App {
-    let dataManager = DataManager.shared
+    /// Check if running in unit test environment (not UI tests)
+    private static let isUnitTesting: Bool = {
+        // XCTestConfigurationFilePath is set for unit tests but we also check we're NOT in UI test mode
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil &&
+        !ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+    }()
+
+    // Note: DataManager.shared is accessed during property initialization.
+    // In unit test mode, CoreDataManager will use /dev/null store for isolation.
+    @StateObject private var dataManager = DataManager.shared
 
     init() {
+        // CRITICAL: Skip full app initialization during UNIT tests
+        // Unit tests inject their own Core Data stacks and don't need the full app lifecycle
+        // This prevents singleton initialization issues and memory corruption from
+        // repeated test host launches
+        if ListAllMacApp.isUnitTesting {
+            print("🧪 ListAllMacApp: Unit test mode - skipping full app initialization")
+            return
+        }
+
         // CRITICAL: Force CoreDataManager initialization FIRST to ensure UITEST_MODE is detected
         // before any data operations. The isUITest flag is evaluated during lazy initialization.
         _ = CoreDataManager.shared.persistentContainer
