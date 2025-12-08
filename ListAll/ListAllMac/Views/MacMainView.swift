@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreData
 import UniformTypeIdentifiers
+import Quartz
 
 /// Main view for macOS app with sidebar navigation.
 /// This is the macOS equivalent of iOS ContentView, using NavigationSplitView
@@ -291,6 +292,9 @@ private struct MacListDetailView: View {
     @State private var selectedItem: Item?
     @State private var showingEditListSheet = false
 
+    // State for Quick Look
+    @State private var quickLookItem: Item?
+
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
 
@@ -360,7 +364,7 @@ private struct MacListDetailView: View {
                 }
             } else {
                 // Items list with MacItemRowView
-                SwiftUI.List {
+                SwiftUI.List(selection: $quickLookItem) {
                     ForEach(items) { item in
                         MacItemRowView(
                             item: item,
@@ -369,15 +373,25 @@ private struct MacListDetailView: View {
                                 selectedItem = item
                                 showingEditItemSheet = true
                             },
-                            onDelete: { deleteItem(item) }
+                            onDelete: { deleteItem(item) },
+                            onQuickLook: { showQuickLook(for: item) }
                         )
                         .draggable(item) // Enable dragging items
+                        .tag(item)
                     }
                     .onMove(perform: moveItem) // Handle item reordering within list
                 }
                 .listStyle(.inset)
                 .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
                     handleItemDrop(droppedItems)
+                }
+                // Spacebar handler for Quick Look
+                .onKeyPress(.space) {
+                    if let item = quickLookItem, item.hasImages {
+                        showQuickLook(for: item)
+                        return .handled
+                    }
+                    return .ignored
                 }
             }
         }
@@ -468,6 +482,20 @@ private struct MacListDetailView: View {
         dataManager.updateList(updatedList)
     }
 
+    // MARK: - Quick Look
+
+    /// Shows Quick Look preview for an item's images
+    private func showQuickLook(for item: Item) {
+        guard item.hasImages else {
+            print("⚠️ Quick Look: Item '\(item.displayTitle)' has no images")
+            return
+        }
+
+        // Use the shared QuickLookController to show preview
+        QuickLookController.shared.preview(item: item)
+        print("📷 Quick Look: Showing preview for '\(item.displayTitle)' with \(item.imageCount) images")
+    }
+
     // MARK: - Drag-and-Drop Handlers
 
     /// Handle item drop on this list's detail view (moves item from another list)
@@ -530,6 +558,7 @@ private struct MacItemRowView: View {
     let onToggle: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
+    let onQuickLook: () -> Void
 
     @State private var isHovering = false
 
@@ -542,6 +571,37 @@ private struct MacItemRowView: View {
                     .foregroundColor(item.isCrossedOut ? .green : .secondary)
             }
             .buttonStyle(.plain)
+
+            // Image thumbnail (if item has images)
+            if item.hasImages, let firstImage = item.sortedImages.first, let nsImage = firstImage.nsImage {
+                Button(action: onQuickLook) {
+                    ZStack(alignment: .bottomTrailing) {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 36, height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                            )
+
+                        // Badge for multiple images
+                        if item.imageCount > 1 {
+                            Text("\(item.imageCount)")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 3)
+                                .padding(.vertical, 1)
+                                .background(Color.black.opacity(0.7))
+                                .clipShape(Capsule())
+                                .offset(x: 2, y: 2)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .help("Quick Look (Space)")
+            }
 
             // Item content
             VStack(alignment: .leading, spacing: 2) {
@@ -560,7 +620,8 @@ private struct MacItemRowView: View {
                             .cornerRadius(4)
                     }
 
-                    if !item.images.isEmpty {
+                    // Show photo icon only when no thumbnail (fallback indicator)
+                    if item.hasImages && item.sortedImages.first?.nsImage == nil {
                         Image(systemName: "photo")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -580,6 +641,15 @@ private struct MacItemRowView: View {
             // Hover actions
             if isHovering {
                 HStack(spacing: 8) {
+                    // Quick Look button (only if item has images)
+                    if item.hasImages {
+                        Button(action: onQuickLook) {
+                            Image(systemName: "eye")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Quick Look (Space)")
+                    }
+
                     Button(action: onEdit) {
                         Image(systemName: "pencil")
                     }
@@ -606,6 +676,15 @@ private struct MacItemRowView: View {
         .contextMenu {
             Button("Edit") { onEdit() }
             Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
+
+            if item.hasImages {
+                Divider()
+                Button("Quick Look") {
+                    onQuickLook()
+                }
+                .keyboardShortcut(.space, modifiers: [])
+            }
+
             Divider()
             Button("Delete", role: .destructive) { onDelete() }
         }

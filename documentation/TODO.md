@@ -1315,7 +1315,7 @@ func testDragItemBetweenLists() {
 
 ---
 
-### Task 6.2: Implement Quick Look Preview
+### Task 6.2: [COMPLETED] Implement Quick Look Preview
 **TDD**: Write Quick Look integration tests
 
 **Steps**:
@@ -1329,6 +1329,47 @@ func testQuickLookPreview() {
     // Test spacebar shows preview panel
 }
 ```
+
+**Completed**:
+- Created `QuickLookPreviewItem.swift` with full QLPreviewItem protocol conformance
+  - Wraps ItemImage data for Quick Look panel
+  - Creates temporary JPEG files (QLPreviewPanel requires file URLs)
+  - Automatic cleanup on dealloc and explicit cleanup() method
+- Created `QuickLookPreviewCollection` for multi-image preview
+  - QLPreviewPanelDataSource conformance
+  - QLPreviewPanelDelegate conformance with arrow key navigation
+  - Manages collection of preview items from Item model
+- Created `QuickLookController` singleton for panel management
+  - preview(item:startIndex:) method for multi-image preview
+  - preview(itemImage:title:) method for single image preview
+  - togglePreview() and hidePreview() for panel control
+  - isPanelVisible property for state checking
+- Created `MacQuickLookView.swift` with SwiftUI helpers
+  - QuickLookPreviewModifier for .quickLookPreview() modifier
+  - QuickLookButton for triggering preview
+  - QuickLookThumbnailView for showing image thumbnail with preview
+  - MacImagePreviewGrid for grid display with Quick Look
+- Updated `MacMainView.swift` with Quick Look integration
+  - MacItemRowView now shows image thumbnail with badge
+  - Spacebar keyboard shortcut triggers Quick Look
+  - Context menu includes Quick Look option
+  - Hover action button shows eye icon for Quick Look
+- Created 22 unit tests in `QuickLookMacTests`:
+  - QuickLookPreviewItem creation, title, URL, cleanup tests
+  - QuickLookPreviewCollection from item, single image, cleanup tests
+  - QuickLookController singleton, visibility, hide tests
+  - QLPreviewPanelDataSource protocol tests
+  - Notification name tests
+  - Item model integration tests (hasImages, sortedImages)
+  - NSImage/ItemImage integration tests
+
+**Files created**:
+- `ListAllMac/Views/Components/QuickLookPreviewItem.swift`
+- `ListAllMac/Views/Components/MacQuickLookView.swift`
+
+**Files modified**:
+- `ListAllMac/Views/MacMainView.swift` - Added Quick Look integration to MacItemRowView
+- `ListAllMacTests/ListAllMacTests.swift` - Added QuickLookMacTests class
 
 ---
 
@@ -1824,10 +1865,10 @@ ListAll/
 | Phase 3: Services Layer | Completed | 7/7 |
 | Phase 4: ViewModels | Completed | 5/5 |
 | Phase 5: macOS Views | Completed | 11/11 |
-| Phase 6: Advanced Features | In Progress | 1/7 |
+| Phase 6: Advanced Features | In Progress | 2/7 |
 | Phase 7: Testing | Not Started | 0/4 |
 | Phase 8: CI/CD | Not Started | 0/5 |
 | Phase 9: App Store | Not Started | 0/5 |
 | Phase 10: Polish & Launch | Not Started | 0/7 |
 
-**Total Tasks: 57** (32 completed in Phases 1-6)
+**Total Tasks: 57** (33 completed in Phases 1-6)
