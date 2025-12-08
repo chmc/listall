@@ -1373,7 +1373,7 @@ func testQuickLookPreview() {
 
 ---
 
-### Task 6.3: Implement Services Menu Integration
+### Task 6.3: [COMPLETED] Implement Services Menu Integration
 **TDD**: Write Services integration tests
 
 **Steps**:
@@ -1387,6 +1387,41 @@ func testServicesMenuCreatesItem() {
     // Test service creates item from text
 }
 ```
+
+**Completed**:
+- Created `ListAllMac/Services/ServicesProvider.swift` with full Services menu support
+  - Singleton pattern with `ServicesProvider.shared`
+  - Three service methods registered via @objc:
+    - `createItemFromText` - Add selected text as single item (⇧⌘L)
+    - `createItemsFromLines` - Add each line as separate item
+    - `createListFromText` - First line = list name, rest = items
+  - Text parsing with bullet point, numbered list, and checkbox stripping
+  - Configurable settings: default list, show notifications, bring to front
+  - Thread-safe with main thread dispatch for Core Data operations
+- Updated `ListAllMac/Info.plist` with NSServices array
+  - Three services registered with proper NSMessage/NSMenuItem/NSSendTypes
+  - Keyboard shortcut ⇧⌘L for quick item addition
+- Updated `ListAllMac/ListAllMacApp.swift`
+  - Added `@NSApplicationDelegateAdaptor(AppDelegate.self)`
+  - AppDelegate registers ServicesProvider on app launch
+  - Notification permission request for service feedback
+- Created 27 unit tests in `ServicesMenuMacTests`:
+  - Text parsing tests (bullet points, numbers, checkboxes, whitespace)
+  - Configuration tests (default list, notifications, bring to front)
+  - NSPasteboard integration tests
+  - Unicode and RTL text support tests
+  - Service method signature verification tests
+
+**Usage**:
+1. Select text in any macOS app (Safari, TextEdit, Notes, etc.)
+2. Right-click → Services → "Add to ListAll"
+3. Text is added to first available list
+4. ListAll comes to front (configurable)
+
+**Troubleshooting**:
+- Log out/in to macOS to refresh Services database
+- Run: `/System/Library/CoreServices/pbs -flush`
+- Check System Settings → Keyboard → Services
 
 ---
 
@@ -1865,10 +1900,10 @@ ListAll/
 | Phase 3: Services Layer | Completed | 7/7 |
 | Phase 4: ViewModels | Completed | 5/5 |
 | Phase 5: macOS Views | Completed | 11/11 |
-| Phase 6: Advanced Features | In Progress | 2/7 |
+| Phase 6: Advanced Features | In Progress | 3/7 |
 | Phase 7: Testing | Not Started | 0/4 |
 | Phase 8: CI/CD | Not Started | 0/5 |
 | Phase 9: App Store | Not Started | 0/5 |
 | Phase 10: Polish & Launch | Not Started | 0/7 |
 
-**Total Tasks: 57** (33 completed in Phases 1-6)
+**Total Tasks: 57** (34 completed in Phases 1-6)

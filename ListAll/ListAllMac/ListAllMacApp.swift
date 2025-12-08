@@ -7,9 +7,13 @@
 
 import SwiftUI
 import CoreData
+import UserNotifications
 
 @main
 struct ListAllMacApp: App {
+    /// AppDelegate adapter for macOS Services menu registration
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     /// Check if running in unit test environment (not UI tests)
     private static let isUnitTesting: Bool = {
         // XCTestConfigurationFilePath is set for unit tests but we also check we're NOT in UI test mode
@@ -143,5 +147,51 @@ struct ListAllMacApp: App {
         dataManager.loadData()
 
         print("🧪 Populated \(testLists.count) test lists with deterministic data")
+    }
+}
+
+// MARK: - AppDelegate for Services Registration
+
+/// AppDelegate handles macOS-specific lifecycle events.
+/// Primary purpose: Register the ServicesProvider for system-wide Services menu integration.
+class AppDelegate: NSObject, NSApplicationDelegate {
+
+    /// The services provider instance (must be retained for Services menu to work)
+    private var servicesProvider: ServicesProvider?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Skip services registration during unit tests
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            print("🧪 AppDelegate: Skipping Services registration in test mode")
+            return
+        }
+
+        print("🚀 AppDelegate: Registering Services provider")
+
+        // CRITICAL: Create and register the services provider
+        // This must be done AFTER the app is fully initialized
+        servicesProvider = ServicesProvider.shared
+        NSApplication.shared.servicesProvider = servicesProvider
+
+        print("✅ AppDelegate: Services provider registered")
+
+        // IMPORTANT: Only ONE service provider can be registered per app.
+        // The ServicesProvider class handles ALL services defined in Info.plist.
+
+        // Request notification permissions for service feedback
+        requestNotificationPermissions()
+    }
+
+    /// Request permission to show notifications for Services feedback
+    private func requestNotificationPermissions() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if granted {
+                print("✅ Notification permissions granted")
+            } else if let error = error {
+                print("⚠️ Notification permissions error: \(error)")
+            } else {
+                print("⚠️ Notification permissions denied")
+            }
+        }
     }
 }
