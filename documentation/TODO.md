@@ -2,6 +2,13 @@
 
 This document provides a comprehensive, task-by-task plan for creating the ListAll macOS app with full feature parity to iOS, automated CI/CD release pipeline, and TDD principles.
 
+## Task Execution Rules
+
+**IMPORTANT**: Work on ONE task at a time. When start task, mark it in-progress. When a task is completed:
+1. Mark it as `[COMPLETED]`
+2. Stop and wait for user instructions
+3. Do NOT proceed to the next task without explicit permission
+
 ## Task Status Convention
 
 Mark task titles with status indicators:
