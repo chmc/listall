@@ -1464,15 +1464,15 @@ func testServicesMenuCreatesItem() {
 
 ---
 
-### Task 6.7: Create MacImageGalleryView
+### Task 6.7: Create MacImageGalleryView ✅ COMPLETED
 **TDD**: Write image gallery tests
 
 **Steps**:
 1. Create `ListAllMac/Views/Components/MacImageGalleryView.swift`:
-   - Grid layout for thumbnails
-   - Quick Look preview (spacebar)
-   - Drag-and-drop to add images
-   - Copy/paste image support
+   - Grid layout for thumbnails ✅
+   - Quick Look preview (spacebar) ✅
+   - Drag-and-drop to add images ✅
+   - Copy/paste image support ✅
 
 **Test criteria**:
 ```swift
@@ -1484,6 +1484,13 @@ func testImageGalleryDragDrop() {
 **Context**: Deferred from Phase 5 (was Task 5.6) - image management is an advanced feature
 - Basic photo indicator is shown in MacItemRowView
 - Full image gallery with drag-and-drop to be implemented here
+
+**Files created**:
+- `ListAll/ListAllMac/Views/Components/MacImageGalleryView.swift` (NEW)
+- `ListAll/ListAllMac/Views/Components/MacImageDropHandler.swift` (NEW)
+- `ListAll/ListAllMac/Views/Components/MacImageClipboardManager.swift` (NEW)
+- `ListAll/ListAllMac/Views/MacMainView.swift` (MODIFIED - integrated gallery into MacEditItemSheet)
+- `ListAll/ListAllMacTests/ListAllMacTests.swift` (MODIFIED - added MacImageGalleryViewTests)
 
 ---
 

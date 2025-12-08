@@ -1,5 +1,39 @@
 # AI Changelog
 
+## 2025-12-08 - Implement MacImageGalleryView (Task 6.7) ✅ COMPLETED
+
+### Summary
+Implemented a comprehensive image gallery component for the macOS app that allows users to manage item images with drag-and-drop, copy/paste, Quick Look preview, and keyboard navigation.
+
+### Files Created
+- `ListAll/ListAllMac/Views/Components/MacImageGalleryView.swift` - Main gallery view with grid layout
+- `ListAll/ListAllMac/Views/Components/MacImageDropHandler.swift` - Handles drag-and-drop from Finder
+- `ListAll/ListAllMac/Views/Components/MacImageClipboardManager.swift` - NSPasteboard operations
+
+### Files Modified
+- `ListAll/ListAllMac/Views/MacMainView.swift` - Integrated gallery into MacEditItemSheet
+- `ListAll/ListAllMacTests/ListAllMacTests.swift` - Added MacImageGalleryViewTests
+
+### Features Implemented
+1. **Grid Layout** - LazyVGrid with adaptive columns, adjustable thumbnail size (80-200px)
+2. **Selection** - Single click, Cmd+click toggle, Shift+click range selection
+3. **Quick Look** - Spacebar to preview selected images using QuickLookController
+4. **Drag-and-drop** - Drop images from Finder, supports JPEG/PNG/HEIC/TIFF/GIF/WebP
+5. **Copy/Paste** - Copy images to clipboard, paste from clipboard
+6. **Reordering** - Drag to reorder images within gallery
+7. **Toolbar** - Add/delete/preview buttons, selection count, thumbnail size slider
+
+### Technical Details
+- Uses controlled component pattern with `@Binding var images: [ItemImage]`
+- Integrates with existing ImageService for image processing
+- Handles security-scoped resource access for sandboxed apps
+- Extracts keyboard handler into ViewModifier to help Swift type-checker
+
+### Integration
+MacEditItemSheet now includes MacImageGalleryView, allowing users to manage images when editing items. The save callback passes updated images to the updateItem function.
+
+---
+
 ## 2025-12-05 - Fix SwiftUI Display Order After Drag-Drop ✅ COMPLETED
 
 ### Summary

@@ -430,8 +430,8 @@ private struct MacListDetailView: View {
             if let item = selectedItem {
                 MacEditItemSheet(
                     item: item,
-                    onSave: { title, quantity, description in
-                        updateItem(item, title: title, quantity: quantity, description: description)
+                    onSave: { title, quantity, description, images in
+                        updateItem(item, title: title, quantity: quantity, description: description, images: images)
                         showingEditItemSheet = false
                         selectedItem = nil
                     },
@@ -479,11 +479,14 @@ private struct MacListDetailView: View {
         dataManager.loadData()
     }
 
-    private func updateItem(_ item: Item, title: String, quantity: Int, description: String?) {
+    private func updateItem(_ item: Item, title: String, quantity: Int, description: String?, images: [ItemImage]? = nil) {
         var updatedItem = item
         updatedItem.title = title
         updatedItem.quantity = quantity
         updatedItem.itemDescription = description
+        if let images = images {
+            updatedItem.images = images
+        }
         updatedItem.modifiedAt = Date()
         dataManager.updateItem(updatedItem)
     }
@@ -770,20 +773,22 @@ private struct MacAddItemSheet: View {
 
 private struct MacEditItemSheet: View {
     let item: Item
-    let onSave: (String, Int, String?) -> Void
+    let onSave: (String, Int, String?, [ItemImage]) -> Void
     let onCancel: () -> Void
 
     @State private var title: String
     @State private var quantity: Int
     @State private var description: String
+    @State private var images: [ItemImage]
 
-    init(item: Item, onSave: @escaping (String, Int, String?) -> Void, onCancel: @escaping () -> Void) {
+    init(item: Item, onSave: @escaping (String, Int, String?, [ItemImage]) -> Void, onCancel: @escaping () -> Void) {
         self.item = item
         self.onSave = onSave
         self.onCancel = onCancel
         _title = State(initialValue: item.title)
         _quantity = State(initialValue: item.quantity)
         _description = State(initialValue: item.itemDescription ?? "")
+        _images = State(initialValue: item.images)
     }
 
     var body: some View {
@@ -812,8 +817,21 @@ private struct MacEditItemSheet: View {
                         .frame(height: 60)
                         .border(Color.secondary.opacity(0.3))
                 }
+
+                // Image Gallery Section
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Images:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    MacImageGalleryView(
+                        images: $images,
+                        itemId: item.id,
+                        itemTitle: item.title
+                    )
+                    .frame(height: 200)
+                }
             }
-            .frame(width: 300)
+            .frame(width: 400)
 
             HStack(spacing: 16) {
                 Button("Cancel") {
@@ -822,7 +840,7 @@ private struct MacEditItemSheet: View {
                 .keyboardShortcut(.escape)
 
                 Button("Save") {
-                    onSave(title, quantity, description.isEmpty ? nil : description)
+                    onSave(title, quantity, description.isEmpty ? nil : description, images)
                 }
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
@@ -830,7 +848,7 @@ private struct MacEditItemSheet: View {
             }
         }
         .padding(30)
-        .frame(minWidth: 400)
+        .frame(minWidth: 500)
     }
 }
 
