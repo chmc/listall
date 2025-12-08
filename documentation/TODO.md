@@ -1086,30 +1086,7 @@ func testItemDetailEditing() {
 
 ---
 
-### Task 5.6: [DEFERRED] Create MacImageGalleryView
-**TDD**: Write image gallery tests
-
-**Steps**:
-1. Create `ListAllMac/Views/Components/MacImageGalleryView.swift`:
-   - Grid layout for thumbnails
-   - Quick Look preview (spacebar)
-   - Drag-and-drop to add images
-   - Copy/paste image support
-
-**Test criteria**:
-```swift
-func testImageGalleryDragDrop() {
-    // Test image drop handling
-}
-```
-
-**Status**: Deferred to Phase 6 (Advanced Features) - image management is an advanced feature
-- Basic photo indicator is shown in MacItemRowView
-- Full image gallery with drag-and-drop will be implemented in Phase 6
-
----
-
-### Task 5.7: [COMPLETED] Create MacSettingsView
+### Task 5.6: [COMPLETED] Create MacSettingsView
 **TDD**: Write settings persistence tests
 
 **Steps**:
@@ -1136,7 +1113,7 @@ func testSettingsLanguageChange() {
 
 ---
 
-### Task 5.8: [COMPLETED] Create macOS Menu Commands
+### Task 5.7: [COMPLETED] Create macOS Menu Commands
 **TDD**: Write menu action tests
 
 **Steps**:
@@ -1176,7 +1153,7 @@ func testKeyboardShortcuts() {
 
 ---
 
-### Task 5.9: [COMPLETED] Create MacEmptyStateView
+### Task 5.8: [COMPLETED] Create MacEmptyStateView
 **TDD**: Write empty state tests
 
 **Steps**:
@@ -1200,7 +1177,7 @@ func testEmptyStateActions() {
 
 ---
 
-### Task 5.10: [COMPLETED] Create MacCreateListView
+### Task 5.9: [COMPLETED] Create MacCreateListView
 **TDD**: Write list creation tests
 
 **Steps**:
@@ -1225,7 +1202,7 @@ func testCreateListValidation() {
 
 ---
 
-### Task 5.11: [COMPLETED] Create MacEditListView
+### Task 5.10: [COMPLETED] Create MacEditListView
 **TDD**: Write list editing tests
 
 **Steps**:
@@ -1250,28 +1227,39 @@ func testEditListSaves() {
 
 ---
 
-### Task 5.12: Fix macOS Test Crashes for ItemViewModel Tests
+### Task 5.11: [COMPLETED] Fix macOS Test Crashes for ItemViewModel Tests
 **TDD**: Verify all macOS tests pass without crashes
 
 **Problem**:
 ItemViewModelMacTests crash on unsigned macOS builds because ItemViewModel eagerly initializes `DataManager.shared` and `DataRepository()` at construction time. On unsigned builds, accessing App Groups fails, causing memory corruption that manifests as "POINTER_BEING_FREED_WAS_NOT_ALLOCATED" during ItemViewModel deallocation.
 
-**Steps**:
-1. Modify ItemViewModelMacTests to avoid direct ItemViewModel instantiation
-2. Use pure unit tests that test Item model and validation logic without DataManager/DataRepository
-3. Move tests that require DataManager to integration test suite (signed builds only)
-4. Ensure all remaining tests pass on unsigned builds
+**Solution Implemented**:
+Made DataRepository and DataManager lazy in multiple files to prevent eager Core Data initialization during unit tests:
 
-**Test criteria**:
-```swift
-func testAllMacOSTestsPass() {
-    // Run: xcodebuild test -scheme ListAllMac -destination 'platform=macOS'
-    // All tests should pass without crashes
-}
-```
+1. **ItemViewModel.swift** - Changed `private let dataManager = DataManager.shared` and `private let dataRepository = DataRepository()` to `private lazy var`
+2. **ImportService.swift** - Changed `private let dataRepository` to `private lazy var` with empty init()
+3. **ExportService.swift** - Changed `private let dataRepository` to `private lazy var` with empty init()
+4. **SharingService.swift** - Changed `private let dataRepository` and `private let exportService` to `private lazy var` with empty init()
+5. **ImportViewModel.swift** - Changed `private let dataRepository` to `private lazy var`
 
-**Files to update**:
-- `ListAll/ListAllMacTests/ListAllMacTests.swift` - Refactor ItemViewModelMacTests
+**Test Changes**:
+- Refactored `ItemViewModelMacTests` to use pure unit tests testing Item model directly
+- Tests that would trigger DataManager/DataRepository now test the Item model behavior instead
+- ImageService tests remain (they don't require Core Data)
+- Fixed `testItemViewModelIsObservableObject` to use instance assignment instead of type check
+
+**Files updated**:
+- `ListAll/ListAll/ViewModels/ItemViewModel.swift` - Lazy DataManager/DataRepository
+- `ListAll/ListAll/ViewModels/ImportViewModel.swift` - Lazy DataRepository
+- `ListAll/ListAll/Services/ImportService.swift` - Lazy DataRepository
+- `ListAll/ListAll/Services/ExportService.swift` - Lazy DataRepository
+- `ListAll/ListAll/Services/SharingService.swift` - Lazy DataRepository/ExportService
+- `ListAll/ListAllMacTests/ListAllMacTests.swift` - Refactored ItemViewModelMacTests
+
+**Verification**:
+- All three platforms (iOS, macOS, watchOS) build successfully
+- ItemViewModelMacTests pass on unsigned macOS builds
+- Integration tests with DataManager covered by iOS tests (shared implementation)
 
 ---
 
@@ -1375,6 +1363,29 @@ func testHandoffFromIOS() {
     // Test activity continues correctly
 }
 ```
+
+---
+
+### Task 6.7: Create MacImageGalleryView
+**TDD**: Write image gallery tests
+
+**Steps**:
+1. Create `ListAllMac/Views/Components/MacImageGalleryView.swift`:
+   - Grid layout for thumbnails
+   - Quick Look preview (spacebar)
+   - Drag-and-drop to add images
+   - Copy/paste image support
+
+**Test criteria**:
+```swift
+func testImageGalleryDragDrop() {
+    // Test image drop handling
+}
+```
+
+**Context**: Deferred from Phase 5 (was Task 5.6) - image management is an advanced feature
+- Basic photo indicator is shown in MacItemRowView
+- Full image gallery with drag-and-drop to be implemented here
 
 ---
 
@@ -1779,11 +1790,11 @@ ListAll/
 | Phase 2: Core Data & Models | Completed | 3/3 |
 | Phase 3: Services Layer | Completed | 7/7 |
 | Phase 4: ViewModels | Completed | 5/5 |
-| Phase 5: macOS Views | In Progress | 10/12 (Task 5.6 deferred, Task 5.12 pending) |
-| Phase 6: Advanced Features | Not Started | 0/6 |
+| Phase 5: macOS Views | Completed | 11/11 |
+| Phase 6: Advanced Features | Not Started | 0/7 |
 | Phase 7: Testing | Not Started | 0/4 |
 | Phase 8: CI/CD | Not Started | 0/5 |
 | Phase 9: App Store | Not Started | 0/5 |
 | Phase 10: Polish & Launch | Not Started | 0/7 |
 
-**Total Tasks: 57** (56 completed in Phases 1-5, 1 deferred to Phase 6)
+**Total Tasks: 57** (31 completed in Phases 1-5)

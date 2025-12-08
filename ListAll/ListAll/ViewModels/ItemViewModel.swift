@@ -6,10 +6,13 @@ class ItemViewModel: ObservableObject {
     @Published var item: Item
     @Published var isLoading = false
     @Published var errorMessage: String?
-    
-    private let dataManager = DataManager.shared
-    private let dataRepository = DataRepository()
-    
+
+    // Lazy initialization to avoid accessing Core Data during unit tests
+    // On unsigned macOS builds, eager DataManager/DataRepository access crashes
+    // because App Groups require sandbox permissions
+    private lazy var dataManager: DataManager = DataManager.shared
+    private lazy var dataRepository: DataRepository = DataRepository()
+
     init(item: Item) {
         self.item = item
     }

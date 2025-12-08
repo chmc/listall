@@ -32,12 +32,14 @@ class ImportViewModel: ObservableObject {
     @Published var importProgress: ImportProgress?
     
     private let importService: ImportService
-    private let dataRepository: DataRepository
-    
-    init(importService: ImportService = ImportService(), dataRepository: DataRepository = DataRepository()) {
+    // Lazy initialization to avoid accessing Core Data during unit tests
+    // On unsigned macOS builds, eager DataRepository access crashes
+    // because App Groups require sandbox permissions
+    private lazy var dataRepository: DataRepository = DataRepository()
+
+    init(importService: ImportService = ImportService()) {
         self.importService = importService
-        self.dataRepository = dataRepository
-        
+
         // Set up progress handler
         self.importService.progressHandler = { [weak self] progress in
             DispatchQueue.main.async {

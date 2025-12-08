@@ -77,13 +77,14 @@ struct ShareResult {
 class SharingService: ObservableObject {
     @Published var isSharing = false
     @Published var shareError: String?
-    
-    private let dataRepository: DataRepository
-    private let exportService: ExportService
-    
-    init(dataRepository: DataRepository = DataRepository(), exportService: ExportService = ExportService()) {
-        self.dataRepository = dataRepository
-        self.exportService = exportService
+
+    // Lazy initialization to avoid accessing Core Data during unit tests
+    // On unsigned macOS builds, eager DataRepository access crashes
+    // because App Groups require sandbox permissions
+    private lazy var dataRepository: DataRepository = DataRepository()
+    private lazy var exportService: ExportService = ExportService()
+
+    init() {
     }
     
     // MARK: - Share Single List

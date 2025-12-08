@@ -64,10 +64,12 @@ struct ExportOptions {
 
 /// Service responsible for exporting app data to various formats
 class ExportService: ObservableObject {
-    private let dataRepository: DataRepository
-    
-    init(dataRepository: DataRepository = DataRepository()) {
-        self.dataRepository = dataRepository
+    // Lazy initialization to avoid accessing Core Data during unit tests
+    // On unsigned macOS builds, eager DataRepository access crashes
+    // because App Groups require sandbox permissions
+    private lazy var dataRepository: DataRepository = DataRepository()
+
+    init() {
     }
     
     // MARK: - JSON Export

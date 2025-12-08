@@ -159,13 +159,15 @@ struct ImportProgress {
 
 /// Service responsible for importing app data from various formats
 class ImportService: ObservableObject {
-    private let dataRepository: DataRepository
-    
+    // Lazy initialization to avoid accessing Core Data during unit tests
+    // On unsigned macOS builds, eager DataRepository access crashes
+    // because App Groups require sandbox permissions
+    private lazy var dataRepository: DataRepository = DataRepository()
+
     /// Callback for tracking import progress
     var progressHandler: ((ImportProgress) -> Void)?
-    
-    init(dataRepository: DataRepository = DataRepository()) {
-        self.dataRepository = dataRepository
+
+    init() {
     }
     
     // MARK: - Auto-detect Format Import
