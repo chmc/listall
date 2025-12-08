@@ -131,6 +131,13 @@ struct ItemDetailView: View {
                 viewModel.refreshItem() // Refresh item after editing
             }
         }
+        .onAppear {
+            // Advertise Handoff activity for viewing this item
+            if let listId = item.listId,
+               let list = DataManager.shared.lists.first(where: { $0.id == listId }) {
+                HandoffService.shared.startViewingItemActivity(item: item, inList: list)
+            }
+        }
     }
 }
 

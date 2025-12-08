@@ -463,7 +463,10 @@ struct ListView: View {
         }
         .onAppear {
             viewModel.loadItems()
-            
+
+            // Advertise Handoff activity for viewing this list
+            HandoffService.shared.startViewingListActivity(list: list)
+
             // Show tooltips based on list state
             let itemCount = viewModel.items.count
             

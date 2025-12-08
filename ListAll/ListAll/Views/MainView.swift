@@ -312,6 +312,9 @@ struct MainView: View {
             Task {
                 await conflictManager.checkForConflicts()
             }
+
+            // Advertise Handoff activity for browsing lists
+            HandoffService.shared.startBrowsingListsActivity()
             
             // Show add list tooltip if user has no lists and hasn't seen it
             if viewModel.lists.isEmpty {

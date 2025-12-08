@@ -48,6 +48,15 @@ struct ListAllMacApp: App {
             MacMainView()
                 .environmentObject(dataManager)
                 .environment(\.managedObjectContext, CoreDataManager.shared.viewContext)
+                .onContinueUserActivity("io.github.chmc.ListAll.viewing-list") { activity in
+                    handleIncomingActivity(activity)
+                }
+                .onContinueUserActivity("io.github.chmc.ListAll.viewing-item") { activity in
+                    handleIncomingActivity(activity)
+                }
+                .onContinueUserActivity("io.github.chmc.ListAll.browsing-lists") { activity in
+                    handleIncomingActivity(activity)
+                }
         }
         .commands {
             // Add macOS-specific menu commands
@@ -60,6 +69,40 @@ struct ListAllMacApp: App {
                 .environmentObject(dataManager)
         }
         #endif
+    }
+
+    // MARK: - Handoff Support
+
+    /// Handle incoming Handoff activity from another device
+    /// - Parameter activity: The NSUserActivity to process
+    private func handleIncomingActivity(_ activity: NSUserActivity) {
+        guard let target = HandoffService.extractNavigationTarget(from: activity) else {
+            print("⚠️ Handoff: Could not extract navigation target from activity")
+            return
+        }
+
+        switch target {
+        case .mainLists:
+            print("💻 Handoff: Navigating to main lists")
+            // No navigation needed - already at root
+
+        case .list(let id, let name):
+            print("💻 Handoff: Navigating to list '\(name ?? "unknown")' (\(id))")
+            // Post notification that MacMainView can respond to
+            NotificationCenter.default.post(
+                name: NSNotification.Name("HandoffNavigateToList"),
+                object: nil,
+                userInfo: ["listId": id]
+            )
+
+        case .item(let id, let listId, let title):
+            print("💻 Handoff: Navigating to item '\(title ?? "unknown")' (\(id)) in list (\(listId))")
+            NotificationCenter.default.post(
+                name: NSNotification.Name("HandoffNavigateToItem"),
+                object: nil,
+                userInfo: ["itemId": id, "listId": listId]
+            )
+        }
     }
 
     // MARK: - UI Test Environment Setup

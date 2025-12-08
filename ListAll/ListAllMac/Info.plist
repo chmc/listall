@@ -31,6 +31,12 @@
 			<dict/>
 		</dict>
 	</array>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>io.github.chmc.ListAll.viewing-list</string>
+		<string>io.github.chmc.ListAll.viewing-item</string>
+		<string>io.github.chmc.ListAll.browsing-lists</string>
+	</array>
 	<key>NSServices</key>
 	<array>
 		<dict>

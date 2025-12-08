@@ -23,9 +23,52 @@ struct ListAllApp: App {
             ContentView()
                 .environmentObject(dataManager)
                 .preferredColorScheme(forceLight ? .light : nil)
+                .onContinueUserActivity("io.github.chmc.ListAll.viewing-list") { activity in
+                    handleIncomingActivity(activity)
+                }
+                .onContinueUserActivity("io.github.chmc.ListAll.viewing-item") { activity in
+                    handleIncomingActivity(activity)
+                }
+                .onContinueUserActivity("io.github.chmc.ListAll.browsing-lists") { activity in
+                    handleIncomingActivity(activity)
+                }
         }
     }
     
+    // MARK: - Handoff Support
+
+    /// Handle incoming Handoff activity from another device
+    /// - Parameter activity: The NSUserActivity to process
+    private func handleIncomingActivity(_ activity: NSUserActivity) {
+        guard let target = HandoffService.extractNavigationTarget(from: activity) else {
+            print("⚠️ Handoff: Could not extract navigation target from activity")
+            return
+        }
+
+        switch target {
+        case .mainLists:
+            print("📱 Handoff: Navigating to main lists")
+            // No navigation needed - already at root
+
+        case .list(let id, let name):
+            print("📱 Handoff: Navigating to list '\(name ?? "unknown")' (\(id))")
+            // Post notification that ContentView can respond to
+            NotificationCenter.default.post(
+                name: NSNotification.Name("HandoffNavigateToList"),
+                object: nil,
+                userInfo: ["listId": id]
+            )
+
+        case .item(let id, let listId, let title):
+            print("📱 Handoff: Navigating to item '\(title ?? "unknown")' (\(id)) in list (\(listId))")
+            NotificationCenter.default.post(
+                name: NSNotification.Name("HandoffNavigateToItem"),
+                object: nil,
+                userInfo: ["itemId": id, "listId": listId]
+            )
+        }
+    }
+
     /// Configure the app for UI testing with deterministic data
     private func setupUITestEnvironment() {
         // Check if running in UI test mode

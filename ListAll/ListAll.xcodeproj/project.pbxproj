@@ -133,6 +133,7 @@
 				Services/DataMigrationService.swift,
 				Services/DataRepository.swift,
 				Services/ExportService.swift,
+				Services/HandoffService.swift,
 				Services/ImageService.swift,
 				Services/ImportService.swift,
 				Services/SampleDataService.swift,
@@ -1205,6 +1206,7 @@
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ListAll-iOS-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "ListAll App";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos for your list items.";
@@ -1242,6 +1244,7 @@
 				DEVELOPMENT_TEAM = M9BR5FY93A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ListAll-iOS-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "ListAll App";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos for your list items.";

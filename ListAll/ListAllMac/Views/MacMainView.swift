@@ -88,9 +88,21 @@ struct MacMainView: View {
         }
         .onAppear {
             startSyncPolling()
+            // Start Handoff activity for browsing lists (if no list is selected)
+            if selectedList == nil {
+                HandoffService.shared.startBrowsingListsActivity()
+            }
         }
         .onDisappear {
             stopSyncPolling()
+        }
+        .onChange(of: selectedList) { oldValue, newValue in
+            // Update Handoff activity based on selection
+            if let list = newValue {
+                HandoffService.shared.startViewingListActivity(list: list)
+            } else {
+                HandoffService.shared.startBrowsingListsActivity()
+            }
         }
     }
 
@@ -442,6 +454,10 @@ private struct MacListDetailView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewItem"))) { _ in
             showingAddItemSheet = true
+        }
+        .onAppear {
+            // Advertise Handoff activity for viewing this specific list
+            HandoffService.shared.startViewingListActivity(list: list)
         }
     }
 

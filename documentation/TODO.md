@@ -1430,36 +1430,37 @@ func testServicesMenuCreatesItem() {
 
 ---
 
-### Task 6.5: Implement Touch Bar Support (if applicable)
-**TDD**: Write Touch Bar tests
-
-**Steps**:
-1. Add Touch Bar items for common actions
-2. Context-sensitive Touch Bar based on selection
-
-**Test criteria**:
-```swift
-func testTouchBarActions() {
-    // Test Touch Bar buttons work
-}
-```
-
----
-
-### Task 6.6: Implement Handoff with iOS
+### Task 6.6: [COMPLETED] Implement Handoff with iOS
 **TDD**: Write Handoff tests
 
-**Steps**:
-1. Configure NSUserActivity for lists/items
-2. Support continuing activity from iOS
-3. Support handing off to iOS
+**Implementation completed**:
+1. Created `HandoffService.swift` - Cross-platform NSUserActivity management service
+   - Singleton pattern with @MainActor for thread safety
+   - Activity types: browsing-lists, viewing-list, viewing-item
+   - Methods: startBrowsingListsActivity(), startViewingListActivity(list:), startViewingItemActivity(item:inList:), invalidateCurrentActivity()
+   - NavigationTarget enum for parsing incoming activities
+2. Added NSUserActivityTypes to Info.plist (iOS and macOS)
+3. Integrated Handoff into iOS views:
+   - MainView.swift - startBrowsingListsActivity() on appear
+   - ListView.swift - startViewingListActivity(list:) on appear
+   - ItemDetailView.swift - startViewingItemActivity(item:inList:) on appear
+4. Integrated Handoff into macOS views:
+   - MacMainView.swift - Activity updates on selection changes
+   - MacListDetailView - startViewingListActivity(list:) on appear
+5. Added .onContinueUserActivity handlers in ListAllApp.swift and ListAllMacApp.swift
+6. Added comprehensive unit tests in ListAllMacTests.swift (HandoffServiceMacTests class)
 
-**Test criteria**:
-```swift
-func testHandoffFromIOS() {
-    // Test activity continues correctly
-}
-```
+**Files created/modified**:
+- `ListAll/ListAll/Services/HandoffService.swift` (NEW)
+- `ListAll/ListAll-iOS-Info.plist` (NEW)
+- `ListAll/ListAllMac/Info.plist` (MODIFIED)
+- `ListAll/ListAll/Views/MainView.swift` (MODIFIED)
+- `ListAll/ListAll/Views/ListView.swift` (MODIFIED)
+- `ListAll/ListAll/Views/ItemDetailView.swift` (MODIFIED)
+- `ListAll/ListAll/ListAllApp.swift` (MODIFIED)
+- `ListAll/ListAllMac/Views/MacMainView.swift` (MODIFIED)
+- `ListAll/ListAllMac/ListAllMacApp.swift` (MODIFIED)
+- `ListAll/ListAllMacTests/ListAllMacTests.swift` (MODIFIED)
 
 ---
 
