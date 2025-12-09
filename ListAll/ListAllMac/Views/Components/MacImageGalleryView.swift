@@ -663,10 +663,14 @@ private struct MacImageThumbnailCell: View {
             return await ImageService.shared.createThumbnail(from: data, size: thumbnailSize)
         }.value
 
-        // Update UI on main thread
+        // Update UI on main thread with no implicit animation
+        // Using withTransaction prevents layout recursion by ensuring
+        // state changes don't trigger concurrent animation passes
         await MainActor.run {
-            self.thumbnail = loadedThumbnail
-            self.isLoading = false
+            withTransaction(Transaction(animation: nil)) {
+                self.thumbnail = loadedThumbnail
+                self.isLoading = false
+            }
         }
     }
 }

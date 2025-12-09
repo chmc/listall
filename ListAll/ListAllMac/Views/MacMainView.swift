@@ -31,28 +31,90 @@ struct MacMainView: View {
     @State private var syncPollingTimer: Timer?
     private let syncPollingInterval: TimeInterval = 30.0 // Poll every 30 seconds
 
+    // MARK: - Edit State Protection
+    // Flag to prevent background sync from interrupting sheet presentation
+    // Set via notification from MacListDetailView when editing starts/stops
+    @State private var isEditingAnyItem = false
+
+    // MARK: - Edit Item State (for native sheet presenter)
+    // NOTE: We use MacNativeSheetPresenter instead of SwiftUI's .sheet() modifier
+    // because SwiftUI sheets have RunLoop mode issues that prevent presentation until app deactivation
+    @State private var selectedEditItem: Item?
+
+    // MARK: - Navigation Path for Animation Fix
+    // CRITICAL FIX: Apple-confirmed bug in NavigationSplitView (Xcode 14.3+)
+    // Without a NavigationPath with explicit animation, ALL animations in the app break.
+    // This includes .sheet() presentation - sheets queue but never display until app deactivates.
+    // See: https://developer.apple.com/forums/thread/728132
+    @State private var navigationPath = NavigationPath()
+
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Sidebar with lists
-            // CRITICAL: Pass showingArchivedLists flag and let sidebar observe dataManager directly
-            // Passing array by value breaks SwiftUI observation chain on macOS
-            MacSidebarView(
-                showingArchivedLists: $showingArchivedLists,
-                selectedList: $selectedList,
-                onCreateList: { showingCreateListSheet = true },
-                onDeleteList: deleteList
-            )
-            .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 350)
+            // CRITICAL FIX: Wrap sidebar in NavigationStack with animated path
+            // This restores SwiftUI's animation system that NavigationSplitView breaks
+            NavigationStack(path: $navigationPath.animation(.linear(duration: 0))) {
+                // Sidebar with lists
+                // CRITICAL: Pass showingArchivedLists flag and let sidebar observe dataManager directly
+                // Passing array by value breaks SwiftUI observation chain on macOS
+                MacSidebarView(
+                    showingArchivedLists: $showingArchivedLists,
+                    selectedList: $selectedList,
+                    onCreateList: { showingCreateListSheet = true },
+                    onDeleteList: deleteList
+                )
+                .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 350)
+            }
         } detail: {
             // Detail view for selected list
             if let list = selectedList {
-                MacListDetailView(list: list)
-                    .id(list.id) // Force refresh when selection changes
+                MacListDetailView(
+                    list: list,
+                    onEditItem: { item in
+                        // CRITICAL: Use native AppKit sheet presentation (bypasses SwiftUI's RunLoop issues)
+                        // SwiftUI sheets have a known bug where they only present after app deactivation
+                        // This is caused by RunLoop mode conflicts during event handling
+                        print("🎯 MacMainView: Received edit request for item: \(item.title)")
+                        isEditingAnyItem = true
+                        selectedEditItem = item
+
+                        // Define cancel action (used by both Cancel button and ESC key)
+                        let cancelAction = {
+                            MacNativeSheetPresenter.shared.dismissSheet()
+                            selectedEditItem = nil
+                            isEditingAnyItem = false
+                        }
+
+                        // Present using native AppKit sheet (works immediately)
+                        MacNativeSheetPresenter.shared.presentSheet(
+                            MacEditItemSheet(
+                                item: item,
+                                onSave: { title, quantity, description, images in
+                                    updateEditedItem(item, title: title, quantity: quantity, description: description, images: images)
+                                    MacNativeSheetPresenter.shared.dismissSheet()
+                                    selectedEditItem = nil
+                                    isEditingAnyItem = false
+                                },
+                                onCancel: cancelAction
+                            )
+                            .environment(\.managedObjectContext, viewContext),
+                            onCancel: cancelAction  // ESC key support via SheetHostingController
+                        ) {
+                            // Completion handler when sheet dismisses
+                            isEditingAnyItem = false
+                            selectedEditItem = nil
+                            dataManager.loadData()
+                        }
+                        print("✅ MacMainView: Native sheet presenter called")
+                    }
+                )
+                .id(list.id) // Force refresh when selection changes
             } else {
                 MacEmptyStateView(onCreateList: { showingCreateListSheet = true })
             }
         }
         .frame(minWidth: 800, minHeight: 600)
+        // NOTE: Edit item sheet now uses native MacNativeSheetPresenter (bypasses SwiftUI RunLoop issues)
+        // The SwiftUI .sheet() modifier was removed because it only presents after app deactivation
         .sheet(isPresented: $showingCreateListSheet) {
             MacCreateListSheet(
                 onSave: { name in
@@ -69,11 +131,23 @@ struct MacMainView: View {
             showingArchivedLists.toggle()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshData"))) { _ in
-            dataManager.loadData()
+            // Defer to next run loop to prevent layout recursion during view updates
+            DispatchQueue.main.async {
+                dataManager.loadData()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .coreDataRemoteChange)) { _ in
+            // Skip if user is editing - prevents sheet state corruption during CloudKit sync
+            guard !isEditingAnyItem else {
+                print("🛡️ macOS: Skipping main view refresh - user is editing item")
+                return
+            }
             print("🌐 macOS: Received Core Data remote change notification - refreshing UI")
-            dataManager.loadData()
+            // CRITICAL: Defer to next run loop to prevent layout recursion
+            // This breaks the cycle where notifications trigger state changes during ongoing layout
+            DispatchQueue.main.async {
+                dataManager.loadData()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
@@ -96,6 +170,18 @@ struct MacMainView: View {
         .onDisappear {
             stopSyncPolling()
         }
+        // Listen for edit state changes from MacListDetailView
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ItemEditingStarted"))) { _ in
+            isEditingAnyItem = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ItemEditingEnded"))) { _ in
+            isEditingAnyItem = false
+            // Refresh data now that editing is complete to catch any missed updates
+            // Defer to prevent layout recursion during sheet dismissal animation
+            DispatchQueue.main.async {
+                dataManager.loadData()
+            }
+        }
         .onChange(of: selectedList) { oldValue, newValue in
             // Update Handoff activity based on selection
             if let list = newValue {
@@ -117,7 +203,13 @@ struct MacMainView: View {
 
         print("🔄 macOS: Starting sync polling timer (every \(Int(syncPollingInterval))s)")
 
-        syncPollingTimer = Timer.scheduledTimer(withTimeInterval: syncPollingInterval, repeats: true) { _ in
+        syncPollingTimer = Timer.scheduledTimer(withTimeInterval: syncPollingInterval, repeats: true) { [self] _ in
+            // Skip polling if user is editing - prevents UI interruption during sheet presentation
+            guard !isEditingAnyItem else {
+                print("🛡️ macOS: Skipping poll - user is editing item")
+                return
+            }
+
             print("🔄 macOS: Polling for CloudKit changes (timer-based fallback)")
 
             // Force Core Data to check for remote changes
@@ -125,8 +217,11 @@ struct MacMainView: View {
                 viewContext.refreshAllObjects()
             }
 
-            // Reload data to update UI
-            dataManager.loadData()
+            // Reload data to update UI - use async to prevent layout recursion
+            // if timer happens to fire during an ongoing layout pass
+            DispatchQueue.main.async {
+                dataManager.loadData()
+            }
         }
     }
 
@@ -159,6 +254,19 @@ struct MacMainView: View {
         }
         dataManager.deleteList(withId: list.id)
         dataManager.loadData()
+    }
+
+    /// Update an item from the edit sheet (called from MacMainView-level sheet)
+    private func updateEditedItem(_ item: Item, title: String, quantity: Int, description: String?, images: [ItemImage]? = nil) {
+        var updatedItem = item
+        updatedItem.title = title
+        updatedItem.quantity = quantity
+        updatedItem.itemDescription = description
+        if let images = images {
+            updatedItem.images = images
+        }
+        updatedItem.modifiedAt = Date()
+        dataManager.updateItem(updatedItem)
     }
 }
 
@@ -305,15 +413,14 @@ private struct MacSidebarView: View {
 
 private struct MacListDetailView: View {
     let list: List  // Original list from selection (may become stale)
+    let onEditItem: (Item) -> Void  // Callback to parent for edit sheet (prevents state loss)
     @EnvironmentObject var dataManager: DataManager
 
     // ViewModel for filtering, sorting, and item management
     @StateObject private var viewModel: ListViewModel
 
-    // State for item management
+    // State for item management (NOTE: edit sheet state moved to MacMainView)
     @State private var showingAddItemSheet = false
-    @State private var showingEditItemSheet = false
-    @State private var selectedItem: Item?
     @State private var showingEditListSheet = false
 
     // State for filter/sort popover
@@ -325,8 +432,9 @@ private struct MacListDetailView: View {
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
 
-    init(list: List) {
+    init(list: List, onEditItem: @escaping (Item) -> Void) {
         self.list = list
+        self.onEditItem = onEditItem
         _viewModel = StateObject(wrappedValue: ListViewModel(list: list))
     }
 
@@ -554,8 +662,12 @@ private struct MacListDetailView: View {
             item: item,
             onToggle: { toggleItem(item) },
             onEdit: {
-                selectedItem = item
-                showingEditItemSheet = true
+                // CRITICAL FIX: Delegate to parent (MacMainView) for sheet presentation
+                // Sheet state inside NavigationSplitView detail pane is lost during view invalidation
+                // caused by @EnvironmentObject changes from CloudKit sync.
+                // By calling parent's callback, sheet state lives OUTSIDE NavigationSplitView.
+                print("🎯 MacListDetailView: Forwarding edit request to MacMainView for item: \(item.title)")
+                onEditItem(item)
             },
             onDelete: { deleteItem(item) },
             onQuickLook: { showQuickLook(for: item) }
@@ -605,6 +717,8 @@ private struct MacListDetailView: View {
         }
         // Sync ViewModel items with DataManager for proper reactivity
         .onChange(of: items) { _, newItems in
+            // NOTE: Edit state protection is now handled at MacMainView level (isEditingAnyItem)
+            // which blocks dataManager.loadData() calls during editing
             viewModel.items = newItems
         }
         .onAppear {
@@ -614,8 +728,14 @@ private struct MacListDetailView: View {
         // CRITICAL: Observe DataManager changes directly to keep ViewModel in sync
         // When clearing search/filter, we need fresh data from DataManager
         .onReceive(NotificationCenter.default.publisher(for: .coreDataRemoteChange)) { _ in
-            // Force refresh ViewModel items when Core Data syncs remote changes
-            viewModel.items = items
+            // NOTE: Edit state protection is now handled at MacMainView level (isEditingAnyItem)
+            // CRITICAL: Defer to next run loop to prevent layout recursion
+            // Notifications can fire during layout passes, causing the error:
+            // "It's not legal to call -layoutSubtreeIfNeeded on a view already being laid out"
+            DispatchQueue.main.async {
+                // Force refresh ViewModel items when Core Data syncs remote changes
+                viewModel.items = items
+            }
         }
         .sheet(isPresented: $showingAddItemSheet) {
             MacAddItemSheet(
@@ -627,22 +747,8 @@ private struct MacListDetailView: View {
                 onCancel: { showingAddItemSheet = false }
             )
         }
-        .sheet(isPresented: $showingEditItemSheet) {
-            if let item = selectedItem {
-                MacEditItemSheet(
-                    item: item,
-                    onSave: { title, quantity, description, images in
-                        updateItem(item, title: title, quantity: quantity, description: description, images: images)
-                        showingEditItemSheet = false
-                        selectedItem = nil
-                    },
-                    onCancel: {
-                        showingEditItemSheet = false
-                        selectedItem = nil
-                    }
-                )
-            }
-        }
+        // NOTE: Edit item sheet has been moved to MacMainView (outside NavigationSplitView)
+        // to prevent state loss during CloudKit sync view invalidation
         .sheet(isPresented: $showingEditListSheet) {
             MacEditListSheet(
                 list: currentList ?? list,
@@ -886,13 +992,17 @@ private struct MacItemRowView: View {
             }
         }
         .padding(.vertical, 4)
-        .contentShape(Rectangle())
         .onHover { hovering in
             isHovering = hovering
         }
-        .onTapGesture(count: 2) {
+        // CRITICAL: Use native AppKit double-click handler instead of .onTapGesture(count: 2)
+        // SwiftUI's gesture system blocks the run loop on macOS, causing sheets to only
+        // appear after app deactivation. This native handler fires immediately.
+        .onDoubleClick {
             onEdit()
         }
+        .contentShape(Rectangle())  // Move contentShape AFTER onDoubleClick so it doesn't block events
+        .listRowBackground(Color.clear)  // Disable default selection overlay
         .contextMenu {
             Button("Edit") { onEdit() }
             Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
@@ -982,7 +1092,9 @@ private struct MacEditItemSheet: View {
     @State private var description: String
     @State private var images: [ItemImage]
 
-    // Defer heavy gallery loading for faster sheet appearance
+    // Defer gallery loading to allow sheet to appear faster
+    // The gallery is the heaviest component - loading it after initial layout
+    // significantly reduces perceived delay when opening the edit sheet
     @State private var isGalleryReady = false
 
     init(item: Item, onSave: @escaping (String, Int, String?, [ItemImage]) -> Void, onCancel: @escaping () -> Void) {
@@ -992,7 +1104,11 @@ private struct MacEditItemSheet: View {
         _title = State(initialValue: item.title)
         _quantity = State(initialValue: item.quantity)
         _description = State(initialValue: item.itemDescription ?? "")
-        _images = State(initialValue: item.images)
+        // CRITICAL: Initialize images as empty to defer heavy copy operation
+        // The gallery will load them asynchronously after sheet appears
+        _images = State(initialValue: [])
+        // Defer the actual image loading to after sheet is visible
+        _isGalleryReady = State(initialValue: false)
     }
 
     var body: some View {
@@ -1065,10 +1181,22 @@ private struct MacEditItemSheet: View {
         }
         .padding(30)
         .frame(minWidth: 500)
-        .task {
-            // Small delay to let sheet animation complete before loading heavy gallery
-            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-            isGalleryReady = true
+        .onAppear {
+            // Defer gallery loading until after sheet animation completes
+            // This makes the sheet appear much faster by splitting the work:
+            // 1. Sheet appears immediately with placeholder
+            // 2. On next run loop cycle, load images
+            // 3. Gallery renders progressively without blocking sheet presentation
+            DispatchQueue.main.async {
+                // Use withTransaction to disable implicit animations during load
+                // This prevents animation conflicts that cause layout recursion
+                withTransaction(Transaction(animation: nil)) {
+                    // Load actual images from item
+                    self.images = item.images
+                    // Enable gallery rendering
+                    isGalleryReady = true
+                }
+            }
         }
     }
 }
@@ -1215,6 +1343,117 @@ private struct MacCreateListSheet: View {
         }
         .padding(30)
         .frame(minWidth: 350)
+    }
+}
+
+// MARK: - Native Double-Click Handler
+// Uses NSEvent.addLocalMonitorForEvents to detect double-clicks without blocking the run loop.
+//
+// KEY INSIGHT (from deep research): The reason sheets only appear after app deactivation:
+// 1. During event handling, the run loop is in "event tracking" mode
+// 2. DispatchQueue.main.async only executes in "default" mode
+// 3. So sheet presentation is queued but never runs until mode changes
+// 4. App deactivation forces a mode change, which finally presents the sheet
+//
+// SOLUTION: Use performSelector(afterDelay:) which works in ALL run loop modes,
+// not just the default mode like DispatchQueue.main.async
+
+/// View modifier that adds reliable double-click detection using event monitoring
+private struct DoubleClickHandler: ViewModifier {
+    let handler: () -> Void
+
+    func body(content: Content) -> some View {
+        content.background(
+            DoubleClickMonitorView(handler: handler)
+        )
+    }
+}
+
+/// NSViewRepresentable that installs an event monitor for double-clicks
+private struct DoubleClickMonitorView: NSViewRepresentable {
+    let handler: () -> Void
+
+    func makeNSView(context: Context) -> DoubleClickMonitorNSView {
+        DoubleClickMonitorNSView(handler: handler)
+    }
+
+    func updateNSView(_ nsView: DoubleClickMonitorNSView, context: Context) {
+        nsView.handler = handler
+    }
+}
+
+/// NSView that monitors for double-clicks using local event monitor
+/// This approach doesn't block events and works with all run loop modes
+private class DoubleClickMonitorNSView: NSView {
+    var handler: () -> Void
+    private var eventMonitor: Any?
+
+    init(handler: @escaping () -> Void) {
+        self.handler = handler
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+
+        if window != nil {
+            installEventMonitor()
+        } else {
+            removeEventMonitor()
+        }
+    }
+
+    private func installEventMonitor() {
+        guard eventMonitor == nil else { return }
+
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self = self,
+                  let window = self.window,
+                  event.window == window,
+                  event.clickCount == 2 else {
+                return event
+            }
+
+            // Convert event location to view coordinates
+            let locationInWindow = event.locationInWindow
+            let locationInView = self.convert(locationInWindow, from: nil)
+
+            // Check if click is within our bounds
+            if self.bounds.contains(locationInView) {
+                // CRITICAL FIX: Use performSelector(afterDelay:) instead of DispatchQueue.main.async
+                // performSelector works in ALL run loop modes (including event tracking mode)
+                // This breaks the deadlock where sheets only appear after app deactivation
+                self.perform(#selector(self.invokeHandler), with: nil, afterDelay: 0)
+            }
+
+            return event  // Let event continue to other handlers
+        }
+    }
+
+    @objc private func invokeHandler() {
+        handler()
+    }
+
+    private func removeEventMonitor() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+    }
+
+    deinit {
+        removeEventMonitor()
+    }
+}
+
+/// Extension to make double-click handler easy to use
+extension View {
+    func onDoubleClick(perform action: @escaping () -> Void) -> some View {
+        modifier(DoubleClickHandler(handler: action))
     }
 }
 
