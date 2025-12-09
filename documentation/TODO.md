@@ -1605,7 +1605,7 @@ func testImageGalleryDragDrop() {
 
 This phase ports missing iOS features to macOS following the DRY principle - reusing shared ViewModels and Services where possible.
 
-### Task 8.1: Implement Item Filtering UI for macOS
+### Task 8.1: [COMPLETED] Implement Item Filtering UI for macOS
 **TDD**: Write filter UI tests
 
 **Problem**: macOS app displays all items without filter/sort controls. iOS has full `ItemOrganizationView` with 5 filter options.
@@ -1702,6 +1702,24 @@ func testSearchFiltering() {
 
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Add toolbar button and use filteredItems
+
+**Completed**:
+- Created `MacItemOrganizationView.swift` with sort/filter sections, direction toggle, summary stats, and drag-reorder indicator
+- Updated `MacListDetailView` to use `@StateObject ListViewModel` for proper ownership
+- Added filter/sort popover button with badge showing active filters
+- Added search field in list header
+- Implemented `displayedItems` using `viewModel.filteredItems`
+- Added `handleMoveItem` wrapper for conditional reordering (only when sorted by orderNumber)
+- Added `FilterBadge` component showing filter icon with count
+- Added `activeFiltersBar` showing current filter/sort when not default
+- Created 29 unit tests in `MacItemOrganizationViewTests` covering:
+  - ItemFilterOption enum (values, displayNames, systemImages)
+  - ItemSortOption enum (values, displayNames, systemImages)
+  - SortDirection enum (values, displayNames, systemImages)
+  - ListViewModel filter/sort methods
+  - Filter logic (active, completed, hasDescription, search, sorting)
+  - DRY principle verification (shared enums, shared ViewModel)
+- All 29 tests pass
 
 ---
 
@@ -2509,11 +2527,11 @@ ListAll/
 | Phase 5: macOS Views | Completed | 11/11 |
 | Phase 6: Advanced Features | Completed | 4/4 |
 | Phase 7: Testing | Completed | 4/4 |
-| Phase 8: Feature Parity | Not Started | 0/4 |
+| Phase 8: Feature Parity | In Progress | 1/4 |
 | Phase 9: CI/CD | Not Started | 0/5 |
 | Phase 10: App Store | Not Started | 0/5 |
 | Phase 11: Polish & Launch | Not Started | 0/8 |
 
-**Total Tasks: 61** (39 completed in Phases 1-7)
+**Total Tasks: 61** (40 completed in Phases 1-8)
 
 **Note**: Task 6.4 (Spotlight Integration) moved to Phase 11.8 as optional feature (disabled by default)

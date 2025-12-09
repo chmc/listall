@@ -550,7 +550,7 @@ private struct ImageReorderDropDelegate: DropDelegate {
 
 // MARK: - Thumbnail Cell
 
-/// Individual thumbnail cell
+/// Individual thumbnail cell with async thumbnail loading for performance
 private struct MacImageThumbnailCell: View {
     let image: ItemImage
     let size: CGFloat
@@ -560,26 +560,40 @@ private struct MacImageThumbnailCell: View {
     let onDoubleClick: (UUID) -> Void
 
     @State private var isHovering = false
+    @State private var thumbnail: NSImage?
+    @State private var isLoading = true
 
     var body: some View {
         ZStack {
-            // Image or placeholder
-            if let nsImage = image.nsImage {
-                Image(nsImage: nsImage)
+            // Image or placeholder - use cached thumbnail for performance
+            if let thumbnail = thumbnail {
+                Image(nsImage: thumbnail)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
+                // Loading/placeholder state
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.secondary.opacity(0.1))
                     .frame(width: size, height: size)
                     .overlay(
-                        Image(systemName: "photo")
-                            .font(.title)
-                            .foregroundColor(.secondary)
+                        Group {
+                            if isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "photo")
+                                    .font(.title)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     )
             }
+        }
+        .task(id: image.id) {
+            // Load thumbnail asynchronously using ImageService cache
+            await loadThumbnail()
         }
         .opacity(isDragging ? 0.5 : 1.0)
         .overlay(
@@ -630,6 +644,29 @@ private struct MacImageThumbnailCell: View {
             Button("Select") {
                 onSelect(image.id, [])
             }
+        }
+    }
+
+    // MARK: - Async Thumbnail Loading
+
+    /// Loads thumbnail asynchronously using ImageService cache for performance
+    private func loadThumbnail() async {
+        // Capture values needed for background processing
+        let imageData = image.imageData
+        let thumbnailSize = CGSize(width: size * 2, height: size * 2) // 2x for retina
+
+        // Run image processing off the main thread
+        let loadedThumbnail = await Task.detached(priority: .userInitiated) {
+            guard let data = imageData else { return nil as NSImage? }
+
+            // Use ImageService's cached thumbnail creation
+            return await ImageService.shared.createThumbnail(from: data, size: thumbnailSize)
+        }.value
+
+        // Update UI on main thread
+        await MainActor.run {
+            self.thumbnail = loadedThumbnail
+            self.isLoading = false
         }
     }
 }

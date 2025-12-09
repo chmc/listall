@@ -39,6 +39,10 @@ struct ListAllMacApp: App {
         // before any data operations. The isUITest flag is evaluated during lazy initialization.
         _ = CoreDataManager.shared.persistentContainer
 
+        // Pre-warm ImageService to avoid first-use delay when opening edit dialogs
+        // The singleton initialization and cache setup takes time on first access
+        _ = ImageService.shared
+
         // Setup UI test environment if needed
         setupUITestEnvironment()
     }

@@ -196,9 +196,18 @@ private struct MacSidebarView: View {
                         HStack {
                             Text(list.name)
                             Spacer()
-                            Text("\(list.items.count)")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
+                            // Show active count (total) - matching detail view format
+                            let activeCount = list.items.filter { !$0.isCrossedOut }.count
+                            let totalCount = list.items.count
+                            if activeCount < totalCount {
+                                Text("\(activeCount) (\(totalCount))")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            } else {
+                                Text("\(totalCount)")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            }
                         }
                     }
                     // MARK: Drag-and-Drop Support
@@ -298,17 +307,28 @@ private struct MacListDetailView: View {
     let list: List  // Original list from selection (may become stale)
     @EnvironmentObject var dataManager: DataManager
 
+    // ViewModel for filtering, sorting, and item management
+    @StateObject private var viewModel: ListViewModel
+
     // State for item management
     @State private var showingAddItemSheet = false
     @State private var showingEditItemSheet = false
     @State private var selectedItem: Item?
     @State private var showingEditListSheet = false
 
+    // State for filter/sort popover
+    @State private var showingOrganizationPopover = false
+
     // State for Quick Look
     @State private var quickLookItem: Item?
 
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
+
+    init(list: List) {
+        self.list = list
+        _viewModel = StateObject(wrappedValue: ListViewModel(list: list))
+    }
 
     // CRITICAL: Compute current list and items directly from @Published source
     // Using @State copy breaks SwiftUI observation chain on macOS
@@ -330,81 +350,248 @@ private struct MacListDetailView: View {
         currentList?.name ?? list.name
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header with list name and actions
-            HStack {
-                Text(displayName)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+    /// Whether any filter is active (non-default filter, sort, or search)
+    private var hasActiveFilters: Bool {
+        viewModel.currentFilterOption != .all ||
+        viewModel.currentSortOption != .orderNumber ||
+        !viewModel.searchText.isEmpty
+    }
+
+    // MARK: - Header View
+
+    @ViewBuilder
+    private var headerView: some View {
+        HStack {
+            Text(displayName)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            Spacer()
+
+            searchFieldView
+            filterSortButton
+            editListButton
+        }
+        .padding()
+    }
+
+    @ViewBuilder
+    private var searchFieldView: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            TextField("Search items...", text: $viewModel.searchText)
+                .textFieldStyle(.plain)
+                .frame(width: 150)
+            if !viewModel.searchText.isEmpty {
+                Button(action: { viewModel.searchText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(6)
+    }
+
+    @ViewBuilder
+    private var filterSortButton: some View {
+        Button(action: { showingOrganizationPopover.toggle() }) {
+            Image(systemName: "arrow.up.arrow.down")
+        }
+        .buttonStyle(.plain)
+        .help("Filter & Sort")
+        .popover(isPresented: $showingOrganizationPopover) {
+            MacItemOrganizationView(viewModel: viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private var editListButton: some View {
+        Button(action: { showingEditListSheet = true }) {
+            Image(systemName: "pencil")
+        }
+        .buttonStyle(.plain)
+        .help("Edit List")
+    }
+
+    // MARK: - Active Filters Bar
+
+    @ViewBuilder
+    private var activeFiltersBar: some View {
+        if hasActiveFilters {
+            HStack(spacing: 12) {
+                if !viewModel.searchText.isEmpty {
+                    FilterBadge(
+                        icon: "magnifyingglass",
+                        text: "Search: \"\(viewModel.searchText)\"",
+                        onClear: {
+                            viewModel.searchText = ""
+                            // CRITICAL: Refresh items from DataManager when clearing search
+                            viewModel.items = items
+                        }
+                    )
+                }
+
+                if viewModel.currentFilterOption != .all {
+                    FilterBadge(
+                        icon: viewModel.currentFilterOption.systemImage,
+                        text: viewModel.currentFilterOption.displayName,
+                        onClear: {
+                            viewModel.updateFilterOption(.all)
+                            // CRITICAL: Refresh items from DataManager when clearing filter
+                            viewModel.items = items
+                        }
+                    )
+                }
+
+                if viewModel.currentSortOption != .orderNumber {
+                    let sortText = "\(viewModel.currentSortOption.displayName) (\(viewModel.currentSortDirection.displayName))"
+                    FilterBadge(
+                        icon: viewModel.currentSortOption.systemImage,
+                        text: sortText,
+                        onClear: {
+                            viewModel.updateSortOption(.orderNumber)
+                            // CRITICAL: Refresh items from DataManager when clearing sort
+                            viewModel.items = items
+                        }
+                    )
+                }
 
                 Spacer()
 
-                Button(action: { showingEditListSheet = true }) {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.plain)
-                .help("Edit List")
+                Text("\(viewModel.filteredItems.count) of \(viewModel.items.count) items")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
+    }
 
+    // MARK: - Empty State Views
+
+    @ViewBuilder
+    private var emptyListView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "tray")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+
+            Text("No items in this list")
+                .font(.title3)
+                .foregroundColor(.secondary)
+
+            Text("Drag items here or add a new one")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Button("Add First Item") {
+                showingAddItemSheet = true
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    @ViewBuilder
+    private var noMatchingItemsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+
+            Text("No matching items")
+                .font(.title3)
+                .foregroundColor(.secondary)
+
+            Text("Try adjusting your filter or search criteria")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Button("Clear Filters") {
+                viewModel.searchText = ""
+                viewModel.updateFilterOption(.all)
+                // CRITICAL: Refresh items from DataManager when clearing all filters
+                viewModel.items = items
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    // MARK: - Items List View
+
+    /// Whether drag-to-reorder is enabled (only when sorted by orderNumber)
+    private var canReorderItems: Bool {
+        viewModel.currentSortOption == .orderNumber
+    }
+
+    /// The items to display, using ViewModel's filtered list
+    private var displayedItems: [Item] {
+        viewModel.filteredItems
+    }
+
+    private var itemsListView: some View {
+        SwiftUI.List {
+            ForEach(displayedItems) { item in
+                makeItemRow(item: item)
+                    .draggable(item)
+            }
+            .onMove(perform: handleMoveItem)
+        }
+        .listStyle(.inset)
+    }
+
+    private func handleMoveItem(from source: IndexSet, to destination: Int) {
+        guard canReorderItems else { return }
+        moveItem(from: source, to: destination)
+    }
+
+    private func makeItemRow(item: Item) -> some View {
+        MacItemRowView(
+            item: item,
+            onToggle: { toggleItem(item) },
+            onEdit: {
+                selectedItem = item
+                showingEditItemSheet = true
+            },
+            onDelete: { deleteItem(item) },
+            onQuickLook: { showQuickLook(for: item) }
+        )
+    }
+
+    private func handleSpacebarPress() -> KeyPress.Result {
+        if let item = quickLookItem, item.hasImages {
+            showQuickLook(for: item)
+            return .handled
+        }
+        return .ignored
+    }
+
+    // MARK: - Main Body
+
+    var body: some View {
+        VStack(spacing: 0) {
+            headerView
+            activeFiltersBar
             Divider()
 
-            if items.isEmpty {
-                // Empty state for list with no items - also accepts drops
-                VStack(spacing: 16) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-
-                    Text("No items in this list")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-
-                    Text("Drag items here or add a new one")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Button("Add First Item") {
-                        showingAddItemSheet = true
+            if viewModel.filteredItems.isEmpty {
+                Group {
+                    if items.isEmpty {
+                        emptyListView
+                    } else {
+                        noMatchingItemsView
                     }
-                    .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
                     handleItemDrop(droppedItems)
                 }
             } else {
-                // Items list with MacItemRowView
-                SwiftUI.List(selection: $quickLookItem) {
-                    ForEach(items) { item in
-                        MacItemRowView(
-                            item: item,
-                            onToggle: { toggleItem(item) },
-                            onEdit: {
-                                selectedItem = item
-                                showingEditItemSheet = true
-                            },
-                            onDelete: { deleteItem(item) },
-                            onQuickLook: { showQuickLook(for: item) }
-                        )
-                        .draggable(item) // Enable dragging items
-                        .tag(item)
-                    }
-                    .onMove(perform: moveItem) // Handle item reordering within list
-                }
-                .listStyle(.inset)
-                .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-                    handleItemDrop(droppedItems)
-                }
-                // Spacebar handler for Quick Look
-                .onKeyPress(.space) {
-                    if let item = quickLookItem, item.hasImages {
-                        showQuickLook(for: item)
-                        return .handled
-                    }
-                    return .ignored
-                }
+                itemsListView
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -415,6 +602,20 @@ private struct MacListDetailView: View {
                     Label("Add Item", systemImage: "plus")
                 }
             }
+        }
+        // Sync ViewModel items with DataManager for proper reactivity
+        .onChange(of: items) { _, newItems in
+            viewModel.items = newItems
+        }
+        .onAppear {
+            // Initialize ViewModel with current items
+            viewModel.items = items
+        }
+        // CRITICAL: Observe DataManager changes directly to keep ViewModel in sync
+        // When clearing search/filter, we need fresh data from DataManager
+        .onReceive(NotificationCenter.default.publisher(for: .coreDataRemoteChange)) { _ in
+            // Force refresh ViewModel items when Core Data syncs remote changes
+            viewModel.items = items
         }
         .sheet(isPresented: $showingAddItemSheet) {
             MacAddItemSheet(
@@ -781,6 +982,9 @@ private struct MacEditItemSheet: View {
     @State private var description: String
     @State private var images: [ItemImage]
 
+    // Defer heavy gallery loading for faster sheet appearance
+    @State private var isGalleryReady = false
+
     init(item: Item, onSave: @escaping (String, Int, String?, [ItemImage]) -> Void, onCancel: @escaping () -> Void) {
         self.item = item
         self.onSave = onSave
@@ -818,17 +1022,29 @@ private struct MacEditItemSheet: View {
                         .border(Color.secondary.opacity(0.3))
                 }
 
-                // Image Gallery Section
+                // Image Gallery Section - deferred loading for faster sheet appearance
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Images:")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    MacImageGalleryView(
-                        images: $images,
-                        itemId: item.id,
-                        itemTitle: item.title
-                    )
-                    .frame(height: 200)
+
+                    if isGalleryReady {
+                        MacImageGalleryView(
+                            images: $images,
+                            itemId: item.id,
+                            itemTitle: item.title
+                        )
+                        .frame(height: 200)
+                    } else {
+                        // Placeholder while gallery loads
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.1))
+                            .frame(height: 200)
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            )
+                    }
                 }
             }
             .frame(width: 400)
@@ -849,6 +1065,11 @@ private struct MacEditItemSheet: View {
         }
         .padding(30)
         .frame(minWidth: 500)
+        .task {
+            // Small delay to let sheet animation complete before loading heavy gallery
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            isGalleryReady = true
+        }
     }
 }
 
@@ -927,6 +1148,32 @@ private struct MacEmptyStateView: View {
             .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Filter Badge
+
+private struct FilterBadge: View {
+    let icon: String
+    let text: String
+    let onClear: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption)
+            Text(text)
+                .font(.caption)
+            Button(action: onClear) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.accentColor.opacity(0.1))
+        .cornerRadius(12)
     }
 }
 
