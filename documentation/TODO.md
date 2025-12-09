@@ -1496,7 +1496,7 @@ func testImageGalleryDragDrop() {
 
 ## Phase 7: Testing Infrastructure
 
-### Task 7.1: Create macOS Unit Test Target
+### Task 7.1: [COMPLETED] Create macOS Unit Test Target
 **TDD**: Meta-test for test infrastructure
 
 **Steps**:
@@ -1506,11 +1506,18 @@ func testImageGalleryDragDrop() {
 
 **Files created**:
 - `ListAll/ListAllMacTests/`
-- `ListAll/ListAllMacTests/TestHelpers.swift`
+- `ListAll/ListAllMacTests/TestHelpers.swift` (47KB)
+
+**Completed**:
+- Created comprehensive TestHelpers.swift adapted from iOS version
+- Includes TestDataManager, TestCoreDataManager, TestItemViewModel, TestListViewModel
+- Added macOS-specific helpers (NSImage instead of UIImage)
+- Resolved type ambiguity between SwiftUI.List and ListAllMac.List using typealias
+- Build verified: TEST BUILD SUCCEEDED
 
 ---
 
-### Task 7.2: Create macOS UI Test Target
+### Task 7.2: [COMPLETED] Create macOS UI Test Target
 **TDD**: UI test infrastructure
 
 **Steps**:
@@ -1520,11 +1527,25 @@ func testImageGalleryDragDrop() {
 
 **Files created**:
 - `ListAll/ListAllMacUITests/`
-- `ListAll/ListAllMacUITests/MacUITestHelpers.swift`
+- `ListAll/ListAllMacUITests/MacUITestHelpers.swift` (16KB)
+
+**Completed**:
+- Created MacUITestHelpers.swift with comprehensive macOS UI test utilities:
+  - XCUIApplication extensions for menu navigation, keyboard shortcuts, window management
+  - Wait helpers (waitForWindow, waitForSheet, waitForHittable)
+  - List and item operation helpers
+  - Accessibility testing helpers (verifyAccessibilityLabel, verifyVoiceOverNavigation)
+  - Screenshot helpers and debug utilities
+  - MacAccessibilityIdentifier constants enum
+- Updated ListAllMacUITests.swift with 20+ test methods covering:
+  - Launch, menu navigation, keyboard shortcuts
+  - List/item creation, editing, validation
+  - Settings window, context menus, accessibility
+- Build verified: TEST BUILD SUCCEEDED
 
 ---
 
-### Task 7.3: Port Existing Unit Tests
+### Task 7.3: [COMPLETED] Port Existing Unit Tests
 **TDD**: Verify test coverage
 
 **Steps**:
@@ -1536,9 +1557,20 @@ func testImageGalleryDragDrop() {
 
 2. Create macOS-specific test variants for platform code
 
+**Files created**:
+- `ListAll/ListAllMacTests/ModelTestsMac.swift` (9.4KB) - 25 Swift Testing tests
+- `ListAll/ListAllMacTests/UtilsTestsMac.swift` (6.4KB) - 24 Swift Testing tests
+
+**Completed**:
+- Ported 49 new Swift Testing tests for macOS
+- ModelTestsMac: Item, List, ItemImage model tests (all passed)
+- UtilsTestsMac: ValidationHelper, String extensions, ValidationResult tests (all passed)
+- Total macOS unit tests: ~70 tests (existing + new)
+- Fixed ExportService with dependency injection to prevent crashes on unsigned builds
+
 ---
 
-### Task 7.4: Create macOS Screenshot Tests
+### Task 7.4: [COMPLETED] Create macOS Screenshot Tests
 **TDD**: Visual regression tests
 
 **Steps**:
@@ -1548,6 +1580,23 @@ func testImageGalleryDragDrop() {
    - List detail view
    - Item detail view
    - Settings window
+
+**Files created**:
+- `ListAll/ListAllMacUITests/MacScreenshotTests.swift` (12KB)
+- `ListAll/ListAllMacUITests/MacSnapshotHelper.swift` (16KB)
+
+**Completed**:
+- Created MacSnapshotHelper.swift adapted from iOS SnapshotHelper for macOS
+  - Uses XCUIScreen.main.screenshot() for macOS
+  - Fastlane snapshot integration with proper logging
+  - NSImage PNG conversion extension
+- Created MacScreenshotTests.swift with 4 screenshot scenarios:
+  - 01_MainWindow - Main window with sidebar and detail view
+  - 02_ListDetailView - List detail with completed and active items
+  - 03_ItemEditSheet - Item editing sheet/modal
+  - 04_SettingsWindow - Settings window with tabs
+- Launch retry logic and UI readiness detection
+- Compatible with App Store screenshot requirements (1280x800 to 2880x1800)
 
 ---
 
@@ -1964,11 +2013,11 @@ ListAll/
 | Phase 4: ViewModels | Completed | 5/5 |
 | Phase 5: macOS Views | Completed | 11/11 |
 | Phase 6: Advanced Features | In Progress | 3/6 |
-| Phase 7: Testing | Not Started | 0/4 |
+| Phase 7: Testing | Completed | 4/4 |
 | Phase 8: CI/CD | Not Started | 0/5 |
 | Phase 9: App Store | Not Started | 0/5 |
 | Phase 10: Polish & Launch | Not Started | 0/8 |
 
-**Total Tasks: 57** (34 completed in Phases 1-6)
+**Total Tasks: 57** (38 completed in Phases 1-7)
 
 **Note**: Task 6.4 (Spotlight Integration) moved to Phase 10.8 as optional feature (disabled by default)

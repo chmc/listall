@@ -69,7 +69,18 @@ class ExportService: ObservableObject {
     // because App Groups require sandbox permissions
     private lazy var dataRepository: DataRepository = DataRepository()
 
-    init() {
+    // Test-injected repository (overrides lazy default if provided)
+    private var testRepository: DataRepository?
+
+    init(dataRepository: DataRepository? = nil) {
+        self.testRepository = dataRepository
+    }
+
+    // MARK: - Data Repository Access
+
+    /// Get the appropriate data repository (test or production)
+    private var repository: DataRepository {
+        return testRepository ?? dataRepository
     }
     
     // MARK: - JSON Export
@@ -78,20 +89,20 @@ class ExportService: ObservableObject {
     /// - Parameter options: Export options for customization
     /// - Returns: JSON data if successful, nil if export fails
     func exportToJSON(options: ExportOptions = .default) -> Data? {
-        let allLists = dataRepository.getAllLists()
+        let allLists = repository.getAllLists()
         let lists = filterLists(allLists, options: options)
-        
+
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            
+
             let exportData = ExportData(lists: lists.map { list in
-                var items = dataRepository.getItems(for: list)
+                var items = repository.getItems(for: list)
                 items = filterItems(items, options: options)
                 return ListExportData(from: list, items: items, includeImages: options.includeImages)
             })
-            
+
             return try encoder.encode(exportData)
         } catch {
             return nil
@@ -104,13 +115,13 @@ class ExportService: ObservableObject {
     /// - Parameter options: Export options for customization
     /// - Returns: CSV string if successful, nil if export fails
     func exportToCSV(options: ExportOptions = .default) -> String? {
-        let allLists = dataRepository.getAllLists()
+        let allLists = repository.getAllLists()
         let lists = filterLists(allLists, options: options)
         
         var csvContent = "List Name,Item Title,Description,Quantity,Crossed Out,Created Date,Modified Date,Order\n"
         
         for list in lists {
-            var items = dataRepository.getItems(for: list)
+            var items = repository.getItems(for: list)
             items = filterItems(items, options: options)
             
             // If list has no items, still add a row for the list itself
@@ -153,7 +164,7 @@ class ExportService: ObservableObject {
     /// - Parameter options: Export options for customization
     /// - Returns: Plain text string if successful, nil if export fails
     func exportToPlainText(options: ExportOptions = .default) -> String? {
-        let allLists = dataRepository.getAllLists()
+        let allLists = repository.getAllLists()
         let lists = filterLists(allLists, options: options)
         
         var textContent = "ListAll Export\n"
@@ -162,7 +173,7 @@ class ExportService: ObservableObject {
         textContent += String(repeating: "=", count: 52) + "\n\n"
         
         for list in lists {
-            var items = dataRepository.getItems(for: list)
+            var items = repository.getItems(for: list)
             items = filterItems(items, options: options)
             
             // List header
