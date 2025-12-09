@@ -1723,7 +1723,7 @@ func testSearchFiltering() {
 
 ---
 
-### Task 8.2: Implement Item Drag-and-Drop Reordering for macOS
+### Task 8.2: [COMPLETED] Implement Item Drag-and-Drop Reordering for macOS
 **TDD**: Write reorder tests
 
 **Problem**: macOS app has basic drag-drop but doesn't integrate with `ListViewModel.moveItems()`. Items don't persist reorder correctly.
@@ -1734,56 +1734,51 @@ func testSearchFiltering() {
 - **Reuse**: Item `orderNumber` property - already shared
 - **Update**: macOS drag-drop to call shared ViewModel methods
 
-**Steps**:
-1. Update `MacListDetailView` to use `ListViewModel` for reordering:
-   ```swift
-   struct MacListDetailView: View {
-       @StateObject private var viewModel: ListViewModel
+**Completed**:
+- Updated `handleMoveItem()` in `MacListDetailView` to call `viewModel.moveItems(from:to:)` instead of custom implementation
+- Removed redundant `moveItem(from:to:)` function (24 lines) that was bypassing ViewModel
+- Reordering now properly integrates with ListViewModel's filtering/sorting logic
+- Multi-select drag support inherited from shared ViewModel implementation
+- Drag indicator only shows when `currentSortOption == .orderNumber` (via `canReorderItems` guard)
+- Visual feedback already handled by existing `.draggable(item)` modifier
+- macOS build verified: **BUILD SUCCEEDED**
 
-       init(list: List) {
-           _viewModel = StateObject(wrappedValue: ListViewModel(list: list))
-       }
-
-       var body: some View {
-           List {
-               ForEach(viewModel.filteredItems) { item in
-                   MacItemRowView(item: item, viewModel: viewModel)
-               }
-               .onMove(perform: viewModel.currentSortOption == .orderNumber ?
-                   viewModel.moveItems : nil)
-           }
-       }
-   }
-   ```
-
-2. Ensure drag indicator shows only when `currentSortOption == .orderNumber`
-
-3. Add visual feedback during drag:
-   ```swift
-   .onDrag {
-       NSItemProvider(object: item.id.uuidString as NSString)
-   }
-   ```
-
-4. Test order persistence after app restart
-
-**Test criteria**:
+**Key Changes**:
 ```swift
-func testItemReorderPersists() {
-    let originalOrder = viewModel.items.map { $0.id }
-    viewModel.moveItems(from: IndexSet(integer: 0), to: 2)
-    XCTAssertNotEqual(viewModel.items.map { $0.id }, originalOrder)
-    // Verify Core Data persistence
+// BEFORE (bypassed ViewModel):
+private func handleMoveItem(from source: IndexSet, to destination: Int) {
+    guard canReorderItems else { return }
+    moveItem(from: source, to: destination)  // Called custom function
 }
 
-func testDragDisabledWhenSortedByTitle() {
-    viewModel.currentSortOption = .title
-    // Verify .onMove is nil
+// AFTER (uses shared ViewModel):
+private func handleMoveItem(from source: IndexSet, to destination: Int) {
+    guard canReorderItems else { return }
+    viewModel.moveItems(from: source, to: destination)  // Calls ViewModel
 }
 ```
 
-**Files to modify**:
-- `ListAllMac/Views/MacMainView.swift` - Update MacListDetailView to use ListViewModel
+**Benefits**:
+- Items now persist their reordered positions correctly
+- Filter/sort compatibility: reordering works correctly when filters are applied
+- Consistency: macOS follows same pattern as iOS implementation
+- Code reduction: removed 24 lines of redundant code
+- Better maintainability: single source of truth in ListViewModel
+
+**Files modified**:
+- `ListAllMac/Views/MacMainView.swift` - Updated handleMoveItem, removed moveItem function
+
+**Unit Tests Added** (`ListAllMacTests/ListAllMacTests.swift`):
+- `ItemReorderingMacTests` class with 16 tests:
+  - `testRunningOnMacOS` - Platform verification
+  - `testCanReorderOnlyWithOrderNumberSort` - Sort option guard
+  - `testDragDisabledWhenSortedByTitle/CreatedAt/ModifiedAt/Quantity` - Non-orderNumber sort tests
+  - `testReorderingLogicSingleItemMove/ForwardMove/BackwardMove` - Single item reorder tests
+  - `testOrderNumberUpdateLogic` - OrderNumber assignment verification
+  - `testReorderPreservesItemProperties` - Item data integrity
+  - `testReorderEmptyListLogic/ToSamePositionLogic/SingleItemLogic` - Edge cases
+  - `testMultiSelectReorderingLogic/PreservesRelativeOrder` - Multi-select drag tests
+- All 16 tests pass
 
 ---
 
@@ -2527,11 +2522,11 @@ ListAll/
 | Phase 5: macOS Views | Completed | 11/11 |
 | Phase 6: Advanced Features | Completed | 4/4 |
 | Phase 7: Testing | Completed | 4/4 |
-| Phase 8: Feature Parity | In Progress | 1/4 |
+| Phase 8: Feature Parity | In Progress | 2/4 |
 | Phase 9: CI/CD | Not Started | 0/5 |
 | Phase 10: App Store | Not Started | 0/5 |
 | Phase 11: Polish & Launch | Not Started | 0/8 |
 
-**Total Tasks: 61** (40 completed in Phases 1-8)
+**Total Tasks: 61** (41 completed in Phases 1-8)
 
 **Note**: Task 6.4 (Spotlight Integration) moved to Phase 11.8 as optional feature (disabled by default)

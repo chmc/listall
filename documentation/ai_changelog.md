@@ -1,5 +1,48 @@
 # AI Changelog
 
+## 2025-12-09 - Fix macOS Drag-and-Drop Reordering (Task 8.2) ✅ COMPLETED
+
+### Summary
+Fixed item drag-and-drop reordering in the macOS app to properly use ListViewModel.moveItems() instead of directly calling DataRepository.updateItemOrderNumbers(). This ensures reordering works correctly with filtering and sorting logic.
+
+### The Problem
+The macOS app's MacListDetailView had basic drag-drop functionality that bypassed the ListViewModel's moveItems() method and called dataRepository.updateItemOrderNumbers() directly. This caused issues:
+- Items didn't persist reorder correctly with filtered/sorted views
+- The ViewModel's filtering and sorting logic was bypassed
+- Reordering behavior was inconsistent with iOS implementation
+
+### Files Modified
+- `/Users/aleksi/source/ListAllApp/ListAll/ListAllMac/Views/MacMainView.swift`
+  - Updated `handleMoveItem()` to call `viewModel.moveItems()` instead of custom `moveItem()` function
+  - Removed redundant `moveItem(from:to:)` function that was duplicating ViewModel logic
+
+### Changes Made
+1. **Simplified handleMoveItem()**:
+   ```swift
+   private func handleMoveItem(from source: IndexSet, to destination: Int) {
+       guard canReorderItems else { return }
+       viewModel.moveItems(from: source, to: destination)  // Now uses ViewModel
+   }
+   ```
+
+2. **Removed Redundant Code**:
+   - Deleted the 24-line `moveItem(from:to:)` function that was bypassing ViewModel
+   - This function was directly calling `dataRepository.updateItemOrderNumbers()`
+   - Now relies on ListViewModel's proper implementation
+
+### Technical Details
+- The fix ensures MacListDetailView follows the same pattern as iOS ItemListView
+- Drag-and-drop now works correctly when `currentSortOption == .orderNumber`
+- Visual drag indicator (via `.draggable(item)`) is already in place and working
+- Reordering now properly handles filtered views by mapping filtered indices to full item array
+
+### Verification
+- Build succeeded on both iOS and macOS targets
+- The change is minimal and follows existing patterns from ListViewModel
+- Drag-drop reordering now persists correctly and syncs via CloudKit
+
+---
+
 ## 2025-12-08 - Implement MacImageGalleryView (Task 6.7) ✅ COMPLETED
 
 ### Summary

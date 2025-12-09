@@ -654,7 +654,7 @@ private struct MacListDetailView: View {
 
     private func handleMoveItem(from source: IndexSet, to destination: Int) {
         guard canReorderItems else { return }
-        moveItem(from: source, to: destination)
+        viewModel.moveItems(from: source, to: destination)
     }
 
     private func makeItemRow(item: Item) -> some View {
@@ -850,31 +850,6 @@ private struct MacListDetailView: View {
         return didMoveAny
     }
 
-    /// Handle item reordering within this list via drag-and-drop
-    private func moveItem(from source: IndexSet, to destination: Int) {
-        // Get current order
-        var reorderedItems = items
-
-        // Perform the move
-        reorderedItems.move(fromOffsets: source, toOffset: destination)
-
-        // Update order numbers - must modify array elements directly (value types!)
-        for index in reorderedItems.indices {
-            reorderedItems[index].orderNumber = index
-            reorderedItems[index].modifiedAt = Date()
-        }
-
-        print("📦 Reordering items: \(reorderedItems.map { "\($0.title):\($0.orderNumber)" })")
-
-        // Persist the new order using DataRepository
-        if let targetList = currentList {
-            dataRepository.updateItemOrderNumbers(for: targetList, items: reorderedItems)
-        }
-
-        dataManager.loadData()
-
-        print("📦 Reordered items within list via drag-and-drop")
-    }
 }
 
 // MARK: - Item Row View
