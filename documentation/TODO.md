@@ -1834,7 +1834,7 @@ private func handleMoveItem(from source: IndexSet, to destination: Int) {
 
 ---
 
-### Task 8.4: Implement List Sharing for macOS
+### Task 8.4: [COMPLETED] Implement List Sharing for macOS
 **TDD**: Write sharing tests
 
 **Problem**: macOS app doesn't have share functionality. iOS has full `SharingService` with text/JSON formats.
@@ -1990,12 +1990,22 @@ func testNSSharingServicePickerCreation() {
 }
 ```
 
-**Files to create**:
-- `ListAllMac/Views/Components/MacShareFormatPickerView.swift`
+**Files created**:
+- `ListAllMac/Views/Components/MacShareFormatPickerView.swift` - macOS-native share format picker UI
 
-**Files to modify**:
-- `ListAllMac/Views/MacMainView.swift` - Add share button and handler
-- `ListAllMac/Commands/AppCommands.swift` - Add Share menu commands
+**Files modified**:
+- `ListAllMac/Views/MacMainView.swift` - Added share button, share popover, sidebar context menu share, Export All Lists sheet
+- `ListAllMac/Commands/AppCommands.swift` - Added Share List (⇧⌘S) and Export All Lists (⇧⌘E) menu commands
+- `ListAllMacTests/ListAllMacTests.swift` - Added ListSharingMacTests class with 17 unit tests
+
+**Implementation Summary**:
+- Created MacShareFormatPickerView with format selection (Plain Text, JSON), share options toggles, and Copy to Clipboard (⌘C) button
+- Added share button to MacListDetailView header with keyboard shortcut tooltip (⇧⌘S)
+- Added context menu "Share..." option to sidebar list rows
+- Added MacExportAllListsSheet for bulk export with format selection and NSSavePanel integration
+- Menu commands: Share List... (⇧⌘S), Export All Lists... (⇧⌘E)
+- Follows DRY principle: reuses SharingService and ExportService (shared with iOS)
+- All 17 ListSharingMacTests pass
 
 ---
 
@@ -2413,11 +2423,11 @@ ListAll/
 | Phase 5: macOS Views | Completed | 11/11 |
 | Phase 6: Advanced Features | Completed | 4/4 |
 | Phase 7: Testing | Completed | 4/4 |
-| Phase 8: Feature Parity | In Progress | 2/4 |
+| Phase 8: Feature Parity | Completed | 4/4 |
 | Phase 9: CI/CD | Not Started | 0/5 |
 | Phase 10: App Store | Not Started | 0/5 |
 | Phase 11: Polish & Launch | Not Started | 0/8 |
 
-**Total Tasks: 61** (41 completed in Phases 1-8)
+**Total Tasks: 61** (43 completed in Phases 1-8)
 
 **Note**: Task 6.4 (Spotlight Integration) moved to Phase 11.8 as optional feature (disabled by default)

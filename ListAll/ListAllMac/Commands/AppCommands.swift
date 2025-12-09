@@ -51,6 +51,24 @@ struct AppCommands: Commands {
 
             Divider()
 
+            Button("Share List...") {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShareSelectedList"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut("s", modifiers: [.command, .shift])
+
+            Button("Export All Lists...") {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ExportAllLists"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+
+            Divider()
+
             Button("Show Archived Lists") {
                 NotificationCenter.default.post(
                     name: NSNotification.Name("ToggleArchivedLists"),

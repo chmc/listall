@@ -24,6 +24,8 @@ struct MacMainView: View {
     // Menu command observers
     @State private var showingCreateListSheet = false
     @State private var showingArchivedLists = false
+    @State private var showingSharePopover = false
+    @State private var showingExportAllSheet = false
 
     // MARK: - CloudKit Sync Polling (macOS fallback)
     // Apple's CloudKit notifications on macOS can be unreliable when the app is frontmost.
@@ -190,6 +192,26 @@ struct MacMainView: View {
                 HandoffService.shared.startBrowsingListsActivity()
             }
         }
+        // Share menu command handlers
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShareSelectedList"))) { _ in
+            if selectedList != nil {
+                showingSharePopover = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ExportAllLists"))) { _ in
+            showingExportAllSheet = true
+        }
+        .sheet(isPresented: $showingSharePopover) {
+            if let list = selectedList {
+                MacShareFormatPickerView(
+                    list: list,
+                    onDismiss: { showingSharePopover = false }
+                )
+            }
+        }
+        .sheet(isPresented: $showingExportAllSheet) {
+            MacExportAllListsSheet(onDismiss: { showingExportAllSheet = false })
+        }
     }
 
     // MARK: - Sync Polling Methods
@@ -282,6 +304,10 @@ private struct MacSidebarView: View {
     let onCreateList: () -> Void
     let onDeleteList: (List) -> Void
 
+    // State for share popover from context menu
+    @State private var listToShare: List?
+    @State private var showingSharePopover = false
+
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
 
@@ -325,6 +351,10 @@ private struct MacSidebarView: View {
                         handleItemDrop(droppedItems, to: list)
                     }
                     .contextMenu {
+                        Button("Share...") {
+                            shareListFromSidebar(list)
+                        }
+                        Divider()
                         Button("Delete") {
                             onDeleteList(list)
                         }
@@ -352,6 +382,17 @@ private struct MacSidebarView: View {
                 Button(action: onCreateList) {
                     Label("Add List", systemImage: "plus")
                 }
+            }
+        }
+        .sheet(isPresented: $showingSharePopover) {
+            if let list = listToShare {
+                MacShareFormatPickerView(
+                    list: list,
+                    onDismiss: {
+                        showingSharePopover = false
+                        listToShare = nil
+                    }
+                )
             }
         }
     }
@@ -407,6 +448,12 @@ private struct MacSidebarView: View {
 
         print("📦 Reordered lists via drag-and-drop")
     }
+
+    /// Shows share popover for a list from sidebar context menu
+    private func shareListFromSidebar(_ list: List) {
+        listToShare = list
+        showingSharePopover = true
+    }
 }
 
 // MARK: - List Detail View
@@ -425,6 +472,9 @@ private struct MacListDetailView: View {
 
     // State for filter/sort popover
     @State private var showingOrganizationPopover = false
+
+    // State for share popover
+    @State private var showingSharePopover = false
 
     // State for Quick Look
     @State private var quickLookItem: Item?
@@ -478,9 +528,25 @@ private struct MacListDetailView: View {
 
             searchFieldView
             filterSortButton
+            shareButton
             editListButton
         }
         .padding()
+    }
+
+    @ViewBuilder
+    private var shareButton: some View {
+        Button(action: { showingSharePopover.toggle() }) {
+            Image(systemName: "square.and.arrow.up")
+        }
+        .buttonStyle(.plain)
+        .help("Share List (⇧⌘S)")
+        .popover(isPresented: $showingSharePopover) {
+            MacShareFormatPickerView(
+                list: currentList ?? list,
+                onDismiss: { showingSharePopover = false }
+            )
+        }
     }
 
     @ViewBuilder
@@ -1444,6 +1510,167 @@ private struct MacCreateListSheet: View {
         }
         .padding(30)
         .frame(minWidth: 350)
+    }
+}
+
+// MARK: - Export All Lists Sheet
+
+private struct MacExportAllListsSheet: View {
+    let onDismiss: () -> Void
+
+    @State private var selectedFormat: ShareFormat = .json
+    @State private var exportOptions: ExportOptions = .default
+    @State private var exportError: String?
+
+    private let sharingService = SharingService()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack {
+                Text("Export All Lists")
+                    .font(.headline)
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Divider()
+
+            // Format Selection
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Format")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Picker("Format", selection: $selectedFormat) {
+                    Text("JSON").tag(ShareFormat.json)
+                    Text("Plain Text").tag(ShareFormat.plainText)
+                }
+                .pickerStyle(.radioGroup)
+            }
+
+            Divider()
+
+            // Options
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Options")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Toggle("Include crossed-out items", isOn: $exportOptions.includeCrossedOutItems)
+                Toggle("Include archived lists", isOn: $exportOptions.includeArchivedLists)
+                Toggle("Include images", isOn: $exportOptions.includeImages)
+                    .disabled(selectedFormat == .plainText)
+                    .help(selectedFormat == .plainText ? "Images cannot be included in plain text format" : "Include item images in export")
+            }
+
+            // Error display
+            if let error = exportError {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Divider()
+
+            // Actions
+            HStack {
+                Button("Copy to Clipboard") {
+                    copyAllToClipboard()
+                }
+                .buttonStyle(.bordered)
+
+                Spacer()
+
+                Button("Cancel") {
+                    onDismiss()
+                }
+                .keyboardShortcut(.escape)
+
+                Button("Export...") {
+                    exportToFile()
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding()
+        .frame(width: 360)
+    }
+
+    private func copyAllToClipboard() {
+        exportError = nil
+
+        guard let result = sharingService.shareAllData(format: selectedFormat, exportOptions: exportOptions) else {
+            exportError = sharingService.shareError ?? "Failed to export data"
+            return
+        }
+
+        let success: Bool
+        if let text = result.content as? String {
+            success = sharingService.copyToClipboard(text: text)
+        } else if let nsString = result.content as? NSString {
+            success = sharingService.copyToClipboard(text: nsString as String)
+        } else if let url = result.content as? URL,
+                  let data = try? Data(contentsOf: url),
+                  let text = String(data: data, encoding: .utf8) {
+            success = sharingService.copyToClipboard(text: text)
+        } else {
+            exportError = "Unknown content type"
+            return
+        }
+
+        if success {
+            onDismiss()
+        } else {
+            exportError = "Failed to copy to clipboard"
+        }
+    }
+
+    private func exportToFile() {
+        exportError = nil
+
+        guard let result = sharingService.shareAllData(format: selectedFormat, exportOptions: exportOptions) else {
+            exportError = sharingService.shareError ?? "Failed to export data"
+            return
+        }
+
+        // Show save panel
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = selectedFormat == .json ?
+            [.json] : [.plainText]
+        savePanel.nameFieldStringValue = result.fileName ?? "ListAll-Export"
+        savePanel.canCreateDirectories = true
+
+        savePanel.begin { response in
+            guard response == .OK, let url = savePanel.url else { return }
+
+            do {
+                if let sourceURL = result.content as? URL {
+                    try FileManager.default.copyItem(at: sourceURL, to: url)
+                } else if let text = result.content as? String {
+                    try text.write(to: url, atomically: true, encoding: .utf8)
+                } else if let nsString = result.content as? NSString {
+                    try (nsString as String).write(to: url, atomically: true, encoding: .utf8)
+                }
+
+                DispatchQueue.main.async {
+                    onDismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    exportError = "Failed to save file: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 }
 
