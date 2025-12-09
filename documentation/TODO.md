@@ -26,9 +26,10 @@ Mark task titles with status indicators:
 6. [Phase 5: macOS-Specific Views](#phase-5-macos-specific-views)
 7. [Phase 6: Advanced Features](#phase-6-advanced-features)
 8. [Phase 7: Testing Infrastructure](#phase-7-testing-infrastructure)
-9. [Phase 8: CI/CD Pipeline](#phase-8-cicd-pipeline)
-10. [Phase 9: App Store Preparation](#phase-9-app-store-preparation)
-11. [Phase 10: Polish & Launch](#phase-10-polish--launch)
+9. [Phase 8: Feature Parity with iOS](#phase-8-feature-parity-with-ios)
+10. [Phase 9: CI/CD Pipeline](#phase-9-cicd-pipeline)
+11. [Phase 10: App Store Preparation](#phase-10-app-store-preparation)
+12. [Phase 11: Polish & Launch](#phase-11-polish--launch)
 
 ---
 
@@ -1600,9 +1601,503 @@ func testImageGalleryDragDrop() {
 
 ---
 
-## Phase 8: CI/CD Pipeline
+## Phase 8: Feature Parity with iOS
 
-### Task 8.1: Update ci.yml for macOS Builds
+This phase ports missing iOS features to macOS following the DRY principle - reusing shared ViewModels and Services where possible.
+
+### Task 8.1: Implement Item Filtering UI for macOS
+**TDD**: Write filter UI tests
+
+**Problem**: macOS app displays all items without filter/sort controls. iOS has full `ItemOrganizationView` with 5 filter options.
+
+**DRY Approach**:
+- **Reuse**: `ListViewModel.filteredItems`, `applyFilter()`, `applySearch()`, `applySorting()` - already shared
+- **Reuse**: `ItemFilterOption`, `ItemSortOption`, `SortDirection` enums - already shared
+- **Create**: macOS-specific `MacItemOrganizationView.swift` (UI only, no logic duplication)
+
+**Steps**:
+1. Create `ListAllMac/Views/Components/MacItemOrganizationView.swift`:
+   ```swift
+   struct MacItemOrganizationView: View {
+       @ObservedObject var viewModel: ListViewModel
+
+       var body: some View {
+           VStack(alignment: .leading, spacing: 12) {
+               // Sort Section
+               Section {
+                   ForEach(ItemSortOption.allCases) { option in
+                       SortOptionButton(option: option, viewModel: viewModel)
+                   }
+               } header: {
+                   Label("Sorting", systemImage: "arrow.up.arrow.down")
+               }
+
+               Divider()
+
+               // Filter Section
+               Section {
+                   ForEach(ItemFilterOption.allCases) { option in
+                       FilterOptionButton(option: option, viewModel: viewModel)
+                   }
+               } header: {
+                   Label("Filtering", systemImage: "line.3.horizontal.decrease")
+               }
+
+               // Drag-to-reorder indicator
+               if viewModel.currentSortOption == .orderNumber {
+                   HStack {
+                       Image(systemName: "hand.draw")
+                           .foregroundColor(.green)
+                       Text("Drag-to-reorder enabled")
+                           .font(.caption)
+                   }
+               }
+           }
+       }
+   }
+   ```
+
+2. Add filter/sort popover button to `MacListDetailView` toolbar:
+   ```swift
+   .toolbar {
+       ToolbarItem {
+           Button(action: { showingOrganization.toggle() }) {
+               Image(systemName: "arrow.up.arrow.down")
+           }
+           .popover(isPresented: $showingOrganization) {
+               MacItemOrganizationView(viewModel: viewModel)
+                   .padding()
+                   .frame(width: 280)
+           }
+       }
+   }
+   ```
+
+3. Update `MacListDetailView` to use `viewModel.filteredItems` instead of direct items
+
+4. Add search field to toolbar (reuses `ListViewModel.searchText`)
+
+**Test criteria**:
+```swift
+func testFilterOptionsDisplayed() {
+    // Verify all 5 filter options render
+    XCTAssertEqual(ItemFilterOption.allCases.count, 5)
+}
+
+func testFilterAppliesCorrectly() {
+    viewModel.updateFilterOption(.completed)
+    XCTAssertTrue(viewModel.filteredItems.allSatisfy { $0.isCrossedOut })
+}
+
+func testSearchFiltering() {
+    viewModel.searchText = "Milk"
+    XCTAssertTrue(viewModel.filteredItems.allSatisfy {
+        $0.title.localizedCaseInsensitiveContains("Milk")
+    })
+}
+```
+
+**Files to create**:
+- `ListAllMac/Views/Components/MacItemOrganizationView.swift`
+
+**Files to modify**:
+- `ListAllMac/Views/MacMainView.swift` - Add toolbar button and use filteredItems
+
+---
+
+### Task 8.2: Implement Item Drag-and-Drop Reordering for macOS
+**TDD**: Write reorder tests
+
+**Problem**: macOS app has basic drag-drop but doesn't integrate with `ListViewModel.moveItems()`. Items don't persist reorder correctly.
+
+**DRY Approach**:
+- **Reuse**: `ListViewModel.moveItems(from:to:)` - already shared
+- **Reuse**: `DataRepository.reorderItems()` - already shared
+- **Reuse**: Item `orderNumber` property - already shared
+- **Update**: macOS drag-drop to call shared ViewModel methods
+
+**Steps**:
+1. Update `MacListDetailView` to use `ListViewModel` for reordering:
+   ```swift
+   struct MacListDetailView: View {
+       @StateObject private var viewModel: ListViewModel
+
+       init(list: List) {
+           _viewModel = StateObject(wrappedValue: ListViewModel(list: list))
+       }
+
+       var body: some View {
+           List {
+               ForEach(viewModel.filteredItems) { item in
+                   MacItemRowView(item: item, viewModel: viewModel)
+               }
+               .onMove(perform: viewModel.currentSortOption == .orderNumber ?
+                   viewModel.moveItems : nil)
+           }
+       }
+   }
+   ```
+
+2. Ensure drag indicator shows only when `currentSortOption == .orderNumber`
+
+3. Add visual feedback during drag:
+   ```swift
+   .onDrag {
+       NSItemProvider(object: item.id.uuidString as NSString)
+   }
+   ```
+
+4. Test order persistence after app restart
+
+**Test criteria**:
+```swift
+func testItemReorderPersists() {
+    let originalOrder = viewModel.items.map { $0.id }
+    viewModel.moveItems(from: IndexSet(integer: 0), to: 2)
+    XCTAssertNotEqual(viewModel.items.map { $0.id }, originalOrder)
+    // Verify Core Data persistence
+}
+
+func testDragDisabledWhenSortedByTitle() {
+    viewModel.currentSortOption = .title
+    // Verify .onMove is nil
+}
+```
+
+**Files to modify**:
+- `ListAllMac/Views/MacMainView.swift` - Update MacListDetailView to use ListViewModel
+
+---
+
+### Task 8.3: Implement Intelligent Item Suggestions for macOS
+**TDD**: Write suggestion tests
+
+**Problem**: macOS app doesn't show item suggestions when typing in add/edit item sheets. iOS has full `SuggestionService` with fuzzy matching.
+
+**DRY Approach**:
+- **Reuse**: `SuggestionService` - 100% shared (no platform-specific code)
+- **Reuse**: `ItemSuggestion` model - already shared
+- **Create**: macOS-specific `MacSuggestionListView.swift` (UI only)
+
+**Steps**:
+1. Add `SuggestionService.swift` to ListAllMac target membership
+
+2. Create `ListAllMac/Views/Components/MacSuggestionListView.swift`:
+   ```swift
+   struct MacSuggestionListView: View {
+       let suggestions: [ItemSuggestion]
+       let onSuggestionTapped: (ItemSuggestion) -> Void
+       @State private var showAllSuggestions = false
+
+       var body: some View {
+           VStack(alignment: .leading, spacing: 4) {
+               HStack {
+                   Text("Suggestions (\(suggestions.count))")
+                       .font(.caption)
+                       .foregroundColor(.secondary)
+                   Spacer()
+                   if suggestions.count > 3 {
+                       Button(showAllSuggestions ? "Show Top 3" : "Show All") {
+                           showAllSuggestions.toggle()
+                       }
+                       .buttonStyle(.plain)
+                       .font(.caption)
+                   }
+               }
+
+               ForEach(displayedSuggestions) { suggestion in
+                   MacSuggestionRowView(suggestion: suggestion) {
+                       onSuggestionTapped(suggestion)
+                   }
+               }
+           }
+           .padding(8)
+           .background(Color(NSColor.controlBackgroundColor))
+           .cornerRadius(8)
+       }
+
+       private var displayedSuggestions: [ItemSuggestion] {
+           showAllSuggestions ? suggestions : Array(suggestions.prefix(3))
+       }
+   }
+   ```
+
+3. Create `MacSuggestionRowView` with score indicators:
+   ```swift
+   struct MacSuggestionRowView: View {
+       let suggestion: ItemSuggestion
+       let onTapped: () -> Void
+
+       var body: some View {
+           Button(action: onTapped) {
+               HStack {
+                   // Score icon
+                   Image(systemName: scoreIcon)
+                       .foregroundColor(scoreColor)
+
+                   VStack(alignment: .leading) {
+                       Text(suggestion.title)
+                       if let desc = suggestion.description {
+                           Text(desc)
+                               .font(.caption)
+                               .foregroundColor(.secondary)
+                               .lineLimit(1)
+                       }
+                   }
+
+                   Spacer()
+
+                   // Frequency badge
+                   if suggestion.frequency > 1 {
+                       Text("\(suggestion.frequency)×")
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                   }
+               }
+           }
+           .buttonStyle(.plain)
+       }
+   }
+   ```
+
+4. Integrate into `MacAddItemSheet` and `MacEditItemSheet`:
+   ```swift
+   @StateObject private var suggestionService = SuggestionService.shared
+   @State private var showingSuggestions = false
+
+   TextField("Item name", text: $title)
+       .onChange(of: title) { newValue in
+           if newValue.count >= 2 {
+               suggestionService.getSuggestions(for: newValue, in: list)
+               showingSuggestions = true
+           } else {
+               showingSuggestions = false
+           }
+       }
+
+   if showingSuggestions && !suggestionService.suggestions.isEmpty {
+       MacSuggestionListView(
+           suggestions: suggestionService.suggestions,
+           onSuggestionTapped: applySuggestion
+       )
+   }
+   ```
+
+5. Implement `applySuggestion()` to populate fields:
+   ```swift
+   private func applySuggestion(_ suggestion: ItemSuggestion) {
+       title = suggestion.title
+       if let desc = suggestion.description {
+           notes = desc
+       }
+       quantity = suggestion.quantity
+       showingSuggestions = false
+       suggestionService.clearSuggestions()
+   }
+   ```
+
+**Test criteria**:
+```swift
+func testSuggestionServiceShared() {
+    let service = SuggestionService.shared
+    XCTAssertNotNil(service)
+}
+
+func testSuggestionsAppearAfterTwoCharacters() {
+    suggestionService.getSuggestions(for: "Mi", in: testList)
+    // Verify suggestions contain items starting with "Mi"
+}
+
+func testFuzzyMatchingWorks() {
+    suggestionService.getSuggestions(for: "Banan", in: testList)
+    // Should match "Banana" via Levenshtein distance
+}
+
+func testApplySuggestionPopulatesFields() {
+    let suggestion = ItemSuggestion(title: "Milk", quantity: 2, ...)
+    applySuggestion(suggestion)
+    XCTAssertEqual(title, "Milk")
+    XCTAssertEqual(quantity, 2)
+}
+```
+
+**Files to create**:
+- `ListAllMac/Views/Components/MacSuggestionListView.swift`
+
+**Files to modify**:
+- `ListAllMac/Views/MacMainView.swift` - Integrate suggestions into add/edit sheets
+- `ListAll.xcodeproj/project.pbxproj` - Add SuggestionService to macOS target
+
+---
+
+### Task 8.4: Implement List Sharing for macOS
+**TDD**: Write sharing tests
+
+**Problem**: macOS app doesn't have share functionality. iOS has full `SharingService` with text/JSON formats.
+
+**DRY Approach**:
+- **Reuse**: `SharingService` - already has macOS support (`#if canImport(AppKit)`)
+- **Reuse**: `ShareFormat`, `ShareOptions`, `ShareResult` - already shared
+- **Reuse**: `ExportService` - already has macOS support
+- **Create**: macOS-specific `MacShareFormatPickerView.swift` (UI only)
+
+**Steps**:
+1. Verify `SharingService.swift` is in ListAllMac target membership
+
+2. Create `ListAllMac/Views/Components/MacShareFormatPickerView.swift`:
+   ```swift
+   struct MacShareFormatPickerView: View {
+       @Binding var selectedFormat: ShareFormat
+       @Binding var shareOptions: ShareOptions
+       let onShare: (ShareFormat, ShareOptions) -> Void
+       let onCancel: () -> Void
+
+       var body: some View {
+           VStack(alignment: .leading, spacing: 16) {
+               Text("Share List")
+                   .font(.headline)
+
+               // Format Selection
+               Section("Format") {
+                   ForEach([ShareFormat.plainText, .json], id: \.self) { format in
+                       FormatOptionRow(
+                           format: format,
+                           isSelected: selectedFormat == format
+                       ) {
+                           selectedFormat = format
+                       }
+                   }
+               }
+
+               Divider()
+
+               // Options
+               Section("Options") {
+                   Toggle("Include crossed-out items", isOn: $shareOptions.includeCrossedOutItems)
+                   Toggle("Include descriptions", isOn: $shareOptions.includeDescriptions)
+                   Toggle("Include quantities", isOn: $shareOptions.includeQuantities)
+                   if selectedFormat == .json {
+                       Toggle("Include images", isOn: $shareOptions.includeImages)
+                   }
+               }
+
+               Divider()
+
+               // Presets
+               HStack {
+                   Button("Default Options") {
+                       shareOptions = .default
+                   }
+                   Button("Minimal") {
+                       shareOptions = .minimal
+                   }
+               }
+
+               Divider()
+
+               // Actions
+               HStack {
+                   Button("Cancel", action: onCancel)
+                       .keyboardShortcut(.escape)
+                   Spacer()
+                   Button("Share") {
+                       onShare(selectedFormat, shareOptions)
+                   }
+                   .keyboardShortcut(.return)
+                   .buttonStyle(.borderedProminent)
+               }
+           }
+           .padding()
+           .frame(width: 320)
+       }
+   }
+   ```
+
+3. Add share button to `MacListDetailView` toolbar:
+   ```swift
+   ToolbarItem {
+       Button(action: { showingSharePicker = true }) {
+           Image(systemName: "square.and.arrow.up")
+       }
+       .popover(isPresented: $showingSharePicker) {
+           MacShareFormatPickerView(
+               selectedFormat: $selectedShareFormat,
+               shareOptions: $shareOptions,
+               onShare: handleShare,
+               onCancel: { showingSharePicker = false }
+           )
+       }
+   }
+   ```
+
+4. Implement share handler using `NSSharingServicePicker`:
+   ```swift
+   private func handleShare(format: ShareFormat, options: ShareOptions) {
+       guard let result = sharingService.shareList(list, format: format, options: options) else {
+           return
+       }
+
+       showingSharePicker = false
+
+       // Use NSSharingServicePicker for native macOS sharing
+       if let content = result.content as? String {
+           let picker = NSSharingServicePicker(items: [content])
+           // Present picker anchored to share button
+       } else if let fileURL = result.content as? URL {
+           let picker = NSSharingServicePicker(items: [fileURL])
+           // Present picker
+       }
+   }
+   ```
+
+5. Add context menu share option to list rows in sidebar:
+   ```swift
+   .contextMenu {
+       Button("Share...") {
+           // Show share picker for this list
+       }
+   }
+   ```
+
+6. Add "Share All Lists" to File menu via `AppCommands.swift`
+
+**Test criteria**:
+```swift
+func testSharingServiceAvailableOnMacOS() {
+    let service = SharingService.shared
+    XCTAssertNotNil(service)
+}
+
+func testShareListAsPlainText() {
+    let result = sharingService.shareList(testList, format: .plainText, options: .default)
+    XCTAssertNotNil(result)
+    XCTAssertTrue((result?.content as? String)?.contains(testList.name) ?? false)
+}
+
+func testShareListAsJSON() {
+    let result = sharingService.shareList(testList, format: .json, options: .default)
+    XCTAssertNotNil(result)
+    // Verify JSON structure
+}
+
+func testNSSharingServicePickerCreation() {
+    let picker = sharingService.createSharingServicePicker(for: [testList], format: .plainText)
+    XCTAssertNotNil(picker)
+}
+```
+
+**Files to create**:
+- `ListAllMac/Views/Components/MacShareFormatPickerView.swift`
+
+**Files to modify**:
+- `ListAllMac/Views/MacMainView.swift` - Add share button and handler
+- `ListAllMac/Commands/AppCommands.swift` - Add Share menu commands
+
+---
+
+## Phase 9: CI/CD Pipeline
+
+### Task 9.1: Update ci.yml for macOS Builds
 **TDD**: CI verification
 
 **Steps**:
@@ -1637,7 +2132,7 @@ func testImageGalleryDragDrop() {
 
 ---
 
-### Task 8.2: Update release.yml for macOS TestFlight
+### Task 9.2: Update release.yml for macOS TestFlight
 **TDD**: Release pipeline verification
 
 **Steps**:
@@ -1664,7 +2159,7 @@ func testImageGalleryDragDrop() {
 
 ---
 
-### Task 8.3: Create macOS Screenshot Workflow
+### Task 9.3: Create macOS Screenshot Workflow
 **TDD**: Screenshot automation verification
 
 **Steps**:
@@ -1684,7 +2179,7 @@ func testImageGalleryDragDrop() {
 
 ---
 
-### Task 8.4: Update Fastfile for macOS Delivery
+### Task 9.4: Update Fastfile for macOS Delivery
 **TDD**: Delivery verification
 
 **Steps**:
@@ -1711,7 +2206,7 @@ func testImageGalleryDragDrop() {
 
 ---
 
-### Task 8.5: Update Matchfile for macOS Certificates
+### Task 9.5: Update Matchfile for macOS Certificates
 **TDD**: Signing verification
 
 **Steps**:
@@ -1723,9 +2218,9 @@ func testImageGalleryDragDrop() {
 
 ---
 
-## Phase 9: App Store Preparation
+## Phase 10: App Store Preparation
 
-### Task 9.1: Create macOS App Icon
+### Task 10.1: Create macOS App Icon
 **TDD**: Asset validation
 
 **Steps**:
@@ -1735,7 +2230,7 @@ func testImageGalleryDragDrop() {
 
 ---
 
-### Task 9.2: Create macOS Screenshots
+### Task 10.2: Create macOS Screenshots
 **TDD**: Screenshot validation
 
 **Steps**:
@@ -1751,7 +2246,7 @@ App Store requires:
 
 ---
 
-### Task 9.3: Create macOS App Store Metadata
+### Task 10.3: Create macOS App Store Metadata
 **TDD**: Metadata validation
 
 **Steps**:
@@ -1774,7 +2269,7 @@ App Store requires:
 
 ---
 
-### Task 9.4: Configure macOS App Store Categories
+### Task 10.4: Configure macOS App Store Categories
 **TDD**: Category validation
 
 **Steps**:
@@ -1784,7 +2279,7 @@ App Store requires:
 
 ---
 
-### Task 9.5: Create macOS Privacy Policy Page
+### Task 10.5: Create macOS Privacy Policy Page
 **TDD**: URL validation
 
 **Steps**:
@@ -1793,9 +2288,9 @@ App Store requires:
 
 ---
 
-## Phase 10: Polish & Launch
+## Phase 11: Polish & Launch
 
-### Task 10.1: Implement macOS-Specific Keyboard Navigation
+### Task 11.1: Implement macOS-Specific Keyboard Navigation
 **TDD**: Accessibility tests
 
 **Steps**:
@@ -1806,7 +2301,7 @@ App Store requires:
 
 ---
 
-### Task 10.2: Implement VoiceOver Support
+### Task 11.2: Implement VoiceOver Support
 **TDD**: VoiceOver tests
 
 **Steps**:
@@ -1816,7 +2311,7 @@ App Store requires:
 
 ---
 
-### Task 10.3: Implement Dark Mode Support
+### Task 11.3: Implement Dark Mode Support
 **TDD**: Appearance tests
 
 **Steps**:
@@ -1826,7 +2321,7 @@ App Store requires:
 
 ---
 
-### Task 10.4: Performance Optimization
+### Task 11.4: Performance Optimization
 **TDD**: Performance benchmarks
 
 **Steps**:
@@ -1836,7 +2331,7 @@ App Store requires:
 
 ---
 
-### Task 10.5: Memory Leak Testing
+### Task 11.5: Memory Leak Testing
 **TDD**: Memory tests
 
 **Steps**:
@@ -1846,7 +2341,7 @@ App Store requires:
 
 ---
 
-### Task 10.6: Final Integration Testing
+### Task 11.6: Final Integration Testing
 **TDD**: End-to-end tests
 
 **Steps**:
@@ -1856,7 +2351,7 @@ App Store requires:
 
 ---
 
-### Task 10.7: Submit to App Store
+### Task 11.7: Submit to App Store
 **TDD**: Submission verification
 
 **Steps**:
@@ -1869,7 +2364,7 @@ App Store requires:
 
 ---
 
-### Task 10.8: Implement Spotlight Integration (Optional)
+### Task 11.8: Implement Spotlight Integration (Optional)
 **TDD**: Write Spotlight indexing tests
 
 **Priority**: Low - Optional feature, disabled by default
@@ -2012,12 +2507,13 @@ ListAll/
 | Phase 3: Services Layer | Completed | 7/7 |
 | Phase 4: ViewModels | Completed | 5/5 |
 | Phase 5: macOS Views | Completed | 11/11 |
-| Phase 6: Advanced Features | In Progress | 3/6 |
+| Phase 6: Advanced Features | Completed | 4/4 |
 | Phase 7: Testing | Completed | 4/4 |
-| Phase 8: CI/CD | Not Started | 0/5 |
-| Phase 9: App Store | Not Started | 0/5 |
-| Phase 10: Polish & Launch | Not Started | 0/8 |
+| Phase 8: Feature Parity | Not Started | 0/4 |
+| Phase 9: CI/CD | Not Started | 0/5 |
+| Phase 10: App Store | Not Started | 0/5 |
+| Phase 11: Polish & Launch | Not Started | 0/8 |
 
-**Total Tasks: 57** (38 completed in Phases 1-7)
+**Total Tasks: 61** (39 completed in Phases 1-7)
 
-**Note**: Task 6.4 (Spotlight Integration) moved to Phase 10.8 as optional feature (disabled by default)
+**Note**: Task 6.4 (Spotlight Integration) moved to Phase 11.8 as optional feature (disabled by default)
