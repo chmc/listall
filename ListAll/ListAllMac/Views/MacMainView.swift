@@ -1003,9 +1003,21 @@ private struct MacAddItemSheet: View {
     let onSave: (String, Int, String?) -> Void
     let onCancel: () -> Void
 
+    @EnvironmentObject var dataManager: DataManager
+
     @State private var title = ""
     @State private var quantity = 1
     @State private var description = ""
+
+    // Suggestion state
+    @StateObject private var suggestionService = SuggestionService()
+    @State private var showingSuggestions = false
+    @State private var showAllSuggestions = false
+
+    /// Get the current list from DataManager for suggestions context
+    private var currentList: List? {
+        dataManager.lists.first(where: { $0.id == listId })
+    }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -1014,8 +1026,23 @@ private struct MacAddItemSheet: View {
                 .fontWeight(.semibold)
 
             VStack(alignment: .leading, spacing: 12) {
-                TextField("Item Name", text: $title)
-                    .textFieldStyle(.roundedBorder)
+                // Title field with suggestions
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Item Name", text: $title)
+                        .textFieldStyle(.roundedBorder)
+                        .onChange(of: title) { _, newValue in
+                            handleTitleChange(newValue)
+                        }
+
+                    // Suggestions
+                    if showingSuggestions && !suggestionService.suggestions.isEmpty {
+                        MacSuggestionListView(
+                            suggestions: suggestionService.suggestions,
+                            onSuggestionTapped: applySuggestion
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
 
                 HStack {
                     Text("Quantity:")
@@ -1034,7 +1061,7 @@ private struct MacAddItemSheet: View {
                         .border(Color.secondary.opacity(0.3))
                 }
             }
-            .frame(width: 300)
+            .frame(width: 350)
 
             HStack(spacing: 16) {
                 Button("Cancel") {
@@ -1051,7 +1078,43 @@ private struct MacAddItemSheet: View {
             }
         }
         .padding(30)
-        .frame(minWidth: 400)
+        .frame(minWidth: 450)
+        .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
+    }
+
+    // MARK: - Suggestion Handling
+
+    private func handleTitleChange(_ newValue: String) {
+        let trimmedValue = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmedValue.count >= 2 {
+            // Get suggestions from current list context
+            suggestionService.getSuggestions(for: trimmedValue, in: currentList)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = true
+            }
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = false
+            }
+            suggestionService.clearSuggestions()
+        }
+    }
+
+    private func applySuggestion(_ suggestion: ItemSuggestion) {
+        // Apply suggestion data
+        title = suggestion.title
+        quantity = suggestion.quantity
+        if let desc = suggestion.description {
+            description = desc
+        }
+
+        // Hide suggestions
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showingSuggestions = false
+            showAllSuggestions = false
+        }
+        suggestionService.clearSuggestions()
     }
 }
 
@@ -1062,6 +1125,8 @@ private struct MacEditItemSheet: View {
     let onSave: (String, Int, String?, [ItemImage]) -> Void
     let onCancel: () -> Void
 
+    @EnvironmentObject var dataManager: DataManager
+
     @State private var title: String
     @State private var quantity: Int
     @State private var description: String
@@ -1071,6 +1136,15 @@ private struct MacEditItemSheet: View {
     // The gallery is the heaviest component - loading it after initial layout
     // significantly reduces perceived delay when opening the edit sheet
     @State private var isGalleryReady = false
+
+    // Suggestion state
+    @StateObject private var suggestionService = SuggestionService()
+    @State private var showingSuggestions = false
+
+    /// Get the current list from DataManager for suggestions context
+    private var currentList: List? {
+        dataManager.lists.first(where: { $0.id == item.listId })
+    }
 
     init(item: Item, onSave: @escaping (String, Int, String?, [ItemImage]) -> Void, onCancel: @escaping () -> Void) {
         self.item = item
@@ -1093,8 +1167,23 @@ private struct MacEditItemSheet: View {
                 .fontWeight(.semibold)
 
             VStack(alignment: .leading, spacing: 12) {
-                TextField("Item Name", text: $title)
-                    .textFieldStyle(.roundedBorder)
+                // Title field with suggestions
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Item Name", text: $title)
+                        .textFieldStyle(.roundedBorder)
+                        .onChange(of: title) { _, newValue in
+                            handleTitleChange(newValue)
+                        }
+
+                    // Suggestions
+                    if showingSuggestions && !suggestionService.suggestions.isEmpty {
+                        MacSuggestionListView(
+                            suggestions: suggestionService.suggestions,
+                            onSuggestionTapped: applySuggestion
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
 
                 HStack {
                     Text("Quantity:")
@@ -1156,6 +1245,7 @@ private struct MacEditItemSheet: View {
         }
         .padding(30)
         .frame(minWidth: 500)
+        .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
         .onAppear {
             // Defer gallery loading until after sheet animation completes
             // This makes the sheet appear much faster by splitting the work:
@@ -1173,6 +1263,42 @@ private struct MacEditItemSheet: View {
                 }
             }
         }
+    }
+
+    // MARK: - Suggestion Handling
+
+    private func handleTitleChange(_ newValue: String) {
+        let trimmedValue = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmedValue.count >= 2 {
+            // Get suggestions, excluding the current item being edited
+            suggestionService.getSuggestions(for: trimmedValue, in: currentList, excludeItemId: item.id)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = true
+            }
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingSuggestions = false
+            }
+            suggestionService.clearSuggestions()
+        }
+    }
+
+    private func applySuggestion(_ suggestion: ItemSuggestion) {
+        // Apply suggestion data
+        title = suggestion.title
+        quantity = suggestion.quantity
+        if let desc = suggestion.description {
+            description = desc
+        }
+        // Note: Images are NOT copied from suggestions in edit mode
+        // to preserve the current item's images
+
+        // Hide suggestions
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showingSuggestions = false
+        }
+        suggestionService.clearSuggestions()
     }
 }
 

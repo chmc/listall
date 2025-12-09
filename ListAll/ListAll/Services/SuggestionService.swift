@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 struct ItemSuggestion {
     let id: UUID // ID of the source item this suggestion is based on

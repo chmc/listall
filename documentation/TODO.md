@@ -1782,7 +1782,7 @@ private func handleMoveItem(from source: IndexSet, to destination: Int) {
 
 ---
 
-### Task 8.3: Implement Intelligent Item Suggestions for macOS
+### Task 8.3: [COMPLETED] Implement Intelligent Item Suggestions for macOS
 **TDD**: Write suggestion tests
 
 **Problem**: macOS app doesn't show item suggestions when typing in add/edit item sheets. iOS has full `SuggestionService` with fuzzy matching.
@@ -1792,154 +1792,45 @@ private func handleMoveItem(from source: IndexSet, to destination: Int) {
 - **Reuse**: `ItemSuggestion` model - already shared
 - **Create**: macOS-specific `MacSuggestionListView.swift` (UI only)
 
-**Steps**:
-1. Add `SuggestionService.swift` to ListAllMac target membership
+**Implementation Summary**:
 
-2. Create `ListAllMac/Views/Components/MacSuggestionListView.swift`:
-   ```swift
-   struct MacSuggestionListView: View {
-       let suggestions: [ItemSuggestion]
-       let onSuggestionTapped: (ItemSuggestion) -> Void
-       @State private var showAllSuggestions = false
+1. Added `SuggestionService.swift` to ListAllMac target membership via project.pbxproj membershipExceptions
+2. Added missing `import Combine` to SuggestionService.swift for macOS compilation
+3. Created `MacSuggestionListView.swift` with:
+   - macOS-native styling with NSColor.controlBackgroundColor
+   - Hover states with onHover modifier
+   - Score indicators (star.fill for high score, star for medium, circle.fill for low)
+   - Recency indicators (clock icons)
+   - Frequency badges ("Nx" display)
+   - Hot item indicator (flame icon for frequencyScore >= 80)
+   - Image indicator for items with images
+   - Show All / Show Top 3 toggle button
+   - Relative date formatting (Today, Yesterday, Xd ago, etc.)
+4. Integrated into MacAddItemSheet with:
+   - @StateObject private var suggestionService = SuggestionService()
+   - Suggestions appear after 2+ characters typed
+   - applySuggestion() populates title, quantity, and description
+5. Integrated into MacEditItemSheet with:
+   - excludeItemId parameter to prevent suggesting current item being edited
+6. Created 24 unit tests in SuggestionServiceMacTests class covering:
+   - ItemSuggestion model creation and default values
+   - SuggestionService existence and ObservableObject conformance
+   - Suggestion generation for empty/short searches
+   - Cache management methods
+   - Recent items retrieval
+   - Score indicator thresholds
+   - ExcludeItemId functionality
+   - Performance benchmarks
+   - DRY principle verification (shared iOS/macOS service)
 
-       var body: some View {
-           VStack(alignment: .leading, spacing: 4) {
-               HStack {
-                   Text("Suggestions (\(suggestions.count))")
-                       .font(.caption)
-                       .foregroundColor(.secondary)
-                   Spacer()
-                   if suggestions.count > 3 {
-                       Button(showAllSuggestions ? "Show Top 3" : "Show All") {
-                           showAllSuggestions.toggle()
-                       }
-                       .buttonStyle(.plain)
-                       .font(.caption)
-                   }
-               }
+**Files created**:
+- `ListAllMac/Views/Components/MacSuggestionListView.swift` - macOS-native suggestion UI with hover states
 
-               ForEach(displayedSuggestions) { suggestion in
-                   MacSuggestionRowView(suggestion: suggestion) {
-                       onSuggestionTapped(suggestion)
-                   }
-               }
-           }
-           .padding(8)
-           .background(Color(NSColor.controlBackgroundColor))
-           .cornerRadius(8)
-       }
-
-       private var displayedSuggestions: [ItemSuggestion] {
-           showAllSuggestions ? suggestions : Array(suggestions.prefix(3))
-       }
-   }
-   ```
-
-3. Create `MacSuggestionRowView` with score indicators:
-   ```swift
-   struct MacSuggestionRowView: View {
-       let suggestion: ItemSuggestion
-       let onTapped: () -> Void
-
-       var body: some View {
-           Button(action: onTapped) {
-               HStack {
-                   // Score icon
-                   Image(systemName: scoreIcon)
-                       .foregroundColor(scoreColor)
-
-                   VStack(alignment: .leading) {
-                       Text(suggestion.title)
-                       if let desc = suggestion.description {
-                           Text(desc)
-                               .font(.caption)
-                               .foregroundColor(.secondary)
-                               .lineLimit(1)
-                       }
-                   }
-
-                   Spacer()
-
-                   // Frequency badge
-                   if suggestion.frequency > 1 {
-                       Text("\(suggestion.frequency)×")
-                           .font(.caption)
-                           .foregroundColor(.secondary)
-                   }
-               }
-           }
-           .buttonStyle(.plain)
-       }
-   }
-   ```
-
-4. Integrate into `MacAddItemSheet` and `MacEditItemSheet`:
-   ```swift
-   @StateObject private var suggestionService = SuggestionService.shared
-   @State private var showingSuggestions = false
-
-   TextField("Item name", text: $title)
-       .onChange(of: title) { newValue in
-           if newValue.count >= 2 {
-               suggestionService.getSuggestions(for: newValue, in: list)
-               showingSuggestions = true
-           } else {
-               showingSuggestions = false
-           }
-       }
-
-   if showingSuggestions && !suggestionService.suggestions.isEmpty {
-       MacSuggestionListView(
-           suggestions: suggestionService.suggestions,
-           onSuggestionTapped: applySuggestion
-       )
-   }
-   ```
-
-5. Implement `applySuggestion()` to populate fields:
-   ```swift
-   private func applySuggestion(_ suggestion: ItemSuggestion) {
-       title = suggestion.title
-       if let desc = suggestion.description {
-           notes = desc
-       }
-       quantity = suggestion.quantity
-       showingSuggestions = false
-       suggestionService.clearSuggestions()
-   }
-   ```
-
-**Test criteria**:
-```swift
-func testSuggestionServiceShared() {
-    let service = SuggestionService.shared
-    XCTAssertNotNil(service)
-}
-
-func testSuggestionsAppearAfterTwoCharacters() {
-    suggestionService.getSuggestions(for: "Mi", in: testList)
-    // Verify suggestions contain items starting with "Mi"
-}
-
-func testFuzzyMatchingWorks() {
-    suggestionService.getSuggestions(for: "Banan", in: testList)
-    // Should match "Banana" via Levenshtein distance
-}
-
-func testApplySuggestionPopulatesFields() {
-    let suggestion = ItemSuggestion(title: "Milk", quantity: 2, ...)
-    applySuggestion(suggestion)
-    XCTAssertEqual(title, "Milk")
-    XCTAssertEqual(quantity, 2)
-}
-```
-
-**Files to create**:
-- `ListAllMac/Views/Components/MacSuggestionListView.swift`
-
-**Files to modify**:
-- `ListAllMac/Views/MacMainView.swift` - Integrate suggestions into add/edit sheets
-- `ListAll.xcodeproj/project.pbxproj` - Add SuggestionService to macOS target
+**Files modified**:
+- `ListAll.xcodeproj/project.pbxproj` - Added SuggestionService to macOS target membership
+- `Services/SuggestionService.swift` - Added `import Combine` for macOS
+- `ListAllMac/Views/MacMainView.swift` - Integrated suggestions into MacAddItemSheet and MacEditItemSheet
+- `ListAllMacTests/ListAllMacTests.swift` - Added SuggestionServiceMacTests class with 24 tests
 
 ---
 

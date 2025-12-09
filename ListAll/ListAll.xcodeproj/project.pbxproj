@@ -138,6 +138,7 @@
 				Services/ImportService.swift,
 				Services/SampleDataService.swift,
 				Services/SharingService.swift,
+				Services/SuggestionService.swift,
 				Services/UITestDataService.swift,
 				Utils/Constants.swift,
 				"Utils/Extensions/String+Extensions.swift",
