@@ -2895,82 +2895,58 @@ macOS screenshots follow the same LOCAL generation pattern as iPhone/iPad/Watch,
 
 ---
 
-### Task 9.4: Update Fastfile for macOS Delivery
+### Task 9.4: [COMPLETED] Update Fastfile for macOS Delivery
 **TDD**: Create test script to verify delivery
 
-**Steps**:
-1. **CREATE** the following Fastlane lanes (implementation tasks, not just references):
+**SWARM VERIFIED** (December 2025): Implemented by 4 specialized agents:
+- **Apple Development Expert**: Created `release_macos` lane with proper `app_platform: "osx"`
+- **Shell Script Specialist** (x2): Created `build-macos.sh` and `test-macos.sh` helper scripts
+- **Critical Reviewer**: Identified and fixed critical metadata_path issue
 
-   a. **Lane: `beta_macos`** (for TestFlight uploads)
-   ```ruby
-   private_lane :beta_macos do
-     match(
-       type: 'appstore',
-       app_identifier: ["io.github.chmc.ListAllMac"],
-       platform: "macos"
-     )
+**Completed**:
+1. ✅ **Lane: `beta_macos`** (line 371-457) - Already existed, verified working
+2. ✅ **Lane: `screenshots_macos`** (line 3640-3741) - Already existed with full locale support
+3. ✅ **Lane: `screenshots_macos_normalize`** (line 3745+) - Already existed for App Store dimensions
+4. ✅ **Lane: `release_macos`** (line 552-617) - CREATED with:
+   - `app_platform: "osx"` (CRITICAL for macOS)
+   - Shared metadata with iOS (not platform-specific)
+   - Screenshots from `./screenshots/mac_normalized`
+   - Match code signing in readonly mode
+   - Skip binary upload (via TestFlight)
+5. ✅ **Helper script: `build-macos.sh`** (349 lines) - Created with:
+   - `set -euo pipefail` defensive bash
+   - `--config Debug|Release` flag
+   - `--unsigned` for CI builds
+   - `--verbose` and `--help` flags
+   - Timing information and colored output
+   - ShellCheck compliant (zero warnings)
+6. ✅ **Helper script: `test-macos.sh`** (438 lines) - Created with:
+   - `--unit` and `--ui` test type selection
+   - xcresult bundle output
+   - Test result parsing with pass/fail counts
+   - ShellCheck compliant (zero warnings)
 
-     build_mac_app(
-       scheme: "ListAllMac",
-       export_method: "app-store",
-       output_directory: "./build"
-     )
+**Critical Review Findings** (addressed):
+- ❌→✅ Fixed: `metadata_path: "./metadata/macos"` → Uses default shared metadata
+- ✅ Verified: `app_platform: "osx"` (not "macos")
+- ✅ Verified: Both shell scripts pass ShellCheck
 
-     pilot(
-       pkg: lane_context[SharedValues::PKG_OUTPUT_PATH],
-       app_platform: "osx",  # REQUIRED for macOS
-       skip_waiting_for_build_processing: true
-     )
-   end
-   ```
+**Files created/modified**:
+- `fastlane/Fastfile` - Added `release_macos` lane (~65 lines)
+- `.github/scripts/build-macos.sh` - NEW (349 lines, 10KB)
+- `.github/scripts/test-macos.sh` - NEW (438 lines, 14KB)
 
-   b. **Lane: `screenshots_macos`** (for screenshot generation)
-   ```ruby
-   lane :screenshots_macos do
-     # macOS doesn't use simulators - runs natively
-     run_tests(
-       scheme: "ListAllMac",
-       destination: "platform=macOS,arch=arm64",
-       only_testing: ["ListAllMacUITests/MacScreenshotTests"],
-       xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO"
-     )
-   end
-   ```
+**Usage**:
+```bash
+# Build macOS app
+.github/scripts/build-macos.sh --config Release
 
-   c. **Lane: `release_macos`** (for App Store submission)
-   ```ruby
-   lane :release_macos do |options|
-     version = options[:version]
-     UI.user_error!("Version required") unless version
+# Run tests
+.github/scripts/test-macos.sh --unit
 
-     match(
-       type: "appstore",
-       app_identifier: "io.github.chmc.ListAllMac",
-       platform: "macos"
-     )
-
-     build_mac_app(
-       scheme: "ListAllMac",
-       export_method: "app-store"
-     )
-
-     deliver(
-       app_identifier: "io.github.chmc.ListAllMac",
-       app_version: version,
-       metadata_path: "./metadata/macos",
-       screenshots_path: "./screenshots/mac",
-       app_platform: "osx",  # REQUIRED for macOS
-       force: true,
-       submit_for_review: false
-     )
-   end
-   ```
-
-   **IMPORTANT**: All three lanes must be CREATED - they do not exist yet.
-
-2. Create helper scripts:
-   - `.github/scripts/build-macos.sh` - Defensive macOS build
-   - `.github/scripts/test-macos.sh` - macOS test runner
+# Deliver to App Store Connect
+bundle exec fastlane release_macos version:1.2.0
+```
 
 ---
 

@@ -141,6 +141,10 @@ DerivedData/
 *.ipa
 *.dSYM
 
+# Test results (Xcode xcresult bundles)
+*.xcresult
+TestResults*.xcresult/
+
 # Temporary files
 *.tmp
 *.temp

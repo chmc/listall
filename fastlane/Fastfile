@@ -549,6 +549,73 @@ platform :ios do
     UI.message("💡 Run 'bundle exec fastlane release' to upload to App Store Connect")
   end
 
+  desc "Deliver macOS app metadata/screenshots to App Store (no auto-submit)"
+  desc "Creates new app version if needed. Usage: fastlane release_macos version:1.2.0"
+  lane :release_macos do |options|
+    require_asc_env!
+
+    # Version is required to create/update app version in App Store Connect
+    version = options[:version]
+    UI.user_error!("Version required. Usage: fastlane release_macos version:1.2.0") unless version
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    # Path to normalized macOS screenshots (exact App Store dimensions)
+    # macOS screenshots are generated locally via screenshots_macos_* lanes
+    screenshots_path = File.expand_path("../screenshots/mac_normalized", __dir__)
+
+    # Verify normalized screenshots exist
+    unless Dir.exist?(screenshots_path)
+      UI.user_error!("macOS screenshots not found at #{screenshots_path}. Run screenshots_macos_normalize first.")
+    end
+
+    UI.message("📸 Using normalized macOS screenshots from: #{screenshots_path}")
+    UI.message("📦 Creating/updating macOS App Store version: #{version}")
+
+    # Code signing for macOS App Store distribution
+    # Required before deliver to validate app identity
+    if ENV['CI']
+      setup_ci
+      ENV["KEYCHAIN_PASSWORD"] = ""
+    end
+
+    match(
+      type: 'appstore',
+      platform: 'macos',
+      app_identifier: ["io.github.chmc.ListAllMac"],
+      verbose: true,
+      keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
+      skip_set_partition_list: true,
+      readonly: true  # Read-only for release (certs already exist)
+    )
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "io.github.chmc.ListAllMac",
+      app_version: version,  # Creates new version if doesn't exist
+      app_platform: "osx",   # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS
+      screenshots_path: screenshots_path,
+      # metadata_path uses default (./fastlane/metadata) - shared with iOS
+      # App metadata (name, description, keywords) is shared across platforms
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      skip_binary_upload: true,  # Binary uploaded separately via TestFlight
+      submit_for_review: false,
+      precheck_include_in_app_purchases: false,  # No IAPs in this app
+      force: true,
+      ignore_language_directory_validation: true  # Allow documentation folders in metadata
+    )
+
+    UI.success("✅ macOS metadata and screenshots delivered to App Store Connect!")
+    UI.message("💡 Review at: https://appstoreconnect.apple.com")
+  end
+
   desc "Validate App Store Connect auth via API key (no uploads)"
   lane :asc_dry_run do
     require_asc_env!
