@@ -55,7 +55,7 @@ Following the existing iOS/watchOS pattern:
 
 - iOS: `io.github.chmc.ListAll`
 - watchOS: `io.github.chmc.ListAll.watchkitapp`
-- macOS: `io.github.chmc.ListAll.macos`
+- macOS: `io.github.chmc.ListAllMac`
 
 ---
 
@@ -68,7 +68,7 @@ Following the existing iOS/watchOS pattern:
 1. Open `ListAll/ListAll.xcodeproj` in Xcode
 2. Add new target: macOS App (SwiftUI lifecycle)
 3. Name: `ListAllMac`
-4. Bundle ID: `io.github.chmc.ListAll.macos`
+4. Bundle ID: `io.github.chmc.ListAllMac`
 5. Deployment target: macOS 13.0 (for SwiftUI 4 features)
 6. Configure App Groups: `group.io.github.chmc.ListAll`
 
@@ -213,7 +213,7 @@ func testAppLaunches() {
    app_identifier([
        "io.github.chmc.ListAll",
        "io.github.chmc.ListAll.watchkitapp",
-       "io.github.chmc.ListAll.macos"
+       "io.github.chmc.ListAllMac"
    ])
    ```
 
@@ -2011,98 +2011,359 @@ func testNSSharingServicePickerCreation() {
 
 ## Phase 9: CI/CD Pipeline
 
-### Task 9.1: Update ci.yml for macOS Builds
-**TDD**: CI verification
+### Architecture Decision: Parallel Jobs (Not Sequential)
 
-**Steps**:
-1. Update `.github/workflows/ci.yml`:
-   ```yaml
-   - name: Build macOS app
-     run: |
-       cd ListAll
-       xcodebuild clean build \
-         -project ListAll.xcodeproj \
-         -scheme ListAllMac \
-         -destination 'platform=macOS' \
-         -configuration Debug \
-         CODE_SIGN_IDENTITY="" \
-         CODE_SIGNING_REQUIRED=NO \
-         CODE_SIGNING_ALLOWED=NO \
-         | xcpretty || true
+**IMPORTANT**: Based on swarm analysis by Critical Reviewer, Pipeline Specialist, Apple Development Expert, and Shell Script Specialist agents, Phase 9 uses **parallel jobs** instead of sequential steps.
 
-   - name: Run macOS tests
-     run: |
-       cd ListAll
-       xcodebuild test \
-         -project ListAll.xcodeproj \
-         -scheme ListAllMac \
-         -destination 'platform=macOS' \
-         -resultBundlePath TestResults-Mac.xcresult \
-         CODE_SIGN_IDENTITY="" \
-         CODE_SIGNING_REQUIRED=NO \
-         CODE_SIGNING_ALLOWED=NO \
-         | xcpretty || true
-   ```
+**Why Parallel Jobs**:
+| Criterion | Sequential | Parallel | Winner |
+|-----------|-----------|----------|--------|
+| CI Time | ~23 min | ~15 min | **Parallel (~35% faster)** |
+| Failure Isolation | None | Full | **Parallel** |
+| Runner Cost | ~$3.68 | ~$5.28 | Sequential (-43% cost, but speed justifies parallel) |
+| Debuggability | Hard (mixed logs) | Easy (per-platform) | **Parallel** |
+| Maintainability | Medium | High | **Parallel** |
+
+**Cost Analysis**: Parallel is ~43% more expensive ($5.28 vs $3.68) but delivers 35% time savings (15 min vs 23 min). The speed improvement justifies the additional cost for developer productivity and faster feedback loops.
+
+**Key Differences from iOS/watchOS**:
+- macOS uses `platform=macOS,arch=arm64` (no simulator)
+- macOS builds faster (no simulator boot/shutdown)
+- macOS uses `.pkg` format (not `.ipa`)
+- pilot requires `app_platform: "osx"` for macOS uploads
 
 ---
 
-### Task 9.2: Update release.yml for macOS TestFlight
-**TDD**: Release pipeline verification
+### Task 9.0: Pre-requisites (BLOCKING)
+**TDD**: Create test script to verify infrastructure before implementation
 
 **Steps**:
-1. Update `.github/workflows/release.yml`:
-   - Add macOS build step
-   - Upload macOS app to TestFlight
-   - Version bump includes macOS target
+1. Create verification script `.github/scripts/verify-macos-prerequisites.sh`:
+   - Check bundle ID registration
+   - Verify TestFlight enabled for macOS
+   - Validate code signing and provisioning profiles
+   - Verify macOS version number sync with iOS
 
-2. Update Fastfile with macOS beta lane:
+   Example verification commands:
+   ```bash
+   # Check bundle ID registration
+   bundle exec fastlane run app_store_connect_api_key
+
+   # Confirm macOS provisioning profile retrievable
+   bundle exec fastlane match appstore --platform macos --readonly
+
+   # Current: ListAllMac shows 1.0, should match iOS (1.1.4)
+   bundle exec fastlane show_version
+
+   # Verify iOS and macOS versions match
+   ios_version=$(xcodebuild -showBuildSettings -scheme ListAll | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+   macos_version=$(xcodebuild -showBuildSettings -scheme ListAllMac | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+   [[ "$ios_version" == "$macos_version" ]] || echo "Version mismatch!"
+   ```
+
+2. Run verification script and confirm all checks pass
+
+**Blocking**: Tasks 9.1-9.5 cannot proceed until these pass.
+
+---
+
+### Task 9.1: Add macOS to ci.yml as Parallel Job
+**TDD**: Create test script to verify CI with failure isolation
+
+**Architecture**: Split into 3 parallel jobs (not sequential steps)
+```yaml
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test-ios:      # ~12 min
+  build-and-test-watchos:  # ~10 min
+  build-and-test-macos:    # ~10 min (faster, no simulator)
+```
+
+**Local Test Command**:
+```bash
+xcodebuild test \
+  -project ListAll/ListAll.xcodeproj \
+  -scheme ListAllMac \
+  -destination 'platform=macOS,arch=arm64' \
+  -resultBundlePath TestResults-Mac.xcresult \
+  CODE_SIGN_IDENTITY="" \
+  CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO
+```
+**Steps**:
+1. Refactor ci.yml from single job to three parallel jobs
+2. Add `build-and-test-macos` job:
+   ```yaml
+   build-and-test-macos:
+     name: Build and Test macOS
+     runs-on: macos-14
+     timeout-minutes: 20  # Shorter than iOS (no simulator)
+
+     steps:
+     - name: Checkout code
+       uses: actions/checkout@v4
+
+     - name: Select Xcode version
+       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+     - name: Cache DerivedData
+       uses: actions/cache@v4
+       with:
+         path: ~/Library/Developer/Xcode/DerivedData
+         key: ${{ runner.os }}-derived-data-macos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+
+     - name: Build macOS app
+       run: |
+         set -o pipefail
+         cd ListAll
+         xcodebuild clean build \
+           -project ListAll.xcodeproj \
+           -scheme ListAllMac \
+           -destination 'platform=macOS,arch=arm64' \
+           -configuration Debug \
+           CODE_SIGN_IDENTITY="" \
+           CODE_SIGNING_REQUIRED=NO \
+           CODE_SIGNING_ALLOWED=NO \
+           | xcpretty
+
+     - name: Run macOS tests
+       run: |
+         set -o pipefail
+         cd ListAll
+         xcodebuild test \
+           -project ListAll.xcodeproj \
+           -scheme ListAllMac \
+           -destination 'platform=macOS,arch=arm64' \
+           -resultBundlePath TestResults-Mac.xcresult \
+           CODE_SIGN_IDENTITY="" \
+           CODE_SIGNING_REQUIRED=NO \
+           CODE_SIGNING_ALLOWED=NO \
+           | xcpretty
+
+     - name: Upload macOS test results
+       if: always()
+       uses: actions/upload-artifact@v4
+       with:
+         name: macos-test-results
+         path: ListAll/TestResults-Mac.xcresult
+         retention-days: 30
+   ```
+
+3. Split existing iOS/watchOS into separate parallel jobs
+4. Ensure each job has isolated cache keys
+
+**Test criteria**:
+- All 3 jobs run in parallel (verify in GitHub Actions UI)
+- Total CI time ~15 min (parallel) vs ~23 min baseline
+- Verify with: `gh run view <run-id> --json jobs`
+- macOS failure doesn't block iOS/watchOS
+
+---
+
+### Task 9.2: Add macOS to release.yml as Parallel Job
+**TDD**: Create test script to verify release pipeline with parallel uploads
+
+**Architecture**: Version bump → parallel platform builds
+```yaml
+jobs:
+  version-bump:     # Runs first, outputs version
+  beta-ios:         # Depends on version-bump, parallel with beta-macos
+  beta-macos:       # Depends on version-bump, parallel with beta-ios
+```
+
+**Steps**:
+1. Add `version-bump` job that outputs version and commit SHA for all platforms:
+   ```yaml
+   version-bump:
+     runs-on: macos-14
+     outputs:
+       version: ${{ steps.bump.outputs.version }}
+       commit_sha: ${{ steps.commit.outputs.sha }}
+     steps:
+       - name: Checkout code
+         uses: actions/checkout@v4
+
+       - name: Bump version
+         id: bump
+         run: |
+           # Version bump logic
+           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+       - name: Commit version bump
+         id: commit
+         run: |
+           git commit -am "Bump version to $VERSION"
+           git push
+           echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+   ```
+2. Add `beta-macos` job parallel to existing beta job:
+   ```yaml
+   beta-macos:
+     name: TestFlight macOS
+     needs: [version-bump]
+     if: needs.version-bump.result == 'success'
+     runs-on: macos-14
+     timeout-minutes: 20
+
+     steps:
+     - name: Checkout code
+       uses: actions/checkout@v4
+       with:
+         ref: ${{ needs.version-bump.outputs.commit_sha }}
+
+     - name: Build and upload macOS to TestFlight
+       run: bundle exec fastlane beta_macos
+   ```
+
+3. Add platform selection input:
+   ```yaml
+   inputs:
+     platforms:
+       description: 'Platforms to build'
+       default: 'ios,macos'
+       type: string
+   ```
+
+4. **CREATE** Fastlane lane `beta_macos` (implementation task, not just reference):
    ```ruby
-   lane :beta_mac do |options|
-     match(type: "appstore", app_identifier: "io.github.chmc.ListAll.macos")
+   private_lane :beta_macos do
+     match(
+       type: 'appstore',
+       app_identifier: ["io.github.chmc.ListAllMac"],
+       platform: "macos"
+     )
 
      build_mac_app(
        scheme: "ListAllMac",
-       export_method: "app-store"
+       export_method: "app-store",
+       output_directory: "./build"
      )
 
-     upload_to_testflight(
+     pilot(
+       pkg: lane_context[SharedValues::PKG_OUTPUT_PATH],
+       app_platform: "osx",  # REQUIRED for macOS
        skip_waiting_for_build_processing: true
      )
    end
    ```
 
+   **Note**: This lane must be CREATED - it does not exist yet.
+
+**macOS-Specific Requirements:**
+- Hardened Runtime must be enabled (`ENABLE_HARDENED_RUNTIME = YES`)
+- App Sandbox entitlement required for App Store
+- Notarization happens automatically during App Store submission
+
+**Test criteria**:
+- iOS and macOS upload in parallel
+- Can build only iOS: `platforms:ios`
+- Can build only macOS: `platforms:macos`
+
 ---
 
-### Task 9.3: Create macOS Screenshot Workflow
-**TDD**: Screenshot automation verification
+### Task 9.3: Add macOS Screenshots to prepare-appstore.yml
+**TDD**: Create test script to verify screenshot automation
+
+**Note**: macOS screenshots are simpler than iOS (no simulator management)
+
+**macOS Screenshot Requirements** (16:10 aspect ratio):
+- 1280x800 (minimum)
+- 1440x900 (MacBook Air)
+- 2560x1600 (13" MacBook Pro Retina)
+- 2880x1800 (15/16" MacBook Pro Retina) - **Recommended**
 
 **Steps**:
-1. Update `.github/workflows/prepare-appstore.yml`:
-   - Add macOS screenshot generation job
-   - Use real macOS environment (not simulator)
-
-2. Create macOS screenshot Fastlane lane:
+1. Add `screenshots-macos` job to prepare-appstore.yml (parallel with iPhone/iPad/Watch)
+2. **CREATE** Fastlane lane `screenshots_macos` (implementation task, not just reference):
    ```ruby
-   lane :mac_screenshots do
-     capture_mac_screenshots(
+   lane :screenshots_macos do
+     # macOS doesn't use simulators - runs natively
+     run_tests(
        scheme: "ListAllMac",
-       output_directory: "./fastlane/screenshots/mac"
+       destination: "platform=macOS,arch=arm64",
+       only_testing: ["ListAllMacUITests/MacScreenshotTests"],
+       xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO"
      )
    end
    ```
 
+   **Note**: This lane must be CREATED - it does not exist yet.
+
+3. Update `.github/scripts/validate-screenshots.sh` to include macOS dimensions:
+   ```bash
+   readonly -a MACOS_VALID_DIMENSIONS=(
+       "1280x800"
+       "1440x900"
+       "2560x1600"
+       "2880x1800"
+   )
+   ```
+
+4. Add screenshot tests in `ListAllMacUITests/MacScreenshotTests.swift`
+
+**Test criteria**:
+- macOS screenshots generated at 2880x1800
+- 16:10 aspect ratio validated
+- Screenshots appear in delivery folder
+
 ---
 
 ### Task 9.4: Update Fastfile for macOS Delivery
-**TDD**: Delivery verification
+**TDD**: Create test script to verify delivery
 
 **Steps**:
-1. Add macOS delivery lane:
-   ```ruby
-   lane :release_mac do |options|
-     version = options[:version]
+1. **CREATE** the following Fastlane lanes (implementation tasks, not just references):
 
-     match(type: "appstore", app_identifier: "io.github.chmc.ListAll.macos")
+   a. **Lane: `beta_macos`** (for TestFlight uploads)
+   ```ruby
+   private_lane :beta_macos do
+     match(
+       type: 'appstore',
+       app_identifier: ["io.github.chmc.ListAllMac"],
+       platform: "macos"
+     )
+
+     build_mac_app(
+       scheme: "ListAllMac",
+       export_method: "app-store",
+       output_directory: "./build"
+     )
+
+     pilot(
+       pkg: lane_context[SharedValues::PKG_OUTPUT_PATH],
+       app_platform: "osx",  # REQUIRED for macOS
+       skip_waiting_for_build_processing: true
+     )
+   end
+   ```
+
+   b. **Lane: `screenshots_macos`** (for screenshot generation)
+   ```ruby
+   lane :screenshots_macos do
+     # macOS doesn't use simulators - runs natively
+     run_tests(
+       scheme: "ListAllMac",
+       destination: "platform=macOS,arch=arm64",
+       only_testing: ["ListAllMacUITests/MacScreenshotTests"],
+       xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO"
+     )
+   end
+   ```
+
+   c. **Lane: `release_macos`** (for App Store submission)
+   ```ruby
+   lane :release_macos do |options|
+     version = options[:version]
+     UI.user_error!("Version required") unless version
+
+     match(
+       type: "appstore",
+       app_identifier: "io.github.chmc.ListAllMac",
+       platform: "macos"
+     )
 
      build_mac_app(
        scheme: "ListAllMac",
@@ -2110,24 +2371,48 @@ func testNSSharingServicePickerCreation() {
      )
 
      deliver(
-       app_identifier: "io.github.chmc.ListAll.macos",
-       skip_screenshots: false,
-       skip_metadata: false,
-       platform: "osx"
+       app_identifier: "io.github.chmc.ListAllMac",
+       app_version: version,
+       metadata_path: "./metadata/macos",
+       screenshots_path: "./screenshots/mac",
+       app_platform: "osx",  # REQUIRED for macOS
+       force: true,
+       submit_for_review: false
      )
    end
    ```
 
+   **IMPORTANT**: All three lanes must be CREATED - they do not exist yet.
+
+2. Create helper scripts:
+   - `.github/scripts/build-macos.sh` - Defensive macOS build
+   - `.github/scripts/test-macos.sh` - macOS test runner
+
 ---
 
 ### Task 9.5: Update Matchfile for macOS Certificates
-**TDD**: Signing verification
+**TDD**: Create test script to verify signing
+
+**Note**: Apple Distribution certificate works for iOS, watchOS, AND macOS App Store.
 
 **Steps**:
-1. Update Matchfile (already done in Task 1.5)
-2. Run Match to generate macOS certificates:
+1. Matchfile already includes macOS (verified in Task 1.5):
+   ```ruby
+   app_identifier([
+     "io.github.chmc.ListAll",
+     "io.github.chmc.ListAll.watchkitapp",
+     "io.github.chmc.ListAllMac"
+   ])
+   ```
+
+2. Run Match to sync macOS provisioning profile:
    ```bash
-   bundle exec fastlane match appstore --app_identifier io.github.chmc.ListAll.macos
+   bundle exec fastlane match appstore --platform macos
+   ```
+
+3. Verify certificate retrieved successfully:
+   ```bash
+   bundle exec fastlane match appstore --platform macos --readonly
    ```
 
 ---
@@ -2381,7 +2666,7 @@ ListAll/
 |----------|-----------|
 | iOS | `io.github.chmc.ListAll` |
 | watchOS | `io.github.chmc.ListAll.watchkitapp` |
-| macOS | `io.github.chmc.ListAll.macos` |
+| macOS | `io.github.chmc.ListAllMac` |
 
 ## Appendix C: Deployment Targets
 
@@ -2393,22 +2678,41 @@ ListAll/
 
 ## Appendix D: CI/CD Workflow Updates
 
+### Architecture: Parallel Jobs (Not Sequential)
+
+Based on swarm analysis, all workflows use **parallel jobs** for platform isolation:
+
+**Benefits**:
+- ~35% faster CI (15 min vs 23 min)
+- Failure isolation (macOS failure doesn't block iOS)
+- Easier debugging (per-platform logs)
+- Cost increase of ~43% justified by speed gains and developer productivity
+
 ### ci.yml Changes
-- Add macOS build job
-- Add macOS test job
-- Upload macOS test results
+- Refactor single job → 3 parallel jobs:
+  - `build-and-test-ios` (timeout: 30 min)
+  - `build-and-test-watchos` (timeout: 25 min)
+  - `build-and-test-macos` (timeout: 20 min, no simulator)
+- Per-platform cache keys
+- Per-platform artifact uploads
 
 ### release.yml Changes
-- Add macOS TestFlight upload
+- Add `version-bump` job (runs first, outputs version)
+- Split beta into parallel jobs:
+  - `beta-ios` (depends on version-bump)
+  - `beta-macos` (depends on version-bump, parallel with beta-ios)
+- Add platform selection input (`ios`, `macos`, or both)
 - Version bump applies to all platforms
 
 ### prepare-appstore.yml Changes
-- Add macOS screenshot generation
-- Include macOS screenshots in delivery
+- Add `screenshots-macos` job (parallel with iPhone/iPad/Watch)
+- macOS screenshots: 2880x1800 (16:10 aspect ratio)
+- No simulator management (runs natively)
 
 ### publish-to-appstore.yml Changes
 - Add macOS app delivery
 - Coordinate iOS/watchOS/macOS release
+- Platform-specific deliver configurations
 
 ---
 
@@ -2424,10 +2728,12 @@ ListAll/
 | Phase 6: Advanced Features | Completed | 4/4 |
 | Phase 7: Testing | Completed | 4/4 |
 | Phase 8: Feature Parity | Completed | 4/4 |
-| Phase 9: CI/CD | Not Started | 0/5 |
+| Phase 9: CI/CD | Not Started | 0/6 |
 | Phase 10: App Store | Not Started | 0/5 |
 | Phase 11: Polish & Launch | Not Started | 0/8 |
 
-**Total Tasks: 61** (43 completed in Phases 1-8)
+**Total Tasks: 62** (43 completed in Phases 1-8)
 
-**Note**: Task 6.4 (Spotlight Integration) moved to Phase 11.8 as optional feature (disabled by default)
+**Notes**:
+- Task 6.4 (Spotlight Integration) moved to Phase 11.8 as optional feature (disabled by default)
+- Phase 9 revised based on swarm analysis: uses parallel jobs architecture (Task 9.0 added as blocking pre-requisite)
