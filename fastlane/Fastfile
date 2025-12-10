@@ -500,7 +500,7 @@ platform :ios do
     
     # Read from Xcode project
     UI.message("\nXcode Project Versions:")
-    targets = ['ListAll', 'ListAllWatch Watch App']
+    targets = ['ListAll', 'ListAllWatch Watch App', 'ListAllMac']
     targets.each do |target|
       begin
         version = get_version_number(
