@@ -80,7 +80,7 @@ Description:
 
 Arguments:
     PLATFORM    Platform to generate screenshots for
-                Options: iphone, ipad, watch, all, framed
+                Options: iphone, ipad, watch, macos, all, framed
                 Default: all
 
     LOCALE      Locale to generate screenshots for
@@ -106,6 +106,9 @@ Examples:
     # Generate iPhone screenshots for Finnish only (10 minutes)
     ./generate-screenshots-local.sh iphone fi
 
+    # Generate macOS screenshots for all locales (5 minutes)
+    ./generate-screenshots-local.sh macos
+
 Platform Details:
     iphone  - iPhone 16 Pro Max (6.7" display, 1290x2796)
               Fastlane lane: screenshots_iphone + framing
@@ -122,11 +125,16 @@ Platform Details:
               Screenshots: 5 per locale (unframed)
               Estimated time: ~20 minutes
 
-    all     - All platforms (iPhone + iPad + Watch)
-              Screenshots: 9 per locale (18 total)
+    macos   - macOS (Native, 16:10 aspect ratio, 2880x1800)
+              Fastlane lane: screenshots_macos
+              Screenshots: 2 per locale (unframed)
+              Estimated time: ~5 minutes
+
+    all     - All platforms (iPhone + iPad + Watch + macOS)
+              Screenshots: 11 per locale (22 total)
               iPhone/iPad: framed with device bezels
-              Watch: unframed
-              Estimated time: ~60-90 minutes
+              Watch/macOS: unframed
+              Estimated time: ~70-100 minutes
 
     framed  - Re-apply device frames to existing screenshots
               Fastlane lane: frame_screenshots_custom
@@ -142,6 +150,10 @@ Output Locations:
     Watch (unframed):
         fastlane/screenshots/watch_normalized/en-US/
         fastlane/screenshots/watch_normalized/fi/
+
+    macOS (unframed):
+        fastlane/screenshots/mac/en-US/
+        fastlane/screenshots/mac/fi/
 
     Raw captures (temporary, not committed):
         fastlane/screenshots/
@@ -179,7 +191,7 @@ validate_platform() {
     local platform="$1"
 
     case "${platform}" in
-        iphone|ipad|watch|all|framed)
+        iphone|ipad|watch|macos|all|framed)
             return 0
             ;;
         *)
@@ -389,34 +401,55 @@ generate_watch_screenshots() {
     return 0
 }
 
-generate_all_screenshots() {
-    log_info "Platform: All (iPhone + iPad + Watch)"
-    log_info "Screenshots: 9 per locale (18 total)"
-    log_info "Estimated time: ~60-90 minutes"
-    log_info "Mode: iPhone/iPad with device frames, Watch unframed"
+generate_macos_screenshots() {
+    log_info "Platform: macOS (Native)"
+    log_info "Expected output: 2880x1800 pixels"
+    log_info "Screenshots: 2 per locale"
+    log_info "Estimated time: ~5 minutes"
     echo ""
 
-    log_info "Step 1/4: Generating iPhone screenshots..."
+    if ! bundle exec fastlane ios screenshots_macos; then
+        log_error "macOS screenshot generation failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    return 0
+}
+
+generate_all_screenshots() {
+    log_info "Platform: All (iPhone + iPad + Watch + macOS)"
+    log_info "Screenshots: 11 per locale (22 total)"
+    log_info "Estimated time: ~70-100 minutes"
+    log_info "Mode: iPhone/iPad with device frames, Watch/macOS unframed"
+    echo ""
+
+    log_info "Step 1/5: Generating iPhone screenshots..."
     if ! bundle exec fastlane ios screenshots_iphone; then
         log_error "iPhone screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    log_info "Step 2/4: Generating iPad screenshots..."
+    log_info "Step 2/5: Generating iPad screenshots..."
     if ! bundle exec fastlane ios screenshots_ipad; then
         log_error "iPad screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    log_info "Step 3/4: Applying device frames to iPhone/iPad..."
+    log_info "Step 3/5: Applying device frames to iPhone/iPad..."
     if ! frame_ios_screenshots_inplace; then
         log_error "Screenshot framing failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    log_info "Step 4/4: Generating Watch screenshots (unframed)..."
+    log_info "Step 4/5: Generating Watch screenshots (unframed)..."
     if ! bundle exec fastlane ios watch_screenshots; then
         log_error "Watch screenshot generation failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    log_info "Step 5/5: Generating macOS screenshots (unframed)..."
+    if ! bundle exec fastlane ios screenshots_macos; then
+        log_error "macOS screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
@@ -495,6 +528,10 @@ show_summary() {
         echo "  Watch (unframed):"
         echo "    fastlane/screenshots/watch_normalized/en-US/"
         echo "    fastlane/screenshots/watch_normalized/fi/"
+    elif [[ "${platform}" == "macos" ]]; then
+        echo "  macOS (unframed):"
+        echo "    fastlane/screenshots/mac/en-US/"
+        echo "    fastlane/screenshots/mac/fi/"
     elif [[ "${platform}" == "all" ]]; then
         echo "  iPhone/iPad (framed with device bezels):"
         echo "    fastlane/screenshots_compat/en-US/"
@@ -503,6 +540,10 @@ show_summary() {
         echo "  Watch (unframed):"
         echo "    fastlane/screenshots/watch_normalized/en-US/"
         echo "    fastlane/screenshots/watch_normalized/fi/"
+        echo ""
+        echo "  macOS (unframed):"
+        echo "    fastlane/screenshots/mac/en-US/"
+        echo "    fastlane/screenshots/mac/fi/"
     else
         echo "  iPhone/iPad (framed with device bezels):"
         echo "    fastlane/screenshots_compat/en-US/"
@@ -534,7 +575,7 @@ main() {
     if ! validate_platform "${PLATFORM}"; then
         log_error "Invalid platform: ${PLATFORM}"
         echo ""
-        echo "Valid platforms: iphone, ipad, watch, all, framed"
+        echo "Valid platforms: iphone, ipad, watch, macos, all, framed"
         echo "Run with --help for more information"
         exit "${EXIT_INVALID_ARGS}"
     fi
@@ -588,6 +629,10 @@ main() {
         watch)
             log_header "Watch Screenshot Generation (Unframed)"
             generate_watch_screenshots || exit $?
+            ;;
+        macos)
+            log_header "macOS Screenshot Generation (Unframed)"
+            generate_macos_screenshots || exit $?
             ;;
         all)
             log_header "All Platforms Screenshot Generation"

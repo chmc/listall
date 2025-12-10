@@ -86,12 +86,20 @@ To test Fastlane lanes locally (beta uploads, App Store Connect authentication, 
 
 1. **Generate screenshots locally:**
    ```bash
-   .github/scripts/generate-screenshots-local.sh
+   # Generate all platforms (iPhone, iPad, Watch, macOS)
+   .github/scripts/generate-screenshots-local.sh all
+
+   # Or generate specific platforms:
+   .github/scripts/generate-screenshots-local.sh iphone   # ~25 min
+   .github/scripts/generate-screenshots-local.sh ipad     # ~40 min
+   .github/scripts/generate-screenshots-local.sh watch    # ~20 min
+   .github/scripts/generate-screenshots-local.sh macos    # ~5 min
    ```
 
 2. **Commit and push** the generated screenshots:
    - `fastlane/screenshots_compat/` (iPhone/iPad)
    - `fastlane/screenshots/watch_normalized/` (Watch)
+   - `fastlane/screenshots/mac/` (macOS)
 
 3. **Run the publish workflow:**
    Go to **Actions** → **Publish to App Store**, enter version number, and run.

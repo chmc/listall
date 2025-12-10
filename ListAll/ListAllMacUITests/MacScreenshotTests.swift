@@ -4,11 +4,20 @@
 //
 //  Created by Claude Code on 8.12.2025.
 //
+//  macOS screenshot tests for LOCAL screenshot generation.
+//  Screenshots are captured at 2880x1800 (Retina) resolution.
+//  Output: ~/Library/Caches/tools.fastlane/screenshots/Mac-*.png
+//
+//  Usage:
+//    xcodebuild test -project ListAll.xcodeproj -scheme ListAllMac \
+//      -destination 'platform=macOS' -only-testing:ListAllMacUITests/MacScreenshotTests
+//
 
 import XCTest
 
 /// Screenshot tests for macOS App Store submission
-/// Captures screenshots at required resolutions for App Store submission
+/// Captures screenshots at 2880x1800 (Retina) resolution for App Store submission
+/// Screenshots are saved to Fastlane cache directory and organized by locale
 @MainActor
 final class MacScreenshotTests: XCTestCase {
 
@@ -25,6 +34,7 @@ final class MacScreenshotTests: XCTestCase {
         app = XCUIApplication()
 
         // Setup Fastlane snapshot
+        // This configures locale detection and screenshot directory setup
         setupSnapshot(app)
     }
 
@@ -304,3 +314,45 @@ final class MacScreenshotTests: XCTestCase {
         print("========================================")
     }
 }
+
+// MARK: - Screenshot Output Information
+//
+// Screenshots are captured using XCUIScreen.main.screenshot() which captures
+// the entire main display at native Retina resolution.
+//
+// Output location (managed by MacSnapshotHelper.swift):
+//   ~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/Library/Caches/tools.fastlane/screenshots/Mac-*.png
+//
+// Filenames follow App Store convention:
+//   - Mac-01_MainWindow.png
+//   - Mac-02_ListDetailView.png
+//   - Mac-03_ItemEditSheet.png
+//   - Mac-04_SettingsWindow.png
+//
+// IMPORTANT - Aspect Ratio:
+//   XCUIScreen.main.screenshot() captures the ENTIRE DISPLAY, so the screenshot
+//   aspect ratio depends on your display's aspect ratio:
+//   - 16:10 displays (e.g., 2880x1800): ✅ Perfect for App Store
+//   - 16:9 displays (e.g., 3840x2160): ⚠️ Requires cropping to 16:10
+//   - 21:9 ultrawide (e.g., 3840x1600): ⚠️ Requires cropping to 16:10
+//
+//   Recommended: Generate screenshots on a 16:10 Retina Mac for best results.
+//
+// Locale organization:
+//   The MacSnapshotHelper reads locale from Fastlane cache directory
+//   (language.txt and locale.txt) to organize screenshots by locale.
+//
+// For local screenshot generation:
+//   1. Run tests via xcodebuild or Fastlane
+//   2. Screenshots saved to cache directory
+//   3. Verify aspect ratio: sips -g pixelWidth -g pixelHeight screenshot.png
+//   4. Crop if needed: magick screenshot.png -gravity center -crop 2880x1800+0+0 +repage output.png
+//   5. Post-process to move screenshots to fastlane/screenshots/mac/[locale]/
+//
+// App Store requirements:
+//   - Minimum 3 screenshots per locale
+//   - Maximum 10 screenshots per locale
+//   - 16:10 aspect ratio (e.g., 2880x1800, 2560x1600, 1440x900)
+//   - PNG format
+//
+// See documentation/macos-screenshot-generation.md for detailed guide.

@@ -3621,7 +3621,7 @@ platform :ios do
   lane :verify_watch_screenshots do
     UI.header("🔍 Validating watchOS Screenshots")
     watch_normalized_dir = File.expand_path("screenshots/watch_normalized", __dir__)
-    
+
     begin
       WatchScreenshotHelper.validate_screenshots(
         watch_normalized_dir,
@@ -3632,6 +3632,191 @@ platform :ios do
     rescue WatchScreenshotHelper::ValidationError => e
       UI.user_error!("Watch screenshot validation failed: #{e.message}")
     end
+  end
+
+  desc "Generate macOS screenshots (locally - not in CI)"
+  desc "Captures macOS screenshots for EN and FI locales"
+  desc "Outputs screenshots to fastlane/screenshots/mac/ ready for App Store"
+  lane :screenshots_macos do
+    UI.header("🖥️ Generating macOS Screenshots")
+
+    # macOS screenshots run locally on developer's machine
+    # No simulator management needed - runs natively
+
+    locales = %w[en-US fi]
+    screenshots_cache_dir = File.expand_path("~/Library/Caches/tools.fastlane/screenshots")
+    mac_output_dir = File.expand_path("screenshots/mac", __dir__)
+
+    # Clean previous screenshots
+    FileUtils.rm_rf(mac_output_dir) if Dir.exist?(mac_output_dir)
+    FileUtils.mkdir_p(mac_output_dir)
+
+    # Expected screenshots per locale
+    expected_per_locale = 4  # 01_MainWindow, 02_ListDetailView, 03_ItemEditSheet, 04_SettingsWindow
+    total_captured = 0
+
+    locales.each_with_index do |locale, locale_idx|
+      UI.header("📸 Generating macOS screenshots for locale: #{locale} (#{locale_idx + 1}/#{locales.count})")
+
+      # Create locale-specific directories
+      locale_cache_dir = File.join(screenshots_cache_dir, locale)
+      locale_output_dir = File.join(mac_output_dir, locale)
+      FileUtils.mkdir_p(locale_cache_dir)
+      FileUtils.mkdir_p(locale_output_dir)
+
+      # Write language and locale files for MacSnapshotHelper
+      File.write(File.join(screenshots_cache_dir, "language.txt"), locale.split('-').first)
+      File.write(File.join(screenshots_cache_dir, "locale.txt"), locale)
+
+      # Clean cache screenshots directory before test run
+      FileUtils.rm_rf(File.join(screenshots_cache_dir, "screenshots")) if Dir.exist?(File.join(screenshots_cache_dir, "screenshots"))
+
+      # Run macOS UI tests to capture screenshots
+      # macOS runs natively, no simulator needed
+      UI.message("🧪 Running macOS UI tests for #{locale}...")
+      run_tests(
+        project: "ListAll/ListAll.xcodeproj",
+        scheme: "ListAllMac",
+        destination: "platform=macOS",
+        only_testing: ["ListAllMacUITests/MacScreenshotTests"],
+        xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
+        result_bundle: true,
+        fail_build: false  # Continue even if some tests fail to capture all possible screenshots
+      )
+
+      # Copy screenshots from cache to output directory
+      cache_screenshots_dir = File.join(screenshots_cache_dir, "screenshots")
+      if Dir.exist?(cache_screenshots_dir)
+        screenshots = Dir.glob(File.join(cache_screenshots_dir, "Mac-*.png"))
+        UI.message("📋 Found #{screenshots.count} screenshots in cache")
+
+        screenshots.each do |screenshot_path|
+          filename = File.basename(screenshot_path).gsub("Mac-", "")
+          target_path = File.join(locale_output_dir, filename)
+          FileUtils.cp(screenshot_path, target_path)
+          UI.message("  ✓ Copied: #{filename}")
+          total_captured += 1
+        end
+      else
+        UI.important("⚠️  No screenshots found in cache for #{locale}")
+      end
+
+      # Validate locale screenshot count
+      locale_shots = Dir.glob(File.join(locale_output_dir, "*.png"))
+      if locale_shots.count < expected_per_locale
+        UI.important("⚠️  #{locale}: Expected #{expected_per_locale} screenshots, found #{locale_shots.count}")
+      else
+        UI.success("✅ #{locale}: Found #{locale_shots.count} screenshots")
+      end
+    end
+
+    # Final validation
+    if total_captured == 0
+      UI.user_error!("🚨 macOS screenshot generation failed: No screenshots captured")
+    end
+
+    UI.success("🖥️ macOS screenshots generation complete!")
+    UI.success("✅ Captured #{total_captured} total screenshots (#{expected_per_locale} per locale)")
+    UI.message("📁 Screenshots saved to: fastlane/screenshots/mac/")
+
+    # Verify screenshot dimensions
+    UI.header("📐 Validating macOS screenshot dimensions")
+    locales.each do |locale|
+      locale_dir = File.join(mac_output_dir, locale)
+      next unless Dir.exist?(locale_dir)
+
+      Dir.glob(File.join(locale_dir, "*.png")).each do |shot|
+        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+        w, h = dims.split('x').map(&:to_i)
+
+        # macOS screenshots should be at least Retina (2880x1800) for App Store
+        # XCUIScreen.main.screenshot() captures native display resolution
+        UI.message("  #{locale}/#{File.basename(shot)}: #{dims}")
+
+        if w < 2880 || h < 1800
+          UI.important("  ⚠️  Screenshot may be too small for App Store (expected at least 2880x1800)")
+        end
+      end
+    end
+  end
+
+  desc "Normalize macOS screenshots to App Store Connect requirements (2880x1800)"
+  desc "Resizes/pads macOS screenshots if needed to meet exact App Store dimensions"
+  lane :screenshots_macos_normalize do
+    UI.header("📐 Normalizing macOS Screenshots")
+
+    mac_raw_dir = File.expand_path("screenshots/mac", __dir__)
+    mac_normalized_dir = File.expand_path("screenshots/mac_normalized", __dir__)
+    locales = %w[en-US fi]
+
+    # Target dimensions for macOS App Store screenshots
+    target_width = 2880
+    target_height = 1800
+
+    # Clean and create normalized directory
+    FileUtils.rm_rf(mac_normalized_dir) if Dir.exist?(mac_normalized_dir)
+    FileUtils.mkdir_p(mac_normalized_dir)
+
+    locales.each do |locale|
+      locale_raw_dir = File.join(mac_raw_dir, locale)
+      locale_normalized_dir = File.join(mac_normalized_dir, locale)
+
+      unless Dir.exist?(locale_raw_dir)
+        UI.important("⚠️  No raw screenshots found for #{locale}, skipping")
+        next
+      end
+
+      FileUtils.mkdir_p(locale_normalized_dir)
+
+      Dir.glob(File.join(locale_raw_dir, "*.png")).each do |raw_path|
+        filename = File.basename(raw_path)
+        normalized_path = File.join(locale_normalized_dir, filename)
+
+        # Get current dimensions
+        dims = `identify -format '%wx%h' #{Shellwords.escape(raw_path)}`.strip
+        w, h = dims.split('x').map(&:to_i)
+
+        if w == target_width && h == target_height
+          # Already correct size, just copy
+          FileUtils.cp(raw_path, normalized_path)
+          UI.message("✓ #{locale}/#{filename}: #{dims} (already correct)")
+        elsif w >= target_width && h >= target_height
+          # Resize down to target (maintaining aspect ratio, then crop if needed)
+          sh("convert #{Shellwords.escape(raw_path)} -resize #{target_width}x#{target_height}^ -gravity center -extent #{target_width}x#{target_height} #{Shellwords.escape(normalized_path)}")
+          UI.message("✓ #{locale}/#{filename}: #{dims} → #{target_width}x#{target_height} (resized)")
+        else
+          # Pad to target size (add black bars if too small)
+          sh("convert #{Shellwords.escape(raw_path)} -gravity center -background black -extent #{target_width}x#{target_height} #{Shellwords.escape(normalized_path)}")
+          UI.important("⚠️  #{locale}/#{filename}: #{dims} → #{target_width}x#{target_height} (padded)")
+        end
+      end
+    end
+
+    # Validate normalized screenshots
+    total_normalized = 0
+    locales.each do |locale|
+      locale_dir = File.join(mac_normalized_dir, locale)
+      next unless Dir.exist?(locale_dir)
+
+      shots = Dir.glob(File.join(locale_dir, "*.png"))
+      total_normalized += shots.count
+
+      shots.each do |shot|
+        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+        w, h = dims.split('x').map(&:to_i)
+
+        if w != target_width || h != target_height
+          UI.user_error!("❌ Normalization failed: #{locale}/#{File.basename(shot)} is #{dims}, expected #{target_width}x#{target_height}")
+        end
+      end
+    end
+
+    if total_normalized == 0
+      UI.user_error!("🚨 macOS screenshot normalization failed: No normalized screenshots found")
+    end
+
+    UI.success("✅ Normalized #{total_normalized} macOS screenshots to #{target_width}x#{target_height}")
+    UI.message("📁 Normalized screenshots saved to: fastlane/screenshots/mac_normalized/")
   end
 
   desc "Validate all delivery-ready screenshots (normalized iPhone/iPad + naked Watch)"
