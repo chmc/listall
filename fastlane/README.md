@@ -45,6 +45,18 @@ Options:
 
   skip_version_bump: true to skip version increment (use current version)
 
+### ios beta_macos
+
+```sh
+[bundle exec] fastlane ios beta_macos
+```
+
+Build and upload macOS app to TestFlight
+
+Options:
+
+  skip_version_bump: true to skip version validation (use current version)
+
 ### ios release
 
 ```sh
@@ -62,6 +74,16 @@ Creates new app version if needed. Usage: fastlane release version:1.2.0
 ```
 
 Dry-run: Verify normalized screenshots would be detected by deliver (no upload)
+
+### ios release_macos
+
+```sh
+[bundle exec] fastlane ios release_macos
+```
+
+Deliver macOS app metadata/screenshots to App Store (no auto-submit)
+
+Creates new app version if needed. Usage: fastlane release_macos version:1.2.0
 
 ### ios asc_dry_run
 
@@ -176,6 +198,28 @@ Captures screenshots from Apple Watch Series 10 (46mm) for EN and FI locales
 ```
 
 Validate watch screenshot sizes and naming (uses App Store Connect requirements)
+
+### ios screenshots_macos
+
+```sh
+[bundle exec] fastlane ios screenshots_macos
+```
+
+Generate macOS screenshots (locally - not in CI)
+
+Captures macOS screenshots for EN and FI locales
+
+Outputs screenshots to fastlane/screenshots/mac/ ready for App Store
+
+### ios screenshots_macos_normalize
+
+```sh
+[bundle exec] fastlane ios screenshots_macos_normalize
+```
+
+Normalize macOS screenshots to App Store Connect requirements (2880x1800)
+
+Resizes/pads macOS screenshots if needed to meet exact App Store dimensions
 
 ### ios validate_delivery_screenshots
 

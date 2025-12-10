@@ -3022,7 +3022,7 @@ bundle exec fastlane match appstore --platform macos --app_identifier "io.github
 
 ---
 
-### Task 9.6: Update show_version Lane to Include macOS
+### Task 9.6: [COMPLETED] Update show_version Lane to Include macOS
 **TDD**: Verify all platforms displayed
 
 **Problem**: Current `show_version` lane only displays iOS and watchOS versions.
@@ -3045,6 +3045,25 @@ bundle exec fastlane match appstore --platform macos --app_identifier "io.github
    # ✅ ListAllWatch Watch App: 1.1.4
    # ✅ ListAllMac: 1.1.4
    ```
+
+**SWARM VERIFIED** (December 2025):
+
+| Agent | Finding | Status |
+|-------|---------|--------|
+| Pipeline Specialist | Implementation correct, all 3 platforms displayed | ✅ Approved |
+| Critical Reviewer | Approved with conditions - optimization implemented | ✅ Approved |
+
+**Completed**:
+- ✅ `ListAllMac` already in targets array at line 664 of `fastlane/Fastfile`
+- ✅ Optimized `get_build_number` to be called once outside loop (was 3x inside)
+- ✅ Added documentation comment explaining build numbers are project-wide via agvtool
+- ✅ Narrowed exception handling from generic `=> e` to `Fastlane::Interface::FastlaneError => e`
+- ✅ Verified: `bundle exec fastlane show_version` displays all 3 platforms with 1.1.4 (35)
+
+**Critical Reviewer Recommendations Applied**:
+1. **CRITICAL (Fixed)**: Moved `get_build_number` outside loop for efficiency and architectural clarity
+2. **IMPORTANT (Fixed)**: Added comment documenting that `get_build_number` lacks target parameter
+3. **MINOR (Fixed)**: Narrowed exception handling to specific Fastlane errors
 
 ---
 
@@ -3110,7 +3129,7 @@ Before implementing Phase 9 tasks:
 - [x] **Task 9.0**: Sync macOS build number from 1 to 35
 - [x] **Task 9.0.1**: Create `verify-version-sync.sh` script
 - [x] **Task 9.0.2**: Create `verify-macos-prerequisites.sh` script
-- [ ] **Task 9.6**: Update `show_version` lane to include macOS
+- [x] **Task 9.6**: Update `show_version` lane to include macOS
 
 After prerequisites pass:
 

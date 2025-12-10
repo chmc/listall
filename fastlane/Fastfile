@@ -657,17 +657,20 @@ platform :ios do
     UI.message("Latest git tag: #{git_version || 'none'}") if git_version
     
     # Read from Xcode project
+    # Note: Build numbers (CURRENT_PROJECT_VERSION) are project-wide in Xcode.
+    # get_build_number() does not accept a target parameter - it returns the
+    # same value for all targets via agvtool. Fetched once outside the loop.
     UI.message("\nXcode Project Versions:")
     targets = ['ListAll', 'ListAllWatch Watch App', 'ListAllMac']
+    build = get_build_number(xcodeproj: xcodeproj_path)
     targets.each do |target|
       begin
         version = get_version_number(
           xcodeproj: xcodeproj_path,
           target: target
         )
-        build = get_build_number(xcodeproj: xcodeproj_path)
         UI.message("  #{target}: #{version} (#{build})")
-      rescue => e
+      rescue Fastlane::Interface::FastlaneError => e
         UI.error("  #{target}: Error - #{e.message}")
       end
     end
