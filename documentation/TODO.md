@@ -2011,9 +2011,50 @@ func testNSSharingServicePickerCreation() {
 
 ## Phase 9: CI/CD Pipeline
 
-### Architecture Decision: Parallel Jobs (Not Sequential)
+### Architecture Decision: Synchronized Versioning + Parallel Jobs
 
-**IMPORTANT**: Based on swarm analysis by Critical Reviewer, Pipeline Specialist, Apple Development Expert, and Shell Script Specialist agents, Phase 9 uses **parallel jobs** instead of sequential steps.
+**SWARM VERIFIED** (December 2025): Analysis by Critical Reviewer, Pipeline Specialist, Apple Development Expert, and Shell Script Specialist agents confirmed this architecture.
+
+#### Synchronized Versioning Strategy
+
+**Single Source of Truth**: `.version` file controls MARKETING_VERSION for ALL platforms (iOS, macOS, watchOS).
+
+**Current Version State** (CRITICAL - requires immediate fix):
+| Platform | MARKETING_VERSION | BUILD_NUMBER | Status |
+|----------|-------------------|--------------|--------|
+| iOS (ListAll) | 1.1.4 | 35 | ✅ Current |
+| watchOS (ListAllWatch) | 1.1.4 | 35 | ✅ Current |
+| macOS (ListAllMac) | 1.0 | 1 | ❌ **OUT OF SYNC** |
+
+**Why Synchronized Versions**:
+- Users expect consistent version numbers across platforms for same app
+- Simplifies release management and support
+- `version_helper.rb` already iterates ALL Xcode targets (verified working)
+- TestFlight handles same version across iOS/macOS (separate platform tracks by bundle ID)
+
+**Version Sync Architecture**:
+```
+┌─────────────────────────┐
+│   .version file         │  ← Single source of truth
+│   (e.g., "1.1.5")       │
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│  version_helper.rb      │  ← Updates ALL Xcode targets
+│  update_xcodeproj_ver() │
+└───────────┬─────────────┘
+            │
+    ┌───────┴───────┬───────────────┐
+    ▼               ▼               ▼
+┌────────┐   ┌──────────┐   ┌───────────┐
+│ ListAll│   │ListAllMac│   │ListAllWatch│
+│  iOS   │   │  macOS   │   │  watchOS   │
+│ 1.1.5  │   │  1.1.5   │   │   1.1.5    │
+└────────┘   └──────────┘   └───────────┘
+```
+
+#### Parallel Jobs Strategy
 
 **Why Parallel Jobs**:
 | Criterion | Sequential | Parallel | Winner |
@@ -2024,46 +2065,241 @@ func testNSSharingServicePickerCreation() {
 | Debuggability | Hard (mixed logs) | Easy (per-platform) | **Parallel** |
 | Maintainability | Medium | High | **Parallel** |
 
-**Cost Analysis**: Parallel is ~43% more expensive ($5.28 vs $3.68) but delivers 35% time savings (15 min vs 23 min). The speed improvement justifies the additional cost for developer productivity and faster feedback loops.
+**Release Workflow Architecture** (version-bump → parallel builds):
+```yaml
+jobs:
+  version-bump:        # Runs FIRST, outputs version, commits to git
+    outputs:
+      version: "1.1.5"
+  beta-ios:            # Depends on version-bump, parallel with beta-macos
+    needs: [version-bump]
+  beta-macos:          # Depends on version-bump, parallel with beta-ios
+    needs: [version-bump]
+```
 
-**Key Differences from iOS/watchOS**:
-- macOS uses `platform=macOS,arch=arm64` (no simulator)
-- macOS builds faster (no simulator boot/shutdown)
-- macOS uses `.pkg` format (not `.ipa`)
-- pilot requires `app_platform: "osx"` for macOS uploads
+**Key Principle**: Version bump happens ONCE before ANY platform builds. All platforms use the SAME version from the version-bump job output. This prevents race conditions and ensures consistency.
+
+**Key Differences by Platform**:
+| Platform | Destination | Output Format | pilot Platform |
+|----------|-------------|---------------|----------------|
+| iOS | `platform=iOS Simulator,name=iPhone 16 Pro` | `.ipa` | `ios` |
+| watchOS | `platform=watchOS Simulator,name=Apple Watch Series 10` | `.ipa` (embedded) | `ios` |
+| macOS | `platform=macOS,arch=arm64` | `.pkg` | `osx` |
 
 ---
 
-### Task 9.0: Pre-requisites (BLOCKING)
+### Task 9.0: [BLOCKING] Synchronize macOS Version with iOS/watchOS
+**CRITICAL**: This task MUST be completed before any other Phase 9 tasks.
+
+**Problem**: macOS target is at version 1.0, while iOS/watchOS are at 1.1.4.
+
+**Impact**: If version-bump runs, macOS would jump from 1.0 to 1.1.5, creating confusion and potentially App Store Connect issues.
+
+**Steps**:
+1. **Verify macOS has NOT shipped to production** (required for catch-up approach):
+   ```bash
+   # Check App Store Connect for existing macOS builds
+   bundle exec fastlane run app_store_connect_api_key
+   # If no macOS builds exist, proceed with catch-up
+   ```
+
+2. **Sync macOS version to match iOS/watchOS**:
+   ```bash
+   # Option A: Use version_helper.rb (recommended)
+   bundle exec ruby -r ./fastlane/lib/version_helper.rb -e "
+     VersionHelper.update_xcodeproj_version('ListAll/ListAll.xcodeproj', '1.1.4')
+     VersionHelper.validate_versions('ListAll/ListAll.xcodeproj')
+   "
+
+   # Option B: Manual Xcode edit
+   # Open ListAll.xcodeproj → ListAllMac target → Build Settings → MARKETING_VERSION → set to 1.1.4
+   ```
+
+3. **Sync build number to match iOS/watchOS**:
+   ```bash
+   # Set all targets to build 35 (matching iOS/watchOS baseline)
+   cd ListAll
+   agvtool new-version -all 35
+   ```
+
+4. **Verify synchronization**:
+   ```bash
+   # Check all three schemes have same version
+   xcodebuild -showBuildSettings -scheme ListAll 2>/dev/null | grep MARKETING_VERSION
+   xcodebuild -showBuildSettings -scheme ListAllMac 2>/dev/null | grep MARKETING_VERSION
+   xcodebuild -showBuildSettings -scheme "ListAllWatch Watch App" 2>/dev/null | grep MARKETING_VERSION
+
+   # Expected output for all: MARKETING_VERSION = 1.1.4
+   ```
+
+5. **Update show_version lane** to include macOS:
+   ```ruby
+   # In fastlane/Fastfile, update targets array (around line 503):
+   targets = ['ListAll', 'ListAllWatch Watch App', 'ListAllMac']
+   ```
+
+**Test criteria**:
+- `bundle exec fastlane show_version` displays all 3 platforms with 1.1.4
+- `bundle exec ruby -r ./fastlane/lib/version_helper.rb -e "VersionHelper.validate_versions('ListAll/ListAll.xcodeproj')"` returns success
+
+**Blocking**: Tasks 9.1-9.6 cannot proceed until macOS version is synchronized.
+
+---
+
+### Task 9.0.1: Create Version Sync Verification Script
+**TDD**: Pre-flight check for version synchronization
+
+**Steps**:
+1. Create `.github/scripts/verify-version-sync.sh`:
+   ```bash
+   #!/bin/bash
+   set -euo pipefail
+
+   # verify-version-sync.sh - Ensures all platforms have synchronized versions
+
+   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+   PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+   PROJECT_PATH="$PROJECT_ROOT/ListAll/ListAll.xcodeproj"
+   VERSION_FILE="$PROJECT_ROOT/.version"
+
+   # Colors
+   RED='\033[0;31m'
+   GREEN='\033[0;32m'
+   YELLOW='\033[1;33m'
+   NC='\033[0m'
+
+   echo "🔍 Verifying version synchronization across all platforms..."
+   echo ""
+
+   # Read expected version from .version file
+   if [[ ! -f "$VERSION_FILE" ]]; then
+       echo -e "${RED}❌ .version file not found at $VERSION_FILE${NC}"
+       exit 1
+   fi
+   EXPECTED_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+   echo "📋 Expected version (from .version): $EXPECTED_VERSION"
+   echo ""
+
+   # Extract MARKETING_VERSION for each scheme
+   get_version() {
+       local scheme="$1"
+       xcodebuild -project "$PROJECT_PATH" -showBuildSettings -scheme "$scheme" 2>/dev/null | \
+           grep "MARKETING_VERSION" | head -1 | awk '{print $3}'
+   }
+
+   # Check each platform
+   ERRORS=0
+   declare -A VERSIONS
+
+   for scheme in "ListAll" "ListAllMac" "ListAllWatch Watch App"; do
+       VERSION=$(get_version "$scheme")
+       VERSIONS["$scheme"]="$VERSION"
+
+       if [[ "$VERSION" == "$EXPECTED_VERSION" ]]; then
+           echo -e "${GREEN}✅ $scheme: $VERSION${NC}"
+       else
+           echo -e "${RED}❌ $scheme: $VERSION (expected $EXPECTED_VERSION)${NC}"
+           ((ERRORS++))
+       fi
+   done
+
+   echo ""
+   if [[ $ERRORS -eq 0 ]]; then
+       echo -e "${GREEN}✅ All platforms synchronized at version $EXPECTED_VERSION${NC}"
+       exit 0
+   else
+       echo -e "${RED}❌ Version mismatch detected! $ERRORS platform(s) out of sync.${NC}"
+       echo -e "${YELLOW}Run: bundle exec fastlane set_version version:$EXPECTED_VERSION${NC}"
+       exit 1
+   fi
+   ```
+
+2. Make executable and test:
+   ```bash
+   chmod +x .github/scripts/verify-version-sync.sh
+   .github/scripts/verify-version-sync.sh
+   ```
+
+3. Add to CI pre-flight checks in release.yml:
+   ```yaml
+   - name: Verify version synchronization
+     run: .github/scripts/verify-version-sync.sh
+   ```
+
+**Test criteria**:
+- Script exits 0 when all platforms match
+- Script exits 1 with clear error when mismatch detected
+- Script shows table of all platform versions
+
+---
+
+### Task 9.0.2: Pre-requisites Verification
 **TDD**: Create test script to verify infrastructure before implementation
 
 **Steps**:
 1. Create verification script `.github/scripts/verify-macos-prerequisites.sh`:
-   - Check bundle ID registration
-   - Verify TestFlight enabled for macOS
-   - Validate code signing and provisioning profiles
-   - Verify macOS version number sync with iOS
-
-   Example verification commands:
    ```bash
-   # Check bundle ID registration
-   bundle exec fastlane run app_store_connect_api_key
+   #!/bin/bash
+   set -euo pipefail
 
-   # Confirm macOS provisioning profile retrievable
-   bundle exec fastlane match appstore --platform macos --readonly
+   # verify-macos-prerequisites.sh - Pre-flight checks for macOS CI/CD
 
-   # Current: ListAllMac shows 1.0, should match iOS (1.1.4)
-   bundle exec fastlane show_version
+   echo "🔍 Verifying macOS CI/CD prerequisites..."
+   echo ""
 
-   # Verify iOS and macOS versions match
-   ios_version=$(xcodebuild -showBuildSettings -scheme ListAll | grep MARKETING_VERSION | head -1 | awk '{print $3}')
-   macos_version=$(xcodebuild -showBuildSettings -scheme ListAllMac | grep MARKETING_VERSION | head -1 | awk '{print $3}')
-   [[ "$ios_version" == "$macos_version" ]] || echo "Version mismatch!"
+   ERRORS=0
+
+   # 1. Check bundle ID registration
+   echo "1️⃣ Checking App Store Connect API authentication..."
+   if bundle exec fastlane run app_store_connect_api_key 2>/dev/null; then
+       echo "   ✅ App Store Connect API key valid"
+   else
+       echo "   ❌ App Store Connect API key invalid"
+       ((ERRORS++))
+   fi
+
+   # 2. Check macOS provisioning profile
+   echo "2️⃣ Checking macOS provisioning profile..."
+   if bundle exec fastlane match appstore --platform macos --readonly 2>/dev/null; then
+       echo "   ✅ macOS provisioning profile available"
+   else
+       echo "   ⚠️ macOS provisioning profile not found (may need to run match)"
+   fi
+
+   # 3. Check version synchronization
+   echo "3️⃣ Checking version synchronization..."
+   .github/scripts/verify-version-sync.sh || ((ERRORS++))
+
+   # 4. Verify Xcode can build macOS target
+   echo "4️⃣ Verifying macOS build capability..."
+   if xcodebuild -project ListAll/ListAll.xcodeproj -scheme ListAllMac \
+       -destination 'platform=macOS,arch=arm64' \
+       -configuration Debug \
+       CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
+       -quiet build 2>/dev/null; then
+       echo "   ✅ macOS build successful"
+   else
+       echo "   ❌ macOS build failed"
+       ((ERRORS++))
+   fi
+
+   echo ""
+   if [[ $ERRORS -eq 0 ]]; then
+       echo "✅ All prerequisites verified!"
+       exit 0
+   else
+       echo "❌ $ERRORS prerequisite(s) failed. Fix before proceeding."
+       exit 1
+   fi
    ```
 
-2. Run verification script and confirm all checks pass
+2. Run verification script and confirm all checks pass:
+   ```bash
+   chmod +x .github/scripts/verify-macos-prerequisites.sh
+   .github/scripts/verify-macos-prerequisites.sh
+   ```
 
-**Blocking**: Tasks 9.1-9.5 cannot proceed until these pass.
+**Blocking**: Tasks 9.1-9.6 cannot proceed until these pass.
 
 ---
 
@@ -2163,104 +2399,410 @@ xcodebuild test \
 
 ---
 
-### Task 9.2: Add macOS to release.yml as Parallel Job
+### Task 9.2: Add macOS to release.yml with Synchronized Version Bump
 **TDD**: Create test script to verify release pipeline with parallel uploads
 
-**Architecture**: Version bump → parallel platform builds
-```yaml
-jobs:
-  version-bump:     # Runs first, outputs version
-  beta-ios:         # Depends on version-bump, parallel with beta-macos
-  beta-macos:       # Depends on version-bump, parallel with beta-ios
+**Architecture**: Version bump (ONCE) → parallel platform builds
+
+**SWARM VERIFIED**: This architecture prevents race conditions where multiple jobs try to bump version simultaneously.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     release.yml Workflow                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌───────────────────────┐                                          │
+│  │   version-bump        │  ← Runs FIRST, commits version, outputs  │
+│  │   (macos-14)          │    version number for downstream jobs    │
+│  │   ~2 min              │                                          │
+│  └───────────┬───────────┘                                          │
+│              │                                                       │
+│              │  needs: version-bump                                  │
+│              ├─────────────────────────────────┐                     │
+│              ▼                                 ▼                     │
+│  ┌───────────────────────┐       ┌───────────────────────┐          │
+│  │   beta-ios            │       │   beta-macos          │          │
+│  │   (macos-14)          │       │   (macos-14)          │  PARALLEL│
+│  │   ~20 min             │       │   ~15 min             │          │
+│  │   - iOS + watchOS     │       │   - macOS .pkg        │          │
+│  └───────────────────────┘       └───────────────────────┘          │
+│                                                                     │
+│  Total wall time: ~22 min (vs ~40 min if sequential)                │
+│  Savings: ~45% faster                                               │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Steps**:
-1. Add `version-bump` job that outputs version and commit SHA for all platforms:
+
+1. **Refactor release.yml with version-bump job** (complete YAML):
    ```yaml
-   version-bump:
-     runs-on: macos-14
-     outputs:
-       version: ${{ steps.bump.outputs.version }}
-       commit_sha: ${{ steps.commit.outputs.sha }}
-     steps:
-       - name: Checkout code
-         uses: actions/checkout@v4
+   name: Release to TestFlight
 
-       - name: Bump version
-         id: bump
-         run: |
-           # Version bump logic
-           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+   on:
+     workflow_dispatch:
+       inputs:
+         bump_type:
+           description: 'Version bump type'
+           required: true
+           default: 'patch'
+           type: choice
+           options:
+             - patch
+             - minor
+             - major
+         skip_version_bump:
+           description: 'Skip version bump (use current version)'
+           required: false
+           default: false
+           type: boolean
+         platforms:
+           description: 'Platforms to build (comma-separated)'
+           required: false
+           default: 'ios,macos'
+           type: string
+     push:
+       tags:
+         - 'v*'
 
-       - name: Commit version bump
-         id: commit
-         run: |
-           git commit -am "Bump version to $VERSION"
-           git push
-           echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+   permissions:
+     contents: write
+
+   jobs:
+     #############################################################################
+     # JOB 1: Version Bump (runs ONCE, FIRST) - Synchronized across all platforms
+     #############################################################################
+     version-bump:
+       name: Version Bump & Sync
+       runs-on: macos-14
+       outputs:
+         version: ${{ steps.bump.outputs.version }}
+         build_number: ${{ steps.build_num.outputs.build_number }}
+       steps:
+         - name: Checkout code
+           uses: actions/checkout@v4
+           with:
+             fetch-depth: 0
+             token: ${{ secrets.GITHUB_TOKEN }}
+
+         - name: Setup Ruby
+           uses: ruby/setup-ruby@v1
+           with:
+             ruby-version: '3.2'
+             bundler-cache: true
+
+         - name: Verify version synchronization (pre-flight)
+           run: .github/scripts/verify-version-sync.sh
+
+         - name: Show current version
+           run: bundle exec fastlane show_version
+
+         - name: Bump version
+           id: bump
+           run: |
+             if [ "${{ github.event.inputs.skip_version_bump }}" = "true" ]; then
+               echo "⏭️ Skipping version bump as requested"
+               CURRENT_VERSION=$(cat .version)
+               echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+             else
+               BUMP_TYPE="${{ github.event.inputs.bump_type || 'patch' }}"
+               echo "📦 Bumping version: $BUMP_TYPE"
+
+               # Use version_helper.rb to bump and sync ALL targets
+               NEW_VERSION=$(bundle exec ruby -r ./fastlane/lib/version_helper.rb -e "
+                 current = VersionHelper.read_version
+                 new_version = VersionHelper.increment_version(current, '$BUMP_TYPE')
+                 puts new_version
+               ")
+
+               echo "📦 New version: $NEW_VERSION"
+               echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+               # Update .version file and ALL Xcode targets
+               bundle exec ruby -r ./fastlane/lib/version_helper.rb -e "
+                 VersionHelper.write_version('$NEW_VERSION')
+                 VersionHelper.update_xcodeproj_version('ListAll/ListAll.xcodeproj', '$NEW_VERSION')
+                 unless VersionHelper.validate_versions('ListAll/ListAll.xcodeproj')
+                   puts '❌ Version validation failed'
+                   exit 1
+                 end
+               "
+             fi
+
+         - name: Generate build number
+           id: build_num
+           run: |
+             BUILD_NUM="${GITHUB_RUN_NUMBER:-1}"
+             echo "build_number=$BUILD_NUM" >> $GITHUB_OUTPUT
+             echo "📦 Build number: $BUILD_NUM"
+
+         - name: Verify version synchronization (post-bump)
+           run: .github/scripts/verify-version-sync.sh
+
+         - name: Commit and push version changes
+           if: success() && github.event.inputs.skip_version_bump != 'true'
+           run: |
+             git config user.name "GitHub Actions"
+             git config user.email "actions@github.com"
+
+             NEW_VERSION="${{ steps.bump.outputs.version }}"
+
+             git add .version ListAll/ListAll.xcodeproj/project.pbxproj
+             git commit -m "Bump version to ${NEW_VERSION}" || echo "No changes to commit"
+
+             git tag "v${NEW_VERSION}" || echo "Tag already exists"
+             git push origin main || echo "Push failed"
+             git push origin "v${NEW_VERSION}" || echo "Tag push failed"
+
+         - name: Upload version artifacts
+           uses: actions/upload-artifact@v4
+           with:
+             name: version-info
+             path: .version
+             retention-days: 7
+
+     #############################################################################
+     # JOB 2: iOS + watchOS Build (parallel with macOS)
+     #############################################################################
+     beta-ios:
+       name: TestFlight iOS
+       needs: version-bump
+       runs-on: macos-14
+       if: contains(github.event.inputs.platforms || 'ios,macos', 'ios')
+       env:
+         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+         ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+         MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+         MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+       steps:
+         - name: Checkout code
+           uses: actions/checkout@v4
+           with:
+             ref: main
+             fetch-depth: 0
+
+         - name: Setup Ruby
+           uses: ruby/setup-ruby@v1
+           with:
+             ruby-version: '3.2'
+             bundler-cache: true
+
+         - name: Select Xcode version
+           run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+         - name: Verify version matches version-bump output
+           run: |
+             EXPECTED="${{ needs.version-bump.outputs.version }}"
+             ACTUAL=$(cat .version)
+             if [ "$ACTUAL" != "$EXPECTED" ]; then
+               echo "❌ Version mismatch! Expected: $EXPECTED, Got: $ACTUAL"
+               exit 1
+             fi
+             echo "✅ Version verified: $ACTUAL"
+
+         - name: Prepare Match Git URL
+           run: |
+             echo "MATCH_GIT_URL=https://x-access-token:${{ secrets.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+
+         - name: Build and upload iOS to TestFlight
+           run: bundle exec fastlane beta skip_version_bump:true
+
+         - name: Upload iOS artifacts
+           if: always()
+           uses: actions/upload-artifact@v4
+           with:
+             name: ios-build-artifacts
+             path: |
+               ListAll/build/*.ipa
+               ListAll/build/*.xcarchive
+               ListAll/build/*.log
+             retention-days: 14
+
+     #############################################################################
+     # JOB 3: macOS Build (parallel with iOS)
+     #############################################################################
+     beta-macos:
+       name: TestFlight macOS
+       needs: version-bump
+       runs-on: macos-14
+       if: contains(github.event.inputs.platforms || 'ios,macos', 'macos')
+       timeout-minutes: 25
+       env:
+         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+         ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+         MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+         MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+       steps:
+         - name: Checkout code
+           uses: actions/checkout@v4
+           with:
+             ref: main
+             fetch-depth: 0
+
+         - name: Setup Ruby
+           uses: ruby/setup-ruby@v1
+           with:
+             ruby-version: '3.2'
+             bundler-cache: true
+
+         - name: Select Xcode version
+           run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+         - name: Cache SPM packages
+           uses: actions/cache@v4
+           with:
+             path: |
+               ~/.swiftpm
+               ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+             key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+             restore-keys: |
+               ${{ runner.os }}-spm-
+
+         - name: Verify version matches version-bump output
+           run: |
+             EXPECTED="${{ needs.version-bump.outputs.version }}"
+             ACTUAL=$(cat .version)
+             if [ "$ACTUAL" != "$EXPECTED" ]; then
+               echo "❌ Version mismatch! Expected: $EXPECTED, Got: $ACTUAL"
+               exit 1
+             fi
+             echo "✅ Version verified: $ACTUAL"
+
+         - name: Prepare Match Git URL
+           run: |
+             echo "MATCH_GIT_URL=https://x-access-token:${{ secrets.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+
+         - name: Build and upload macOS to TestFlight
+           run: bundle exec fastlane beta_macos skip_version_bump:true
+
+         - name: Upload macOS artifacts
+           if: always()
+           uses: actions/upload-artifact@v4
+           with:
+             name: macos-build-artifacts
+             path: |
+               ListAll/build/*.pkg
+               ListAll/build/*.xcarchive
+               ListAll/build/*.log
+             retention-days: 14
+
+     #############################################################################
+     # JOB 4: Verify Release (runs after all builds)
+     #############################################################################
+     verify-release:
+       name: Verify Release
+       needs: [version-bump, beta-ios, beta-macos]
+       runs-on: ubuntu-latest
+       if: always()
+       steps:
+         - name: Release Summary
+           run: |
+             echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+             echo "" >> $GITHUB_STEP_SUMMARY
+             echo "**Version**: ${{ needs.version-bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+             echo "**Build**: ${{ needs.version-bump.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
+             echo "" >> $GITHUB_STEP_SUMMARY
+             echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+             echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+             echo "| iOS | ${{ needs.beta-ios.result }} |" >> $GITHUB_STEP_SUMMARY
+             echo "| macOS | ${{ needs.beta-macos.result }} |" >> $GITHUB_STEP_SUMMARY
    ```
-2. Add `beta-macos` job parallel to existing beta job:
-   ```yaml
-   beta-macos:
-     name: TestFlight macOS
-     needs: [version-bump]
-     if: needs.version-bump.result == 'success'
-     runs-on: macos-14
-     timeout-minutes: 20
 
-     steps:
-     - name: Checkout code
-       uses: actions/checkout@v4
-       with:
-         ref: ${{ needs.version-bump.outputs.commit_sha }}
-
-     - name: Build and upload macOS to TestFlight
-       run: bundle exec fastlane beta_macos
-   ```
-
-3. Add platform selection input:
-   ```yaml
-   inputs:
-     platforms:
-       description: 'Platforms to build'
-       default: 'ios,macos'
-       type: string
-   ```
-
-4. **CREATE** Fastlane lane `beta_macos` (implementation task, not just reference):
+2. **CREATE Fastlane lane `beta_macos`** (add to fastlane/Fastfile):
    ```ruby
-   private_lane :beta_macos do
+   desc "Build and upload macOS app to TestFlight"
+   lane :beta_macos do |options|
+     # Setup CI environment
+     if ENV['CI']
+       setup_ci
+       ENV["KEYCHAIN_PASSWORD"] = ""
+     end
+
+     xcodeproj_path = "ListAll/ListAll.xcodeproj"
+
+     # Version should already be set by version-bump job
+     unless options[:skip_version_bump]
+       UI.user_error!("beta_macos should run with skip_version_bump:true in CI")
+     end
+
+     current_version = VersionHelper.read_version
+     UI.message("📦 Using version: #{current_version}")
+
+     # Validate version is synchronized across all targets
+     unless VersionHelper.validate_versions(xcodeproj_path)
+       UI.user_error!("Version validation failed for macOS target")
+     end
+
+     # Increment build number from CI
+     if ENV['GITHUB_RUN_NUMBER']
+       increment_build_number(
+         build_number: ENV['GITHUB_RUN_NUMBER'],
+         xcodeproj: xcodeproj_path
+       )
+     end
+
+     # Code signing for macOS
      match(
        type: 'appstore',
+       platform: 'macos',
        app_identifier: ["io.github.chmc.ListAllMac"],
-       platform: "macos"
+       verbose: true,
+       keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
+       skip_set_partition_list: true
      )
 
-     build_mac_app(
+     # Build macOS app
+     pkg_path = build_mac_app(
+       project: xcodeproj_path,
        scheme: "ListAllMac",
        export_method: "app-store",
-       output_directory: "./build"
+       output_directory: "./ListAll/build",
+       export_options: {
+         provisioningProfiles: {
+           "io.github.chmc.ListAllMac" => "match AppStore io.github.chmc.ListAllMac"
+         }
+       }
      )
 
-     pilot(
-       pkg: lane_context[SharedValues::PKG_OUTPUT_PATH],
-       app_platform: "osx",  # REQUIRED for macOS
-       skip_waiting_for_build_processing: true
-     )
+     # Upload to TestFlight
+     if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_BASE64"]
+       api_key = app_store_connect_api_key(
+         key_id: ENV["ASC_KEY_ID"],
+         issuer_id: ENV["ASC_ISSUER_ID"],
+         key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+         is_key_content_base64: false,
+         in_house: false
+       )
+
+       pilot(
+         pkg: pkg_path,
+         api_key: api_key,
+         distribute_external: false,
+         app_platform: "osx",  # REQUIRED for macOS uploads
+         skip_waiting_for_build_processing: true
+       )
+
+       UI.success("✅ macOS build uploaded to TestFlight!")
+     else
+       UI.important("⚠️ ASC_* env vars not set. Skipping TestFlight upload.")
+     end
    end
    ```
 
-   **Note**: This lane must be CREATED - it does not exist yet.
-
-**macOS-Specific Requirements:**
+**macOS-Specific Requirements**:
 - Hardened Runtime must be enabled (`ENABLE_HARDENED_RUNTIME = YES`)
 - App Sandbox entitlement required for App Store
 - Notarization happens automatically during App Store submission
+- pilot requires `app_platform: "osx"` (NOT "macos")
 
 **Test criteria**:
-- iOS and macOS upload in parallel
-- Can build only iOS: `platforms:ios`
-- Can build only macOS: `platforms:macos`
+- Version bump runs ONCE, outputs version for all downstream jobs
+- iOS and macOS upload in parallel after version-bump completes
+- Can build only iOS: `platforms: ios`
+- Can build only macOS: `platforms: macos`
+- verify-release job summarizes results from all platforms
+- Version mismatch detection fails build early
 
 ---
 
@@ -2414,6 +2956,119 @@ jobs:
    ```bash
    bundle exec fastlane match appstore --platform macos --readonly
    ```
+
+---
+
+### Task 9.6: Update show_version Lane to Include macOS
+**TDD**: Verify all platforms displayed
+
+**Problem**: Current `show_version` lane only displays iOS and watchOS versions.
+
+**Steps**:
+1. Update `fastlane/Fastfile` (around line 503):
+   ```ruby
+   # BEFORE:
+   targets = ['ListAll', 'ListAllWatch Watch App']
+
+   # AFTER:
+   targets = ['ListAll', 'ListAllWatch Watch App', 'ListAllMac']
+   ```
+
+2. Verify output includes all 3 platforms:
+   ```bash
+   bundle exec fastlane show_version
+   # Expected output:
+   # ✅ ListAll: 1.1.4
+   # ✅ ListAllWatch Watch App: 1.1.4
+   # ✅ ListAllMac: 1.1.4
+   ```
+
+---
+
+### Phase 9 Summary: Synchronized Versioning Architecture
+
+**SWARM VERIFIED** (December 2025): This architecture was analyzed and validated by a swarm of 4 specialized agents:
+
+| Agent | Role | Key Findings |
+|-------|------|--------------|
+| Pipeline Specialist | CI/CD workflow design | Version-bump job must run FIRST before parallel builds to prevent race conditions |
+| Apple Development Expert | Xcode project analysis | `version_helper.rb` already syncs ALL targets; macOS at 1.0 needs catch-up |
+| Critical Reviewer | Architecture validation | Synchronized versioning accepted with documented limitations |
+| Shell Script Specialist | Verification scripts | Pre-flight and post-bump verification scripts designed |
+
+#### Architecture Summary
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│            Synchronized Versioning for iOS/macOS/watchOS                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Single Source of Truth: .version file                                  │
+│                                                                         │
+│  ┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐    │
+│  │ .version     │────▶│ version_helper   │────▶│ Xcode Project    │    │
+│  │ "1.1.5"      │     │ .rb              │     │ (all targets)    │    │
+│  └──────────────┘     └──────────────────┘     └──────────────────┘    │
+│                                                                         │
+│  Release Workflow:                                                      │
+│  ┌─────────────┐                                                        │
+│  │ version-bump│  ← Runs ONCE, commits, outputs version                 │
+│  └──────┬──────┘                                                        │
+│         │                                                               │
+│    ┌────┴────┐                                                          │
+│    ▼         ▼                                                          │
+│  ┌─────┐  ┌───────┐                                                     │
+│  │ iOS │  │ macOS │  ← Run PARALLEL using same version                  │
+│  └─────┘  └───────┘                                                     │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Known Limitations (Critical Reviewer Findings)
+
+**Accepted Limitations of Synchronized Versioning**:
+
+1. **No platform-specific hotfixes**: If iOS needs a hotfix but macOS doesn't, both platforms must release with the same version number. macOS release notes would say "Bug fixes" even if nothing changed.
+
+2. **Coupled release cycles**: All platforms release together. Cannot ship macOS 1.2.0 while iOS stays at 1.1.5.
+
+3. **Version skipping on new platforms**: When macOS was added, it started at 1.0 while iOS was at 1.1.4. Catching up requires skipping versions (1.0 → 1.1.4).
+
+**Mitigations**:
+- Document that synchronized versioning signals feature parity across platforms
+- Use `platforms:` workflow input to build individual platforms when needed
+- Build number can differ per platform (each gets GITHUB_RUN_NUMBER)
+
+#### Migration Checklist
+
+Before implementing Phase 9 tasks:
+
+- [ ] **Task 9.0**: Sync macOS version from 1.0 to 1.1.4
+- [ ] **Task 9.0**: Sync macOS build number from 1 to 35
+- [ ] **Task 9.0.1**: Create `verify-version-sync.sh` script
+- [ ] **Task 9.0.2**: Create `verify-macos-prerequisites.sh` script
+- [ ] **Task 9.6**: Update `show_version` lane to include macOS
+
+After prerequisites pass:
+
+- [ ] **Task 9.1**: Add macOS to ci.yml (parallel job)
+- [ ] **Task 9.2**: Add version-bump job + beta-macos to release.yml
+- [ ] **Task 9.3**: Add macOS screenshots to prepare-appstore.yml
+- [ ] **Task 9.4**: Create beta_macos, screenshots_macos, release_macos lanes
+- [ ] **Task 9.5**: Run `match appstore --platform macos`
+
+#### Files Modified in Phase 9
+
+| File | Changes |
+|------|---------|
+| `.github/workflows/ci.yml` | Add macOS parallel job |
+| `.github/workflows/release.yml` | Add version-bump job, beta-macos job, platforms input |
+| `.github/workflows/prepare-appstore.yml` | Add macOS screenshot job |
+| `fastlane/Fastfile` | Add beta_macos, screenshots_macos, release_macos lanes; update show_version |
+| `fastlane/lib/version_helper.rb` | No changes needed (already syncs all targets) |
+| `.github/scripts/verify-version-sync.sh` | NEW - Version sync verification |
+| `.github/scripts/verify-macos-prerequisites.sh` | NEW - Pre-flight checks |
+| `ListAll/ListAll.xcodeproj/project.pbxproj` | Sync MARKETING_VERSION to 1.1.4 |
 
 ---
 
