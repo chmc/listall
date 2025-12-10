@@ -6,46 +6,48 @@ on:
   pull_request:
     branches: [ main ]
 
+# Cancel in-progress runs when new commits are pushed (Critical Reviewer C2)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-test:
-    name: Build and Test
+  #############################################################################
+  # Job 1: iOS Build and Test (~12-15 min)
+  #############################################################################
+  build-and-test-ios:
+    name: Build and Test iOS
     runs-on: macos-14
-    
+    timeout-minutes: 25
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-    
+
     - name: Show Xcode version
       run: xcodebuild -version
-    
+
+    # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
       uses: actions/cache@v4
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-derived-data-ios-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-
-    
-    - name: Cache SPM packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.swiftpm
-          ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
-        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-        restore-keys: |
-          ${{ runner.os }}-spm-
-    
-    - name: Resolve SPM dependencies
+          ${{ runner.os }}-derived-data-ios-
+
+    # Pre-flight: Clean simulator state to prevent boot failures
+    - name: Clean simulator state
       run: |
-        cd ListAll
-        xcodebuild -resolvePackageDependencies -project ListAll.xcodeproj -scheme ListAll
-    
+        xcrun simctl shutdown all || true
+        xcrun simctl delete unavailable || true
+
     - name: Build iOS app
       run: |
+        set -o pipefail
         cd ListAll
         xcodebuild clean build \
           -project ListAll.xcodeproj \
@@ -55,10 +57,11 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty || true
-    
+          | xcpretty
+
     - name: Run iOS tests
       run: |
+        set -o pipefail
         cd ListAll
         xcodebuild test \
           -project ListAll.xcodeproj \
@@ -68,10 +71,64 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty || true
-    
+          | xcpretty
+
+    # Always upload test results for debugging, even on success
+    - name: Upload iOS test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-test-results
+        path: ListAll/TestResults.xcresult
+        retention-days: 30
+
+    # Upload diagnostic logs only on failure to reduce artifact storage
+    - name: Upload iOS test logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-test-logs
+        path: |
+          ~/Library/Logs/DiagnosticReports
+          ~/Library/Developer/Xcode/DerivedData/*/Logs
+        retention-days: 7
+
+  #############################################################################
+  # Job 2: watchOS Build and Test (~10-12 min)
+  #############################################################################
+  build-and-test-watchos:
+    name: Build and Test watchOS
+    runs-on: macos-14
+    timeout-minutes: 25
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    # Platform-specific cache key prevents cross-platform cache corruption
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-watchos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-watchos-
+
+    # Pre-flight: Clean simulator state to prevent boot failures
+    - name: Clean simulator state
+      run: |
+        xcrun simctl shutdown all || true
+        xcrun simctl delete unavailable || true
+
     - name: Build watchOS app
       run: |
+        set -o pipefail
         cd ListAll
         xcodebuild clean build \
           -project ListAll.xcodeproj \
@@ -81,10 +138,11 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty || true
-    
+          | xcpretty
+
     - name: Run watchOS tests
       run: |
+        set -o pipefail
         cd ListAll
         xcodebuild test \
           -project ListAll.xcodeproj \
@@ -94,16 +152,9 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty || true
-    
-    - name: Upload iOS test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: ios-test-results
-        path: ListAll/TestResults.xcresult
-        retention-days: 30
-    
+          | xcpretty
+
+    # Always upload test results for debugging, even on success
     - name: Upload watchOS test results
       if: always()
       uses: actions/upload-artifact@v4
@@ -111,13 +162,123 @@ jobs:
         name: watchos-test-results
         path: ListAll/TestResults-Watch.xcresult
         retention-days: 30
-    
-    - name: Upload test logs
+
+    # Upload diagnostic logs only on failure to reduce artifact storage
+    - name: Upload watchOS test logs
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-logs
+        name: watchos-test-logs
         path: |
           ~/Library/Logs/DiagnosticReports
           ~/Library/Developer/Xcode/DerivedData/*/Logs
         retention-days: 7
+
+  #############################################################################
+  # Job 3: macOS Build and Test (~8-10 min, no simulator overhead)
+  #############################################################################
+  build-and-test-macos:
+    name: Build and Test macOS
+    runs-on: macos-14
+    timeout-minutes: 20  # Shorter timeout - no simulator overhead
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    # Platform-specific cache key prevents cross-platform cache corruption
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-macos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-macos-
+
+    - name: Build macOS app
+      run: |
+        set -o pipefail
+        cd ListAll
+        xcodebuild clean build \
+          -project ListAll.xcodeproj \
+          -scheme ListAllMac \
+          -destination 'platform=macOS' \
+          -configuration Debug \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty
+
+    - name: Run macOS tests
+      run: |
+        set -o pipefail
+        cd ListAll
+        xcodebuild test \
+          -project ListAll.xcodeproj \
+          -scheme ListAllMac \
+          -destination 'platform=macOS' \
+          -resultBundlePath TestResults-Mac.xcresult \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty
+
+    # Always upload test results for debugging, even on success
+    - name: Upload macOS test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-test-results
+        path: ListAll/TestResults-Mac.xcresult
+        retention-days: 30
+
+    # Upload diagnostic logs only on failure to reduce artifact storage
+    - name: Upload macOS test logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-test-logs
+        path: |
+          ~/Library/Logs/DiagnosticReports
+          ~/Library/Developer/Xcode/DerivedData/*/Logs
+        retention-days: 7
+
+  #############################################################################
+  # Job 4: CI Summary (aggregates results, runs on cheap ubuntu runner)
+  # Critical Reviewer C3: Explicit failure detection for branch protection
+  #############################################################################
+  ci-summary:
+    name: CI Summary
+    needs: [build-and-test-ios, build-and-test-watchos, build-and-test-macos]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check all platform builds succeeded
+      run: |
+        echo "## CI Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Platform | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| iOS | ${{ needs.build-and-test-ios.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| watchOS | ${{ needs.build-and-test-watchos.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| macOS | ${{ needs.build-and-test-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Fail if any platform failed
+        if [[ "${{ needs.build-and-test-ios.result }}" != "success" ]] || \
+           [[ "${{ needs.build-and-test-watchos.result }}" != "success" ]] || \
+           [[ "${{ needs.build-and-test-macos.result }}" != "success" ]]; then
+          echo "::error::One or more platform builds failed"
+          echo "**Status: FAILED** - One or more platforms did not succeed" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "**Status: PASSED** - All platforms succeeded" >> $GITHUB_STEP_SUMMARY
+        echo "All platform builds succeeded!"

@@ -2292,10 +2292,34 @@ jobs:
 
 ---
 
-### Task 9.1: Add macOS to ci.yml as Parallel Job
+### Task 9.1: [COMPLETED] Add macOS to ci.yml as Parallel Job
 **TDD**: Create test script to verify CI with failure isolation
 
-**Architecture**: Split into 3 parallel jobs (not sequential steps)
+**SWARM VERIFIED** (December 2025): Implementation by 4 specialized agents:
+- **Pipeline Specialist**: Designed 4-job parallel architecture
+- **Shell Script Specialist**: Fixed `|| true` error masking, validated `set -o pipefail`
+- **Critical Reviewer**: Added concurrency control, ci-summary job, identified deployment target issue
+- **Apple Development Expert**: Validated macOS destination, fixed MACOSX_DEPLOYMENT_TARGET (26.0 → 14.0)
+
+**Completed Changes**:
+1. ✅ Refactored ci.yml from single job to 4 parallel jobs
+2. ✅ Added concurrency group with cancel-in-progress
+3. ✅ Platform-specific cache keys (ios, watchos, macos)
+4. ✅ Pre-flight simulator cleanup for iOS/watchOS jobs
+5. ✅ Fixed `|| true` error masking → proper `set -o pipefail`
+6. ✅ Added ci-summary job for failure aggregation
+7. ✅ macOS uses `platform=macOS` (arch-agnostic, per Apple Dev Expert)
+8. ✅ Fixed MACOSX_DEPLOYMENT_TARGET from invalid 26.0 to 14.0 (Sonoma)
+9. ✅ Per-job timeouts: iOS/watchOS 25min, macOS 20min
+10. ✅ Local macOS build verified: BUILD SUCCEEDED
+
+**Critical Fixes Applied**:
+- C1: Removed unrealistic timing claims (now 12-18 min target)
+- C2: Added `concurrency: group: ci-${{ github.ref }}, cancel-in-progress: true`
+- C3: Added `ci-summary` job for explicit failure detection
+- I3: Replaced `| xcpretty || true` with `set -o pipefail | xcpretty`
+
+**Architecture**: Split into 4 jobs (3 parallel + summary)
 ```yaml
 concurrency:
   group: ci-${{ github.ref }}
