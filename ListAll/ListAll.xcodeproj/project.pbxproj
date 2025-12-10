@@ -946,6 +946,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ListAllMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ListAll;
+				INFOPLIST_KEY_CFBundleName = ListAll;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -954,7 +956,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = ListAll;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -982,6 +984,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ListAllMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ListAll;
+				INFOPLIST_KEY_CFBundleName = ListAll;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -990,7 +994,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.chmc.ListAllMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = ListAll;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
