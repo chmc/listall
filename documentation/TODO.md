@@ -3360,14 +3360,59 @@ fastlane/metadata/macos/
 
 ## Phase 11: Polish & Launch
 
-### Task 11.1: Implement macOS-Specific Keyboard Navigation
+### Task 11.1: [COMPLETED] Implement macOS-Specific Keyboard Navigation
 **TDD**: Accessibility tests
 
-**Steps**:
-1. Full keyboard navigation for all views
-2. Arrow keys for list navigation
-3. Tab between focusable elements
-4. Enter to confirm, Escape to cancel
+**SWARM VERIFIED** (December 2025): Implemented by 4 specialized agents:
+- **Apple Development Expert**: Researched SwiftUI keyboard APIs and designed implementation plan
+- **Testing Specialist**: Designed comprehensive test plan with 25+ test cases
+- **Critical Reviewer**: Identified and helped fix bidirectional focus sync and Cmd+C interception issues
+
+**Completed**:
+1. ✅ **Sidebar Navigation (MacSidebarView)**:
+   - `@FocusState private var focusedListID: UUID?` for tracking focused list
+   - `.focusable()` and `.focused($focusedListID, equals: list.id)` on each list row
+   - `.onKeyPress(.return)` - Enter key selects focused list
+   - `.onKeyPress(.space)` - Space key selects focused list (macOS convention)
+   - `.onKeyPress(.delete)` - Delete key removes focused list
+   - `moveFocusAfterDeletion(deletedId:)` helper to maintain focus after deletion
+   - Bidirectional focus/selection sync (arrow keys update selection immediately)
+
+2. ✅ **Item List Navigation (MacListDetailView)**:
+   - `@FocusState private var focusedItemID: UUID?` for tracking focused item
+   - `@FocusState private var isSearchFieldFocused: Bool` for search field
+   - `.focusable()` and `.focused($focusedItemID, equals: item.id)` on each item row
+   - `.onKeyPress(.space)` - Space toggles completion OR shows Quick Look if item has images
+   - `.onKeyPress(.return)` - Enter opens edit sheet
+   - `.onKeyPress(.delete)` - Delete removes item
+   - `.onKeyPress(characters: "c")` - 'C' key toggles completion (ignores Cmd+C)
+   - `moveFocusAfterItemDeletion(deletedId:)` helper
+
+3. ✅ **Search Field Keyboard Shortcuts**:
+   - `.focused($isSearchFieldFocused)` on TextField
+   - `.onExitCommand` - Escape clears search and unfocuses
+   - `.onKeyPress(characters: "f")` with Cmd modifier - Cmd+F focuses search
+
+4. ✅ **Accessibility Identifiers Added**:
+   - `ListsSidebar`, `SidebarListCell_<name>`, `AddListButton`
+   - `ItemsList`, `ItemRow_<title>`, `AddItemButton`
+   - `ListSearchField`, `FilterSortButton`, `ShareListButton`, `EditListButton`
+
+5. ✅ **UI Tests Created** (`MacKeyboardNavigationTests.swift`):
+   - 25+ test methods covering arrow keys, Enter, Escape, Space, Delete
+   - Keyboard shortcuts (Cmd+N, Cmd+Shift+N, Cmd+R, Cmd+F, Cmd+Shift+S)
+   - Accessibility identifier verification tests
+   - Focus management tests
+
+**Critical Review Findings** (addressed):
+- ❌→✅ Fixed: Bidirectional focus/selection sync (Issue #2)
+- ❌→✅ Fixed: 'C' key was capturing Cmd+C (Issue #9)
+- ⚠️ Noted: Tab navigation relies on SwiftUI default behavior
+- ⚠️ Noted: Space key behavior differs for items with images (shows Quick Look)
+
+**Files created/modified**:
+- `ListAllMac/Views/MacMainView.swift` - Added ~150 lines of keyboard navigation code
+- `ListAllMacUITests/MacKeyboardNavigationTests.swift` - NEW (25+ tests)
 
 ---
 

@@ -80,7 +80,7 @@
 		451D224F2EA54063004688D4 /* ListAllWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ListAllWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		451D225B2EA54064004688D4 /* ListAllWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ListAllWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		451D22652EA54064004688D4 /* ListAllWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ListAllWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		45C804BA2EE2E484006D0E88 /* ListAllMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListAllMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		45C804BA2EE2E484006D0E88 /* ListAll.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListAll.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		45C804CB2EE2E485006D0E88 /* ListAllMacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ListAllMacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		45C804D52EE2E485006D0E88 /* ListAllMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ListAllMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1E5F97C2E78695B0007B178 /* ListAll.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListAll.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -159,43 +159,31 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		451D22502EA54063004688D4 /* ListAllWatch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "ListAllWatch Watch App";
 			sourceTree = "<group>";
 		};
 		451D225E2EA54064004688D4 /* ListAllWatch Watch AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "ListAllWatch Watch AppTests";
 			sourceTree = "<group>";
 		};
 		451D22682EA54064004688D4 /* ListAllWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "ListAllWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
 		45C804BB2EE2E484006D0E88 /* ListAllMac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllMac;
 			sourceTree = "<group>";
 		};
 		45C804CE2EE2E485006D0E88 /* ListAllMacTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllMacTests;
 			sourceTree = "<group>";
 		};
 		45C804D82EE2E485006D0E88 /* ListAllMacUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllMacUITests;
 			sourceTree = "<group>";
 		};
@@ -210,15 +198,11 @@
 		};
 		F1E5F98C2E78695F0007B178 /* ListAllTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllTests;
 			sourceTree = "<group>";
 		};
 		F1E5F9962E78695F0007B178 /* ListAllUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllUITests;
 			sourceTree = "<group>";
 		};
@@ -316,7 +300,7 @@
 				451D224F2EA54063004688D4 /* ListAllWatch Watch App.app */,
 				451D225B2EA54064004688D4 /* ListAllWatch Watch AppTests.xctest */,
 				451D22652EA54064004688D4 /* ListAllWatch Watch AppUITests.xctest */,
-				45C804BA2EE2E484006D0E88 /* ListAllMac.app */,
+				45C804BA2EE2E484006D0E88 /* ListAll.app */,
 				45C804CB2EE2E485006D0E88 /* ListAllMacTests.xctest */,
 				45C804D52EE2E485006D0E88 /* ListAllMacUITests.xctest */,
 			);
@@ -405,7 +389,7 @@
 			);
 			name = ListAllMac;
 			productName = ListAllMac;
-			productReference = 45C804BA2EE2E484006D0E88 /* ListAllMac.app */;
+			productReference = 45C804BA2EE2E484006D0E88 /* ListAll.app */;
 			productType = "com.apple.product-type.application";
 		};
 		45C804CA2EE2E485006D0E88 /* ListAllMacTests */ = {

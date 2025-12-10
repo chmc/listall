@@ -21,6 +21,14 @@ struct MacMainView: View {
     @State private var selectedList: List?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
+    // MARK: - Focus State for Keyboard Navigation (Task 11.1)
+    /// Tracks which major section has keyboard focus
+    enum FocusSection: Hashable {
+        case sidebar
+        case detail
+    }
+    @FocusState private var focusedSection: FocusSection?
+
     // Menu command observers
     @State private var showingCreateListSheet = false
     @State private var showingArchivedLists = false
@@ -311,6 +319,10 @@ private struct MacSidebarView: View {
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
 
+    // MARK: - Keyboard Navigation (Task 11.1)
+    /// Focus state for individual list rows - enables arrow key navigation
+    @FocusState private var focusedListID: UUID?
+
     // Compute lists directly from @Published source for proper reactivity
     private var displayedLists: [List] {
         if showingArchivedLists {
@@ -344,6 +356,10 @@ private struct MacSidebarView: View {
                             }
                         }
                     }
+                    // MARK: Keyboard Navigation (Task 11.1)
+                    .focusable()
+                    .focused($focusedListID, equals: list.id)
+                    .accessibilityIdentifier("SidebarListCell_\(list.name)")
                     // MARK: Drag-and-Drop Support
                     .draggable(list) // Enable dragging lists to reorder
                     .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
@@ -377,11 +393,56 @@ private struct MacSidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .accessibilityIdentifier("ListsSidebar")
+        // MARK: - Keyboard Navigation Handlers (Task 11.1)
+        .onKeyPress(.return) {
+            // Enter key selects the focused list
+            if let focusedID = focusedListID,
+               let list = displayedLists.first(where: { $0.id == focusedID }) {
+                selectedList = list
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.space) {
+            // Space key also selects the focused list (macOS convention)
+            if let focusedID = focusedListID,
+               let list = displayedLists.first(where: { $0.id == focusedID }) {
+                selectedList = list
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.delete) {
+            // Delete key deletes the focused list
+            if let focusedID = focusedListID,
+               let list = displayedLists.first(where: { $0.id == focusedID }) {
+                onDeleteList(list)
+                // Move focus to next list or nil
+                moveFocusAfterDeletion(deletedId: focusedID)
+                return .handled
+            }
+            return .ignored
+        }
+        // Sync focus with selection (bidirectional - Issue #2 fix from Critical Review)
+        .onChange(of: selectedList) { _, newList in
+            if let newList = newList {
+                focusedListID = newList.id
+            }
+        }
+        .onChange(of: focusedListID) { _, newFocusedID in
+            // When arrow keys change focus, update selection (macOS convention)
+            if let newFocusedID = newFocusedID,
+               let list = displayedLists.first(where: { $0.id == newFocusedID }) {
+                selectedList = list
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: onCreateList) {
                     Label("Add List", systemImage: "plus")
                 }
+                .accessibilityIdentifier("AddListButton")
             }
         }
         .sheet(isPresented: $showingSharePopover) {
@@ -454,6 +515,26 @@ private struct MacSidebarView: View {
         listToShare = list
         showingSharePopover = true
     }
+
+    // MARK: - Keyboard Navigation Helpers (Task 11.1)
+
+    /// Moves focus to the next or previous list after deletion
+    private func moveFocusAfterDeletion(deletedId: UUID) {
+        let lists = displayedLists
+        guard let currentIndex = lists.firstIndex(where: { $0.id == deletedId }) else {
+            focusedListID = nil
+            return
+        }
+
+        // Try next list first, then previous
+        if currentIndex < lists.count - 1 {
+            focusedListID = lists[currentIndex + 1].id
+        } else if currentIndex > 0 {
+            focusedListID = lists[currentIndex - 1].id
+        } else {
+            focusedListID = nil
+        }
+    }
 }
 
 // MARK: - List Detail View
@@ -481,6 +562,12 @@ private struct MacListDetailView: View {
 
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
+
+    // MARK: - Keyboard Navigation (Task 11.1)
+    /// Focus state for individual item rows - enables arrow key navigation
+    @FocusState private var focusedItemID: UUID?
+    /// Focus state for search field
+    @FocusState private var isSearchFieldFocused: Bool
 
     init(list: List, onEditItem: @escaping (Item) -> Void) {
         self.list = list
@@ -541,6 +628,7 @@ private struct MacListDetailView: View {
         }
         .buttonStyle(.plain)
         .help("Share List (⇧⌘S)")
+        .accessibilityIdentifier("ShareListButton")
         .popover(isPresented: $showingSharePopover) {
             MacShareFormatPickerView(
                 list: currentList ?? list,
@@ -557,8 +645,21 @@ private struct MacListDetailView: View {
             TextField("Search items...", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .frame(width: 150)
+                .focused($isSearchFieldFocused)
+                .accessibilityIdentifier("ListSearchField")
+                .onExitCommand {
+                    // Escape clears search when search field is focused
+                    if !viewModel.searchText.isEmpty {
+                        viewModel.searchText = ""
+                        viewModel.items = items
+                    }
+                    isSearchFieldFocused = false
+                }
             if !viewModel.searchText.isEmpty {
-                Button(action: { viewModel.searchText = "" }) {
+                Button(action: {
+                    viewModel.searchText = ""
+                    viewModel.items = items
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
@@ -578,6 +679,7 @@ private struct MacListDetailView: View {
         }
         .buttonStyle(.plain)
         .help("Filter & Sort")
+        .accessibilityIdentifier("FilterSortButton")
         .popover(isPresented: $showingOrganizationPopover) {
             MacItemOrganizationView(viewModel: viewModel)
         }
@@ -590,6 +692,7 @@ private struct MacListDetailView: View {
         }
         .buttonStyle(.plain)
         .help("Edit List")
+        .accessibilityIdentifier("EditListButton")
     }
 
     // MARK: - Active Filters Bar
@@ -712,10 +815,62 @@ private struct MacListDetailView: View {
             ForEach(displayedItems) { item in
                 makeItemRow(item: item)
                     .draggable(item)
+                    // MARK: Keyboard Navigation (Task 11.1)
+                    .focusable()
+                    .focused($focusedItemID, equals: item.id)
+                    .accessibilityIdentifier("ItemRow_\(item.title)")
             }
             .onMove(perform: handleMoveItem)
         }
         .listStyle(.inset)
+        .accessibilityIdentifier("ItemsList")
+        // MARK: - Keyboard Navigation Handlers (Task 11.1)
+        .onKeyPress(.space) {
+            // Space toggles completion state of focused item
+            guard let focusedID = focusedItemID,
+                  let item = displayedItems.first(where: { $0.id == focusedID }) else {
+                return .ignored
+            }
+            // Check if item has images - if so, show Quick Look instead
+            if item.hasImages {
+                showQuickLook(for: item)
+            } else {
+                toggleItem(item)
+            }
+            return .handled
+        }
+        .onKeyPress(.return) {
+            // Enter opens edit sheet for focused item
+            guard let focusedID = focusedItemID,
+                  let item = displayedItems.first(where: { $0.id == focusedID }) else {
+                return .ignored
+            }
+            onEditItem(item)
+            return .handled
+        }
+        .onKeyPress(.delete) {
+            // Delete removes the focused item
+            guard let focusedID = focusedItemID,
+                  let item = displayedItems.first(where: { $0.id == focusedID }) else {
+                return .ignored
+            }
+            deleteItem(item)
+            moveFocusAfterItemDeletion(deletedId: focusedID)
+            return .handled
+        }
+        .onKeyPress(characters: CharacterSet(charactersIn: "c")) { keyPress in
+            // 'C' key toggles completion (alternative to Space for items with images)
+            // Issue #9 fix: Ignore if modifier keys are pressed (don't capture Cmd+C)
+            guard keyPress.modifiers.isEmpty else {
+                return .ignored
+            }
+            guard let focusedID = focusedItemID,
+                  let item = displayedItems.first(where: { $0.id == focusedID }) else {
+                return .ignored
+            }
+            toggleItem(item)
+            return .handled
+        }
     }
 
     private func handleMoveItem(from source: IndexSet, to destination: Int) {
@@ -779,6 +934,7 @@ private struct MacListDetailView: View {
                 Button(action: { showingAddItemSheet = true }) {
                     Label("Add Item", systemImage: "plus")
                 }
+                .accessibilityIdentifier("AddItemButton")
             }
         }
         // Sync ViewModel items with DataManager for proper reactivity
@@ -827,6 +983,15 @@ private struct MacListDetailView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewItem"))) { _ in
             showingAddItemSheet = true
+        }
+        // MARK: - Keyboard Shortcuts (Task 11.1)
+        .onKeyPress(characters: CharacterSet(charactersIn: "f")) { keyPress in
+            // Cmd+F focuses the search field
+            guard keyPress.modifiers.contains(.command) else {
+                return .ignored
+            }
+            isSearchFieldFocused = true
+            return .handled
         }
         .onAppear {
             // Advertise Handoff activity for viewing this specific list
@@ -886,6 +1051,26 @@ private struct MacListDetailView: View {
         // Use the shared QuickLookController to show preview
         QuickLookController.shared.preview(item: item)
         print("📷 Quick Look: Showing preview for '\(item.displayTitle)' with \(item.imageCount) images")
+    }
+
+    // MARK: - Keyboard Navigation Helpers (Task 11.1)
+
+    /// Moves focus to the next or previous item after deletion
+    private func moveFocusAfterItemDeletion(deletedId: UUID) {
+        let items = displayedItems
+        guard let currentIndex = items.firstIndex(where: { $0.id == deletedId }) else {
+            focusedItemID = nil
+            return
+        }
+
+        // Try next item first, then previous
+        if currentIndex < items.count - 1 {
+            focusedItemID = items[currentIndex + 1].id
+        } else if currentIndex > 0 {
+            focusedItemID = items[currentIndex - 1].id
+        } else {
+            focusedItemID = nil
+        }
     }
 
     // MARK: - Drag-and-Drop Handlers
