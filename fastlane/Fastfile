@@ -622,8 +622,14 @@ platform :ios do
       app_version: version,  # Creates new version if doesn't exist
       app_platform: "osx",   # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS
       screenshots_path: screenshots_path,
-      # metadata_path uses default (./fastlane/metadata) - shared with iOS
-      # App metadata (name, description, keywords) is shared across platforms
+      metadata_path: "./metadata/macos",  # macOS-specific metadata (Task 10.3/10.4)
+      # App Store Categories (Task 10.4)
+      # Full list: https://docs.fastlane.tools/actions/deliver/#available-categories
+      primary_category: "Productivity",
+      secondary_category: "Utilities",
+      # Age Rating (Task 10.4) - 4+ with no objectionable content
+      # Values: 0=None, 1=Infrequent/Mild, 2=Frequent/Intense
+      app_rating_config_path: "./metadata/macos/rating_config.json",
       skip_screenshots: false,
       overwrite_screenshots: true,
       skip_binary_upload: true,  # Binary uploaded separately via TestFlight

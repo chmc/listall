@@ -3279,13 +3279,54 @@ fastlane/metadata/macos/
 
 ---
 
-### Task 10.4: Configure macOS App Store Categories
+### Task 10.4: [COMPLETED] Configure macOS App Store Categories
 **TDD**: Category validation
+
+**SWARM VERIFIED** (December 2025): Implementation by swarm of specialized agents:
+- **Apple Development Expert**: Researched Fastlane deliver category/age rating configuration
+- **Shell Script Specialist**: Analyzed existing validation script and metadata structure
+- **Critical Reviewer**: Identified critical issues (age rating JSON missing, deprecated format)
 
 **Steps**:
 1. Set primary category: Productivity
 2. Set secondary category: Utilities
 3. Configure age rating (4+)
+
+**Completed**:
+- ✅ Created `fastlane/metadata/macos/app_info.txt` with:
+  - Category documentation (Primary: Productivity, Secondary: Utilities)
+  - Age rating documentation (4+) with full questionnaire answers
+  - macOS-specific review notes and testing instructions
+  - Sandbox entitlements documentation
+- ✅ Created `fastlane/metadata/macos/rating_config.json` with:
+  - All age rating fields set to 0 (None) or false
+  - Proper JSON format for Fastlane deliver
+- ✅ Updated `fastlane/Fastfile` release_macos lane:
+  - Added `metadata_path: "./metadata/macos"` for platform-specific metadata
+  - Added `primary_category: "Productivity"`
+  - Added `secondary_category: "Utilities"`
+  - Added `app_rating_config_path: "./metadata/macos/rating_config.json"`
+- ✅ Updated `fastlane/metadata/validate_metadata.sh`:
+  - Added check for `metadata/macos/app_info.txt` (required)
+  - Added check for `metadata/macos/rating_config.json` (required)
+  - Added `check_json_syntax()` function for JSON validation
+  - Added "CHECKING JSON CONFIGURATION FILES" section
+  - Added "CHECKING APP STORE CATEGORIES & AGE RATING" section
+  - Validates both iOS and macOS have: PRIMARY CATEGORY, SECONDARY CATEGORY, AGE RATING
+  - Checks category consistency between platforms (both use Productivity/Utilities)
+
+**Critical Review findings addressed**:
+- **Fixed**: Age rating now configured via JSON file (was only documented)
+- **Fixed**: Removed deprecated `MZGenre.*` format from documentation
+- **Fixed**: Added JSON syntax validation for rating_config.json
+
+**Files created**:
+- `fastlane/metadata/macos/app_info.txt` (~3.5KB)
+- `fastlane/metadata/macos/rating_config.json` (~500 bytes)
+
+**Files modified**:
+- `fastlane/Fastfile` (release_macos lane)
+- `fastlane/metadata/validate_metadata.sh` (+50 lines)
 
 ---
 

@@ -62,16 +62,31 @@ check_char_limit() {
 check_url() {
     local file=$1
     local name=$2
-    
+
     if [ -f "$file" ]; then
         local url=$(cat "$file" | tr -d '\n' | tr -d ' ')
         echo -n "  Checking $name: $url ... "
-        
+
         # Simple URL format check
         if [[ $url =~ ^https?:// ]]; then
             echo -e "${GREEN}✓${NC} Valid format"
         else
             echo -e "${RED}✗${NC} Invalid URL format"
+            ((ERRORS++))
+        fi
+    fi
+}
+
+# Function to check JSON syntax
+check_json_syntax() {
+    local file=$1
+    local name=$2
+
+    if [ -f "$file" ]; then
+        if python3 -c "import json; json.load(open('$file'))" 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} $name: Valid JSON syntax"
+        else
+            echo -e "${RED}✗${NC} $name: Invalid JSON syntax"
             ((ERRORS++))
         fi
     fi
@@ -108,6 +123,12 @@ echo "════════════════════════�
 echo "  CHECKING macOS METADATA"
 echo "═══════════════════════════════════════════════════════"
 echo ""
+
+# Check macOS app_info.txt (categories and age rating documentation)
+check_file "metadata/macos/app_info.txt" "required"
+
+# Check macOS age rating configuration (required by Fastlane deliver)
+check_file "metadata/macos/rating_config.json" "required"
 
 # Check macOS en-US files
 check_file "metadata/macos/en-US/description.txt" "required"
@@ -159,6 +180,78 @@ echo ""
 check_url "metadata/macos/en-US/support_url.txt" "macOS Support URL"
 check_url "metadata/macos/en-US/privacy_policy_url.txt" "macOS Privacy Policy URL"
 check_url "metadata/macos/en-US/marketing_url.txt" "macOS Marketing URL"
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  CHECKING JSON CONFIGURATION FILES"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+
+check_json_syntax "metadata/macos/rating_config.json" "macOS Age Rating Config"
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  CHECKING APP STORE CATEGORIES & AGE RATING"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+
+# Function to check category/age rating in app_info.txt
+check_app_info_section() {
+    local file=$1
+    local section=$2
+    local platform=$3
+
+    if [ -f "$file" ]; then
+        if grep -q "^${section}$" "$file"; then
+            echo -e "${GREEN}✓${NC} ${platform}: ${section} section found"
+        else
+            echo -e "${RED}✗${NC} ${platform}: ${section} section MISSING"
+            ((ERRORS++))
+        fi
+    fi
+}
+
+# Valid App Store categories for reference
+# Full list: https://docs.fastlane.tools/actions/deliver/#available-categories
+VALID_CATEGORIES="Books|Business|Developer Tools|Education|Entertainment|Finance|Food & Drink|Games|Graphics & Design|Health & Fitness|Kids|Lifestyle|Magazines & Newspapers|Medical|Music|Navigation|News|Photo & Video|Productivity|Reference|Shopping|Social Networking|Sports|Travel|Utilities|Weather"
+
+# Check iOS app_info.txt categories
+echo -e "${BLUE}iOS Categories:${NC}"
+check_app_info_section "metadata/app_info.txt" "PRIMARY CATEGORY" "iOS"
+check_app_info_section "metadata/app_info.txt" "SECONDARY CATEGORY (Optional)" "iOS"
+check_app_info_section "metadata/app_info.txt" "AGE RATING" "iOS"
+
+# Check macOS app_info.txt categories
+echo ""
+echo -e "${BLUE}macOS Categories:${NC}"
+check_app_info_section "metadata/macos/app_info.txt" "PRIMARY CATEGORY" "macOS"
+check_app_info_section "metadata/macos/app_info.txt" "SECONDARY CATEGORY (Optional)" "macOS"
+check_app_info_section "metadata/macos/app_info.txt" "AGE RATING" "macOS"
+
+# Validate category values match between iOS and macOS
+echo ""
+echo -e "${BLUE}Category Consistency:${NC}"
+if [ -f "metadata/app_info.txt" ] && [ -f "metadata/macos/app_info.txt" ]; then
+    IOS_PRIMARY=$(grep -A 2 "^PRIMARY CATEGORY$" metadata/app_info.txt | tail -n 1 | tr -d '[:space:]')
+    MACOS_PRIMARY=$(grep -A 2 "^PRIMARY CATEGORY$" metadata/macos/app_info.txt | tail -n 1 | tr -d '[:space:]')
+
+    if [ "$IOS_PRIMARY" = "$MACOS_PRIMARY" ]; then
+        echo -e "${GREEN}✓${NC} Primary category matches: $IOS_PRIMARY"
+    else
+        echo -e "${YELLOW}⚠${NC} Primary category differs: iOS=$IOS_PRIMARY, macOS=$MACOS_PRIMARY"
+        ((WARNINGS++))
+    fi
+
+    IOS_SECONDARY=$(grep -A 2 "^SECONDARY CATEGORY (Optional)" metadata/app_info.txt | tail -n 1 | tr -d '[:space:]')
+    MACOS_SECONDARY=$(grep -A 2 "^SECONDARY CATEGORY (Optional)" metadata/macos/app_info.txt | tail -n 1 | tr -d '[:space:]')
+
+    if [ "$IOS_SECONDARY" = "$MACOS_SECONDARY" ]; then
+        echo -e "${GREEN}✓${NC} Secondary category matches: $IOS_SECONDARY"
+    else
+        echo -e "${YELLOW}⚠${NC} Secondary category differs: iOS=$IOS_SECONDARY, macOS=$MACOS_SECONDARY"
+        ((WARNINGS++))
+    fi
+fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
