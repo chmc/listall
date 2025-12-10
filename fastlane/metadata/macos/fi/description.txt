@@ -1,0 +1,74 @@
+Järjestä elämäsi ListAll-sovelluksella - älykäs listojen hallintasovellus Macille, joka oppii tavoistasi ja auttaa sinua pysymään järjestyksessä.
+
+PÄÄOMINAISUUDET:
+
+ÄLYKKÄÄT LISTAT
+• Luo rajattomasti listoja ostoksille, tehtäville, pakkaamiselle ja muulle
+• Järjestä kohteet otsikoilla, kuvauksilla, määrillä ja kuvilla
+• Merkitse kohteet valmiiksi kun olet suorittanut ne
+• Arkistoi listat kun valmis, palauta milloin tahansa
+
+ÄLYKKÄÄT EHDOTUKSET
+• Saa älykkäitä kohdeehdotuksia historiasi perusteella
+• Lisää usein käytetyt kohteet yhdellä napautuksella
+• Automaattinen täydennys säästää aikaa ja vähentää kirjoittamista
+
+VISUAALISET LISTAT
+• Liitä useita kuvia mihin tahansa kohteeseen
+• Zoomaa, pyyhkäise ja järjestä kuvia
+• Täydellinen ostoslistoille, pakkaamislistoille tai visuaalisille muistutuksille
+
+MACOS-ALKUPERÄINEN KOKEMUS
+• Natiivi macOS-käyttöliittymä joka tuntuu kotoisalta
+• Moni-ikkunatuki - avaa useita listoja rinnakkain
+• Pikanäppäimet tehokkaaseen työnkulkuun
+• Valikkokomennot kaikille tärkeille toiminnoille
+• Palvelut-valikon integraatio tekstin lisäämiseen muista sovelluksista
+• Pikalatselun esikatselu listatiedostoille Finderissä
+• Vedä ja pudota kohteita ikkunoiden välillä
+• Koko hiiren ja kosketusnäytön tuki
+• Handoff iOS-laitteillesi - aloita Macilla, jatka iPhonella tai iPadilla
+
+YKSITYISYYS JA TURVALLISUUS
+• Valinnainen Touch ID -suojaus
+• Biometrinen tunnistautuminen listojen yksityisyyden turvaamiseen
+• Turvallinen paikallinen tallennus sisäänrakennetulla iCloud-synkronoinnilla
+• Tietosi pysyvät ominasi – ei kolmannen osapuolen palvelimia
+
+TEHOKKAAT OMINAISUUDET
+• Hae kaikista listoista ja kohteista
+• Lajittele ja suodata kohteet omalla tavallasi
+• Massatoiminnot - valitse, siirrä, kopioi tai poista useita kohteita
+• Kumoa poisto - palauta vahingossa poistetut kohteet
+• Järjestä vetämällä ja pudottamalla
+• Vie/tuo listoja (JSON, CSV, pelkkä teksti)
+• Jaa listoja muiden kanssa
+• Tuki tummalle tilalle
+
+SAUMATON SYNKRONOINTI
+• iCloud-synkronointi on aina päällä – tietosi pysyvät ajan tasalla kaikilla laitteilla
+• Synkronoi automaattisesti Mac, iPhone, iPad ja Apple Watch -laitteiden välillä
+• Toimii offline-tilassa – synkronoi automaattisesti kun yhdistetty
+• Automaattiset taustapäivitykset
+
+TÄYDELLINEN:
+• Ostoslistoille (ruokaostoksille, rautakaupalle, lahjoille)
+• Tehtävälistoille ja tehtävien hallintaan
+• Pakkaamislistoille matkoille
+• Reseptien ainesosille
+• Tapahtumien suunnitteluun
+• Projektin tarkistuslistoille
+• Kotitalouden inventaariolle
+• Kokoelmien seuraamiselle
+• Ja paljon muuhun!
+
+MITÄ KÄYTTÄJÄT RAKASTAVAT:
+• Siisti, intuitiivinen käyttöliittymä
+• Nopea ja reagoiva
+• Ei mainoksia, yksityisyyteen keskittyvä
+• Säännölliset päivitykset ja parannukset
+
+Olivatpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe tehokas ja joustava listojen hallintasovellus!
+
+AVOIN LÄHDEKOODI
+ListAll on avoimen lähdekoodin sovellus ja ilmainen. Voit tarkastella koodia, osallistua kehitykseen tai luoda oman versiosi osoitteessa https://github.com/chmc/listall

@@ -1,0 +1,72 @@
+Organize your life with ListAll - the intelligent list management app that learns from your habits and helps you stay organized on your Mac.
+
+KEY FEATURES:
+
+SMART LISTS
+• Create unlimited lists for shopping, tasks, packing, and more
+• Organize items with titles, descriptions, quantities, and photos
+• Cross out items as you complete them
+• Archive lists when done, restore anytime
+
+INTELLIGENT SUGGESTIONS
+• Get smart item suggestions based on your history
+• Add frequently used items with one click
+• Autocomplete saves time and reduces typing
+
+VISUAL LISTS
+• Attach multiple photos to any item
+• Zoom, swipe, and organize images
+• Perfect for shopping lists, packing lists, or visual reminders
+
+MACOS-NATIVE EXPERIENCE
+• Multi-window support - work with multiple lists simultaneously
+• Keyboard shortcuts for fast navigation and editing
+• Native Mac menu commands and Services integration
+• Drag-and-drop between windows and from other apps
+• Quick Look preview for list items with photos
+• Handoff support - start on Mac, continue on iPhone
+• Native macOS UI with NavigationSplitView and Settings window
+
+PRIVACY & SECURITY
+• Optional Touch ID protection
+• Biometric authentication to keep lists private
+• Secure local storage with built-in iCloud sync
+• Your data stays yours - no third-party servers
+
+POWERFUL FEATURES
+• Search across all lists and items
+• Sort and filter items your way
+• Bulk operations - select, move, copy, or delete multiple items
+• Undo delete - recover accidentally removed items
+• Drag-and-drop reordering
+• Export/import lists (JSON, CSV, plain text)
+• Share lists with others
+• Dark mode support
+
+SEAMLESS SYNC
+• iCloud sync is always on - your data stays up to date across all devices
+• Works offline - syncs automatically when connected
+• Automatic background updates
+• Handoff between Mac and iPhone
+
+PERFECT FOR:
+• Shopping lists (groceries, hardware, gifts)
+• To-do lists and task management
+• Packing lists for travel
+• Recipe ingredients
+• Event planning
+• Project checklists
+• Household inventory
+• Collection tracking
+• And much more!
+
+WHAT USERS LOVE:
+• Clean, intuitive interface
+• Fast and responsive
+• No ads, privacy-focused
+• Regular updates and improvements
+
+Whether you're planning a trip, managing household chores, or keeping track of your shopping, ListAll is your perfect companion on Mac. Download now and experience a powerful and flexible list management app!
+
+OPEN SOURCE
+ListAll is open source and free. You can view the code, contribute, or fork it for your own projects at https://github.com/chmc/listall

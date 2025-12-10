@@ -1,0 +1,17 @@
+
+Welcome to ListAll for Mac!
+
+INTRODUCING LISTALL FOR MACOS:
+
+• Native macOS app with full feature parity
+• Multi-window support - work with multiple lists at once
+• Keyboard shortcuts for fast navigation
+• Drag-and-drop between windows and apps
+• Touch ID security
+• Handoff support with iPhone
+• iCloud sync across all your devices
+
+All your favorite features from iOS, now optimized for Mac with a native macOS experience.
+
+If you enjoy ListAll, please consider leaving a review. For questions or feedback, contact us at the support URL.
+

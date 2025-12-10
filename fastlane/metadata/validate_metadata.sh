@@ -1,7 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -uo pipefail
 
 # Metadata Validation Script for ListAll
 # This script checks that all required files exist and meet character limits
+# Note: We don't use 'set -e' because we need to continue checking all files
+# even when some checks fail, to collect all errors and warnings.
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ListAll - App Store Metadata Validation"
@@ -102,7 +105,22 @@ check_file "metadata/en-US/marketing_url.txt" "optional"
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  CHECKING CHARACTER LIMITS"
+echo "  CHECKING macOS METADATA"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+
+# Check macOS en-US files
+check_file "metadata/macos/en-US/description.txt" "required"
+check_file "metadata/macos/en-US/keywords.txt" "required"
+check_file "metadata/macos/en-US/support_url.txt" "required"
+check_file "metadata/macos/en-US/privacy_policy_url.txt" "required"
+check_file "metadata/macos/en-US/release_notes.txt" "required"
+check_file "metadata/macos/en-US/promotional_text.txt" "optional"
+check_file "metadata/macos/en-US/marketing_url.txt" "optional"
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  CHECKING CHARACTER LIMITS (iOS)"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
@@ -113,7 +131,18 @@ check_char_limit "metadata/en-US/promotional_text.txt" 170 "Promotional Text"
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  CHECKING URLS"
+echo "  CHECKING CHARACTER LIMITS (macOS)"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+
+check_char_limit "metadata/macos/en-US/description.txt" 4000 "macOS Description"
+check_char_limit "metadata/macos/en-US/keywords.txt" 100 "macOS Keywords"
+check_char_limit "metadata/macos/en-US/release_notes.txt" 4000 "macOS Release Notes"
+check_char_limit "metadata/macos/en-US/promotional_text.txt" 170 "macOS Promotional Text"
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  CHECKING URLS (iOS)"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
@@ -123,7 +152,17 @@ check_url "metadata/en-US/marketing_url.txt" "Marketing URL"
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  CHECKING SCREENSHOTS"
+echo "  CHECKING URLS (macOS)"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+
+check_url "metadata/macos/en-US/support_url.txt" "macOS Support URL"
+check_url "metadata/macos/en-US/privacy_policy_url.txt" "macOS Privacy Policy URL"
+check_url "metadata/macos/en-US/marketing_url.txt" "macOS Marketing URL"
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  CHECKING SCREENSHOTS (iOS & watchOS)"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
@@ -178,6 +217,58 @@ if [ -d "$SCREENSHOT_DIR" ]; then
 else
     echo -e "${RED}✗${NC} Screenshots directory not found"
     ((ERRORS++))
+fi
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  CHECKING SCREENSHOTS (macOS)"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+
+MACOS_SCREENSHOT_DIR="metadata/macos/en-US/screenshots"
+if [[ -d "${MACOS_SCREENSHOT_DIR}" ]]; then
+    echo -e "${GREEN}✓${NC} macOS screenshots directory exists"
+
+    # Count macOS screenshots by size
+    # macOS supports: 1280x800, 1440x900, 2560x1600, 2880x1800
+    MACOS_1280=$(ls "${MACOS_SCREENSHOT_DIR}"/1280x800_*.png 2>/dev/null | wc -l | tr -d ' ')
+    MACOS_1440=$(ls "${MACOS_SCREENSHOT_DIR}"/1440x900_*.png 2>/dev/null | wc -l | tr -d ' ')
+    MACOS_2560=$(ls "${MACOS_SCREENSHOT_DIR}"/2560x1600_*.png 2>/dev/null | wc -l | tr -d ' ')
+    MACOS_2880=$(ls "${MACOS_SCREENSHOT_DIR}"/2880x1800_*.png 2>/dev/null | wc -l | tr -d ' ')
+
+    echo ""
+    echo "macOS screenshot counts:"
+
+    if [[ "${MACOS_1280}" -ge 3 ]]; then
+        echo -e "  ${GREEN}✓${NC} 1280x800: ${MACOS_1280} screenshots (3-10 required)"
+    else
+        echo -e "  ${YELLOW}⚠${NC} 1280x800: ${MACOS_1280} screenshots (3-10 required)"
+        ((WARNINGS++))
+    fi
+
+    if [[ "${MACOS_1440}" -ge 3 ]]; then
+        echo -e "  ${GREEN}✓${NC} 1440x900: ${MACOS_1440} screenshots (3-10 required)"
+    else
+        echo -e "  ${YELLOW}⚠${NC} 1440x900: ${MACOS_1440} screenshots (3-10 required)"
+        ((WARNINGS++))
+    fi
+
+    if [[ "${MACOS_2560}" -ge 3 ]]; then
+        echo -e "  ${GREEN}✓${NC} 2560x1600: ${MACOS_2560} screenshots (3-10 required)"
+    else
+        echo -e "  ${YELLOW}⚠${NC} 2560x1600: ${MACOS_2560} screenshots (3-10 required)"
+        ((WARNINGS++))
+    fi
+
+    if [[ "${MACOS_2880}" -ge 3 ]]; then
+        echo -e "  ${GREEN}✓${NC} 2880x1800: ${MACOS_2880} screenshots (3-10 required)"
+    else
+        echo -e "  ${YELLOW}⚠${NC} 2880x1800: ${MACOS_2880} screenshots (3-10 required)"
+        ((WARNINGS++))
+    fi
+else
+    echo -e "${YELLOW}⚠${NC} macOS screenshots directory not found"
+    ((WARNINGS++))
 fi
 
 echo ""
@@ -239,28 +330,34 @@ echo "  VALIDATION SUMMARY"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
-if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
+if [[ ${ERRORS} -eq 0 ]] && [[ ${WARNINGS} -eq 0 ]]; then
     echo -e "${GREEN}✓ ALL CHECKS PASSED!${NC}"
     echo ""
     echo "Your metadata is ready for App Store submission."
     echo "Next steps:"
-    echo "  1. Take screenshots (see metadata/en-US/screenshots/README.md)"
-    echo "  2. Follow SUBMISSION_GUIDE.md"
-    echo "  3. Upload to App Store Connect"
+    echo "  1. Take screenshots for iOS/watchOS (see metadata/en-US/screenshots/README.md)"
+    echo "  2. Take screenshots for macOS (sizes: 1280x800, 1440x900, 2560x1600, 2880x1800)"
+    echo "  3. Follow SUBMISSION_GUIDE.md"
+    echo "  4. Upload to App Store Connect"
     exit 0
-elif [ $ERRORS -eq 0 ]; then
+elif [[ ${ERRORS} -eq 0 ]]; then
     echo -e "${YELLOW}⚠ VALIDATION COMPLETED WITH WARNINGS${NC}"
     echo ""
-    echo "Warnings: $WARNINGS"
+    echo "Warnings: ${WARNINGS}"
     echo ""
     echo "You can proceed, but address warnings for better results."
     echo "Most warnings are about missing screenshots."
+    echo ""
+    echo "Platform-specific notes:"
+    echo "  - iOS: Requires screenshots for 6.9\", 6.7\" (minimum)"
+    echo "  - watchOS: Requires Apple Watch screenshots"
+    echo "  - macOS: Requires screenshots at 1280x800, 1440x900, 2560x1600, or 2880x1800"
     exit 0
 else
     echo -e "${RED}✗ VALIDATION FAILED${NC}"
     echo ""
-    echo "Errors: $ERRORS"
-    echo "Warnings: $WARNINGS"
+    echo "Errors: ${ERRORS}"
+    echo "Warnings: ${WARNINGS}"
     echo ""
     echo "Fix the errors above before submitting to App Store."
     exit 1

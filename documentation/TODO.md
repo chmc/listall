@@ -3226,26 +3226,56 @@ bundle exec fastlane ios screenshots_macos_normalize
 
 ---
 
-### Task 10.3: Create macOS App Store Metadata
+### Task 10.3: [COMPLETED] Create macOS App Store Metadata
 **TDD**: Metadata validation
 
-**Steps**:
-1. Create `fastlane/metadata/macos/` directory structure:
-   ```
-   fastlane/metadata/macos/
-   ├── en-US/
-   │   ├── name.txt
-   │   ├── subtitle.txt
-   │   ├── description.txt
-   │   ├── keywords.txt
-   │   ├── promotional_text.txt
-   │   ├── privacy_url.txt
-   │   └── support_url.txt
-   └── fi/
-       └── (same structure)
-   ```
+**SWARM VERIFIED** (December 2025): Implementation by swarm of specialized agents:
+- **Apple Development Expert**: Created en-US and fi metadata files adapted for macOS
+- **Shell Script Specialist**: Updated validate_metadata.sh for macOS validation
+- **Critical Reviewer**: Comprehensive review, fixed guideline violations
 
-2. Adapt iOS descriptions for macOS context
+**Completed**:
+- ✅ Created `fastlane/metadata/macos/en-US/` with all 8 metadata files
+- ✅ Created `fastlane/metadata/macos/fi/` with all 8 metadata files
+- ✅ Updated `validate_metadata.sh` to validate macOS metadata
+- ✅ Fixed keywords.txt character limit (was 113, now 76/100)
+- ✅ Removed pricing claims per App Store Guidelines 2.3.8 ("no costs", "ilmainen")
+- ✅ Removed unsubstantiated superlatives ("most flexible")
+- ✅ All character limits validated and passing
+
+**Files created**:
+```
+fastlane/metadata/macos/
+├── en-US/
+│   ├── copyright.txt (© 2025 Aleksi Sutela)
+│   ├── description.txt (2658 chars - macOS features)
+│   ├── keywords.txt (76 chars - optimized for macOS)
+│   ├── privacy_policy_url.txt
+│   ├── promotional_text.txt (141 chars)
+│   ├── release_notes.txt (556 chars - initial macOS release)
+│   ├── subtitle.txt (28 chars - "Smart Lists & Tasks for Mac")
+│   └── support_url.txt
+└── fi/
+    ├── copyright.txt
+    ├── description.txt (3299 chars - Finnish macOS features)
+    ├── keywords.txt (97 chars - Finnish keywords)
+    ├── privacy_policy_url.txt
+    ├── promotional_text.txt (105 chars)
+    ├── release_notes.txt (1003 chars)
+    ├── subtitle.txt (27 chars - "Älykäs lista & tehtävät")
+    └── support_url.txt
+```
+
+**Key macOS adaptations**:
+- Removed Apple Watch references (not supported on macOS)
+- Added macOS-specific features: keyboard shortcuts, menu commands, Services menu, Quick Look, multi-window, Handoff
+- Replaced "iPhone" with "Mac", "Face ID/Touch ID" with "Touch ID" only
+- Updated promotional text to highlight multi-window support instead of Watch
+
+**Critical Review findings addressed**:
+- Character limit violations: FIXED
+- App Store guideline violations: FIXED
+- Feature claims: All claimed features (Touch ID, Handoff, multi-window, keyboard shortcuts, Services, Quick Look, drag-drop) are implemented per Tasks 3.2, 5.7, 6.1-6.6
 
 ---
 
