@@ -127,11 +127,11 @@ Platform Details:
 
     macos   - macOS (Native, 16:10 aspect ratio, 2880x1800)
               Fastlane lane: screenshots_macos
-              Screenshots: 2 per locale (unframed)
+              Screenshots: 4 per locale (unframed)
               Estimated time: ~5 minutes
 
     all     - All platforms (iPhone + iPad + Watch + macOS)
-              Screenshots: 11 per locale (22 total)
+              Screenshots: 13 per locale (26 total)
               iPhone/iPad: framed with device bezels
               Watch/macOS: unframed
               Estimated time: ~70-100 minutes
@@ -404,7 +404,7 @@ generate_watch_screenshots() {
 generate_macos_screenshots() {
     log_info "Platform: macOS (Native)"
     log_info "Expected output: 2880x1800 pixels"
-    log_info "Screenshots: 2 per locale"
+    log_info "Screenshots: 4 per locale (01_MainWindow, 02_ListDetailView, 03_ItemEditSheet, 04_SettingsWindow)"
     log_info "Estimated time: ~5 minutes"
     echo ""
 
@@ -418,7 +418,7 @@ generate_macos_screenshots() {
 
 generate_all_screenshots() {
     log_info "Platform: All (iPhone + iPad + Watch + macOS)"
-    log_info "Screenshots: 11 per locale (22 total)"
+    log_info "Screenshots: 13 per locale (26 total)"
     log_info "Estimated time: ~70-100 minutes"
     log_info "Mode: iPhone/iPad with device frames, Watch/macOS unframed"
     echo ""
@@ -553,7 +553,7 @@ show_summary() {
     echo ""
     echo "Next steps:"
     echo "  1. Review screenshots manually"
-    echo "  2. Commit to git: git add fastlane/screenshots_compat/ fastlane/screenshots/watch_normalized/"
+    echo "  2. Commit to git: git add fastlane/screenshots_compat/ fastlane/screenshots/watch_normalized/ fastlane/screenshots/mac_normalized/"
     echo "  3. Upload to App Store: bundle exec fastlane ios release version:X.Y.Z"
     echo ""
 }

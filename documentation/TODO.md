@@ -3183,7 +3183,7 @@ After prerequisites pass:
 
 ---
 
-### Task 10.2: Create macOS Screenshots
+### Task 10.2: [COMPLETED] Create macOS Screenshots
 **TDD**: Screenshot validation
 
 **Steps**:
@@ -3196,6 +3196,33 @@ App Store requires:
 1. Capture screenshots on various Mac displays
 2. Add device frames using screenshot script
 3. Localize for en-US and fi
+
+**Completed** (swarm-verified, Dec 10, 2025):
+- ✅ macOS screenshot infrastructure already in place:
+  - `MacScreenshotTests.swift` - 4 test scenarios capturing MainWindow, ListDetailView, ItemEditSheet, SettingsWindow
+  - `MacSnapshotHelper.swift` - Screenshot capture helper adapted from Fastlane
+  - `screenshots_macos` Fastlane lane - Generates screenshots for en-US and fi locales
+  - `screenshots_macos_normalize` Fastlane lane - Normalizes to 2880x1800 (16:10 Retina)
+- ✅ Added macOS validation to `validate_delivery_screenshots` lane (checks 2880x1800 dimensions)
+- ✅ Added macOS to `prepare_screenshots_for_delivery()` function (copies from mac_normalized/)
+- ✅ Fixed shell script documentation (screenshot counts: 4 per locale, 13 total per locale)
+- ✅ Fixed git commit instructions to include `fastlane/screenshots/mac_normalized/`
+
+**Usage**:
+```bash
+# Generate macOS screenshots only
+./generate-screenshots-local.sh macos
+
+# Generate all platforms including macOS
+./generate-screenshots-local.sh all
+
+# Normalize macOS screenshots after generation
+bundle exec fastlane ios screenshots_macos_normalize
+```
+
+**Output locations**:
+- Raw: `fastlane/screenshots/mac/[locale]/`
+- Normalized: `fastlane/screenshots/mac_normalized/[locale]/`
 
 ---
 

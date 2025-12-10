@@ -20,6 +20,7 @@ end
 # - iPhone 6.7": 1290x2796
 # - iPad 13": 2064x2752 (2024 standard, replaces old 12.9" 2048x2732)
 # - Watch Series 7+: 396x484
+# - macOS: 2880x1800 (16:10 Retina)
 # Framed screenshots have device bezels which change dimensions to non-standard sizes
 # that App Store Connect rejects.
 def prepare_screenshots_for_delivery(compat_path)
@@ -55,6 +56,26 @@ def prepare_screenshots_for_delivery(compat_path)
       if Dir.exist?(watch_locale_dir)
         Dir.glob(File.join(watch_locale_dir, "*.png")).each do |screenshot|
           FileUtils.cp(screenshot, dst_dir)
+        end
+      end
+    end
+  end
+
+  # Also copy macOS screenshots from mac_normalized directory
+  macos_src_dir = File.expand_path("screenshots/mac_normalized", __dir__)
+  if Dir.exist?(macos_src_dir)
+    locales.each do |locale|
+      macos_locale_dir = File.join(macos_src_dir, locale)
+      dst_dir = File.join(delivery_path, locale)
+      FileUtils.mkdir_p(dst_dir)
+
+      if Dir.exist?(macos_locale_dir)
+        Dir.glob(File.join(macos_locale_dir, "*.png")).each do |screenshot|
+          # Prefix macOS screenshots to distinguish them from iOS screenshots
+          basename = File.basename(screenshot)
+          # Only add prefix if not already prefixed
+          prefixed_name = basename.start_with?("Mac-") ? basename : "Mac-#{basename}"
+          FileUtils.cp(screenshot, File.join(dst_dir, prefixed_name))
         end
       end
     end
@@ -3976,6 +3997,40 @@ platform :ios do
       warnings << "⚠️  Watch screenshots directory not found: #{watch_dir}"
     end
 
+    # Check macOS normalized screenshots
+    # macOS screenshots should be exactly 2880x1800 (16:10 aspect ratio)
+    macos_size = { width: 2880, height: 1800, tolerance: 0 }  # macOS Retina exact
+    macos_dir = File.expand_path("screenshots/mac_normalized", __dir__)
+    if Dir.exist?(macos_dir)
+      locales.each do |locale|
+        locale_dir = File.join(macos_dir, locale)
+        unless Dir.exist?(locale_dir)
+          warnings << "⚠️  Missing macOS screenshots directory: #{locale_dir}"
+          next
+        end
+
+        # Expected 4 macOS screenshots: 01_MainWindow, 02_ListDetailView, 03_ItemEditSheet, 04_SettingsWindow
+        macos_shots = Dir.glob(File.join(locale_dir, "*.png"))
+        if macos_shots.count < 3
+          warnings << "⚠️  #{locale}: Expected at least 3 macOS screenshots (App Store minimum), found #{macos_shots.count}"
+        elsif macos_shots.count != 4
+          warnings << "⚠️  #{locale}: Expected 4 macOS screenshots, found #{macos_shots.count}"
+        end
+
+        macos_shots.each do |shot|
+          dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+          w, h = dims.split('x').map(&:to_i)
+          if w != macos_size[:width] || h != macos_size[:height]
+            errors << "❌ macOS #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{macos_size[:width]}x#{macos_size[:height]})"
+          else
+            puts "✅ macOS #{locale}/#{File.basename(shot)}: #{dims}"
+          end
+        end
+      end
+    else
+      warnings << "⚠️  macOS screenshots directory not found: #{macos_dir}"
+    end
+
     # Print summary
     puts "\n" + "=" * 70
     puts "Delivery Screenshot Validation Summary"
@@ -3994,10 +4049,11 @@ platform :ios do
     else
       puts "\n✅ All delivery screenshots are valid and ready for App Store submission!"
       puts "\nReady for upload:"
-      puts "  • iPhone: 10 framed screenshots (~1421x2909)"
-      puts "  • iPad: 10 framed screenshots (~2286x3168)"
-      puts "  • Watch: 10 naked screenshots (396x484)"
-      puts "  • Total: 30 screenshots across EN + FI locales"
+      puts "  • iPhone: 4 screenshots (1290x2796)"
+      puts "  • iPad: 4 screenshots (2064x2752)"
+      puts "  • Watch: 10 screenshots (396x484)"
+      puts "  • macOS: 8 screenshots (2880x1800)"
+      puts "  • Total: 26 screenshots across EN + FI locales"
     end
   end
 
