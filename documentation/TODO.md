@@ -2253,71 +2253,40 @@ jobs:
 
 ---
 
-### Task 9.0.2: Pre-requisites Verification
+### Task 9.0.2: [COMPLETED] Pre-requisites Verification
 **TDD**: Create test script to verify infrastructure before implementation
 
-**Steps**:
-1. Create verification script `.github/scripts/verify-macos-prerequisites.sh`:
-   ```bash
-   #!/bin/bash
-   set -euo pipefail
+**Completed**:
+- Created `.github/scripts/verify-macos-prerequisites.sh` with 5 comprehensive checks
+- Swarm-verified by 4 specialized agents (December 2025):
+  - Shell Script Specialist: Defensive bash patterns, ShellCheck compliant
+  - Pipeline Specialist: CI/CD integration patterns, `asc_dry_run` validation
+  - Apple Development Expert: Xcode/Fastlane patterns, `platform=macOS` destination
+  - Critical Reviewer: Edge case handling, match output parsing, entitlements check
 
-   # verify-macos-prerequisites.sh - Pre-flight checks for macOS CI/CD
+**Script Features**:
+1. **Check 1**: App Store Connect API authentication via `asc_dry_run` lane (actual API validation, not just env var check)
+2. **Check 2**: macOS provisioning profile via `match --readonly --platform macos` (parses output to detect missing profiles)
+3. **Check 3**: Version synchronization via existing `verify-version-sync.sh`
+4. **Check 4**: macOS build capability with unsigned Debug build (uses `platform=macOS` per Apple Dev Expert)
+5. **Check 5**: macOS entitlements verification (sandbox, network.client, app-groups, icloud-services)
 
-   echo "🔍 Verifying macOS CI/CD prerequisites..."
-   echo ""
+**Command-Line Options**:
+- `--skip-profile-check`: Skip provisioning check (first-time setup)
+- `--verbose`: Show detailed command output
+- `--ci`: CI environment mode (stricter checks)
+- `--help`: Show usage information
 
-   ERRORS=0
+**Key Improvements from Critical Review**:
+- Match output parsing to detect "No matching profiles" (match exits 0 but no profile)
+- Entitlements check added (macOS requires explicit sandbox unlike iOS)
+- Warning vs error distinction (missing profile = warning for new setup)
+- Clear remediation instructions for each failure mode
 
-   # 1. Check bundle ID registration
-   echo "1️⃣ Checking App Store Connect API authentication..."
-   if bundle exec fastlane run app_store_connect_api_key 2>/dev/null; then
-       echo "   ✅ App Store Connect API key valid"
-   else
-       echo "   ❌ App Store Connect API key invalid"
-       ((ERRORS++))
-   fi
-
-   # 2. Check macOS provisioning profile
-   echo "2️⃣ Checking macOS provisioning profile..."
-   if bundle exec fastlane match appstore --platform macos --readonly 2>/dev/null; then
-       echo "   ✅ macOS provisioning profile available"
-   else
-       echo "   ⚠️ macOS provisioning profile not found (may need to run match)"
-   fi
-
-   # 3. Check version synchronization
-   echo "3️⃣ Checking version synchronization..."
-   .github/scripts/verify-version-sync.sh || ((ERRORS++))
-
-   # 4. Verify Xcode can build macOS target
-   echo "4️⃣ Verifying macOS build capability..."
-   if xcodebuild -project ListAll/ListAll.xcodeproj -scheme ListAllMac \
-       -destination 'platform=macOS,arch=arm64' \
-       -configuration Debug \
-       CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
-       -quiet build 2>/dev/null; then
-       echo "   ✅ macOS build successful"
-   else
-       echo "   ❌ macOS build failed"
-       ((ERRORS++))
-   fi
-
-   echo ""
-   if [[ $ERRORS -eq 0 ]]; then
-       echo "✅ All prerequisites verified!"
-       exit 0
-   else
-       echo "❌ $ERRORS prerequisite(s) failed. Fix before proceeding."
-       exit 1
-   fi
-   ```
-
-2. Run verification script and confirm all checks pass:
-   ```bash
-   chmod +x .github/scripts/verify-macos-prerequisites.sh
-   .github/scripts/verify-macos-prerequisites.sh
-   ```
+**Test criteria**:
+- Script exits 0 when all checks pass (or only warnings)
+- Script exits 1 when critical checks fail
+- All 4 required entitlements verified present in ListAllMac.entitlements
 
 **Blocking**: Tasks 9.1-9.6 cannot proceed until these pass.
 
