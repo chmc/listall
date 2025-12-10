@@ -1,11 +1,11 @@
 # Privacy Policy for ListAll
 
-**Effective Date:** October 25, 2025  
-**Last Updated:** October 25, 2025
+**Effective Date:** October 25, 2025
+**Last Updated:** December 10, 2025
 
 ## Overview
 
-ListAll ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how ListAll handles your data when you use our iOS and watchOS applications.
+ListAll ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how ListAll handles your data when you use our iOS, watchOS, and macOS applications.
 
 ## Our Privacy Commitment
 
@@ -32,19 +32,19 @@ ListAll stores the following data **locally on your device only**:
 
 All this data is stored in:
 - Your device's secure storage (Core Data database)
-- App Groups container (for syncing between iPhone and Apple Watch)
+- App Groups container (for syncing between iPhone, Apple Watch, and Mac)
 
-### iCloud Sync (Optional)
+### iCloud Sync
 
-If you choose to enable iCloud sync:
+If you are signed into iCloud on your device, ListAll automatically syncs your data:
 
 - Your list data is synchronized to **your personal iCloud account**
 - Data is encrypted in transit and at rest using Apple's iCloud security
 - We do NOT have access to your iCloud data
 - Only you can access your synced data through your Apple ID
-- You can disable iCloud sync at any time from Settings
+- Sync works automatically across your iPhone, Apple Watch, and Mac
 
-**iCloud is disabled by default.** You must explicitly enable it.
+**Note:** To disable iCloud sync, you can sign out of iCloud in System Settings (this affects all apps using iCloud).
 
 ## Data We Do NOT Collect
 
@@ -61,17 +61,23 @@ ListAll does NOT collect, transmit, or have access to:
 
 ## Permissions and Why We Need Them
 
-### Camera Access
+### Camera Access (iOS only)
 - **Purpose**: To let you take photos and attach them to list items
 - **Usage**: Only activated when you tap the camera button
 - **Storage**: Photos are stored locally in the app's database
 - **Not Used For**: Facial recognition, location tracking, or any other purpose
 
-### Photo Library Access
+### Photo Library Access (iOS only)
 - **Purpose**: To let you select existing photos from your library
 - **Usage**: Only activated when you tap the photo picker button
 - **Storage**: Selected photos are copied to the app's database
 - **Not Used For**: Browsing your library, analyzing photos, or any other purpose
+
+### Drag-and-Drop / Clipboard (macOS only)
+- **Purpose**: To add images to list items via drag-and-drop from Finder or clipboard paste
+- **Usage**: Only activated when you explicitly drag an image into the app or paste from clipboard
+- **Storage**: Images are copied to the app's database; original files are not retained
+- **Not Used For**: Background clipboard monitoring or accessing files without your action
 
 ### Face ID / Touch ID
 - **Purpose**: Optional security feature to lock the app
@@ -85,12 +91,25 @@ ListAll does NOT collect, transmit, or have access to:
 - **Storage**: Data stored in your private iCloud container
 - **Not Used For**: Sharing with us or third parties
 
+### Services Menu (macOS only)
+- **Purpose**: Add items to ListAll from any app via right-click Services menu
+- **Usage**: Only activated when you explicitly select text and choose ListAll from Services menu
+- **Data Received**: Text you select is processed locally and stored in your lists
+- **Not Used For**: Tracking which apps you use, background monitoring, or any network transmission
+
+### Handoff (iOS and macOS)
+- **Purpose**: Continue viewing your lists seamlessly across Apple devices
+- **Usage**: Shares your current viewing context (list ID, item title) between your devices
+- **Data Shared**: Only list/item identifiers and titles (not full content)
+- **Security**: Encrypted via Apple's Continuity framework; never passes through our servers
+- **Control**: Can be disabled in System Settings → General → Handoff
+
 ## Data Security
 
 ### Local Security
-- All data is stored securely using iOS's built-in data protection
+- All data is stored securely using iOS's and macOS's built-in data protection
 - Face ID/Touch ID can be enabled for additional app lock security
-- Photos and data are sandboxed within the app
+- Photos and data are sandboxed within the app (App Sandbox on macOS)
 
 ### Cloud Security
 - If iCloud sync is enabled, Apple's industry-standard encryption protects your data
@@ -103,7 +122,7 @@ ListAll does NOT collect, transmit, or have access to:
 ### What About List Sharing?
 When you use the app's "Share" feature:
 - You explicitly choose to export a list
-- Data is shared through iOS's standard sharing system
+- Data is shared through iOS's or macOS's standard sharing system
 - You control who receives the shared data
 - We do not track or have access to shared data
 
@@ -122,15 +141,19 @@ We don't keep any data because we don't collect any data. All your information s
 
 ### How to Delete Your Data
 
-**To delete all app data:**
+**To delete all app data on iOS:**
 1. Open iPhone Settings
 2. Go to General → iPhone Storage
 3. Find ListAll
 4. Tap "Delete App"
 
-This removes all local data. For iCloud data:
-1. Go to iPhone Settings → [Your Name] → iCloud
-2. Manage Storage → ListAll
+**To delete all app data on macOS:**
+1. Drag ListAll from Applications to Trash
+2. For complete removal, delete `~/Library/Group Containers/group.io.github.chmc.ListAll/`
+
+For iCloud data (all platforms):
+1. Go to Settings → [Your Name] → iCloud → Manage Storage
+2. Find ListAll
 3. Delete Documents and Data
 
 ## Third-Party Services
@@ -155,7 +178,7 @@ Since we don't collect your data, you already have full control:
 - **Correction**: Edit any data directly in the app
 - **Deletion**: Delete items, lists, or the entire app
 - **Portability**: Export your data anytime in multiple formats (JSON, CSV, text)
-- **Opt-out**: iCloud sync is disabled by default and can be turned off anytime
+- **iCloud Control**: Sync is automatic when signed into iCloud; disable by signing out of iCloud in System Settings
 
 ## International Users
 
@@ -201,5 +224,4 @@ ListAll is developed by Aleksi Sutela.
 **Governing Law:**
 This Privacy Policy is governed by the laws of Finland.
 
-**Last Updated:** October 25, 2025
-
+**Last Updated:** December 10, 2025

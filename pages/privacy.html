@@ -34,12 +34,12 @@
             <h1>Privacy Policy for ListAll</h1>
             <p class="last-updated">
                 <strong>Effective Date:</strong> October 25, 2025<br>
-                <strong>Last Updated:</strong> October 25, 2025
+                <strong>Last Updated:</strong> December 10, 2025
             </p>
 
             <h2>Overview</h2>
             <p>
-                ListAll ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how ListAll handles your data when you use our iOS and watchOS applications.
+                ListAll ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how ListAll handles your data when you use our iOS, watchOS, and macOS applications.
             </p>
 
             <div class="highlight-box">
@@ -70,18 +70,19 @@
             <p>All this data is stored in:</p>
             <ul>
                 <li>Your device's secure storage (Core Data database)</li>
-                <li>App Groups container (for syncing between iPhone and Apple Watch)</li>
+                <li>App Groups container (for syncing between iPhone, Apple Watch, and Mac)</li>
             </ul>
 
             <h3>iCloud Sync</h3>
-            <p>ListAll uses iCloud for seamless synchronization across your devices:</p>
+            <p>If you are signed into iCloud on your device, ListAll automatically syncs your data:</p>
             <ul>
-                <li>Your list data is automatically synchronized to <strong>your personal iCloud account</strong></li>
+                <li>Your list data is synchronized to <strong>your personal iCloud account</strong></li>
                 <li>Data is encrypted in transit and at rest using Apple's iCloud security</li>
                 <li>We do NOT have access to your iCloud data</li>
                 <li>Only you can access your synced data through your Apple ID</li>
-                <li>Works automatically when you're signed into iCloud on your devices</li>
+                <li>Sync works automatically across your iPhone, Apple Watch, and Mac</li>
             </ul>
+            <p><strong>Note:</strong> To disable iCloud sync, you can sign out of iCloud in System Settings (this affects all apps using iCloud).</p>
 
             <h2>Data We Do NOT Collect</h2>
             <p>ListAll does NOT collect, transmit, or store:</p>
@@ -98,32 +99,53 @@
             <h2>Permissions We Request</h2>
             <p>ListAll requests the following permissions only when needed:</p>
 
-            <h3>Camera Permission</h3>
+            <h3>Camera Permission (iOS only)</h3>
             <ul>
                 <li><strong>Why:</strong> To take photos for attaching to list items</li>
                 <li><strong>When:</strong> Only when you tap "Take Photo" button</li>
                 <li><strong>Data Storage:</strong> Photos stored locally in app database only</li>
             </ul>
 
-            <h3>Photo Library Permission</h3>
+            <h3>Photo Library Permission (iOS only)</h3>
             <ul>
                 <li><strong>Why:</strong> To select existing photos for attaching to items</li>
                 <li><strong>When:</strong> Only when you tap "Choose from Library" button</li>
                 <li><strong>Access:</strong> Limited to photos you explicitly select</li>
             </ul>
 
+            <h3>Drag-and-Drop / Clipboard (macOS only)</h3>
+            <ul>
+                <li><strong>Why:</strong> To add images via drag-and-drop from Finder or clipboard paste</li>
+                <li><strong>When:</strong> Only when you explicitly drag an image or paste from clipboard</li>
+                <li><strong>Access:</strong> Images are copied locally; originals are not retained</li>
+            </ul>
+
             <h3>Face ID / Touch ID Permission</h3>
             <ul>
                 <li><strong>Why:</strong> Optional app lock feature for security</li>
                 <li><strong>When:</strong> Only if you enable "Lock App" in Settings</li>
-                <li><strong>Data:</strong> Biometric data never leaves your device (handled by iOS)</li>
+                <li><strong>Data:</strong> Biometric data never leaves your device (handled by iOS/macOS)</li>
             </ul>
 
-            <h3>iCloud Permission (Optional)</h3>
+            <h3>iCloud (Automatic)</h3>
             <ul>
                 <li><strong>Why:</strong> To sync your lists across your Apple devices</li>
-                <li><strong>When:</strong> Only if you explicitly enable iCloud sync in Settings</li>
+                <li><strong>When:</strong> Automatically when you are signed into iCloud</li>
                 <li><strong>Access:</strong> Your personal iCloud account only</li>
+            </ul>
+
+            <h3>Services Menu (macOS only)</h3>
+            <ul>
+                <li><strong>Why:</strong> Add items to ListAll from any app via right-click Services menu</li>
+                <li><strong>When:</strong> Only when you explicitly select text and choose ListAll from Services menu</li>
+                <li><strong>Data:</strong> Selected text is processed locally and stored in your lists</li>
+            </ul>
+
+            <h3>Handoff (iOS and macOS)</h3>
+            <ul>
+                <li><strong>Why:</strong> Continue viewing your lists seamlessly across your Apple devices</li>
+                <li><strong>Data:</strong> Only list/item identifiers and titles shared (not full content)</li>
+                <li><strong>Security:</strong> Encrypted via Apple's Continuity framework; never passes through our servers</li>
             </ul>
 
             <h2>Data Sharing</h2>
@@ -140,15 +162,15 @@
             <p>ListAll includes an export/share feature that allows you to share lists with others. This sharing is:</p>
             <ul>
                 <li>Completely voluntary and user-initiated</li>
-                <li>Uses iOS's built-in share sheet (your choice of method)</li>
+                <li>Uses iOS's or macOS's built-in share sheet (your choice of method)</li>
                 <li>Does not involve our servers or third-party services</li>
             </ul>
 
             <h2>Data Security</h2>
             <p>Your data security is protected by:</p>
             <ul>
-                <li><strong>Local Storage:</strong> All data stored in iOS's secure Core Data database</li>
-                <li><strong>App Sandboxing:</strong> iOS sandboxing prevents other apps from accessing ListAll's data</li>
+                <li><strong>Local Storage:</strong> All data stored in iOS's/macOS's secure Core Data database</li>
+                <li><strong>App Sandboxing:</strong> iOS/macOS sandboxing prevents other apps from accessing ListAll's data</li>
                 <li><strong>Optional Biometric Lock:</strong> Face ID/Touch ID protection available</li>
                 <li><strong>iCloud Encryption:</strong> If sync enabled, data encrypted by Apple's iCloud infrastructure</li>
             </ul>

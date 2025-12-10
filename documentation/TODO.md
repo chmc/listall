@@ -3330,12 +3330,31 @@ fastlane/metadata/macos/
 
 ---
 
-### Task 10.5: Create macOS Privacy Policy Page
+### Task 10.5: Create macOS Privacy Policy Page [COMPLETED]
 **TDD**: URL validation
 
 **Steps**:
 1. Update existing privacy policy for macOS
 2. Ensure website includes macOS app info
+
+**Completed**: December 10, 2025 (swarm-verified)
+
+**Files modified**:
+- `PRIVACY.md` - Added macOS alongside iOS/watchOS, added macOS-specific sections (Services Menu, Handoff, Drag-and-Drop), fixed iCloud sync description accuracy
+- `pages/privacy.html` - Same updates as PRIVACY.md for website
+- `docs/privacy.html` - Synced with pages/privacy.html
+- `fastlane/metadata/macos/fi/privacy_policy_url.txt` - Fixed to use tietosuoja.html (matches iOS Finnish URL)
+
+**macOS-specific privacy features documented**:
+- Services Menu (receives text from other apps)
+- Handoff (shares activity with iOS)
+- Drag-and-Drop / Clipboard (images from Finder)
+- Touch ID (no Face ID on Mac)
+- App Sandbox
+
+**Critical Review findings addressed**:
+- Fixed iCloud sync description from "optional" to "automatic" (matches actual implementation)
+- Finnish URL consistency verified
 
 ---
 
