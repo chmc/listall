@@ -365,6 +365,97 @@ platform :ios do
     end
   end
 
+  desc "Build and upload macOS app to TestFlight"
+  desc "Options:"
+  desc "  skip_version_bump: true to skip version validation (use current version)"
+  lane :beta_macos do |options|
+    # Setup CI environment (creates temporary keychain)
+    if ENV['CI']
+      setup_ci
+      # Set keychain password for Match to use when importing certs
+      ENV["KEYCHAIN_PASSWORD"] = ""  # setup_ci creates keychain with empty password
+    end
+
+    xcodeproj_path = "ListAll/ListAll.xcodeproj"
+
+    # Version should already be set by version-bump job in CI
+    unless options[:skip_version_bump]
+      UI.user_error!("beta_macos should run with skip_version_bump:true in CI. The version-bump job handles version increments.")
+    end
+
+    # Read and display current version
+    current_version = VersionHelper.read_version
+    UI.message("📦 Using version: #{current_version}")
+
+    # Validate version is synchronized across all targets (iOS, watchOS, macOS)
+    unless VersionHelper.validate_versions(xcodeproj_path)
+      UI.user_error!("Version validation failed for macOS target. All targets must have synchronized versions.")
+    end
+
+    # Increment build number from CI
+    # In CI: use GitHub Actions run number for consistent build numbers across platforms
+    if ENV['GITHUB_RUN_NUMBER']
+      increment_build_number(
+        build_number: ENV['GITHUB_RUN_NUMBER'],
+        xcodeproj: xcodeproj_path
+      )
+    else
+      increment_build_number(
+        xcodeproj: xcodeproj_path
+      )
+    end
+
+    # Code signing for macOS App Store distribution
+    match(
+      type: 'appstore',
+      platform: 'macos',
+      app_identifier: ["io.github.chmc.ListAllMac"],
+      verbose: true,
+      keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
+      skip_set_partition_list: true  # Skip partition list in CI to avoid SecItemCopyMatching error
+    )
+
+    # Build macOS app archive and export as .pkg for App Store submission
+    # Note: build_mac_app automatically handles:
+    # - Hardened Runtime (ENABLE_HARDENED_RUNTIME = YES)
+    # - App Sandbox entitlements
+    # - Notarization during App Store submission
+    pkg_path = build_mac_app(
+      project: xcodeproj_path,
+      scheme: "ListAllMac",
+      export_method: "app-store",
+      output_directory: "./ListAll/build",
+      export_options: {
+        provisioningProfiles: {
+          "io.github.chmc.ListAllMac" => "match AppStore io.github.chmc.ListAllMac"
+        }
+      }
+    )
+
+    # Upload to TestFlight using App Store Connect API
+    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_BASE64"]
+      api_key = app_store_connect_api_key(
+        key_id: ENV["ASC_KEY_ID"],
+        issuer_id: ENV["ASC_ISSUER_ID"],
+        key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+        is_key_content_base64: false,
+        in_house: false
+      )
+
+      pilot(
+        pkg: pkg_path,
+        api_key: api_key,
+        distribute_external: false,
+        app_platform: "osx",  # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS uploads
+        skip_waiting_for_build_processing: true
+      )
+
+      UI.success("✅ macOS build uploaded to TestFlight!")
+    else
+      UI.important("⚠️ ASC_* env vars not set. Skipping TestFlight upload. Package built at: #{pkg_path}")
+    end
+  end
+
   desc "Deliver metadata/screenshots to App Store (no auto-submit)"
   desc "Creates new app version if needed. Usage: fastlane release version:1.2.0"
   lane :release do |options|

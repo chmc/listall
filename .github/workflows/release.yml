@@ -17,21 +17,214 @@ on:
         required: false
         default: false
         type: boolean
+      platforms:
+        description: 'Platforms to build (comma-separated)'
+        required: false
+        default: 'ios,macos'
+        type: string
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: write  # Required to push commits and tags back to the repository
+  contents: write  # Required to push commits and tags
+
+# Prevent concurrent releases from conflicting
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel - let first release finish
 
 jobs:
-  # Tests removed - CI pipeline already validates every commit
-  # No need to re-run tests during release
-  
-  beta:
-    name: TestFlight (beta)
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+  #############################################################################
+  # JOB 1: Version Bump (runs ONCE, FIRST) - Synchronized across all platforms
+  #############################################################################
+  version-bump:
+    name: Version Bump & Sync
     runs-on: macos-14
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      build_number: ${{ steps.build_num.outputs.build_number }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Verify version synchronization (pre-flight)
+        run: .github/scripts/verify-version-sync.sh
+
+      - name: Show current version
+        run: bundle exec fastlane show_version
+
+      - name: Bump version
+        id: bump
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event.inputs.skip_version_bump }}" == "true" ]]; then
+            echo "⏭️ Skipping version bump as requested"
+
+            # Validate .version file exists
+            if [[ ! -f .version ]]; then
+              echo "❌ .version file not found" >&2
+              exit 1
+            fi
+
+            CURRENT_VERSION=$(cat .version | tr -d '[:space:]')
+
+            # Validate version format
+            if ! [[ "${CURRENT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Invalid version format: ${CURRENT_VERSION}" >&2
+              exit 1
+            fi
+
+            echo "version=${CURRENT_VERSION}" >> "${GITHUB_OUTPUT}"
+            echo "✅ Using current version: ${CURRENT_VERSION}"
+          else
+            BUMP_TYPE="${{ github.event.inputs.bump_type }}"
+            BUMP_TYPE="${BUMP_TYPE:-patch}"
+
+            # Validate bump type (prevent injection)
+            case "${BUMP_TYPE}" in
+              major|minor|patch)
+                echo "📦 Bumping version: ${BUMP_TYPE}"
+                ;;
+              *)
+                echo "❌ Invalid bump_type: ${BUMP_TYPE}" >&2
+                exit 1
+                ;;
+            esac
+
+            # Use version_helper.rb to bump and sync ALL targets
+            NEW_VERSION=$(bundle exec ruby -r ./fastlane/lib/version_helper.rb -e "
+              current = VersionHelper.read_version
+              new_version = VersionHelper.increment_version(current, '${BUMP_TYPE}')
+              puts new_version
+            ")
+
+            # Validate Ruby execution succeeded
+            if [[ -z "${NEW_VERSION}" ]]; then
+              echo "❌ Failed to calculate new version" >&2
+              exit 1
+            fi
+
+            # Validate version format
+            if ! [[ "${NEW_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Invalid version returned: ${NEW_VERSION}" >&2
+              exit 1
+            fi
+
+            echo "📦 New version: ${NEW_VERSION}"
+            echo "version=${NEW_VERSION}" >> "${GITHUB_OUTPUT}"
+
+            # Update .version file and ALL Xcode targets
+            if ! bundle exec ruby -r ./fastlane/lib/version_helper.rb -e "
+              VersionHelper.write_version('${NEW_VERSION}')
+              VersionHelper.update_xcodeproj_version('ListAll/ListAll.xcodeproj', '${NEW_VERSION}')
+              unless VersionHelper.validate_versions('ListAll/ListAll.xcodeproj')
+                puts '❌ Version validation failed'
+                exit 1
+              end
+            "; then
+              echo "❌ Failed to update and validate version" >&2
+              exit 1
+            fi
+
+            echo "✅ Version updated and validated: ${NEW_VERSION}"
+          fi
+
+      - name: Generate build number
+        id: build_num
+        run: |
+          BUILD_NUM="${GITHUB_RUN_NUMBER:-1}"
+          echo "build_number=$BUILD_NUM" >> $GITHUB_OUTPUT
+          echo "📦 Build number: $BUILD_NUM"
+
+      - name: Verify version synchronization (post-bump)
+        run: .github/scripts/verify-version-sync.sh
+
+      - name: Commit and push version changes
+        if: success() && github.event.inputs.skip_version_bump != 'true'
+        run: |
+          set -euo pipefail
+
+          # Validate version from previous step
+          NEW_VERSION="${{ steps.bump.outputs.version }}"
+          if [[ -z "${NEW_VERSION}" ]]; then
+            echo "❌ No version output from bump step" >&2
+            exit 1
+          fi
+
+          # Configure git
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Verify we're on main branch (safety check)
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "${CURRENT_BRANCH}" != "main" ]] && [[ "${CURRENT_BRANCH}" != "HEAD" ]]; then
+            echo "❌ Not on main branch (current: ${CURRENT_BRANCH})" >&2
+            exit 1
+          fi
+
+          # Stage version files
+          git add .version ListAll/ListAll.xcodeproj/project.pbxproj
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "⚠️ No changes to commit (version may already be updated)"
+          else
+            git commit -m "Bump version to ${NEW_VERSION}" -m "Generated by release.yml workflow"
+            echo "✅ Committed version changes"
+          fi
+
+          # Create tag (fail if already exists - prevents duplicate releases)
+          if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
+            echo "❌ Tag v${NEW_VERSION} already exists" >&2
+            echo "This version was already released. Check version numbering." >&2
+            exit 1
+          fi
+
+          git tag "v${NEW_VERSION}"
+          echo "✅ Created tag v${NEW_VERSION}"
+
+          # Push changes to main
+          if ! git push origin main; then
+            echo "❌ Failed to push changes to main" >&2
+            exit 1
+          fi
+          echo "✅ Pushed changes to main"
+
+          # Push tag
+          if ! git push origin "v${NEW_VERSION}"; then
+            echo "❌ Failed to push tag v${NEW_VERSION}" >&2
+            echo "⚠️ Changes were pushed but tag was not - manual cleanup may be needed" >&2
+            exit 1
+          fi
+          echo "✅ Pushed tag v${NEW_VERSION}"
+
+      - name: Upload version artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-info
+          path: .version
+          retention-days: 7
+
+  #############################################################################
+  # JOB 2: iOS + watchOS Build (parallel with macOS)
+  #############################################################################
+  beta-ios:
+    name: TestFlight iOS
+    needs: version-bump
+    runs-on: macos-14
+    if: contains(github.event.inputs.platforms || 'ios,macos', 'ios')
+    timeout-minutes: 30
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -42,14 +235,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for proper git operations
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub token for pushing
+          fetch-depth: 0
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Pull latest version changes
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          echo "✅ Checked out latest main with version changes"
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -57,74 +250,79 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Select Xcode version
+        run: |
+          if [[ ! -d /Applications/Xcode_16.1.app ]]; then
+            echo "❌ Xcode 16.1 not found" >&2
+            xcodebuild -version
+            exit 1
+          fi
+          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
       - name: Cache SPM packages
         uses: actions/cache@v4
         with:
           path: |
             ~/.swiftpm
             ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          key: ${{ runner.os }}-spm-ios-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
-            ${{ runner.os }}-spm-
+            ${{ runner.os }}-spm-ios-
 
-      - name: Prepare Match Git URL with authentication
+      - name: Verify version matches version-bump output
         run: |
-          echo "MATCH_GIT_URL=https://x-access-token:${{ secrets.MATCH_GIT_TOKEN }}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
-          echo "✅ Match Git URL prepared with token authentication"
+          set -euo pipefail
+
+          EXPECTED="${{ needs.version-bump.outputs.version }}"
+          if [[ -z "${EXPECTED}" ]]; then
+            echo "❌ No version received from version-bump job" >&2
+            exit 1
+          fi
+
+          if [[ ! -f .version ]]; then
+            echo "❌ .version file not found" >&2
+            exit 1
+          fi
+
+          ACTUAL=$(cat .version | tr -d '[:space:]')
+
+          if [[ "${ACTUAL}" != "${EXPECTED}" ]]; then
+            echo "❌ Version mismatch!" >&2
+            echo "   Expected: ${EXPECTED}" >&2
+            echo "   Got:      ${ACTUAL}" >&2
+            exit 1
+          fi
+          echo "✅ Version verified: ${ACTUAL}"
+
+      - name: Prepare Match Git URL
+        env:
+          TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+        run: |
+          echo "MATCH_GIT_URL=https://x-access-token:${TOKEN}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+          echo "✅ Match Git URL prepared"
 
       - name: Verify Match secrets
         run: |
-          if [ -z "${{ secrets.MATCH_PASSWORD }}" ]; then
-            echo "❌ MATCH_PASSWORD secret is not set"
+          if [[ -z "${MATCH_PASSWORD}" ]]; then
+            echo "❌ MATCH_PASSWORD secret is not set" >&2
             exit 1
           fi
-          if [ -z "${{ secrets.MATCH_GIT_TOKEN }}" ]; then
-            echo "❌ MATCH_GIT_TOKEN secret is not set"
+          if [[ -z "${MATCH_GIT_TOKEN}" ]]; then
+            echo "❌ MATCH_GIT_TOKEN secret is not set" >&2
             exit 1
           fi
           echo "✅ Match secrets are configured"
 
-      - name: Show current version
-        run: bundle exec fastlane show_version
-
-      - name: Build and upload to TestFlight
-        run: |
-          if [ "${{ github.event.inputs.skip_version_bump }}" = "true" ]; then
-            echo "📦 Skipping version bump as requested"
-            bundle exec fastlane beta skip_version_bump:true
-          elif [ -n "${{ github.event.inputs.bump_type }}" ]; then
-            echo "📦 Version bump type: ${{ github.event.inputs.bump_type }}"
-            bundle exec fastlane beta bump_type:${{ github.event.inputs.bump_type }}
-          else
-            echo "📦 Using default version bump (patch)"
-            bundle exec fastlane beta bump_type:patch
-          fi
+      - name: Build and upload iOS to TestFlight
+        run: bundle exec fastlane beta skip_version_bump:true
 
       - name: Show final version
         if: always()
         run: bundle exec fastlane show_version
 
-      - name: Commit version changes
-        if: success() && github.event.inputs.skip_version_bump != 'true'
-        run: |
-          # Configure git
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          
-          # Get the new version
-          NEW_VERSION=$(cat .version)
-          
-          # Commit version file and project changes
-          git add .version ListAll/ListAll.xcodeproj/project.pbxproj
-          git commit -m "Bump version to ${NEW_VERSION}" || echo "No changes to commit"
-          
-          # Create and push tag
-          git tag "v${NEW_VERSION}" || echo "Tag already exists"
-          
-          # Push changes and tags
-          git push origin main || echo "Push failed, possibly no changes"
-          git push origin "v${NEW_VERSION}" || echo "Tag push failed"
-        
       - name: Debug - List identities in keychain
         if: failure()
         run: |
@@ -132,13 +330,204 @@ jobs:
           security find-identity -v -p codesigning
           security find-identity -v -p codesigning ~/Library/Keychains/fastlane_tmp_keychain-db || true
 
-      - name: Upload build artifacts
+      - name: Upload iOS artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: beta-build-artifacts
+          name: ios-build-artifacts
           path: |
             ListAll/build/*.ipa
             ListAll/build/*.xcarchive
             ListAll/build/*.log
           retention-days: 14
+
+  #############################################################################
+  # JOB 3: macOS Build (parallel with iOS)
+  #############################################################################
+  beta-macos:
+    name: TestFlight macOS
+    needs: version-bump
+    runs-on: macos-14
+    if: contains(github.event.inputs.platforms || 'ios,macos', 'macos')
+    timeout-minutes: 25
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull latest version changes
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          echo "✅ Checked out latest main with version changes"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Select Xcode version
+        run: |
+          if [[ ! -d /Applications/Xcode_16.1.app ]]; then
+            echo "❌ Xcode 16.1 not found" >&2
+            xcodebuild -version
+            exit 1
+          fi
+          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.swiftpm
+            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+          key: ${{ runner.os }}-spm-macos-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-macos-
+
+      - name: Verify version matches version-bump output
+        run: |
+          set -euo pipefail
+
+          EXPECTED="${{ needs.version-bump.outputs.version }}"
+          if [[ -z "${EXPECTED}" ]]; then
+            echo "❌ No version received from version-bump job" >&2
+            exit 1
+          fi
+
+          if [[ ! -f .version ]]; then
+            echo "❌ .version file not found" >&2
+            exit 1
+          fi
+
+          ACTUAL=$(cat .version | tr -d '[:space:]')
+
+          if [[ "${ACTUAL}" != "${EXPECTED}" ]]; then
+            echo "❌ Version mismatch!" >&2
+            echo "   Expected: ${EXPECTED}" >&2
+            echo "   Got:      ${ACTUAL}" >&2
+            exit 1
+          fi
+          echo "✅ Version verified: ${ACTUAL}"
+
+      - name: Prepare Match Git URL
+        env:
+          TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+        run: |
+          echo "MATCH_GIT_URL=https://x-access-token:${TOKEN}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+          echo "✅ Match Git URL prepared"
+
+      - name: Verify Match secrets
+        run: |
+          if [[ -z "${MATCH_PASSWORD}" ]]; then
+            echo "❌ MATCH_PASSWORD secret is not set" >&2
+            exit 1
+          fi
+          if [[ -z "${MATCH_GIT_TOKEN}" ]]; then
+            echo "❌ MATCH_GIT_TOKEN secret is not set" >&2
+            exit 1
+          fi
+          echo "✅ Match secrets are configured"
+
+      - name: Build and upload macOS to TestFlight
+        run: bundle exec fastlane beta_macos skip_version_bump:true
+
+      - name: Show final version
+        if: always()
+        run: bundle exec fastlane show_version
+
+      - name: Debug - List identities in keychain
+        if: failure()
+        run: |
+          echo "🔍 Checking what's in the keychain..."
+          security find-identity -v -p codesigning
+          security find-identity -v -p codesigning ~/Library/Keychains/fastlane_tmp_keychain-db || true
+
+      - name: Upload macOS artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build-artifacts
+          path: |
+            ListAll/build/*.pkg
+            ListAll/build/*.xcarchive
+            ListAll/build/*.log
+          retention-days: 14
+
+  #############################################################################
+  # JOB 4: Verify Release (runs after all builds)
+  #############################################################################
+  verify-release:
+    name: Verify Release
+    needs: [version-bump, beta-ios, beta-macos]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Release Summary
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ needs.version-bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build**: ${{ needs.version-bump.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Platform Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS | ${{ needs.beta-ios.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | ${{ needs.beta-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check for partial release
+        run: |
+          set -euo pipefail
+
+          IOS_RESULT="${{ needs.beta-ios.result }}"
+          MACOS_RESULT="${{ needs.beta-macos.result }}"
+          VERSION="${{ needs.version-bump.outputs.version }}"
+
+          echo "iOS result: ${IOS_RESULT}"
+          echo "macOS result: ${MACOS_RESULT}"
+
+          # Both skipped = platform selection, not a failure
+          if [[ "${IOS_RESULT}" == "skipped" ]] && [[ "${MACOS_RESULT}" == "skipped" ]]; then
+            echo "⚠️ Both platforms were skipped - check platforms input"
+            exit 0
+          fi
+
+          # Both succeeded = full success
+          if [[ "${IOS_RESULT}" == "success" ]] && [[ "${MACOS_RESULT}" == "success" ]]; then
+            echo "✅ All platforms released successfully!"
+            exit 0
+          fi
+
+          # Partial release detection
+          if [[ "${IOS_RESULT}" != "${MACOS_RESULT}" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ Partial Release Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some platforms failed while others succeeded." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Recovery options:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Re-run the failed platform job only" >> $GITHUB_STEP_SUMMARY
+            echo "2. Trigger a new release with \`platforms: '<failed_platform>'\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. If version-bump committed, use \`skip_version_bump: true\`" >> $GITHUB_STEP_SUMMARY
+
+            echo "::warning::Partial release for v${VERSION}! iOS: ${IOS_RESULT}, macOS: ${MACOS_RESULT}"
+          fi
+
+          # Any failure should fail the job
+          if [[ "${IOS_RESULT}" == "failure" ]] || [[ "${MACOS_RESULT}" == "failure" ]]; then
+            echo "::error::Release failed for one or more platforms"
+            exit 1
+          fi

@@ -2412,7 +2412,7 @@ xcodebuild test \
 
 ---
 
-### Task 9.2: Add macOS to release.yml with Synchronized Version Bump
+### Task 9.2: [COMPLETED] Add macOS to release.yml with Synchronized Version Bump
 **TDD**: Create test script to verify release pipeline with parallel uploads
 
 **Architecture**: Version bump (ONCE) → parallel platform builds
@@ -2816,6 +2816,24 @@ xcodebuild test \
 - Can build only macOS: `platforms: macos`
 - verify-release job summarizes results from all platforms
 - Version mismatch detection fails build early
+
+**Completed** (December 2025):
+- ✅ Refactored release.yml with 4-job architecture (version-bump → parallel beta-ios/beta-macos → verify-release)
+- ✅ Created `beta_macos` Fastlane lane in fastlane/Fastfile
+- ✅ Applied Critical Reviewer's security fixes:
+  - Added concurrency control to prevent race conditions
+  - Fixed secret leakage in MATCH_GIT_URL (use env var)
+  - Fixed silent failures (removed `|| echo` patterns)
+  - Fixed checkout race condition (git fetch + reset)
+  - Hardened bash scripts with `set -euo pipefail`
+  - Added input validation and version format checks
+- ✅ Added partial release detection in verify-release job
+- ✅ YAML and Ruby syntax validated
+- ✅ macOS build tested locally: BUILD SUCCEEDED
+
+**Files modified**:
+- `.github/workflows/release.yml` - Complete 4-job architecture
+- `fastlane/Fastfile` - Added `beta_macos` lane (~90 lines)
 
 ---
 
