@@ -295,8 +295,11 @@ open class Snapshot: NSObject {
             sleep(1) // Waiting for the animation to be finished
         }
 
-        // macOS screenshot capture using XCUIScreen
+        // macOS screenshot capture - capture entire screen
+        // Note: User should minimize other apps for clean screenshots, or use post-processing
         let screenshot = XCUIScreen.main.screenshot()
+        NSLog("📸 Captured screen screenshot")
+        print("📸 Captured screen screenshot")
         let image = screenshot.image
 
         // Get screenshots directory

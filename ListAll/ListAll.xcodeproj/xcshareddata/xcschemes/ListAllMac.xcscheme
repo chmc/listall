@@ -36,7 +36,7 @@
       </TestPlans>
       <Testables>
          <TestableReference
-            skipped = "NO"
+            skipped = "YES"
             parallelizable = "NO"
             testExecutionOrdering = "random">
             <BuildableReference

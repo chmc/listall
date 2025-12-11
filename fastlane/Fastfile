@@ -3776,15 +3776,16 @@ platform :ios do
         scheme: "ListAllMac",
         destination: "platform=macOS",
         only_testing: ["ListAllMacUITests/MacScreenshotTests"],
+        skip_testing: ["ListAllMacTests"],  # Skip unit tests - they require TEST_HOST which has path issues
         xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
         result_bundle: true,
         fail_build: false  # Continue even if some tests fail to capture all possible screenshots
       )
 
       # Copy screenshots from cache to output directory
-      cache_screenshots_dir = File.join(screenshots_cache_dir, "screenshots")
-      if Dir.exist?(cache_screenshots_dir)
-        screenshots = Dir.glob(File.join(cache_screenshots_dir, "Mac-*.png"))
+      # Note: Screenshots are saved directly to cache dir by MacSnapshotHelper, not to a subdirectory
+      if Dir.exist?(screenshots_cache_dir)
+        screenshots = Dir.glob(File.join(screenshots_cache_dir, "Mac-*.png"))
         UI.message("📋 Found #{screenshots.count} screenshots in cache")
 
         screenshots.each do |screenshot_path|

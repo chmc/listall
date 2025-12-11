@@ -44,19 +44,25 @@ class LocalizationManager: ObservableObject {
     private let userDefaults: UserDefaults
     
     private init() {
-        // Use shared UserDefaults for App Groups (iOS and watchOS)
-        if let sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll") {
+        // CRITICAL: Check UI test mode FIRST to avoid App Groups access on macOS
+        // App Groups triggers privacy dialogs on unsigned macOS development builds
+        let isUITesting = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+
+        // Use shared UserDefaults for App Groups (iOS and watchOS) - SKIP for UI tests
+        if !isUITesting, let sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll") {
             self.userDefaults = sharedDefaults
         } else {
-            // Fallback to standard UserDefaults if App Groups not available
+            // Fallback to standard UserDefaults if App Groups not available or in UI test mode
             self.userDefaults = .standard
+            if isUITesting {
+                print("🧪 LocalizationManager: UI test mode - using standard UserDefaults (no App Groups)")
+            }
         }
-        
+
         // For UI tests: Check AppleLanguages which is set by ListAllApp.init() for Fastlane screenshots
         // This must be checked FIRST before checking saved language preference
         // IMPORTANT: FASTLANE_LANGUAGE environment variable is NOT accessible to the app process
         // (xcodebuild env vars don't pass through), so we check AppleLanguages that was already set
-        let isUITesting = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
         if isUITesting,
            let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
            let firstLanguage = appleLanguages.first {

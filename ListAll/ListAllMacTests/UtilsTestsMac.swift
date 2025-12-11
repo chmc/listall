@@ -7,7 +7,7 @@
 
 import Testing
 import Foundation
-@testable import ListAllMac
+@testable import ListAll
 
 struct UtilsTestsMac {
 

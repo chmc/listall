@@ -35,6 +35,19 @@ struct ListAllMacApp: App {
             return
         }
 
+        // CRITICAL: Force app activation during UI tests BEFORE any other initialization
+        // macOS UI tests launch the app in background by default, causing test timeouts
+        // We must activate immediately in init() before app.launch() times out
+        if ProcessInfo.processInfo.arguments.contains("UITEST_MODE") {
+            print("🧪 ListAllMacApp.init(): UI test mode detected - will activate to foreground")
+            // Schedule activation for next runloop to ensure NSApplication is ready
+            DispatchQueue.main.async {
+                print("🧪 Activating app to foreground for UI tests...")
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                print("🧪 App activation called")
+            }
+        }
+
         // CRITICAL: Force CoreDataManager initialization FIRST to ensure UITEST_MODE is detected
         // before any data operations. The isUITest flag is evaluated during lazy initialization.
         _ = CoreDataManager.shared.persistentContainer
@@ -211,6 +224,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             print("🧪 AppDelegate: Skipping Services registration in test mode")
             return
+        }
+
+        // CRITICAL: Force app activation during UI tests
+        // macOS UI tests launch the app in background by default, causing test timeouts
+        if ProcessInfo.processInfo.arguments.contains("UITEST_MODE") {
+            print("🧪 AppDelegate: UI test mode - activating app to foreground")
+            NSApplication.shared.activate(ignoringOtherApps: true)
         }
 
         print("🚀 AppDelegate: Registering Services provider")

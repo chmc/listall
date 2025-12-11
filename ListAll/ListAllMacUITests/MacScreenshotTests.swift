@@ -31,7 +31,14 @@ final class MacScreenshotTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
+
+        // On macOS, explicitly set the bundle identifier to ensure correct app launches
+        // This helps XCUITest find the right app more reliably
+        app = XCUIApplication(bundleIdentifier: "io.github.chmc.ListAllMac")
+
+        // macOS UI tests need more time due to app activation and window management
+        // Default is 60 seconds, which is too short for macOS screenshot tests
+        executionTimeAllowance = 300  // 5 minutes per test
 
         // Setup Fastlane snapshot
         // This configures locale detection and screenshot directory setup
@@ -46,41 +53,87 @@ final class MacScreenshotTests: XCTestCase {
             if attempt > 1 {
                 print("⏳ Waiting 5 seconds before retry attempt \(attempt)...")
                 sleep(5)
-                // Recreate app instance for retry
-                app = XCUIApplication()
+                // Recreate app instance for retry with explicit bundle ID
+                app = XCUIApplication(bundleIdentifier: "io.github.chmc.ListAllMac")
                 setupSnapshot(app)
             }
 
             // Add launch arguments (must be done each attempt since app may be recreated)
             app.launchArguments += arguments
 
-            print("🚀 Launch attempt \(attempt)/\(maxRetries) with timeout \(launchTimeout)s...")
+            print("🚀 Launch attempt \(attempt)/\(maxRetries)...")
 
-            // Temporarily allow failures during launch attempt
+            // On macOS, app.launch() may time out and throw if app doesn't reach foreground
+            // We need to catch this and check if app is actually running in background
             let previousContinueAfterFailure = continueAfterFailure
             continueAfterFailure = true
 
+            // Store XCTest expectation failure flag
+            var launchDidTimeout = false
+
+            // NOTE: XCTest errors are recorded via test failure API, not Swift exceptions
+            // So we can't catch them with try-catch. Instead, we let launch() fail
+            // and then check the app state to see if it's actually running.
+
+            // Launch app - this may time out waiting for foreground on macOS
             app.launch()
 
-            // Check if launch succeeded
-            let launched = app.wait(for: .runningForeground, timeout: launchTimeout)
+            // If we reach here, launch() either succeeded or failed but didn't halt execution
+            // Check if the "failure" was just that app is in background
+            sleep(2)
 
-            // Restore failure behavior
+            let appState = app.state
+            print("📊 App state after launch: \(appState.rawValue) (2=notRunning, 3=runningBackground, 4=runningForeground)")
+
+            // Consider both foreground and background as successful launch
+            let isRunning = (appState == .runningForeground || appState == .runningBackground)
+
             continueAfterFailure = previousContinueAfterFailure
 
-            if launched {
-                print("✅ App launched successfully on attempt \(attempt)")
+            if isRunning {
+                // App launched successfully (even if XCTest reported a "failure")
+                print("✅ App is running on attempt \(attempt), state: \(appState.rawValue)")
+
+                // Try to activate to foreground if in background
+                if appState == .runningBackground {
+                    print("⚡ App in background, activating to foreground...")
+                    app.activate()
+                    sleep(2)
+                    print("📊 App state after activate(): \(app.state.rawValue)")
+                }
+
                 // Additional delay for UI to settle
-                sleep(2)
+                sleep(1)
                 return true
+            } else {
+                print("⚠️ App not running after launch (state: \(appState.rawValue)) on attempt \(attempt)")
             }
 
-            // Log retry attempt (visible in test logs)
+            // Log retry attempt
             print("⚠️ App launch attempt \(attempt)/\(maxRetries) failed, retrying...")
         }
 
         XCTFail("App failed to launch after \(maxRetries) attempts")
         return false
+    }
+
+    /// Prepare app window for clean screenshots
+    /// Simply activates the app and ensures it's visible
+    private func prepareWindowForScreenshot() {
+        print("🖥️ Preparing window for screenshot...")
+
+        // Ensure our app is frontmost and visible
+        app.activate()
+        sleep(2)
+
+        // Log window state for debugging
+        let windows = app.windows
+        print("📊 App has \(windows.count) windows")
+        if let mainWindow = windows.firstMatch as XCUIElement?, mainWindow.exists {
+            print("📊 Main window frame: \(mainWindow.frame)")
+        }
+
+        print("✅ Window prepared for screenshot")
     }
 
     /// Wait for a stable UI state by checking for any visible element

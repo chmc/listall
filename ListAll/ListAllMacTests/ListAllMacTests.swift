@@ -11,7 +11,7 @@ import Combine
 #if os(macOS)
 import AppKit
 #endif
-@testable import ListAllMac
+@testable import ListAll
 
 /// Unit tests for Core Data model extensions on macOS
 /// Verifies that all entity extensions (ListEntity, ItemEntity, ItemImageEntity, UserDataEntity)

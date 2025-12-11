@@ -62,17 +62,25 @@ class CoreDataManager: ObservableObject {
         // - Release builds automatically use Production environment (live data)
         // This enables cross-device sync during development (iOS ↔ macOS) with complete data isolation
         // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
+        // CRITICAL: Also disabled for UI tests to prevent CloudKit crashes on unsigned builds
         #if os(watchOS)
         let container = NSPersistentContainer(name: "ListAll")
         print("📦 CoreDataManager: Using NSPersistentContainer (watchOS - CloudKit disabled due to portal issues)")
         #else
-        // iOS and macOS: Always use CloudKit container for both Debug and Release
-        let container = NSPersistentCloudKitContainer(name: "ListAll")
-        #if DEBUG
-        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Debug - Development environment)")
-        #else
-        print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Release - Production environment)")
-        #endif
+        // iOS and macOS: Use CloudKit container EXCEPT for UI tests
+        let container: NSPersistentContainer
+        if isUITest {
+            // UI tests must use regular container to avoid CloudKit crashes on unsigned builds
+            container = NSPersistentContainer(name: "ListAll")
+            print("🧪 CoreDataManager: Using NSPersistentContainer (UI test mode - CloudKit disabled)")
+        } else {
+            container = NSPersistentCloudKitContainer(name: "ListAll")
+            #if DEBUG
+            print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Debug - Development environment)")
+            #else
+            print("📦 CoreDataManager: Using NSPersistentCloudKitContainer (Release - Production environment)")
+            #endif
+        }
         #endif
 
         // Configure store description for migration
@@ -80,44 +88,47 @@ class CoreDataManager: ObservableObject {
             fatalError("Failed to retrieve a persistent store description.")
         }
 
-        // Configure App Groups shared container URL
-        let appGroupID = "group.io.github.chmc.ListAll"
-        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            // Use separate database file for UI tests to isolate test data from production data
-            let databaseFileName = isUITest ? "ListAll-UITests.sqlite" : "ListAll.sqlite"
-            let storeURL = containerURL.appendingPathComponent(databaseFileName)
-            print("📦 CoreDataManager: App Groups container accessible")
-            print("📦 CoreDataManager: Store URL = \(storeURL.path)")
-            if isUITest {
-                print("🧪 CoreDataManager: UI test mode detected - using SEPARATE database for isolation")
-            }
-
-            // Migrate from old location if needed (iOS/macOS only - first time after App Groups was added)
-            #if os(iOS) || os(macOS)
-            migrateToAppGroupsIfNeeded(newStoreURL: storeURL)
-            #endif
-
-            storeDescription.url = storeURL
-        } else {
-            // FALLBACK: When App Groups fails (e.g., Debug builds without proper entitlements),
-            // use app's Documents directory as fallback to ensure data persists
-            print("⚠️ CoreDataManager: App Groups container NOT accessible for '\(appGroupID)'")
-            print("⚠️ CoreDataManager: Falling back to Documents directory (Debug builds only)")
-
+        // CRITICAL: UI tests must skip App Groups to avoid macOS privacy dialogs
+        // App Groups access triggers "wants to use data from other apps" dialogs
+        if isUITest {
+            // Use app's Documents directory for UI tests - no permissions needed
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                // Use separate database file for UI tests to isolate test data from production data
-                let databaseFileName = isUITest ? "ListAll-UITests.sqlite" : "ListAll.sqlite"
-                let fallbackURL = documentsURL.appendingPathComponent(databaseFileName)
-                storeDescription.url = fallbackURL
-                print("⚠️ CoreDataManager: Fallback store URL = \(fallbackURL.path)")
-                if isUITest {
-                    print("🧪 CoreDataManager: UI test mode detected - using SEPARATE database for isolation")
-                }
+                let storeURL = documentsURL.appendingPathComponent("ListAll-UITests.sqlite")
+                storeDescription.url = storeURL
+                print("🧪 CoreDataManager: UI test mode - using Documents directory (no App Groups)")
+                print("🧪 CoreDataManager: Store URL = \(storeURL.path)")
+            }
+        } else {
+            // Configure App Groups shared container URL (normal app operation)
+            let appGroupID = "group.io.github.chmc.ListAll"
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+                let databaseFileName = "ListAll.sqlite"
+                let storeURL = containerURL.appendingPathComponent(databaseFileName)
+                print("📦 CoreDataManager: App Groups container accessible")
+                print("📦 CoreDataManager: Store URL = \(storeURL.path)")
+
+                // Migrate from old location if needed (iOS/macOS only - first time after App Groups was added)
+                #if os(iOS) || os(macOS)
+                migrateToAppGroupsIfNeeded(newStoreURL: storeURL)
+                #endif
+
+                storeDescription.url = storeURL
             } else {
-                // Ultimate fallback: keep default URL but log error
-                print("❌ CoreDataManager: CRITICAL - Could not access Documents directory!")
-                if let defaultURL = storeDescription.url {
-                    print("❌ CoreDataManager: Using default URL = \(defaultURL.path)")
+                // FALLBACK: When App Groups fails (e.g., Debug builds without proper entitlements),
+                // use app's Documents directory as fallback to ensure data persists
+                print("⚠️ CoreDataManager: App Groups container NOT accessible for '\(appGroupID)'")
+                print("⚠️ CoreDataManager: Falling back to Documents directory (Debug builds only)")
+
+                if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                    let fallbackURL = documentsURL.appendingPathComponent("ListAll.sqlite")
+                    storeDescription.url = fallbackURL
+                    print("⚠️ CoreDataManager: Fallback store URL = \(fallbackURL.path)")
+                } else {
+                    // Ultimate fallback: keep default URL but log error
+                    print("❌ CoreDataManager: CRITICAL - Could not access Documents directory!")
+                    if let defaultURL = storeDescription.url {
+                        print("❌ CoreDataManager: Using default URL = \(defaultURL.path)")
+                    }
                 }
             }
         }
@@ -135,16 +146,21 @@ class CoreDataManager: ObservableObject {
         // This is required for NSPersistentStoreRemoteChange notifications to fire
         storeDescription.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
 
-        // Enable CloudKit sync for ALL iOS/macOS builds (Debug uses Development environment, Release uses Production)
+        // Enable CloudKit sync for iOS/macOS builds EXCEPT UI tests
         // Note: watchOS CloudKit is disabled due to persistent portal configuration issues
+        // CRITICAL: UI tests must skip CloudKit to avoid crashes and permission dialogs
         #if os(iOS) || os(macOS)
-        let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
-        storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
-        #if DEBUG
-        print("📦 CoreDataManager: CloudKit container options configured (Development environment)")
-        #else
-        print("📦 CoreDataManager: CloudKit container options configured (Production environment)")
-        #endif
+        if !isUITest {
+            let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
+            storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
+            #if DEBUG
+            print("📦 CoreDataManager: CloudKit container options configured (Development environment)")
+            #else
+            print("📦 CoreDataManager: CloudKit container options configured (Production environment)")
+            #endif
+        } else {
+            print("🧪 CoreDataManager: Skipping CloudKit container options in UI test mode")
+        }
         #endif
 
         container.loadPersistentStores { [weak self] storeDescription, error in
@@ -161,13 +177,18 @@ class CoreDataManager: ObservableObject {
         // Initialize CloudKit schema in Debug builds (Development environment)
         // This ensures the schema is pushed to CloudKit Development environment
         // Note: Only do this on iOS/macOS where CloudKit is enabled
+        // CRITICAL: Skip during UI tests - they use NSPersistentContainer (no CloudKit)
         #if DEBUG && (os(iOS) || os(macOS))
-        do {
-            try container.initializeCloudKitSchema(options: [])
-            print("📦 CoreDataManager: CloudKit schema initialized for Development environment")
-        } catch {
-            // Schema initialization can fail on simulators without iCloud login - this is expected
-            print("📦 CoreDataManager: CloudKit schema initialization skipped: \(error.localizedDescription)")
+        if !isUITest, let cloudKitContainer = container as? NSPersistentCloudKitContainer {
+            do {
+                try cloudKitContainer.initializeCloudKitSchema(options: [])
+                print("📦 CoreDataManager: CloudKit schema initialized for Development environment")
+            } catch {
+                // Schema initialization can fail on simulators without iCloud login - this is expected
+                print("📦 CoreDataManager: CloudKit schema initialization skipped: \(error.localizedDescription)")
+            }
+        } else if isUITest {
+            print("🧪 CoreDataManager: Skipping CloudKit schema initialization in UI test mode")
         }
         #endif
 

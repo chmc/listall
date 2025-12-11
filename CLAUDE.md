@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ListAll is a SwiftUI list management app for iOS and watchOS with CloudKit sync infrastructure. The app uses MVVM architecture with shared business logic across platforms.
+ListAll is a SwiftUI list management app for iOS, watchOS, and macOS with CloudKit sync infrastructure. The app uses MVVM architecture with shared business logic across platforms.
 
 ---
 
@@ -116,9 +116,18 @@ bundle exec fastlane asc_dry_run       # Verify App Store Connect auth
 # Generate Watch only (20 min)
 .github/scripts/generate-screenshots-local.sh watch
 
+# Generate macOS only (5 min)
+.github/scripts/generate-screenshots-local.sh macos
+
 # Re-apply device frames only
 .github/scripts/generate-screenshots-local.sh framed
 ```
+
+**macOS Screenshot Notes:**
+- macOS screenshots capture the full screen at native resolution
+- For clean App Store screenshots, minimize other apps before running tests
+- Screenshots are normalized to 2880x1800 (16:10) via `bundle exec fastlane ios screenshots_macos_normalize`
+- UI tests skip App Groups access to avoid permission dialogs on unsigned builds
 
 ### Architecture
 
@@ -128,7 +137,7 @@ bundle exec fastlane asc_dry_run       # Verify App Store Connect auth
 - **Views**: SwiftUI views in `ListAll/ListAll/Views/`
 - **Services**: Data layer in `ListAll/ListAll/Services/`
 
-#### Platform Code Sharing (iOS + watchOS)
+#### Platform Code Sharing (iOS + watchOS + macOS)
 Files are shared via Xcode Target Membership (not symbolic links):
 - **100% shared**: Models, Core Data schema
 - **95% shared**: Services (except BiometricAuthService - iOS only)
@@ -141,6 +150,8 @@ Platform-specific code uses compiler directives:
 // iOS-only code
 #elseif os(watchOS)
 // watchOS-only code
+#elseif os(macOS)
+// macOS-only code
 #endif
 ```
 

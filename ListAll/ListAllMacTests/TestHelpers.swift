@@ -12,10 +12,10 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 #endif
-@testable import ListAllMac
+@testable import ListAll
 
-// Resolve ambiguity between SwiftUI.List and ListAllMac.List
-typealias ListModel = ListAllMac.List
+// Resolve ambiguity between SwiftUI.List and ListAll.List
+typealias ListModel = ListAll.List
 
 /// Test helper for setting up isolated test environments
 class TestHelpers {
@@ -861,7 +861,7 @@ class TestDataRepository: DataRepository {
     }
 
     override func createList(name: String) -> ListModel {
-        let newList = ListAllMac.List(name: name)
+        let newList = ListAll.List(name: name)
         dataManager.addList(newList)
         return newList
     }
@@ -1154,7 +1154,7 @@ class TestMainViewModel: ObservableObject {
             throw ValidationError.nameTooLong
         }
 
-        let newList = ListAllMac.List(name: trimmedName)
+        let newList = ListAll.List(name: trimmedName)
         dataManager.addList(newList)
 
         // Refresh lists from dataManager (which already added the list)
@@ -1326,7 +1326,7 @@ class TestMainViewModel: ObservableObject {
         }
 
         // Create new list with duplicate name
-        let duplicatedList = ListAllMac.List(name: duplicateName)
+        let duplicatedList = ListAll.List(name: duplicateName)
 
         // Get items from the original list
         let originalItems = dataManager.getItems(forListId: list.id)
