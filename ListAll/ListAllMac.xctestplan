@@ -22,7 +22,7 @@
   },
   "testTargets" : [
     {
-      "enabled" : false,
+      "enabled" : true,
       "parallelizable" : false,
       "target" : {
         "containerPath" : "container:ListAll.xcodeproj",

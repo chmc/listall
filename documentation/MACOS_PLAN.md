@@ -350,7 +350,7 @@ class MockScreenshotImage: ScreenshotImage {
 
 ---
 
-## 4. Phase 1: App Hiding Unit Tests
+## 4. Phase 1: App Hiding Unit Tests [COMPLETED]
 
 **Goal:** Test AppleScript generation, TCC detection, timeout handling
 **Effort:** 10-12 hours
