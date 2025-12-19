@@ -348,6 +348,101 @@ final class MacScreenshotTests: XCTestCase {
         print("📐 Window frame: \(window.frame)")
     }
 
+    // MARK: - Prerequisites Verification
+
+    /// P2 BLOCKING PREREQUISITE: Verify window capture works before any other tests
+    /// This test MUST pass before proceeding with TDD implementation.
+    /// If it fails, pivot to Dedicated macOS User approach (see MACOS_PLAN.md Section 9.8)
+    ///
+    /// Success criteria:
+    /// - Screenshot width > 800 pixels
+    /// - Screenshot height > 600 pixels
+    /// - At least window OR fullscreen capture must work
+    func testA_P2_WindowCaptureVerification() throws {
+        print("========================================")
+        print("🔍 P2 BLOCKING: Window Capture Verification")
+        print("========================================")
+
+        // Launch app with test mode
+        guard launchAppWithRetry(arguments: ["UITEST_MODE"]) else {
+            XCTFail("❌ P2 FAILED: App failed to launch")
+            return
+        }
+
+        // Wait for UI to stabilize
+        print("⏳ Waiting for UI to stabilize...")
+        sleep(3)
+
+        // Activate app to ensure it's frontmost
+        app.activate()
+        sleep(2)
+
+        // Get main window reference
+        let mainWindow = app.windows.firstMatch
+        let windowAccessible = mainWindow.exists || mainWindow.isHittable
+
+        print("📊 Window accessibility check: exists=\(mainWindow.exists), isHittable=\(mainWindow.isHittable)")
+
+        // Capture screenshot using adaptive strategy (same as MacSnapshotHelper)
+        let image: NSImage
+        var captureMethod: String
+
+        if windowAccessible {
+            // Window is accessible - capture window only (preferred)
+            print("📸 Capturing window screenshot...")
+            app.activate()
+            sleep(1)
+            let screenshot = mainWindow.screenshot()
+            image = screenshot.image
+            captureMethod = "window"
+        } else {
+            // Window not accessible (SwiftUI accessibility bug) - use fullscreen fallback
+            print("⚠️ Window not accessible (SwiftUI bug), using fullscreen fallback...")
+            app.activate()
+            sleep(1)
+            let screenshot = XCUIScreen.main.screenshot()
+            image = screenshot.image
+            captureMethod = "fullscreen"
+        }
+
+        let imageSize = image.size
+        print("📊 Screenshot captured via \(captureMethod): \(imageSize.width) x \(imageSize.height)")
+
+        // CRITICAL ASSERTIONS: If these fail, pivot to dedicated macOS user approach
+        XCTAssertGreaterThan(
+            imageSize.width, 800,
+            "❌ P2 FAILED: Screenshot width (\(imageSize.width)) must be >800. " +
+            "Pivot to Dedicated macOS User approach (see MACOS_PLAN.md Section 9.8)"
+        )
+        XCTAssertGreaterThan(
+            imageSize.height, 600,
+            "❌ P2 FAILED: Screenshot height (\(imageSize.height)) must be >600. " +
+            "Pivot to Dedicated macOS User approach (see MACOS_PLAN.md Section 9.8)"
+        )
+
+        // Additional validation: Check that screenshot is not mostly blank
+        // A valid screenshot should have reasonable file size (> 1KB per 1000 pixels)
+        if let pngData = image.pngRepresentation() {
+            let expectedMinBytes = Int(imageSize.width * imageSize.height) / 1000
+            let actualBytes = pngData.count
+            print("📊 Screenshot file size: \(actualBytes) bytes (min expected: \(expectedMinBytes) bytes)")
+
+            if actualBytes < expectedMinBytes {
+                print("⚠️ WARNING: Screenshot may be blank or corrupt (small file size)")
+            }
+        }
+
+        print("✅ P2 PASSED: Window capture verification successful!")
+        print("   Capture method: \(captureMethod)")
+        print("   Screenshot size: \(imageSize.width) x \(imageSize.height)")
+        if captureMethod == "fullscreen" {
+            print("   ⚠️ NOTE: Using fullscreen fallback due to SwiftUI accessibility bug")
+            print("   This is expected - MacSnapshotHelper handles this automatically")
+        }
+        print("   Proceed to Phase 0: Test Infrastructure")
+        print("========================================")
+    }
+
     // MARK: - Screenshot Tests
 
     /// Test: Capture main window with sidebar showing lists and detail view with items
