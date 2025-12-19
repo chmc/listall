@@ -1,8 +1,22 @@
 # macOS App Store Screenshot Automation - Comprehensive Plan
 
 **Date:** December 19, 2025
-**Status:** PLAN - Awaiting Approval
+**Status:** REVISED - Incorporating Critical Review Findings
 **Prepared by:** Swarm Analysis (Apple Development Expert, Testing Specialist, Critical Reviewer, Pipeline Specialist, Shell Script Specialist)
+**Revision:** 2.0 - Post-Critical Review
+
+---
+
+> **⚠️ CRITICAL WARNING - READ BEFORE IMPLEMENTING**
+>
+> This plan was subjected to rigorous critical review by a 5-agent swarm. Several **critical issues** were identified that would cause immediate failure if not addressed:
+>
+> 1. **TCC Permissions Undocumented** - First run WILL fail without prior permission grant
+> 2. **xcresult Command Was Wrong** - Original API call would have failed (now corrected)
+> 3. **Reliability Targets Were Unrealistic** - Now revised with realistic estimates
+> 4. **Effort Estimates Were Optimistic** - Now includes debugging/integration time
+>
+> See [Section 11: Critical Review Findings](#11-critical-review-findings-swarm-analysis) for full details.
 
 ---
 
@@ -15,17 +29,22 @@ This document presents a comprehensive plan to fix macOS App Store screenshot au
 | Component | Current Status | Assessment |
 |-----------|---------------|------------|
 | XCUITest as screenshot engine | ✅ Correct | Industry best practice |
-| Test data isolation | ✅ Excellent (9.5/10) | Bulletproof, deterministic, locale-aware |
+| Test data isolation | ✅ Good (7/10) | Solid but has edge cases (see Critical Review) |
 | App hiding timing | ❌ CRITICAL | 19+ second race condition |
 | Window capture method | ❌ CRITICAL | Always falls back to full-screen due to SwiftUI bug |
 | Pipeline robustness | ⚠️ Medium (6/10) | Fragile cache extraction, poor error recovery |
 | Process termination | ❌ HIGH | pkill approach unreliable between locales |
+| TCC Permissions | ❌ UNDOCUMENTED | First run fails without prior grant |
 
-### Estimated Reliability After Fixes
+### Estimated Reliability After Fixes (REVISED)
 
 | Current | After Phase 1 | After Phase 2 | After Phase 3 |
 |---------|--------------|--------------|--------------|
-| 60% | 85% | 95% | 98% |
+| ~60% | 70-75% | 78-82% | 82-88% |
+
+> **Note:** Original estimates (85%/95%/98%) were found to be unrealistic during critical review.
+> macOS lacks iOS-like simulator isolation, creating a ~10-15% baseline failure rate that cannot be eliminated.
+> See [Section 11.1](#111-why-reliability-targets-were-revised) for detailed analysis.
 
 ---
 
@@ -41,6 +60,72 @@ This document presents a comprehensive plan to fix macOS App Store screenshot au
 8. [Success Criteria](#8-success-criteria)
 9. [File Changes Required](#9-file-changes-required)
 10. [Appendix: Agent Analysis Summaries](#10-appendix-agent-analysis-summaries)
+11. [Critical Review Findings (Swarm Analysis)](#11-critical-review-findings-swarm-analysis)
+
+---
+
+## Critical Prerequisites (MUST COMPLETE BEFORE IMPLEMENTING)
+
+Before implementing ANY phase of this plan, the following prerequisites MUST be completed:
+
+### P1. Grant TCC Automation Permissions (REQUIRED)
+
+The AppleScript-based app hiding **WILL FAIL** on first run without Automation permissions.
+
+**One-time setup steps:**
+
+1. Open **System Settings** → **Privacy & Security** → **Automation**
+2. Run this test command in Terminal to trigger permission request:
+   ```bash
+   osascript -e 'tell application "System Events" to get name of first process'
+   ```
+3. Click **OK** when prompted to allow Terminal to control System Events
+4. Verify permission granted: The command should output a process name (e.g., "Finder")
+
+**If running from Xcode:**
+- Grant permission to **Xcode** and **XCTRunner** when prompted
+- These dialogs appear during first test run and will cause test timeout if not clicked
+
+### P2. Verify Window Capture Works (RECOMMENDED)
+
+The plan assumes `mainWindow.screenshot()` works despite `exists` returning false. **This should be verified before full implementation.**
+
+**Quick verification:**
+```swift
+// Add temporarily to any test
+let app = XCUIApplication()
+app.launch()
+sleep(3)
+let mainWindow = app.windows.firstMatch
+let screenshot = mainWindow.screenshot()
+print("Screenshot size: \(screenshot.image.size)")  // Should be > 100x100
+```
+
+If screenshot size is 0x0 or very small, the window capture strategy needs revision.
+
+### P3. Verify ImageMagick Installation
+
+```bash
+# Check ImageMagick is installed
+which convert && which identify
+
+# If not found:
+brew install imagemagick
+```
+
+### P4. Measure Baseline Reliability (RECOMMENDED)
+
+Before implementing fixes, establish current baseline:
+```bash
+# Run screenshot generation 5 times, record success/failure
+for i in {1..5}; do
+  echo "=== Run $i ==="
+  .github/scripts/generate-screenshots-local.sh macos
+  echo "Result: $?"
+done
+```
+
+Document: How many runs succeeded? What were failure modes?
 
 ---
 
@@ -352,8 +437,13 @@ After analysis, the "best practice" for macOS screenshots is:
 ### Phase 1: Critical Fixes (Priority: IMMEDIATE)
 
 **Goal:** Eliminate race condition and fix window capture
-**Reliability Target:** 60% → 85%
-**Estimated Effort:** 2-3 hours
+**Reliability Target:** 60% → 70-75% (revised from 85%)
+**Estimated Effort:** 8-11 hours (revised from 2-3 hours)
+
+> **Effort Breakdown (from Critical Review):**
+> - Coding: 2-3 hours
+> - Debugging edge cases: 4-6 hours (TCC issues, timing, window states)
+> - Testing across scenarios: 2 hours
 
 #### 5.1.1 Move App Hiding to UI Test Setup
 
@@ -373,15 +463,31 @@ override func setUpWithError() throws {
     setupSnapshot(app)
 }
 
+/// Hides/quits background apps via AppleScript before screenshot capture.
+///
+/// **CRITICAL: TCC PERMISSIONS REQUIRED**
+/// This function requires Automation permissions. First run will fail unless
+/// permissions are pre-granted. See Prerequisites section P1.
+///
+/// **IMPORTANT CORRECTIONS from Critical Review:**
+/// 1. Added proper error handling (original used `try?` which silently fails)
+/// 2. Added timeout protection (AppleScript can hang indefinitely)
+/// 3. Added TCC permission failure detection
+/// 4. Uses case-insensitive matching for process names
 private func hideAllOtherAppsViaAppleScript() {
     let script = """
     tell application "System Events"
         set appList to name of every process whose background only is false
         repeat with appName in appList
-            if appName is not in {"Finder", "SystemUIServer", "Dock", "Terminal", "Xcode"} then
-                if appName does not contain "xctest" and appName does not contain "ListAll" then
+            -- Case-insensitive comparison (CORRECTED from Critical Review)
+            set appNameLower to do shell script "echo " & quoted form of (appName as string) & " | tr '[:upper:]' '[:lower:]'"
+
+            if appNameLower is not in {"finder", "systemuiserver", "dock", "terminal", "xcode"} then
+                if appNameLower does not contain "xctest" and appNameLower does not contain "xctrunner" and appNameLower does not contain "listall" then
                     try
                         tell process appName to quit
+                    on error errMsg
+                        log "Could not quit " & appName & ": " & errMsg
                     end try
                 end if
             end if
@@ -392,8 +498,48 @@ private func hideAllOtherAppsViaAppleScript() {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
     process.arguments = ["-e", script]
-    try? process.run()
-    process.waitUntilExit()
+
+    // CORRECTED: Add error capture and timeout (from Critical Review)
+    let errorPipe = Pipe()
+    process.standardError = errorPipe
+
+    do {
+        try process.run()
+
+        // Timeout protection: AppleScript can hang if permission dialog appears
+        let timeoutDate = Date().addingTimeInterval(30)
+        while process.isRunning && Date() < timeoutDate {
+            usleep(100000) // 0.1 second
+        }
+
+        if process.isRunning {
+            print("⚠️ AppleScript timed out after 30 seconds - possible TCC dialog waiting")
+            process.terminate()
+            XCTFail("AppleScript timed out - check for permission dialogs")
+            return
+        }
+
+        process.waitUntilExit()
+
+        // Check for TCC permission failures
+        if process.terminationStatus != 0 {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+
+            if errorOutput.contains("not authorized") || errorOutput.contains("not allowed") {
+                print("❌ TCC PERMISSION DENIED - Grant Automation permissions:")
+                print("   System Settings > Privacy & Security > Automation > XCTRunner")
+                XCTFail("TCC Automation permissions not granted")
+            } else {
+                print("⚠️ AppleScript failed (exit \(process.terminationStatus)): \(errorOutput)")
+            }
+        } else {
+            print("✅ Background apps hidden successfully")
+        }
+    } catch {
+        print("❌ Failed to execute osascript: \(error.localizedDescription)")
+        XCTFail("osascript execution failed: \(error)")
+    }
 }
 ```
 
@@ -487,8 +633,13 @@ Remove:
 ### Phase 2: Pipeline Robustness (Priority: HIGH)
 
 **Goal:** Make pipeline more reliable and add error recovery
-**Reliability Target:** 85% → 95%
-**Estimated Effort:** 3-4 hours
+**Reliability Target:** 70-75% → 78-82% (revised from 95%)
+**Estimated Effort:** 9-12 hours (revised from 3-4 hours)
+
+> **Effort Breakdown (from Critical Review):**
+> - Coding: 3-4 hours
+> - xcresulttool quirks and debugging: 4-6 hours
+> - Integration testing: 2 hours
 
 #### 5.2.1 Add Pre-flight Checks to Fastfile
 
@@ -545,21 +696,27 @@ end
 
 #### 5.2.3 Add .xcresult Extraction (Primary) with Cache Fallback
 
+> **⚠️ CORRECTED:** Original command `xcrun xcresulttool export --type file` was incorrect.
+> The correct subcommand is `export attachments`. See Critical Review Section 11.2.
+
 ```ruby
 def extract_screenshots_from_xcresult(result_bundle_path, output_dir)
   return [] unless File.exist?(result_bundle_path)
 
   # Extract attachments from xcresult
+  # NOTE: Use "export attachments" subcommand, NOT "--type file"
   extraction_dir = File.join(output_dir, "xcresult_extracted")
   FileUtils.mkdir_p(extraction_dir)
 
-  sh("xcrun xcresulttool export --type file " \
+  # CORRECT command (validated against Fastfile line 1300):
+  sh("xcrun xcresulttool export attachments " \
      "--path #{Shellwords.escape(result_bundle_path)} " \
      "--output-path #{Shellwords.escape(extraction_dir)} 2>/dev/null || true")
 
-  # Find screenshot attachments
+  # Find screenshot attachments (filter by naming pattern)
   screenshots = Dir.glob("#{extraction_dir}/**/*.png").select do |f|
-    File.basename(f).include?("Screenshot") || File.basename(f).start_with?("Mac-")
+    basename = File.basename(f)
+    basename.include?("Screenshot") || basename.start_with?("Mac-")
   end
 
   UI.message("📦 Extracted #{screenshots.count} screenshots from .xcresult")
@@ -582,6 +739,11 @@ else
   end
 end
 ```
+
+> **Note on Dual Extraction:** Critical Review identified that having two extraction methods
+> adds complexity without clear benefit since failure modes are correlated. Consider using
+> cache directory only (simpler) OR xcresult only (after implementing XCTAttachment).
+> Don't implement both unless you have evidence of independent failure modes.
 
 #### 5.2.4 Add Screenshot Content Validation
 
@@ -615,8 +777,15 @@ end
 ### Phase 3: Polish and Optimization (Priority: MEDIUM)
 
 **Goal:** Add advanced features and optimize performance
-**Reliability Target:** 95% → 98%
-**Estimated Effort:** 2-3 hours
+**Reliability Target:** 78-82% → 82-88% (revised from 98%)
+**Estimated Effort:** 6-7 hours (revised from 2-3 hours)
+
+> **Effort Breakdown (from Critical Review):**
+> - Coding: 2-3 hours
+> - Integration testing: 4 hours
+>
+> **Note:** Diminishing returns expected in Phase 3. macOS has ~10-15% baseline unreliability
+> due to lack of simulator isolation that cannot be eliminated through software changes.
 
 #### 5.3.1 Add XCTAttachment for Test Integration
 
@@ -717,18 +886,24 @@ end
 
 ## 6. Test Data Strategy
 
-### 6.1 Current Implementation (KEEP - Excellent)
+### 6.1 Current Implementation (KEEP - Good)
 
-The test data isolation is already excellent and should be preserved unchanged:
+The test data isolation is solid but has edge cases identified in Critical Review:
 
 | Aspect | Rating | Details |
 |--------|--------|---------|
 | Database Isolation | ✅ 10/10 | Separate `ListAll-UITests.sqlite` file |
 | Safety Checks | ✅ 10/10 | `fatalError` if not using test database |
 | CloudKit Isolation | ✅ 10/10 | CloudKit disabled for UI tests |
-| Data Determinism | ✅ 10/10 | Fixed lists, items, timestamps |
-| Locale Awareness | ✅ 10/10 | Separate English and Finnish datasets |
-| No Race Conditions | ✅ 10/10 | All initialization is synchronous |
+| Data Determinism | ✅ 9/10 | Fixed lists, items, timestamps |
+| Locale Awareness | ⚠️ 7/10 | Edge case: locale may not switch between runs |
+| No Race Conditions | ⚠️ 6/10 | Core Data writes may not flush before test reads |
+
+> **Critical Review Finding:** Overall rating revised from 9.5/10 to 7/10.
+> The isolation architecture is sound, but there are unverified assumptions:
+> - No verification that `viewContext.save()` blocks until disk flush
+> - App Groups access on macOS may have permission issues
+> - No verification locale actually changed between runs
 
 ### 6.2 Test Data Content
 
@@ -937,24 +1112,174 @@ The macOS screenshot automation for ListAll has **critical reliability issues** 
 4. **Add pipeline robustness** - Pre-flight checks, verification, validation
 5. **Extract from .xcresult** - More reliable than cache directory
 
-### Estimated Total Effort
+### Estimated Total Effort (REVISED)
 
-| Phase | Effort | Priority |
-|-------|--------|----------|
-| Phase 1: Critical Fixes | 2-3 hours | IMMEDIATE |
-| Phase 2: Pipeline Robustness | 3-4 hours | HIGH |
-| Phase 3: Polish | 2-3 hours | MEDIUM |
-| **Total** | **7-10 hours** | |
+| Phase | Original | Revised | Priority |
+|-------|----------|---------|----------|
+| Prerequisites | - | 1-2 hours | REQUIRED |
+| Phase 1: Critical Fixes | 2-3 hours | 8-11 hours | IMMEDIATE |
+| Phase 2: Pipeline Robustness | 3-4 hours | 9-12 hours | HIGH |
+| Phase 3: Polish | 2-3 hours | 6-7 hours | MEDIUM |
+| **Total** | **7-10 hours** | **24-32 hours** | |
+
+> **Why 3x longer?** Original estimates only counted coding time. Critical Review
+> identified that debugging edge cases (TCC permissions, timing issues, xcresulttool
+> quirks) typically takes 2-3x longer than initial coding.
 
 ### Next Steps
 
-1. **Review this plan** and provide feedback
-2. **Approve approach** for Phase 1 implementation
-3. **Allocate time** for implementation
-4. **Test locally** before deploying
-5. **Monitor** success rate over 1 month
+1. **Complete Prerequisites** (Section P1-P4 above) - REQUIRED before any implementation
+2. **Measure baseline reliability** - 5 runs, document success/failure modes
+3. **Prototype window capture fix** - Verify `mainWindow.screenshot()` works
+4. **Decide on approach**: Full automation OR dedicated macOS user (simpler alternative)
+5. **If proceeding**: Implement Phase 1, measure improvement, then Phase 2
+
+### Alternative Approach: Dedicated macOS User
+
+Critical Review identified a simpler alternative worth considering:
+
+1. Create `screenshot_bot` macOS user with only ListAll installed
+2. Script user switching: `sudo su - screenshot_bot -c "run_tests.sh"`
+3. One-time permission grants (no TCC issues)
+4. **Estimated reliability: 95%+** with much simpler implementation
+
+**Consider this if:** 82-88% reliability (after all phases) is insufficient, or if
+the 24-32 hour implementation budget is too high for a task that runs ~4 times/year.
 
 ---
 
-**Document Status:** AWAITING APPROVAL
+## 11. Critical Review Findings (Swarm Analysis)
+
+This section documents findings from a rigorous 5-agent swarm critical review conducted on December 19, 2025.
+
+### 11.1 Why Reliability Targets Were Revised
+
+**Original Claim:** 60% → 85% → 95% → 98%
+
+**Critical Review Finding:** These numbers were aspirational targets without empirical basis.
+
+#### Statistical Analysis
+
+If reliability is 98% per run, probability of 20 consecutive successes:
+```
+P(20 successes) = 0.98^20 = 0.668 = 66.8%
+```
+
+To achieve 95% confidence of 20 consecutive successes requires 99.74% reliability.
+
+#### macOS Fundamental Limitations
+
+macOS has irreducible sources of failure that iOS simulators don't have:
+- **No sandboxed test environment** - Tests run on real user system
+- **System state is mutable** - Apps can launch, notifications can appear
+- **User session is shared** - User actions affect tests
+- **Permissions are persistent** - TCC denials persist across runs
+- **Window management is cooperative** - Apps can refuse to hide/quit
+
+**Estimated baseline unreliability: 10-15%** that cannot be eliminated through software changes.
+
+#### Revised Estimates (Realistic)
+
+| Phase | Original | Revised | Rationale |
+|-------|----------|---------|-----------|
+| Phase 1 | 85% | 70-75% | Reduces race condition but doesn't eliminate it |
+| Phase 2 | 95% | 78-82% | Adds validation but introduces complexity |
+| Phase 3 | 98% | 82-88% | Diminishing returns, baseline limit approached |
+
+### 11.2 xcresulttool Command Correction
+
+**Original (WRONG):**
+```bash
+xcrun xcresulttool export --type file --path <bundle> --output-path <dir>
+```
+
+**Corrected:**
+```bash
+xcrun xcresulttool export attachments --path <bundle> --output-path <dir>
+```
+
+The original command used a non-existent `--type file` flag. The correct subcommand is `export attachments`.
+
+### 11.3 TCC Permissions Issue
+
+**Finding:** The plan's AppleScript-based app hiding requires Automation permissions that are not granted by default.
+
+**Impact:** First run WILL fail with timeout or permission denied error.
+
+**Resolution:** Added Prerequisites section P1 with explicit permission grant instructions.
+
+### 11.4 Process Termination Issues
+
+**Original approach:** `pkill -9 -f 'ListAllMac'`
+
+**Problems identified:**
+- Uses `-f` flag (matches full command line, too broad)
+- `-9` is SIGKILL (no graceful shutdown)
+- Doesn't handle zombie processes
+- Doesn't verify termination
+
+**Corrected approach in Section 5.2.2** uses:
+- SIGTERM first, then SIGKILL
+- Polling with zombie process filtering
+- Verification of termination
+
+### 11.5 Test Data Isolation Rating Revision
+
+**Original:** 9.5/10 "Excellent"
+
+**Revised:** 7/10 "Good"
+
+**Issues identified:**
+- No verification Core Data writes flush before tests read
+- App Groups access may fail on macOS (permission issues)
+- Locale switching between runs is unverified
+- `setUpWithError()` runs before EVERY test, not once per class
+
+### 11.6 setUpWithError() Timing Clarification
+
+**Original assumption:** Runs once per test class
+
+**Actual behavior:** Runs before EVERY test method
+
+**Impact:** App hiding runs 4 times per locale (24 AppleScript executions total), not once. This is **accidentally more reliable** but adds ~12 extra seconds per locale.
+
+### 11.7 Content Verification Improvements
+
+**Original:** Check file size > 10KB
+
+**Problems:**
+- Legitimate screenshots may be small (minimized window)
+- Doesn't detect wrong window captured
+- Doesn't verify content correctness
+
+**Recommended additions:**
+- Check image dimensions (not just file size)
+- Verify using explicit accessibility IDs, not `firstMatch`
+- Check row count in sidebar to verify test data loaded
+
+### 11.8 Alternative Approaches Not Originally Considered
+
+| Alternative | Pros | Cons |
+|-------------|------|------|
+| **Dedicated macOS user** | 95%+ reliability, simple | Requires user switching |
+| **Manual with tooling** | 100% reliability | Requires human time |
+| **VM/container** | Complete isolation | macOS licensing, performance |
+| **Render UI directly** | Deterministic, fast | No system chrome |
+
+The Critical Review recommends evaluating the **dedicated macOS user** approach before implementing the complex automation in this plan.
+
+### 11.9 Agent Contributions Summary
+
+| Agent | Focus | Key Finding |
+|-------|-------|-------------|
+| **Critical Reviewer** | Devil's advocate | Reliability targets are fantasy math |
+| **Apple Dev Expert** | XCUITest/SwiftUI | Window capture strategy is sound |
+| **Testing Specialist** | Test strategy | Test isolation is 7/10, not 9.5/10 |
+| **Pipeline Specialist** | Fastlane | xcresult command was wrong |
+| **Shell Specialist** | AppleScript | TCC permissions undocumented |
+
+---
+
+**Document Status:** REVISED - Incorporating Critical Review
 **Last Updated:** December 19, 2025
+**Revision:** 2.0
