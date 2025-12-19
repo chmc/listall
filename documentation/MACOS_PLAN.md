@@ -554,7 +554,7 @@ class AppHidingScriptGenerator {
 
 ---
 
-## 5. Phase 2: Window Capture Unit Tests
+## 5. Phase 2: Window Capture Unit Tests [COMPLETED]
 
 **Goal:** Test capture method selection, screenshot validation
 **Effort:** 8-10 hours
