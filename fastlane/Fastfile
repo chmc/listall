@@ -3806,6 +3806,15 @@ platform :ios do
       else
         UI.success("✅ #{locale}: Found #{locale_shots.count} screenshots")
       end
+
+      # CRITICAL: Terminate ListAll app between locale runs
+      # Without this, the app from the previous locale holds AX authorization
+      # and the next test run fails with "Not authorized for UI testing"
+      UI.message("🛑 Terminating ListAll app before next locale...")
+      sh("pkill -9 -f 'ListAllMac' 2>/dev/null || true")
+      sh("pkill -9 -f 'ListAll$' 2>/dev/null || true")  # Match "ListAll" at end to avoid matching "ListAllMac" twice
+      sh("pkill -9 -f 'XCTRunner' 2>/dev/null || true")
+      sleep(3)  # Wait for processes to fully terminate and release AX authorization
     end
 
     # Final validation

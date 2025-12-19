@@ -353,6 +353,116 @@ frame_ios_screenshots_inplace() {
 }
 
 # =============================================================================
+# macOS Helper Functions
+# =============================================================================
+
+hide_and_quit_background_apps_macos() {
+    log_info "Preparing macOS desktop for clean screenshots..."
+
+    # Check if osascript is available
+    if ! command -v osascript &> /dev/null; then
+        log_warn "osascript not found - skipping app cleanup (may result in cluttered screenshots)"
+        return 0
+    fi
+
+    # STEP 1: Quit non-essential applications completely
+    # This is more reliable than hiding - apps stay closed
+    log_info "Closing non-essential applications..."
+
+    osascript <<'EOF' 2>/dev/null || true
+tell application "System Events"
+    set appList to name of every process whose background only is false
+    repeat with appName in appList
+        -- Skip essential system processes and apps we need
+        -- Use pattern matching (contains) instead of exact names for test runner variants
+        set shouldSkip to false
+
+        -- Skip system essentials
+        if appName is in {"Finder", "SystemUIServer", "Dock", "Terminal"} then
+            set shouldSkip to true
+        end if
+
+        -- Skip Xcode and related tools (pattern matching)
+        if appName contains "Xcode" or appName contains "xcode" then
+            set shouldSkip to true
+        end if
+
+        -- Skip test runners (pattern matching for various test runner names)
+        if appName contains "xctest" or appName contains "XCTest" or appName contains "xctrunner" or appName contains "XCTRunner" then
+            set shouldSkip to true
+        end if
+
+        -- Skip xcodebuild
+        if appName contains "xcodebuild" then
+            set shouldSkip to true
+        end if
+
+        -- Skip Simulator (important - tests run in simulator context)
+        if appName contains "Simulator" then
+            set shouldSkip to true
+        end if
+
+        -- Skip ListAll app (the app being tested - must not be quit!)
+        if appName contains "ListAll" then
+            set shouldSkip to true
+        end if
+
+        if shouldSkip is false then
+            try
+                -- Quit apps that can be quit (ignoring errors for system apps)
+                tell process appName to quit
+            end try
+        end if
+    end repeat
+end tell
+EOF
+
+    log_info "Waiting for applications to quit (3 seconds)..."
+    sleep 3
+
+    # STEP 2: Hide any remaining visible apps (for apps that can't be quit)
+    # This targets apps that refused to quit or are system components
+    log_info "Hiding remaining visible applications..."
+
+    osascript <<'EOF' 2>/dev/null || true
+tell application "System Events"
+    -- Use proper AppleScript syntax with repeat loop
+    -- (the "name is not in {list}" one-liner syntax doesn't work)
+    repeat with p in (get every process whose visible is true)
+        set appName to name of p
+        if appName is not in {"Finder", "SystemUIServer", "Dock", "Terminal"} then
+            -- Also skip test-related and ListAll processes
+            if appName does not contain "Xcode" and appName does not contain "xctest" and appName does not contain "ListAll" then
+                try
+                    set visible of p to false
+                end try
+            end if
+        end if
+    end repeat
+end tell
+EOF
+
+    log_info "Waiting for hide animations to complete (2 seconds)..."
+    sleep 2
+
+    # STEP 3: Minimize Finder windows to clear desktop
+    log_info "Minimizing Finder windows..."
+
+    osascript <<'EOF' 2>/dev/null || true
+tell application "Finder"
+    set miniaturized of every window to true
+end tell
+EOF
+
+    sleep 1
+
+    log_success "Desktop prepared for screenshots"
+    log_info "Current state: All non-essential apps closed/hidden, desktop clear"
+
+    return 0
+}
+
+# =============================================================================
 # Screenshot Generation Functions
 # =============================================================================
 
@@ -408,6 +518,12 @@ generate_macos_screenshots() {
     log_info "Estimated time: ~5 minutes"
     echo ""
 
+    # Prepare desktop for clean screenshots BEFORE launching app
+    # This closes/hides all non-essential apps and clears the desktop
+    hide_and_quit_background_apps_macos
+
+    # Now launch fastlane to run tests and take screenshots
+    # The tests should NOT try to hide apps - just activate ListAll to foreground
     if ! bundle exec fastlane ios screenshots_macos; then
         log_error "macOS screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
@@ -448,8 +564,8 @@ generate_all_screenshots() {
     fi
 
     log_info "Step 5/5: Generating macOS screenshots (unframed)..."
-    if ! bundle exec fastlane ios screenshots_macos; then
-        log_error "macOS screenshot generation failed"
+    # Use helper function to ensure background apps are hidden
+    if ! generate_macos_screenshots; then
         return "${EXIT_GENERATION_FAILED}"
     fi
 

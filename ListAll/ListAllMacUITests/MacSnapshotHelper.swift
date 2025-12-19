@@ -61,105 +61,63 @@ open class Snapshot: NSObject {
     static var deviceLanguage = ""
     static var currentLocale = ""
 
-    open class func setupSnapshot(_ app: XCUIApplication, waitForAnimations: Bool = true) {
-        // Log setup for debugging
-        let setupMsg = "🔧 [macOS] setupSnapshot() called"
-        NSLog(setupMsg)
-        print(setupMsg)
+    /// Telemetry: tracks which capture method was used for each screenshot
+    /// Key: screenshot name, Value: "window" or "fullscreen"
+    static var screenshotStats: [String: String] = [:]
 
-        // Log environment variables
-        let env = ProcessInfo.processInfo.environment
-        NSLog("🔍 DEBUG: HOME=\(env["HOME"] ?? "NOT SET")")
-        NSLog("🔍 DEBUG: NSHomeDirectory()=\(NSHomeDirectory())")
-        print("🔍 DEBUG: HOME=\(env["HOME"] ?? "NOT SET")")
-        print("🔍 DEBUG: NSHomeDirectory()=\(NSHomeDirectory())")
+    /// Log telemetry summary at end of test run
+    class func logScreenshotStats() {
+        let windowCount = screenshotStats.values.filter { $0 == "window" }.count
+        let fullscreenCount = screenshotStats.values.filter { $0 == "fullscreen" }.count
+        let total = screenshotStats.count
+
+        NSLog("[macOS] Screenshot stats: window=\(windowCount)/\(total), fullscreen=\(fullscreenCount)/\(total)")
+
+        if fullscreenCount > windowCount && total > 0 {
+            NSLog("[macOS] WARNING: Fullscreen fallback used more than window capture - consider investigating")
+        }
+    }
+
+    open class func setupSnapshot(_ app: XCUIApplication, waitForAnimations: Bool = true) {
+        NSLog("[macOS] setupSnapshot() called")
 
         Snapshot.app = app
         Snapshot.waitForAnimations = waitForAnimations
+        screenshotStats = [:]  // Reset telemetry for this test run
 
         do {
             let cacheDir = try getCacheDirectory()
             Snapshot.cacheDirectory = cacheDir
-            let cacheMsg = "✅ Cache directory set to: \(cacheDir.path)"
-            NSLog(cacheMsg)
-            print(cacheMsg)
 
-            // Verify cache directory is writable
+            // Ensure directories exist
             let fileManager = FileManager.default
             if !fileManager.fileExists(atPath: cacheDir.path) {
                 try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true, attributes: nil)
-                NSLog("✅ Created cache directory: \(cacheDir.path)")
-                print("✅ Created cache directory: \(cacheDir.path)")
-            }
-
-            // Test write access
-            let testFile = cacheDir.appendingPathComponent(".test_write")
-            do {
-                try "test".write(to: testFile, atomically: true, encoding: .utf8)
-                try fileManager.removeItem(at: testFile)
-                NSLog("✅ Cache directory is writable")
-                print("✅ Cache directory is writable")
-            } catch {
-                NSLog("⚠️ Cache directory exists but may not be writable: \(error.localizedDescription)")
-                print("⚠️ Cache directory exists but may not be writable: \(error.localizedDescription)")
             }
 
             if let screenshotsDir = screenshotsDirectory {
-                let screenshotsMsg = "✅ Screenshots directory will be: \(screenshotsDir.path)"
-                NSLog(screenshotsMsg)
-                print(screenshotsMsg)
-
-                // Ensure screenshots directory exists
                 if !fileManager.fileExists(atPath: screenshotsDir.path) {
                     try fileManager.createDirectory(at: screenshotsDir, withIntermediateDirectories: true, attributes: nil)
-                    NSLog("✅ Created screenshots directory: \(screenshotsDir.path)")
-                    print("✅ Created screenshots directory: \(screenshotsDir.path)")
                 }
-            } else {
-                let warningMsg = "⚠️ screenshotsDirectory is nil after setting cacheDirectory"
-                NSLog(warningMsg)
-                print(warningMsg)
+                NSLog("[macOS] Screenshots directory: \(screenshotsDir.path)")
             }
 
             setLanguage(app)
             setLocale(app)
             setLaunchArguments(app)
 
-            // Write marker file to verify setupSnapshot() completed
-            let markerPath = cacheDir.appendingPathComponent("setupSnapshot_completed.txt")
-            let markerContent = "setupSnapshot() completed at \(Date())\nCache directory: \(cacheDir.path)\nScreenshots directory: \(screenshotsDirectory?.path ?? "nil")"
-            do {
-                try markerContent.write(to: markerPath, atomically: true, encoding: .utf8)
-                NSLog("✅ Created setupSnapshot completion marker: \(markerPath.path)")
-                print("✅ Created setupSnapshot completion marker: \(markerPath.path)")
-            } catch {
-                NSLog("⚠️ Could not write setupSnapshot marker: \(error.localizedDescription)")
-                print("⚠️ Could not write setupSnapshot marker: \(error.localizedDescription)")
-            }
-
-            let successMsg = "✅ setupSnapshot() completed successfully"
-            NSLog(successMsg)
-            print(successMsg)
+            NSLog("[macOS] setupSnapshot() completed")
         } catch let error {
-            let errorMsg = "❌ setupSnapshot() failed: \(error.localizedDescription)"
-            let errorDetails = "❌ Error details: \(error)"
-            NSLog(errorMsg)
-            NSLog(errorDetails)
-            print(errorMsg)
-            print(errorDetails)
+            NSLog("[macOS] setupSnapshot() failed: \(error.localizedDescription)")
 
-            // Try to use a fallback directory
+            // Try fallback directory
             let fallbackCache = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("fastlane_screenshots")
             do {
                 try FileManager.default.createDirectory(at: fallbackCache, withIntermediateDirectories: true, attributes: nil)
                 Snapshot.cacheDirectory = fallbackCache
-                let fallbackMsg = "⚠️ Using fallback cache directory: \(fallbackCache.path)"
-                NSLog(fallbackMsg)
-                print(fallbackMsg)
+                NSLog("[macOS] Using fallback cache: \(fallbackCache.path)")
             } catch {
-                let fatalMsg = "❌ CRITICAL: Could not create fallback cache directory. Screenshots will not be saved."
-                NSLog(fatalMsg)
-                print(fatalMsg)
+                NSLog("[macOS] CRITICAL: Could not create fallback cache directory")
             }
         }
     }
@@ -228,64 +186,15 @@ open class Snapshot: NSObject {
     }
 
     open class func snapshot(_ name: String, timeWaitingForIdle timeout: TimeInterval = 20) {
-        // Log immediately so Fastlane can detect snapshot calls
-        let logMessage = "snapshot: \(name)"
-        NSLog(logMessage)
-        print(logMessage)
-        NSLog("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
-        print("🔍 DEBUG: Snapshot.snapshot('\(name)') called, timeout=\(timeout)")
-
-        // Write marker file to verify snapshot() is being called
-        let markerPaths = [
-            cacheDirectory?.appendingPathComponent("snapshot_marker_\(name).txt"),
-            URL(fileURLWithPath: "/tmp/snapshot_marker_\(name).txt")
-        ].compactMap { $0 }
-
-        let timestamp = Date().timeIntervalSince1970
-        let markerContent = "snapshot called: \(name) at \(timestamp)\n"
-        if let markerData = markerContent.data(using: .utf8) {
-            for markerPath in markerPaths {
-                try? markerData.write(to: markerPath)
-            }
-        }
-
-        // Write to debug log file
-        let debugLogPaths = [
-            cacheDirectory?.appendingPathComponent("snapshot_debug.log"),
-            URL(fileURLWithPath: "/tmp/snapshot_debug.log")
-        ].compactMap { $0 }
-
-        let debugMessage = "[\(timestamp)] snapshot: \(name)\n"
-        if let data = debugMessage.data(using: .utf8) {
-            for debugLogPath in debugLogPaths {
-                do {
-                    if let fileHandle = try? FileHandle(forWritingTo: debugLogPath) {
-                        fileHandle.seekToEndOfFile()
-                        fileHandle.write(data)
-                        fileHandle.closeFile()
-                        break
-                    } else {
-                        try data.write(to: debugLogPath)
-                        break
-                    }
-                } catch {
-                    continue
-                }
-            }
-        }
+        // Log for Fastlane to detect snapshot calls
+        NSLog("snapshot: \(name)")
 
         // Verify setupSnapshot was called
         guard let app = self.app else {
-            let errorMsg = "XCUIApplication is not set. Please call setupSnapshot(app) before snapshot()."
-            NSLog("❌ ERROR: \(errorMsg)")
-            print("❌ ERROR: \(errorMsg)")
-            XCTFail(errorMsg)
+            NSLog("[macOS] ERROR: XCUIApplication not set. Call setupSnapshot(app) first.")
+            XCTFail("XCUIApplication is not set")
             return
         }
-
-        let appState = app.state.rawValue
-        NSLog("🔍 DEBUG: Snapshot.app is set, app state: \(appState)")
-        print("🔍 DEBUG: Snapshot.app is set, app state: \(appState)")
 
         if timeout > 0 {
             waitForLoadingIndicatorToDisappear(within: timeout)
@@ -295,12 +204,53 @@ open class Snapshot: NSObject {
             sleep(1) // Waiting for the animation to be finished
         }
 
-        // macOS screenshot capture - capture entire screen
-        // Note: User should minimize other apps for clean screenshots, or use post-processing
-        let screenshot = XCUIScreen.main.screenshot()
-        NSLog("📸 Captured screen screenshot")
-        print("📸 Captured screen screenshot")
-        let image = screenshot.image
+        // macOS screenshot capture with window-first strategy and full-screen fallback
+        // CRITICAL: XCUIElement.screenshot() crashes if element doesn't exist - must pre-check
+        guard let app = self.app else {
+            NSLog("[macOS] ERROR: XCUIApplication is not set")
+            return
+        }
+
+        // Step 1: Activate app and wait for UI to stabilize
+        app.activate()
+        sleep(2)
+
+        // Step 2: Verify content elements exist (proves window is in accessibility hierarchy)
+        let sidebar = app.outlines.firstMatch
+        let contentAccessible = sidebar.waitForExistence(timeout: 10)
+
+        // Step 3: Check window accessibility for screenshot method decision
+        let mainWindow = app.windows.firstMatch
+        let windowAccessible = mainWindow.exists || mainWindow.isHittable
+
+        NSLog("[macOS] Screenshot '\(name)': content=\(contentAccessible), window.exists=\(mainWindow.exists), window.isHittable=\(mainWindow.isHittable)")
+
+        // Step 4: Capture screenshot using appropriate method
+        let image: NSImage
+        var captureMethod: String
+
+        if windowAccessible {
+            // Window is accessible - capture window only (preferred, clean without background apps)
+            app.activate()
+            sleep(1)
+            let screenshot = mainWindow.screenshot()
+            image = screenshot.image
+            captureMethod = "window"
+            NSLog("[macOS] SUCCESS: Window-only screenshot captured (\(image.size))")
+        } else {
+            // Window not accessible - use full-screen fallback
+            // Full-screen captures the screen region, may include background apps
+            NSLog("[macOS] Window not accessible, using full-screen fallback")
+            app.activate()
+            sleep(1)
+            let screenshot = XCUIScreen.main.screenshot()
+            image = screenshot.image
+            captureMethod = "fullscreen"
+            NSLog("[macOS] Full-screen screenshot captured (\(image.size))")
+        }
+
+        // Track telemetry for method analysis
+        screenshotStats[name] = captureMethod
 
         // Get screenshots directory
         var screenshotsDir: URL?
@@ -308,23 +258,17 @@ open class Snapshot: NSObject {
             screenshotsDir = dir
         } else {
             // Fallback: Try to recreate cache directory
-            NSLog("⚠️ screenshotsDirectory is nil - attempting to recreate cache directory")
             do {
                 let fallbackCacheDir = try getCacheDirectory()
                 screenshotsDir = fallbackCacheDir.appendingPathComponent("screenshots", isDirectory: true)
                 Snapshot.cacheDirectory = fallbackCacheDir
-                NSLog("✅ Recreated cache directory: \(fallbackCacheDir.path)")
             } catch {
-                let fallbackPath = URL(fileURLWithPath: "/tmp/fastlane_screenshots")
-                screenshotsDir = fallbackPath
-                NSLog("⚠️ Using fallback screenshots directory: \(fallbackPath.path)")
+                screenshotsDir = URL(fileURLWithPath: "/tmp/fastlane_screenshots")
             }
         }
 
         guard let finalScreenshotsDir = screenshotsDir else {
-            let errorMsg = "❌ CRITICAL: Cannot determine screenshots directory - screenshot will not be saved"
-            NSLog(errorMsg)
-            print(errorMsg)
+            NSLog("[macOS] CRITICAL: Cannot determine screenshots directory")
             return
         }
 
@@ -336,31 +280,21 @@ open class Snapshot: NSObject {
             let fileManager = FileManager.default
             if !fileManager.fileExists(atPath: finalScreenshotsDir.path) {
                 try fileManager.createDirectory(at: finalScreenshotsDir, withIntermediateDirectories: true, attributes: nil)
-                NSLog("✅ Created screenshots directory: \(finalScreenshotsDir.path)")
-                print("✅ Created screenshots directory: \(finalScreenshotsDir.path)")
             }
 
             let path = finalScreenshotsDir.appendingPathComponent("\(deviceName)-\(name).png")
-            NSLog("🔍 DEBUG: Attempting to save screenshot to: \(path.path)")
-            print("🔍 DEBUG: Attempting to save screenshot to: \(path.path)")
 
             // Save PNG data
             guard let pngData = image.pngRepresentation() else {
-                NSLog("❌ Failed to get PNG representation of screenshot")
-                print("❌ Failed to get PNG representation of screenshot")
+                NSLog("[macOS] Failed to get PNG representation")
                 return
             }
 
             try pngData.write(to: path, options: .atomic)
-            NSLog("✅ Saved screenshot: \(path.lastPathComponent)")
-            print("✅ Saved screenshot: \(path.lastPathComponent)")
+            NSLog("[macOS] Saved: \(path.lastPathComponent)")
 
         } catch let error {
-            let errorMsg = "Problem writing screenshot: \(name) to \(finalScreenshotsDir.path)/\(deviceName)-\(name).png"
-            NSLog("❌ \(errorMsg)")
-            print("❌ \(errorMsg)")
-            NSLog("❌ Error: \(error.localizedDescription)")
-            print("❌ Error: \(error.localizedDescription)")
+            NSLog("[macOS] Failed to save '\(name)': \(error.localizedDescription)")
         }
     }
 
@@ -374,17 +308,10 @@ open class Snapshot: NSObject {
         let homeDir = URL(fileURLWithPath: NSHomeDirectory())
         let cacheDir = homeDir.appendingPathComponent(cachePath)
 
-        NSLog("🔍 Cache directory path: \(cacheDir.path)")
-
         // Ensure the cache directory exists
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: cacheDir.path) {
-            do {
-                try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true, attributes: nil)
-                NSLog("✅ Created cache directory: \(cacheDir.path)")
-            } catch {
-                NSLog("⚠️ Failed to create cache directory: \(error.localizedDescription)")
-            }
+            try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true, attributes: nil)
         }
 
         return cacheDir
@@ -404,4 +331,4 @@ extension NSImage {
 
 // Please don't remove the lines below
 // They are used to detect outdated configuration files
-// MacSnapshotHelperVersion [1.0]
+// MacSnapshotHelperVersion [1.1]

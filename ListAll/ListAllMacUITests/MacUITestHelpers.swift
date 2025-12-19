@@ -142,8 +142,32 @@ extension XCUIApplication {
     // MARK: - Window Management
 
     /// Get the main window of the app.
+    ///
+    /// **IMPORTANT**: Due to SwiftUI WindowGroup accessibility limitations on macOS,
+    /// `mainWindow.exists` will return `false` even when the window is visible.
+    /// This is a known SwiftUI/XCUITest issue - see documentation/macos-swiftui-window-accessibility-fix.md
+    ///
+    /// **DO NOT USE** `.exists` or `.waitForExistence()` on this element.
+    /// Instead, check for content elements (e.g., `app.outlines.firstMatch.exists`).
+    ///
+    /// This element CAN be used for:
+    /// - `.screenshot()` - captures window successfully
+    /// - Accessing child elements via queries
     var mainWindow: XCUIElement {
         return windows.element(boundBy: 0)
+    }
+
+    /// Check if the main UI is ready by verifying content elements exist.
+    ///
+    /// This is the recommended way to verify window readiness on macOS with SwiftUI,
+    /// since `mainWindow.exists` returns false due to accessibility limitations.
+    ///
+    /// - Parameter timeout: How long to wait for UI (default: 5 seconds)
+    /// - Returns: True if main UI content is ready
+    func isMainUIReady(timeout: TimeInterval = 5) -> Bool {
+        // Check for sidebar (the main content element that proves window is ready)
+        let sidebar = outlines.firstMatch
+        return sidebar.waitForExistence(timeout: timeout)
     }
 
     /// Wait for a window with a specific title to appear.

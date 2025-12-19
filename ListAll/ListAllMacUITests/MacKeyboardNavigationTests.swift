@@ -32,9 +32,11 @@ final class MacKeyboardNavigationTests: XCTestCase {
             "App should launch successfully"
         )
 
-        // Wait for main window
-        let mainWindow = app.windows.firstMatch
-        XCTAssertTrue(mainWindow.waitForExistence(timeout: 5), "Main window should exist")
+        // Wait for UI to be ready (checking for sidebar instead of window due to SwiftUI accessibility limitations)
+        // SwiftUI WindowGroup windows are not exposed to accessibility hierarchy in a queryable way,
+        // but content elements ARE accessible. See: documentation/macos-swiftui-window-accessibility-fix.md
+        let sidebar = app.outlines.firstMatch
+        XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Main UI should be ready (sidebar should exist)")
     }
 
     override func tearDownWithError() throws {
@@ -245,7 +247,9 @@ final class MacKeyboardNavigationTests: XCTestCase {
         app.typeKey("r", modifierFlags: .command)
 
         // Then: App should refresh (no error, app remains responsive)
-        XCTAssertTrue(app.windows.firstMatch.exists, "App should remain responsive after refresh")
+        // Note: Check for sidebar instead of window due to SwiftUI accessibility limitations
+        let sidebar = app.outlines.firstMatch
+        XCTAssertTrue(sidebar.exists, "App should remain responsive after refresh")
     }
 
     /// Test Cmd+, opens Settings
@@ -376,7 +380,9 @@ final class MacKeyboardNavigationTests: XCTestCase {
         sheet.typeKey(.escape, modifierFlags: [])
 
         // App should remain focused and responsive
-        XCTAssertTrue(app.windows.firstMatch.exists, "App window should remain active")
+        // Note: Check for sidebar instead of window due to SwiftUI accessibility limitations
+        let sidebar = app.outlines.firstMatch
+        XCTAssertTrue(sidebar.exists, "App window should remain active")
     }
 }
 

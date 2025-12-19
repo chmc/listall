@@ -26,6 +26,9 @@ struct ListAllMacApp: App {
     @StateObject private var dataManager = DataManager.shared
 
     init() {
+        print("🚀 ListAllMacApp.init() STARTING")
+        print("🔍 Arguments: \(ProcessInfo.processInfo.arguments)")
+
         // CRITICAL: Skip full app initialization during UNIT tests
         // Unit tests inject their own Core Data stacks and don't need the full app lifecycle
         // This prevents singleton initialization issues and memory corruption from
@@ -58,6 +61,8 @@ struct ListAllMacApp: App {
 
         // Setup UI test environment if needed
         setupUITestEnvironment()
+
+        print("🚀 ListAllMacApp.init() COMPLETED")
     }
 
     var body: some Scene {
@@ -220,16 +225,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var servicesProvider: ServicesProvider?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Skip services registration during unit tests
-        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
-            print("🧪 AppDelegate: Skipping Services registration in test mode")
+        // Detect test environment
+        let isTestEnvironment = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        let isUITest = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+
+        // Skip ONLY for unit tests (test environment WITHOUT UITEST_MODE)
+        // UI tests need AppDelegate to run for window creation
+        if isTestEnvironment && !isUITest {
+            print("🧪 AppDelegate: Unit test mode - skipping full initialization")
             return
         }
 
         // CRITICAL: Force app activation during UI tests
         // macOS UI tests launch the app in background by default, causing test timeouts
-        if ProcessInfo.processInfo.arguments.contains("UITEST_MODE") {
+        // SwiftUI WindowGroup won't create windows without proper activation policy
+        if isUITest {
             print("🧪 AppDelegate: UI test mode - activating app to foreground")
+
+            // CRITICAL FIX: Set activation policy to .regular
+            // Without this, SwiftUI WindowGroup won't create windows for command-line launched apps
+            // This must be called BEFORE any window creation attempts
+            NSApp.setActivationPolicy(.regular)
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
 

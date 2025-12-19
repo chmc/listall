@@ -44,18 +44,20 @@ final class ListAllMacUITests: XCTestCase {
     // MARK: - Launch Tests
 
     func testAppLaunches() throws {
-        // Verify the app launched and main window is present
-        XCTAssertTrue(app.mainWindow.exists, "Main window should exist")
+        // Verify the app launched and main UI is ready
+        // Note: Use isMainUIReady() instead of mainWindow.exists due to SwiftUI accessibility limitations
+        XCTAssertTrue(app.isMainUIReady(timeout: 5), "Main UI should be ready")
         XCTAssertEqual(app.state, .runningForeground, "App should be in foreground")
     }
 
     func testMainWindowElements() throws {
         // Verify key UI elements are present
-        XCTAssertTrue(app.mainWindow.exists, "Main window should exist")
+        // Note: Use isMainUIReady() instead of mainWindow.exists due to SwiftUI accessibility limitations
+        XCTAssertTrue(app.isMainUIReady(timeout: 5), "Main UI should be ready")
 
         // Sidebar should be visible
         let sidebar = app.outlines.firstMatch
-        XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should be visible")
+        XCTAssertTrue(sidebar.exists, "Sidebar should be visible")
 
         // Detail area should be present
         let detailArea = app.scrollViews.firstMatch
@@ -375,8 +377,9 @@ final class ListAllMacUITests: XCTestCase {
     // MARK: - Window Management Tests
 
     func testMultipleWindowsSupport() throws {
-        // Verify main window exists
-        XCTAssertTrue(app.mainWindow.exists, "Main window should exist")
+        // Verify main UI is ready
+        // Note: Use isMainUIReady() instead of mainWindow.exists due to SwiftUI accessibility limitations
+        XCTAssertTrue(app.isMainUIReady(timeout: 5), "Main UI should be ready")
 
         // Note: Opening multiple windows requires user interaction or specific menu commands
         // This is a placeholder for when that functionality is implemented
@@ -473,7 +476,8 @@ final class ListAllMacUITests: XCTestCase {
 
     func testAccessibilityLabels() throws {
         // Verify key elements have proper accessibility
-        XCTAssertTrue(app.mainWindow.exists, "Main window should exist")
+        // Note: Use isMainUIReady() instead of mainWindow.exists due to SwiftUI accessibility limitations
+        XCTAssertTrue(app.isMainUIReady(timeout: 5), "Main UI should be ready")
 
         // Sidebar should be accessible
         let sidebar = app.outlines.firstMatch

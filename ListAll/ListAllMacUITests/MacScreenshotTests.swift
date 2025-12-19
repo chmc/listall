@@ -14,6 +14,7 @@
 //
 
 import XCTest
+import AppKit
 
 /// Screenshot tests for macOS App Store submission
 /// Captures screenshots at 2880x1800 (Retina) resolution for App Store submission
@@ -32,9 +33,17 @@ final class MacScreenshotTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
 
+        // CRITICAL: On macOS, give the system time to stabilize between test runs
+        // This is especially important when running multiple locales in sequence
+        // Without this delay, authorization can be lost between locale changes
+        print("⏳ Waiting 3 seconds for system to stabilize before test setup...")
+        sleep(3)
+
         // On macOS, explicitly set the bundle identifier to ensure correct app launches
         // This helps XCUITest find the right app more reliably
-        app = XCUIApplication(bundleIdentifier: "io.github.chmc.ListAllMac")
+        // CRITICAL: Use XCUIApplication() default initializer to maintain authorization
+        // across test runs. Bundle identifier is resolved automatically.
+        app = XCUIApplication()
 
         // macOS UI tests need more time due to app activation and window management
         // Default is 60 seconds, which is too short for macOS screenshot tests
@@ -53,13 +62,12 @@ final class MacScreenshotTests: XCTestCase {
             if attempt > 1 {
                 print("⏳ Waiting 5 seconds before retry attempt \(attempt)...")
                 sleep(5)
-                // Recreate app instance for retry with explicit bundle ID
-                app = XCUIApplication(bundleIdentifier: "io.github.chmc.ListAllMac")
-                setupSnapshot(app)
+                // DO NOT recreate app instance - this causes authorization loss on macOS
+                // The app instance from setUpWithError() maintains authorization across launches
             }
 
-            // Add launch arguments (must be done each attempt since app may be recreated)
-            app.launchArguments += arguments
+            // Clear and set launch arguments for this attempt
+            app.launchArguments = arguments
 
             print("🚀 Launch attempt \(attempt)/\(maxRetries)...")
 
@@ -117,44 +125,208 @@ final class MacScreenshotTests: XCTestCase {
         return false
     }
 
+    /// Force window to be visible and positioned on-screen using AppleScript
+    /// This is critical because XCUIApplication.activate() doesn't guarantee window visibility
+    /// NOTE: AppleScript requires additional permissions which may trigger dialogs
+    private func forceWindowOnScreen() {
+        print("📍 Forcing window to be visible and on-screen...")
+
+        // STRATEGY: Use aggressive AppleScript approach to ensure window is truly frontmost
+        // XCUIApplication.activate() alone is insufficient for screenshot tests
+
+        // Use AppleScript to FORCE window to be frontmost and visible
+        // This is more reliable than XCUIApplication for ensuring window is on top
+        let script = """
+        tell application "System Events"
+            tell process "ListAll"
+                -- First, make sure the app is frontmost (THIS IS CRITICAL)
+                set frontmost to true
+
+                -- Wait a moment for frontmost to take effect
+                delay 0.5
+
+                -- If there are windows, make sure they're visible and on-screen
+                if (count of windows) > 0 then
+                    tell window 1
+                        -- Ensure window is not minimized
+                        if value of attribute "AXMinimized" is true then
+                            set value of attribute "AXMinimized" to false
+                        end if
+
+                        -- Get current position and size
+                        set windowPosition to position
+                        set windowSize to size
+
+                        -- If window is off-screen (negative or very large position), move it on-screen
+                        set posX to item 1 of windowPosition
+                        set posY to item 2 of windowPosition
+
+                        -- Move to center-ish position if off-screen
+                        if posX < 0 or posX > 2000 or posY < 0 or posY > 1500 then
+                            set position to {100, 100}
+                        end if
+
+                        -- CRITICAL: Ensure window size is reasonable
+                        -- macOS may launch test app with tiny window
+                        set currentWidth to item 1 of windowSize
+                        set currentHeight to item 2 of windowSize
+
+                        if currentWidth < 800 or currentHeight < 600 then
+                            set size to {1200, 800}
+                        end if
+                    end tell
+
+                    -- Force window 1 to be key window (accepts keyboard input)
+                    -- This is stronger than just frontmost
+                    perform action "AXRaise" of window 1
+                end if
+            end tell
+        end tell
+
+        -- Also activate the app to bring to front
+        tell application "ListAll"
+            activate
+        end tell
+
+        -- Wait for window to fully render
+        delay 1
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            if process.terminationStatus == 0 {
+                print("  ✓ Window positioned on-screen via AppleScript")
+            } else {
+                print("  ⚠️ AppleScript returned non-zero status: \(process.terminationStatus)")
+            }
+        } catch {
+            print("  ⚠️ AppleScript execution failed: \(error)")
+            print("  💡 Continuing anyway - window may still be usable")
+        }
+
+        // Give window MORE time to reposition and render
+        sleep(2)
+    }
+
     /// Prepare app window for clean screenshots
-    /// Simply activates the app and ensures it's visible
+    /// NOTE: Desktop should already be cleared by shell script before tests run
+    /// This function ensures ListAll window is visible, on-screen, and frontmost
     private func prepareWindowForScreenshot() {
         print("🖥️ Preparing window for screenshot...")
 
-        // Ensure our app is frontmost and visible
-        app.activate()
-        sleep(2)
+        // CRITICAL: Hide all other apps to ensure ListAll is the ONLY visible window
+        // This prevents other apps from appearing in the screenshot
+        hideAllOtherApps()
 
-        // Log window state for debugging
-        let windows = app.windows
-        print("📊 App has \(windows.count) windows")
-        if let mainWindow = windows.firstMatch as XCUIElement?, mainWindow.exists {
-            print("📊 Main window frame: \(mainWindow.frame)")
+        // STEP 1: Activate via NSWorkspace with force flag
+        if let listAllApp = NSWorkspace.shared.runningApplications.first(where: {
+            $0.bundleIdentifier == "io.github.chmc.ListAllMac"
+        }) {
+            listAllApp.activate(options: [.activateIgnoringOtherApps])
+            print("  ✓ Activated ListAll via NSWorkspace")
         }
 
-        print("✅ Window prepared for screenshot")
+        // STEP 2: Use XCUIApplication's activate
+        app.activate()
+
+        // STEP 3: Wait for window by checking for actual content elements
+        // Don't use app.windows.count - it doesn't work reliably with SwiftUI on macOS
+        // Instead, wait for content elements which proves the window exists
+        let sidebar = app.outlines["ListsSidebar"]
+        if sidebar.waitForExistence(timeout: 10) {
+            print("✅ Window verified - found sidebar content")
+            // Give a moment for window to settle after activation
+            sleep(1)
+        } else {
+            // Try AppleScript fallback to position window
+            print("⚠️ Sidebar not found, trying AppleScript fallback...")
+            forceWindowOnScreen()
+
+            // Give UI time to update after AppleScript
+            sleep(2)
+
+            // Check for any button as evidence of window
+            let anyButton = app.buttons.firstMatch
+            if anyButton.waitForExistence(timeout: 5) {
+                print("✅ Window appears ready (found buttons)")
+            } else {
+                print("⚠️ WARNING: Could not verify window - screenshots may have issues")
+            }
+        }
     }
 
-    /// Wait for a stable UI state by checking for any visible element
+    /// Hide all other running applications to ensure only ListAll is visible
+    /// This is critical for clean screenshots that only show the test app
+    private func hideAllOtherApps() {
+        print("👻 Hiding all other applications...")
+
+        let workspace = NSWorkspace.shared
+        let listAllBundleId = "io.github.chmc.ListAllMac"
+
+        // Get all running apps except ListAll and system apps
+        let runningApps = workspace.runningApplications.filter { app in
+            // Keep ListAll and system apps visible
+            guard app.bundleIdentifier != listAllBundleId else { return false }
+            guard app.bundleIdentifier != "com.apple.finder" else { return false }
+            guard app.bundleIdentifier != "com.apple.dock" else { return false }
+            guard app.activationPolicy == .regular else { return false }
+
+            return true
+        }
+
+        print("  ℹ️ Found \(runningApps.count) apps to hide")
+
+        // Hide each app
+        for app in runningApps {
+            if let bundleId = app.bundleIdentifier {
+                print("  👻 Hiding \(bundleId)")
+                app.hide()
+            }
+        }
+
+        // Give apps time to hide
+        sleep(1)
+
+        print("  ✓ All other apps hidden")
+    }
+
+    /// Wait for a stable UI state by checking for actual content elements
+    /// Uses waitForExistence() which properly handles NSHostingView layer timing
     /// Returns true if UI appears ready, false if timeout
     private func waitForUIReady() -> Bool {
-        // Wait for any window, button, or table to appear
-        // This is more reliable than fixed sleep
-        let anyWindow = app.windows.firstMatch
-        let anyButton = app.buttons.firstMatch
-        let anyTable = app.tables.firstMatch
+        // CRITICAL: On macOS with SwiftUI, NSHostingView creates a hidden accessibility layer
+        // We must use waitForExistence() which synchronously polls the hierarchy
+        // rather than checking .exists which returns immediately
 
-        let startTime = Date()
-        while Date().timeIntervalSince(startTime) < elementTimeout {
-            if anyWindow.exists || anyButton.exists || anyTable.exists {
-                print("✅ UI ready - found interactive elements")
-                // Small additional settle time
-                sleep(1)
-                return true
-            }
-            // Poll every 0.5 seconds
-            Thread.sleep(forTimeInterval: 0.5)
+        // Wait for the sidebar outline (the main content element) to exist
+        // This proves the window AND the SwiftUI view hierarchy are ready
+        let sidebar = app.outlines["ListsSidebar"]
+        if sidebar.waitForExistence(timeout: elementTimeout) {
+            print("✅ UI ready - found sidebar outline")
+            sleep(1)  // Small additional settle time for animation completion
+            return true
+        }
+
+        // Fallback: Wait for ANY outline (in case accessibility ID is different)
+        let anyOutline = app.outlines.firstMatch
+        if anyOutline.waitForExistence(timeout: 5) {
+            print("✅ UI ready - found an outline element")
+            sleep(1)
+            return true
+        }
+
+        // Last resort: Wait for any button (toolbar buttons appear early)
+        let anyButton = app.buttons.firstMatch
+        if anyButton.waitForExistence(timeout: 5) {
+            print("✅ UI ready - found a button element")
+            sleep(1)
+            return true
         }
 
         print("⚠️ UI ready check timed out, proceeding anyway")
@@ -166,11 +338,9 @@ final class MacScreenshotTests: XCTestCase {
     ///   - width: Target width in points
     ///   - height: Target height in points
     private func resizeWindow(width: CGFloat, height: CGFloat) {
+        // NOTE: On macOS SwiftUI, window.exists returns false due to accessibility bug
+        // but we can still get window frame. Don't guard on exists.
         let window = app.windows.firstMatch
-        guard window.exists else {
-            print("⚠️ Window not found, cannot resize")
-            return
-        }
 
         // Note: XCUIElement doesn't directly support resizing on macOS
         // The window size is determined by the content and app layout
@@ -187,8 +357,9 @@ final class MacScreenshotTests: XCTestCase {
         print("💻 Starting Main Window Screenshot Test")
         print("========================================")
 
-        // Launch with test data - without SKIP_TEST_DATA, deterministic lists will be populated
-        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_ANIMATIONS"]) else {
+        // Launch with test data
+        // NOTE: We still pass UITEST_MODE to populate test data, but NSApp.setActivationPolicy(.regular) should be called by AppDelegate
+        guard launchAppWithRetry(arguments: ["UITEST_MODE"]) else {
             XCTFail("App failed to launch for main window screenshot")
             return
         }
@@ -196,23 +367,101 @@ final class MacScreenshotTests: XCTestCase {
         // Wait for UI to be ready
         _ = waitForUIReady()
 
-        // Wait for lists to load - look for any table row
-        let listTable = app.tables.firstMatch
-        if listTable.waitForExistence(timeout: elementTimeout) {
-            print("✅ Lists loaded - found list table")
+        // DEBUG: Print the full accessibility tree to understand what XCUITest sees
+        print("=== DEBUG: Full element hierarchy ===")
+        print("App exists: \(app.exists)")
+        print("App state: \(app.state.rawValue)")
+        print("App windows count: \(app.windows.allElementsBoundByIndex.count)")
+        print("App menuBars count: \(app.menuBars.allElementsBoundByIndex.count)")
+        print("App menuBarItems count: \(app.menuBarItems.allElementsBoundByIndex.count)")
+        if app.menuBarItems.count > 0 {
+            for i in 0..<min(5, app.menuBarItems.allElementsBoundByIndex.count) {
+                let item = app.menuBarItems.element(boundBy: i)
+                print("  Menu bar item \(i): '\(item.title)' exists=\(item.exists)")
+            }
+        }
+        print("App buttons count: \(app.buttons.allElementsBoundByIndex.count)")
+        print("App staticTexts count: \(app.staticTexts.allElementsBoundByIndex.count)")
+        print("App outlines count: \(app.outlines.allElementsBoundByIndex.count)")
+        if app.buttons.count > 0 {
+            print("First button identifier: \(app.buttons.firstMatch.identifier)")
+        }
+        print("=== END DEBUG ===")
 
-            // Wait for table rows to appear
+        // CRITICAL FIX: Prepare window BEFORE any UI interactions
+        // The window must be visible and frontmost before we can interact with UI elements
+        prepareWindowForScreenshot()
+
+        // Wait for lists to load - look for sidebar using accessibility identifier
+        // On macOS, SwiftUI List with .sidebar style is exposed as an outline, not a table
+        // CRITICAL: SwiftUI WindowGroup doesn't expose windows to accessibility hierarchy
+        // BUT mainWindow.screenshot() STILL WORKS - we verify window exists by checking for content elements
+        let mainWindow = app.windows.firstMatch
+        // NOTE: Don't use mainWindow.waitForExistence() - it returns false due to SwiftUI accessibility bug
+        // The window IS there - we verify via content elements below
+        print("📊 Main window reference obtained (screenshot() will work even if exists is false)")
+
+        print("📊 Querying sidebar...")
+        // Try from app root first (more reliable), then from window
+        let sidebarFromApp = app.outlines["ListsSidebar"]
+        let sidebarFromWindow = mainWindow.outlines["ListsSidebar"]
+
+        var sidebarToUse: XCUIElement?
+
+        if sidebarFromApp.waitForExistence(timeout: elementTimeout) {
+            print("✅ Lists loaded - found sidebar outline from app root")
+            sidebarToUse = sidebarFromApp
+        } else if sidebarFromWindow.waitForExistence(timeout: 5) {
+            print("✅ Lists loaded - found sidebar outline from window")
+            sidebarToUse = sidebarFromWindow
+        } else {
+            print("⚠️ Sidebar outline not found, trying to find ANY outline...")
+            // Debug: List all outlines
+            let allOutlines = mainWindow.outlines
+            print("📊 Found \(allOutlines.count) outlines in window")
+            for i in 0..<min(5, allOutlines.count) {
+                let outline = allOutlines.element(boundBy: i)
+                if outline.exists {
+                    print("  Outline \(i): identifier='\(outline.identifier)'")
+                    sidebarToUse = outline
+                    break
+                }
+            }
+        }
+
+        if let sidebar = sidebarToUse {
+            // Wait for outline rows to appear
             sleep(1)
 
             // Click on first list to show detail view
-            let firstRow = listTable.tableRows.firstMatch
+            // Look for the first outline row (which represents a list in the sidebar)
+            let firstRow = sidebar.outlineRows.firstMatch
             if firstRow.waitForExistence(timeout: elementTimeout) {
-                print("✅ Found first list, clicking to show detail")
+                print("✅ Found first list in sidebar, clicking to show detail")
                 firstRow.click()
                 sleep(1)
+            } else {
+                print("⚠️ No outline rows found in sidebar, trying alternative...")
+                // Try clicking on first cell descendant
+                let firstCell = sidebar.cells.firstMatch
+                if firstCell.waitForExistence(timeout: 3) {
+                    print("✅ Found first cell in sidebar, clicking")
+                    firstCell.click()
+                    sleep(1)
+                }
             }
         } else {
-            print("⚠️ No list table found, but proceeding with screenshot")
+            print("⚠️ Could not find sidebar outline, trying to find list by name")
+            // Fallback: Try finding by static text (list name)
+            // Test data should create "Grocery Shopping" as first list
+            let firstListCell = mainWindow.staticTexts["Grocery Shopping"].firstMatch
+            if firstListCell.waitForExistence(timeout: elementTimeout) {
+                print("✅ Found first list by name, clicking")
+                firstListCell.click()
+                sleep(1)
+            } else {
+                print("⚠️ Could not find any lists, proceeding with screenshot anyway")
+            }
         }
 
         // Take screenshot of main window with sidebar and detail view
@@ -238,15 +487,19 @@ final class MacScreenshotTests: XCTestCase {
         // Wait for UI to be ready
         _ = waitForUIReady()
 
+        // CRITICAL FIX: Prepare window BEFORE any UI interactions
+        // The window must be visible and frontmost before we can interact with UI elements
+        prepareWindowForScreenshot()
+
         // Navigate to a list with items
-        let listTable = app.tables.firstMatch
-        if listTable.waitForExistence(timeout: elementTimeout) {
+        let sidebar = app.outlines["ListsSidebar"]
+        if sidebar.waitForExistence(timeout: elementTimeout) {
             // Click on second list (should have more items for better screenshot)
-            let rows = listTable.tableRows
+            let rows = sidebar.outlineRows
             if rows.count > 1 {
                 let secondRow = rows.element(boundBy: 1)
                 if secondRow.waitForExistence(timeout: elementTimeout) {
-                    print("✅ Found second list, clicking to show detail")
+                    print("✅ Found second list in sidebar, clicking to show detail")
                     secondRow.click()
                     sleep(1)
                 }
@@ -254,10 +507,18 @@ final class MacScreenshotTests: XCTestCase {
                 // Fall back to first row if only one list exists
                 let firstRow = rows.firstMatch
                 if firstRow.waitForExistence(timeout: elementTimeout) {
-                    print("✅ Found first list, clicking to show detail")
+                    print("✅ Found first list in sidebar, clicking to show detail")
                     firstRow.click()
                     sleep(1)
                 }
+            }
+        } else {
+            // Fallback: Try finding second list by name
+            let secondListCell = app.staticTexts["Weekend Projects"].firstMatch
+            if secondListCell.waitForExistence(timeout: elementTimeout) {
+                print("✅ Found second list by name, clicking")
+                secondListCell.click()
+                sleep(1)
             }
         }
 
@@ -284,13 +545,25 @@ final class MacScreenshotTests: XCTestCase {
         // Wait for UI to be ready
         _ = waitForUIReady()
 
+        // CRITICAL FIX: Prepare window BEFORE any UI interactions
+        // The window must be visible and frontmost before we can interact with UI elements
+        prepareWindowForScreenshot()
+
         // Navigate to a list
-        let listTable = app.tables.firstMatch
-        if listTable.waitForExistence(timeout: elementTimeout) {
-            let firstRow = listTable.tableRows.firstMatch
+        let sidebar = app.outlines["ListsSidebar"]
+        if sidebar.waitForExistence(timeout: elementTimeout) {
+            let firstRow = sidebar.outlineRows.firstMatch
             if firstRow.waitForExistence(timeout: elementTimeout) {
-                print("✅ Found first list, clicking to show detail")
+                print("✅ Found first list in sidebar, clicking to show detail")
                 firstRow.click()
+                sleep(1)
+            }
+        } else {
+            // Fallback: Try finding first list by name
+            let firstListCell = app.staticTexts["Grocery Shopping"].firstMatch
+            if firstListCell.waitForExistence(timeout: elementTimeout) {
+                print("✅ Found first list by name, clicking")
+                firstListCell.click()
                 sleep(1)
             }
         }
@@ -311,14 +584,19 @@ final class MacScreenshotTests: XCTestCase {
         } else {
             print("⚠️ Could not find add item button, trying to click on existing item")
             // Try clicking on an existing item to open edit sheet
-            let itemTable = app.tables.matching(identifier: "itemTable").firstMatch
-            if itemTable.exists {
-                let firstItem = itemTable.tableRows.firstMatch
+            // The items list has identifier "ItemsList" (see MacMainView line 826)
+            let itemsList = app.tables["ItemsList"]
+            if itemsList.waitForExistence(timeout: elementTimeout) {
+                let firstItem = itemsList.tableRows.firstMatch
                 if firstItem.waitForExistence(timeout: elementTimeout) {
                     print("✅ Clicking on first item to show edit sheet")
                     firstItem.click()
                     sleep(1)
+                } else {
+                    print("⚠️ No items found in list")
                 }
+            } else {
+                print("⚠️ Could not find ItemsList table")
             }
         }
 
@@ -345,6 +623,10 @@ final class MacScreenshotTests: XCTestCase {
         // Wait for UI to be ready
         _ = waitForUIReady()
 
+        // CRITICAL FIX: Prepare window BEFORE any UI interactions
+        // The window must be visible and frontmost before we can interact with UI elements
+        prepareWindowForScreenshot()
+
         // Open Settings window using keyboard shortcut (Cmd+,)
         print("⌨️ Opening Settings with Cmd+,")
         app.typeKey(",", modifierFlags: .command)
@@ -370,8 +652,9 @@ final class MacScreenshotTests: XCTestCase {
 
 // MARK: - Screenshot Output Information
 //
-// Screenshots are captured using XCUIScreen.main.screenshot() which captures
-// the entire main display at native Retina resolution.
+// Screenshots are captured using mainWindow.screenshot() which captures
+// the app window at native Retina resolution. The app is activated
+// immediately before capture to ensure it's frontmost.
 //
 // Output location (managed by MacSnapshotHelper.swift):
 //   ~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/Library/Caches/tools.fastlane/screenshots/Mac-*.png
@@ -382,14 +665,14 @@ final class MacScreenshotTests: XCTestCase {
 //   - Mac-03_ItemEditSheet.png
 //   - Mac-04_SettingsWindow.png
 //
-// IMPORTANT - Aspect Ratio:
-//   XCUIScreen.main.screenshot() captures the ENTIRE DISPLAY, so the screenshot
-//   aspect ratio depends on your display's aspect ratio:
-//   - 16:10 displays (e.g., 2880x1800): ✅ Perfect for App Store
-//   - 16:9 displays (e.g., 3840x2160): ⚠️ Requires cropping to 16:10
-//   - 21:9 ultrawide (e.g., 3840x1600): ⚠️ Requires cropping to 16:10
+// IMPORTANT - Screenshot Capture:
+//   mainWindow.screenshot() captures the SCREEN REGION where the window exists.
+//   On macOS, if other apps cover that region, they appear in the screenshot.
+//   The MacSnapshotHelper activates the app IMMEDIATELY before capture to ensure
+//   the ListAll window is frontmost. The screenshot size depends on window size.
 //
-//   Recommended: Generate screenshots on a 16:10 Retina Mac for best results.
+//   For App Store, screenshots are post-processed to 2880x1800 (16:10) via
+//   Fastlane's screenshots_macos_normalize lane.
 //
 // Locale organization:
 //   The MacSnapshotHelper reads locale from Fastlane cache directory
