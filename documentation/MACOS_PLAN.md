@@ -1,9 +1,33 @@
 # macOS App Store Screenshot Automation - TDD Implementation Plan
 
 **Date:** December 19, 2025
-**Status:** REVISED v3.0 - TDD Compliance + Swarm Critical Review
+**Status:** REVISED v3.1 - TDD Compliance + Swarm Instructions
 **Prepared by:** 5-Agent Swarm (Critical Reviewer, Testing Specialist, Apple Dev Expert, Pipeline Specialist, Shell Script Specialist)
-**Revision:** 3.0 - Full TDD Approach
+**Revision:** 3.1 - Full TDD Approach with Claude Code Swarm Instructions
+
+---
+
+## Claude Code Swarm Execution Guide
+
+This document contains executable swarm instructions for each task. Use these to implement the plan with specialized agents.
+
+### Available Agents
+
+| Agent | File | Use For |
+|-------|------|---------|
+| Testing Specialist | `.claude/agents/testing-specialist.md` | Unit tests, XCUITest, TDD cycles |
+| Apple Dev Expert | `.claude/agents/apple-dev.md` | Swift, XCUITest, macOS platform code |
+| Pipeline Specialist | `.claude/agents/pipeline-specialist.md` | Fastlane, CI/CD, workflow optimization |
+| Shell Script Specialist | `.claude/agents/shell-specialist.md` | Bash scripts, AppleScript integration |
+| Critical Reviewer | `.claude/agents/critic.md` | Code review, plan validation |
+
+### How to Execute a Task
+
+For any task with a `🤖 SWARM INSTRUCTION` block, copy the instruction to Claude Code:
+
+```
+Use a swarm of @.claude/agents/ with [AGENTS] to [TASK DESCRIPTION]
+```
 
 ---
 
@@ -75,7 +99,25 @@ This document presents a **Test-Driven Development** approach to fix macOS App S
 
 ## 1. Critical Prerequisites (BLOCKING)
 
+> 🤖 **SWARM INSTRUCTION - Prerequisites Verification**
+> ```
+> Use a swarm of @.claude/agents/shell-specialist.md and @.claude/agents/apple-dev.md to:
+> 1. Verify TCC automation permissions are granted (P1)
+> 2. Run window capture verification test (P2)
+> 3. Verify ImageMagick installation (P3)
+> 4. Run baseline measurement (P4 - 5 runs)
+> Report: PASS/FAIL for each prerequisite with actionable fix instructions if failed
+> ```
+
 ### P1. TCC Automation Permissions (REQUIRED)
+
+> 🤖 **SWARM INSTRUCTION - P1**
+> ```
+> Use @.claude/agents/shell-specialist.md to verify TCC permissions:
+> - Run: osascript -e 'tell application "System Events" to get name of first process'
+> - If error contains "not authorized", provide fix instructions
+> - Verify Terminal/Xcode has Automation permissions
+> ```
 
 ```bash
 # Trigger permission request
@@ -86,6 +128,15 @@ osascript -e 'tell application "System Events" to get name of first process'
 ```
 
 ### P2. Window Capture Verification (BLOCKING - Must Pass Before Phase 1)
+
+> 🤖 **SWARM INSTRUCTION - P2**
+> ```
+> Use @.claude/agents/testing-specialist.md and @.claude/agents/apple-dev.md to:
+> - Create and run window capture verification test
+> - Verify screenshot dimensions > 800x600
+> - If FAIL: Document failure mode and recommend pivot to Dedicated macOS User approach
+> - If PASS: Proceed to Phase 0
+> ```
 
 ```swift
 // Run this verification test BEFORE implementing Phase 1
@@ -109,12 +160,29 @@ func testWindowCaptureVerification() {
 
 ### P3. ImageMagick Installation
 
+> 🤖 **SWARM INSTRUCTION - P3**
+> ```
+> Use @.claude/agents/shell-specialist.md to verify ImageMagick:
+> - Check if installed: which magick
+> - If missing: brew install imagemagick
+> - Verify version: magick identify --version
+> ```
+
 ```bash
 brew install imagemagick
 which magick && magick identify --version
 ```
 
 ### P4. Baseline Measurement
+
+> 🤖 **SWARM INSTRUCTION - P4**
+> ```
+> Use @.claude/agents/pipeline-specialist.md and @.claude/agents/shell-specialist.md to:
+> - Run .github/scripts/generate-screenshots-local.sh macos 5 times
+> - Record success/failure for each run
+> - Categorize failure modes (TCC, window capture, validation, etc.)
+> - Report baseline reliability percentage
+> ```
 
 ```bash
 # Run 5 times, record success/failure modes
@@ -156,6 +224,19 @@ done
 **Goal:** Create protocols and mocks for dependency injection
 **Effort:** 6-8 hours
 **Tests:** 0 (infrastructure only)
+
+> 🤖 **SWARM INSTRUCTION - Phase 0 Complete**
+> ```
+> Use a swarm of @.claude/agents/testing-specialist.md and @.claude/agents/apple-dev.md to:
+> 1. Create ListAllMacTests/MacScreenshotTestInfrastructure.swift with:
+>    - AppleScriptExecuting protocol and AppleScriptResult struct
+>    - AppleScriptError enum with timeout, permissionDenied, executionFailed cases
+>    - WorkspaceQuerying protocol and RunningApp struct
+>    - ScreenshotCapturing, ScreenshotWindow, ScreenshotImage protocols
+>    - Mock implementations: MockAppleScriptExecutor, MockWorkspace, MockScreenshotWindow, MockScreenshotImage
+> 2. Verify file compiles: xcodebuild -scheme ListAllMacTests build
+> 3. Critical review with @.claude/agents/critic.md for protocol design
+> ```
 
 ### 3.1 Protocols for Testability
 
@@ -274,6 +355,29 @@ class MockScreenshotImage: ScreenshotImage {
 **Goal:** Test AppleScript generation, TCC detection, timeout handling
 **Effort:** 10-12 hours
 **Tests:** 29 unit tests
+
+> 🤖 **SWARM INSTRUCTION - Phase 1 Complete**
+> ```
+> Use a swarm of @.claude/agents/testing-specialist.md, @.claude/agents/apple-dev.md, and @.claude/agents/shell-specialist.md to:
+>
+> TDD CYCLE 1 - AppleScript Generation (RED→GREEN→REFACTOR):
+> 1. RED: Create ListAllMacTests/AppHidingLogicTests.swift with 15 failing tests
+> 2. GREEN: Create ListAllMacUITests/AppHidingScriptGenerator.swift - minimal implementation
+> 3. REFACTOR: Improve code quality, all tests still pass
+> 4. VERIFY: xcodebuild test -scheme ListAllMacTests
+>
+> TDD CYCLE 2 - TCC Detection:
+> 1. RED: Create ListAllMacTests/TCCPermissionDetectionTests.swift with 7 failing tests
+> 2. GREEN: Create TCCErrorDetector.swift
+> 3. REFACTOR + VERIFY
+>
+> TDD CYCLE 3 - Timeout Handling:
+> 1. RED: Create ListAllMacTests/AppleScriptTimeoutTests.swift with 7 failing tests
+> 2. GREEN: Create RealAppleScriptExecutor.swift with DispatchSemaphore
+> 3. REFACTOR + VERIFY
+>
+> Critical review with @.claude/agents/critic.md after each cycle
+> ```
 
 ### 4.1 AppleScript Generation Tests (RED first)
 
@@ -456,6 +560,29 @@ class AppHidingScriptGenerator {
 **Effort:** 8-10 hours
 **Tests:** 22 unit tests
 
+> 🤖 **SWARM INSTRUCTION - Phase 2 Complete**
+> ```
+> Use a swarm of @.claude/agents/testing-specialist.md and @.claude/agents/apple-dev.md to:
+>
+> TDD CYCLE 1 - Capture Strategy (RED→GREEN→REFACTOR):
+> 1. RED: Create ListAllMacTests/WindowCaptureStrategyTests.swift with 12 failing tests
+>    - Test window accessible → use window capture
+>    - Test exists=false but content present → use window (SwiftUI bug workaround)
+>    - Test no content → fallback to fullscreen
+> 2. GREEN: Create WindowCaptureStrategy.swift with decideCaptureMethod()
+> 3. REFACTOR + VERIFY
+>
+> TDD CYCLE 2 - Screenshot Validation:
+> 1. RED: Create ListAllMacTests/ScreenshotValidationTests.swift with 10 failing tests
+>    - Test rejects too small (<800x600)
+>    - Test rejects suspicious file size (<1KB for large dimensions)
+>    - Test accepts valid images
+> 2. GREEN: Create ScreenshotValidator.swift
+> 3. REFACTOR + VERIFY
+>
+> Critical review with @.claude/agents/critic.md for edge cases
+> ```
+
 ### 5.1 Capture Strategy Tests
 
 Create `ListAllMacTests/WindowCaptureStrategyTests.swift`:
@@ -561,6 +688,28 @@ class ScreenshotValidationTests: XCTestCase {
 **Effort:** 12-14 hours
 **Tests:** 20 integration tests
 
+> 🤖 **SWARM INSTRUCTION - Phase 3 Complete**
+> ```
+> Use a swarm of @.claude/agents/testing-specialist.md, @.claude/agents/apple-dev.md, and @.claude/agents/pipeline-specialist.md to:
+>
+> TDD CYCLE 1 - Screenshot Orchestrator (RED→GREEN→REFACTOR):
+> 1. RED: Create ListAllMacUITests/MacSnapshotIntegrationTests.swift with 20 failing tests
+>    - Test full flow: hide apps → capture → validate
+>    - Test TCC permission failure reporting
+>    - Test timeout handling in orchestrator
+>    - Test retry logic for transient failures
+> 2. GREEN: Create ScreenshotOrchestrator.swift that coordinates:
+>    - AppHidingScriptGenerator
+>    - RealAppleScriptExecutor
+>    - WindowCaptureStrategy
+>    - ScreenshotValidator
+> 3. REFACTOR: Extract common patterns, improve error messages
+> 4. VERIFY: All 20 integration tests pass
+>
+> Use @.claude/agents/pipeline-specialist.md to review orchestration patterns
+> Critical review with @.claude/agents/critic.md for error handling completeness
+> ```
+
 ### 6.1 Screenshot Orchestrator Tests
 
 Create `ListAllMacUITests/MacSnapshotIntegrationTests.swift`:
@@ -644,6 +793,28 @@ class MockScreenshotCapture: ScreenshotCapturing {
 **Effort:** 10-12 hours
 **Tests:** 8 E2E tests (refactored)
 
+> 🤖 **SWARM INSTRUCTION - Phase 4 Complete**
+> ```
+> Use a swarm of @.claude/agents/testing-specialist.md, @.claude/agents/apple-dev.md, and @.claude/agents/pipeline-specialist.md to:
+>
+> 1. REFACTOR MacScreenshotTests.swift:
+>    - Inject ScreenshotOrchestrator in setUpWithError()
+>    - Call orchestrator.hideBackgroundApps() (Defense Layer 2)
+>    - Add content verification before each screenshot
+>    - Add orchestrator.captureAndValidate() calls
+>
+> 2. VERIFY all 8 E2E tests pass:
+>    - 4 screenshots × 2 locales (en-US, fi)
+>    - Run: bundle exec fastlane ios screenshots_macos
+>
+> 3. RUN RELIABILITY TEST:
+>    - Execute 10 consecutive runs
+>    - Target: 85%+ success rate (≥9/10 passes)
+>
+> Use @.claude/agents/pipeline-specialist.md to verify Fastlane integration
+> Final review with @.claude/agents/critic.md for production readiness
+> ```
+
 ### 7.1 Refactored MacScreenshotTests
 
 Modify `MacScreenshotTests.swift`:
@@ -699,7 +870,29 @@ class MacScreenshotTests: XCTestCase {
 
 ## 8. Code Fixes Required
 
+> 🤖 **SWARM INSTRUCTION - All Code Fixes**
+> ```
+> Use a swarm of @.claude/agents/shell-specialist.md, @.claude/agents/apple-dev.md, and @.claude/agents/pipeline-specialist.md to:
+>
+> Apply all 4 critical fixes below. For each fix:
+> 1. Read existing code
+> 2. Apply fix as specified
+> 3. Verify with tests/shellcheck
+> 4. Commit with descriptive message
+>
+> Critical review with @.claude/agents/critic.md after all fixes applied
+> ```
+
 ### 8.1 CRITICAL: Keep Shell Hiding (Defense in Depth)
+
+> 🤖 **SWARM INSTRUCTION - Fix 8.1**
+> ```
+> Use @.claude/agents/shell-specialist.md to:
+> - Verify hide_and_quit_background_apps_macos() exists in generate-screenshots-local.sh
+> - Ensure it's called BEFORE bundle exec fastlane ios screenshots_macos
+> - Add log_warn if hide fails but continue execution
+> - DO NOT remove this function - it's Defense Layer 1
+> ```
 
 **DO NOT** remove `hide_and_quit_background_apps_macos()` from shell script.
 
@@ -729,6 +922,16 @@ generate_macos_screenshots() {
 
 ### 8.2 CRITICAL: Fix AppleScript Case Comparison
 
+> 🤖 **SWARM INSTRUCTION - Fix 8.2**
+> ```
+> Use @.claude/agents/shell-specialist.md and @.claude/agents/apple-dev.md to:
+> - Find all AppleScript code using: tr '[:upper:]' '[:lower:]'
+> - Replace with native AppleScript case-insensitive comparison
+> - Use "appName is in {list}" for exact matches
+> - Use "appName contains X or appName contains x" for patterns
+> - Verify no shell subprocesses spawned for case conversion
+> ```
+
 Replace inefficient `tr` shell calls with native AppleScript:
 
 **BEFORE (INEFFICIENT):**
@@ -751,6 +954,16 @@ end if
 
 ### 8.3 CRITICAL: Fix TCC Error Detection in Shell
 
+> 🤖 **SWARM INSTRUCTION - Fix 8.3**
+> ```
+> Use @.claude/agents/shell-specialist.md to:
+> - Find all osascript calls that redirect stderr to /dev/null
+> - Capture stderr instead: output=$(osascript ... 2>&1)
+> - Check for TCC error strings: "not authorized", "(-1743)"
+> - Log actionable error message with fix instructions
+> - Run shellcheck on modified scripts
+> ```
+
 ```bash
 # OLD (silent failure)
 osascript <<'EOF' 2>/dev/null || true
@@ -772,6 +985,17 @@ fi
 ```
 
 ### 8.4 CRITICAL: Fix Process Termination
+
+> 🤖 **SWARM INSTRUCTION - Fix 8.4**
+> ```
+> Use @.claude/agents/pipeline-specialist.md and @.claude/agents/shell-specialist.md to:
+> - Add terminate_macos_app_verified() to fastlane/Fastfile
+> - Validate app_name input (alphanumeric + underscore/hyphen only)
+> - Use SIGTERM first, wait 2s, then SIGKILL
+> - Poll with timeout, filter zombie processes (state 'Z')
+> - Return true only when process confirmed dead
+> - Verify with: ruby -c fastlane/Fastfile
+> ```
 
 ```ruby
 # Fastfile - validated termination
@@ -886,6 +1110,22 @@ end
 
 ### 9.8 Alternative: Dedicated macOS User
 
+> 🤖 **SWARM INSTRUCTION - Pivot to Dedicated User**
+> ```
+> Use a swarm of @.claude/agents/shell-specialist.md and @.claude/agents/pipeline-specialist.md to:
+>
+> ONLY USE IF Phase 4 reliability < 85% after 10 runs:
+>
+> 1. Create screenshot_bot macOS user:
+>    - sudo sysadminctl -addUser screenshot_bot -fullName "Screenshot Bot" -password <secure>
+> 2. Configure TCC permissions for screenshot_bot (one-time)
+> 3. Create run_tests.sh wrapper script
+> 4. Modify CI to use: sudo su - screenshot_bot -c "run_tests.sh"
+> 5. Test: 10 consecutive runs, verify 95%+ reliability
+>
+> Critical review with @.claude/agents/critic.md for security implications
+> ```
+
 If reliability targets cannot be met, consider:
 
 1. Create `screenshot_bot` macOS user
@@ -897,6 +1137,19 @@ If reliability targets cannot be met, consider:
 ---
 
 ## 10. Success Criteria
+
+> 🤖 **SWARM INSTRUCTION - Verify Success**
+> ```
+> Use a swarm of @.claude/agents/testing-specialist.md and @.claude/agents/critic.md to:
+>
+> After each phase, verify checklist items:
+> 1. Run all tests: xcodebuild test -scheme ListAllMacTests
+> 2. Count tests and verify targets met
+> 3. Run E2E reliability test: 10 consecutive runs
+> 4. Report: PASS/FAIL with metrics
+>
+> Critical review for any deviations from success criteria
+> ```
 
 ### Phase Completion Checklist
 
@@ -956,6 +1209,21 @@ This TDD-compliant plan transforms the macOS screenshot automation from an unrel
 
 ---
 
-**Document Status:** REVISED v3.0 - TDD Compliance
+**Document Status:** REVISED v3.1 - TDD Compliance + Swarm Instructions
 **Last Updated:** December 19, 2025
-**Revision:** 3.0
+**Revision:** 3.1
+
+---
+
+## Quick Reference: All Swarm Instructions
+
+| Task | Agents | Command |
+|------|--------|---------|
+| Prerequisites (P1-P4) | Shell, Apple Dev | `Use a swarm of @.claude/agents/shell-specialist.md and @.claude/agents/apple-dev.md to verify all prerequisites` |
+| Phase 0: Infrastructure | Testing, Apple Dev, Critic | `Use a swarm to create test infrastructure with protocols and mocks` |
+| Phase 1: App Hiding | Testing, Apple Dev, Shell, Critic | `Use a swarm to implement TDD cycles for AppleScript, TCC detection, timeouts` |
+| Phase 2: Window Capture | Testing, Apple Dev, Critic | `Use a swarm to implement capture strategy and validation tests` |
+| Phase 3: Integration | Testing, Apple Dev, Pipeline, Critic | `Use a swarm to implement ScreenshotOrchestrator with 20 integration tests` |
+| Phase 4: E2E | Testing, Apple Dev, Pipeline, Critic | `Use a swarm to refactor MacScreenshotTests and verify 85%+ reliability` |
+| Code Fixes | Shell, Apple Dev, Pipeline, Critic | `Use a swarm to apply all 4 critical fixes` |
+| Success Verification | Testing, Critic | `Use a swarm to verify success criteria after each phase` |
