@@ -9,7 +9,7 @@ MANDATORY RULES:
 - Read /documentation/MACOS_PLAN.md file content and follow rules in there
 - Always before working read /documentation/ARCHITECTURE.md
 - Before working, read /documentation/learnings .md files to prevent earlier problems
-- Choose relevant subagents .claude/agents to implement 
+- Choose relevant subagents .claude/agents to implement task, you can use swarm of subagents
 - When you start task in /documentation/MACOS_PLAN.md, mark task title header as in-progress
 - When you finish task in /documentation/MACOS_PLAN.md, mark task title header as completed
 - Always follow TDD
