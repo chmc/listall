@@ -3,7 +3,7 @@
 //  ListAllMacTests
 //
 //  Created as part of MACOS_PLAN.md Phase 0: Test Infrastructure
-//  Purpose: Protocols and mocks for dependency injection in screenshot tests
+//  Purpose: Mocks for dependency injection in screenshot tests
 //
 
 import Foundation
@@ -11,7 +11,9 @@ import XCTest
 import AppKit
 @testable import ListAll
 
-// Note: AppleScriptExecuting, AppleScriptResult, and AppleScriptError are defined in
+// Note: Production types (ScreenshotWindow, ScreenshotImage, CaptureMethod, etc.) are defined in
+// ListAllMac/Services/Screenshots/ScreenshotTypes.swift
+// AppleScriptExecuting, AppleScriptResult, and AppleScriptError are defined in
 // ListAllMac/Services/Screenshots/AppleScriptProtocols.swift
 // They are imported via @testable import ListAll
 
@@ -32,85 +34,6 @@ struct RunningApp: Equatable {
     /// Check if this is a regular (visible) application
     var isRegularApp: Bool {
         activationPolicy == 0  // NSApplication.ActivationPolicy.regular.rawValue
-    }
-}
-
-// MARK: - Screenshot Capture Protocol
-
-/// Protocol for capturing screenshots
-/// Enables dependency injection for unit testing without real XCUITest
-protocol ScreenshotCapturing {
-    func captureWindow(_ window: ScreenshotWindow) throws -> ScreenshotImage
-    func captureFullScreen() throws -> ScreenshotImage
-}
-
-/// Protocol representing a window that can be screenshotted
-protocol ScreenshotWindow {
-    var exists: Bool { get }
-    var isHittable: Bool { get }
-    var frame: CGRect { get }
-}
-
-/// Protocol representing a captured screenshot image
-protocol ScreenshotImage {
-    var size: CGSize { get }
-    var data: Data { get }
-}
-
-/// Capture method decision
-enum CaptureMethod: Equatable {
-    case window
-    case fullscreen
-}
-
-// MARK: - Screenshot Error
-
-/// Errors that can occur during screenshot capture
-enum ScreenshotError: Error, Equatable {
-    case windowNotAccessible
-    case tccPermissionRequired
-    case captureTimedOut
-    case invalidImageSize(width: CGFloat, height: CGFloat)
-    case suspiciousFileSize(bytes: Int)
-    case validationFailed(reason: ValidationFailureReason)
-
-    var userMessage: String {
-        switch self {
-        case .windowNotAccessible:
-            return "Window is not accessible for screenshot"
-        case .tccPermissionRequired:
-            return "TCC Automation permissions NOT granted. " +
-                   "Fix: System Settings → Privacy & Security → Automation → Enable for Terminal/Xcode"
-        case .captureTimedOut:
-            return "Screenshot capture timed out"
-        case .invalidImageSize(let width, let height):
-            return "Invalid screenshot size: \(width)x\(height). Expected >800x600"
-        case .suspiciousFileSize(let bytes):
-            return "Suspicious file size: \(bytes) bytes. Screenshot may be blank or corrupt"
-        case .validationFailed(let reason):
-            return "Screenshot validation failed: \(reason)"
-        }
-    }
-}
-
-/// Reasons for screenshot validation failure
-enum ValidationFailureReason: Equatable {
-    case tooSmall
-    case suspiciousFileSize
-    case blankImage
-}
-
-// MARK: - Screenshot Validation Result
-
-/// Result of screenshot validation
-struct ScreenshotValidationResult: Equatable {
-    let isValid: Bool
-    let reason: ValidationFailureReason?
-
-    static let valid = ScreenshotValidationResult(isValid: true, reason: nil)
-
-    static func invalid(_ reason: ValidationFailureReason) -> ScreenshotValidationResult {
-        ScreenshotValidationResult(isValid: false, reason: reason)
     }
 }
 
@@ -267,7 +190,8 @@ class MockScreenshotCapture: ScreenshotCapturing {
 // MARK: - XCUIApplication Mock Support
 
 /// Mock XCUIApplication-like element for testing
-class MockXCUIApp {
+/// Implements AppContentQuerying for use with WindowCaptureStrategy
+class MockXCUIApp: AppContentQuerying {
     var hasSidebar: Bool
     var hasButtons: Bool
     var hasOutlineRows: Bool
