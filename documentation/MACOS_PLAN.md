@@ -682,7 +682,7 @@ class ScreenshotValidationTests: XCTestCase {
 
 ---
 
-## 6. Phase 3: Integration Tests
+## 6. Phase 3: Integration Tests [IN-PROGRESS]
 
 **Goal:** Test full screenshot flow with mocks
 **Effort:** 12-14 hours
