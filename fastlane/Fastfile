@@ -241,6 +241,42 @@ def normalize_device_screenshots(device_type, locales: %w[en-US fi])
   end
 end
 
+# Terminate macOS app with verified process termination
+# Validates app_name input, uses SIGTERM first, then SIGKILL if needed
+# Polls with timeout until process is confirmed dead, filtering zombie processes
+# @param app_name [String] Name of the app to terminate (alphanumeric + underscore/hyphen only)
+# @param timeout_seconds [Integer] Maximum time to wait for termination (default: 10)
+# @return [Boolean] true if process confirmed terminated, false if timeout
+def terminate_macos_app_verified(app_name, timeout_seconds: 10)
+  # Security: Validate input
+  unless app_name =~ /\A[a-zA-Z0-9_-]+\z/
+    UI.user_error!("Invalid app name: #{app_name}")
+  end
+
+  # SIGTERM first
+  sh("pkill -TERM -x #{Shellwords.escape(app_name)} 2>/dev/null || true")
+  sleep(2)
+
+  # SIGKILL if needed
+  sh("pkill -9 -x #{Shellwords.escape(app_name)} 2>/dev/null || true")
+
+  # Poll until confirmed dead (filter zombies)
+  timeout_seconds.times do
+    pids = sh("pgrep -x #{Shellwords.escape(app_name)} 2>/dev/null || true", log: false).strip
+    return true if pids.empty?
+
+    # Filter zombie processes
+    non_zombies = pids.split("\n").select do |pid|
+      state = sh("ps -o state= -p #{pid} 2>/dev/null || true", log: false).strip
+      state.length > 0 && state[0] != 'Z'
+    end
+    return true if non_zombies.empty?
+    sleep(1)
+  end
+
+  false
+end
+
 
 platform :ios do
   desc "Run unit and UI tests (xcodebuild like CI)"
