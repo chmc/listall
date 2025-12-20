@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CoreGraphics
 
 // MARK: - Screenshot Window Protocol
 
@@ -96,6 +97,16 @@ struct ScreenshotValidationResult: Equatable {
     }
 }
 
+// MARK: - Screenshot Result
+
+/// Result of screenshot capture and validation
+struct ScreenshotResult {
+    let filename: String
+    let wasValidated: Bool
+    let captureMethod: CaptureMethod
+    let imagePath: String?
+}
+
 // MARK: - Screenshot Capture Protocol
 
 /// Protocol for capturing screenshots
@@ -103,4 +114,24 @@ struct ScreenshotValidationResult: Equatable {
 protocol ScreenshotCapturing {
     func captureWindow(_ window: ScreenshotWindow) throws -> ScreenshotImage
     func captureFullScreen() throws -> ScreenshotImage
+}
+
+// MARK: - Workspace Query Protocol
+
+/// Protocol for querying running applications
+/// Enables dependency injection for unit testing without real NSWorkspace
+protocol WorkspaceQuerying {
+    func runningApplications() -> [RunningApp]
+}
+
+/// Representation of a running application
+struct RunningApp: Equatable {
+    let bundleIdentifier: String?
+    let localizedName: String?
+    let activationPolicy: Int  // NSApplication.ActivationPolicy.rawValue
+
+    /// Check if this is a regular (visible) application
+    var isRegularApp: Bool {
+        activationPolicy == 0  // NSApplication.ActivationPolicy.regular.rawValue
+    }
 }

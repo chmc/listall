@@ -15,27 +15,8 @@ import AppKit
 // ListAllMac/Services/Screenshots/ScreenshotTypes.swift
 // AppleScriptExecuting, AppleScriptResult, and AppleScriptError are defined in
 // ListAllMac/Services/Screenshots/AppleScriptProtocols.swift
+// WorkspaceQuerying and RunningApp are defined in ListAllMac/Services/Screenshots/ScreenshotTypes.swift
 // They are imported via @testable import ListAll
-
-// MARK: - Workspace Query Protocol
-
-/// Protocol for querying running applications
-/// Enables dependency injection for unit testing without real NSWorkspace
-protocol WorkspaceQuerying {
-    func runningApplications() -> [RunningApp]
-}
-
-/// Representation of a running application
-struct RunningApp: Equatable {
-    let bundleIdentifier: String?
-    let localizedName: String?
-    let activationPolicy: Int  // NSApplication.ActivationPolicy.rawValue
-
-    /// Check if this is a regular (visible) application
-    var isRegularApp: Bool {
-        activationPolicy == 0  // NSApplication.ActivationPolicy.regular.rawValue
-    }
-}
 
 // MARK: - Mock Implementations
 

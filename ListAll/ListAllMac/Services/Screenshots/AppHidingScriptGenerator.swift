@@ -16,7 +16,10 @@ import Foundation
 /// - Excludes test infrastructure (xctest, xctrunner, etc.)
 /// - Excludes system-essential apps (Finder, Dock, SystemUIServer)
 /// - Includes error handling to continue on individual app failures
-class AppHidingScriptGenerator {
+///
+/// Note: Not marked as Sendable or MainActor to avoid Swift concurrency inference issues
+/// that cause crashes during test cleanup on background threads
+final class AppHidingScriptGenerator {
 
     // MARK: - System Apps Always Excluded
 
@@ -149,5 +152,11 @@ class AppHidingScriptGenerator {
         }
 
         return errors
+    }
+
+    /// Explicit deinit to prevent Swift concurrency automatic deallocation issues
+    deinit {
+        // Explicitly do nothing - prevents Swift runtime from auto-generating
+        // actor-isolated deallocation that crashes during XCTest cleanup
     }
 }

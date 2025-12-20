@@ -8,10 +8,11 @@
 //
 
 import Foundation
+import CoreGraphics
 
 /// Validates screenshot images for quality and correctness
 /// Detects too small, blank, or corrupt screenshots
-class ScreenshotValidator {
+final class ScreenshotValidator {
 
     /// Minimum acceptable screenshot dimensions
     private let minimumWidth: CGFloat = 800

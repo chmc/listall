@@ -4,7 +4,7 @@
 //
 //  Created as part of MACOS_PLAN.md Phase 3: Integration Tests
 //  Purpose: Test full screenshot orchestration flow with mocks
-//  TDD Phase: RED - Tests created first, ScreenshotOrchestrator doesn't exist yet
+//  TDD Phase: GREEN - Production ScreenshotOrchestrator now implements all tests
 //
 
 import XCTest
@@ -586,84 +586,6 @@ final class MacSnapshotIntegrationTests: XCTestCase {
     }
 }
 
-// MARK: - ScreenshotResult (Expected Interface)
-
-/// Expected result structure from ScreenshotOrchestrator
-/// This doesn't exist yet - will be created in GREEN phase
-struct ScreenshotResult {
-    let filename: String
-    let wasValidated: Bool
-    let captureMethod: CaptureMethod
-    let imagePath: String?
-}
-
-// MARK: - ScreenshotOrchestrator (Expected Interface)
-
-/// Expected orchestrator interface
-/// This doesn't exist yet - will be created in GREEN phase
-/// Tests define the expected API that production code will implement
-class ScreenshotOrchestrator {
-    private let scriptExecutor: AppleScriptExecuting
-    private let captureStrategy: WindowCaptureStrategy
-    private let validator: ScreenshotValidator
-    private let workspace: WorkspaceQuerying
-    private let screenshotCapture: ScreenshotCapturing
-    private let retryCount: Int
-    private let defaultTimeout: TimeInterval = 30.0
-
-    init(
-        scriptExecutor: AppleScriptExecuting,
-        captureStrategy: WindowCaptureStrategy,
-        validator: ScreenshotValidator,
-        workspace: WorkspaceQuerying? = nil,
-        screenshotCapture: ScreenshotCapturing? = nil,
-        retryCount: Int = 0
-    ) {
-        self.scriptExecutor = scriptExecutor
-        self.captureStrategy = captureStrategy
-        self.validator = validator
-        self.workspace = workspace ?? MockWorkspace()
-        self.screenshotCapture = screenshotCapture ?? MockScreenshotCapture()
-        self.retryCount = retryCount
-    }
-
-    /// Hide background apps before taking screenshot
-    /// - Parameters:
-    ///   - excluding: App names to exclude from hiding
-    ///   - timeout: Maximum time to wait for AppleScript
-    /// - Throws: AppleScriptError if script fails or times out
-    func hideBackgroundApps(excluding: [String] = [], timeout: TimeInterval? = nil) throws {
-        // Placeholder - will implement in GREEN phase
-        fatalError("ScreenshotOrchestrator not implemented yet - RED phase")
-    }
-
-    /// Capture screenshot with optional window
-    /// - Parameters:
-    ///   - window: Window to capture, or nil for fullscreen
-    ///   - fallbackToFullscreen: If true, use fullscreen when window unavailable
-    /// - Returns: Screenshot result
-    /// - Throws: ScreenshotError if capture fails
-    func captureScreenshot(
-        window: ScreenshotWindow?,
-        fallbackToFullscreen: Bool = true
-    ) throws -> ScreenshotResult {
-        // Placeholder - will implement in GREEN phase
-        fatalError("ScreenshotOrchestrator not implemented yet - RED phase")
-    }
-
-    /// Capture and validate screenshot in one operation
-    /// - Parameters:
-    ///   - named: Screenshot name (without extension)
-    ///   - window: Window to capture
-    ///   - fallbackToFullscreen: If true, use fullscreen when window unavailable
-    /// - Returns: Screenshot result with validation
-    /// - Throws: ScreenshotError if capture or validation fails
-    func captureAndValidate(
-        named: String,
-        window: ScreenshotWindow?,
-        fallbackToFullscreen: Bool = true
-    ) throws -> ScreenshotResult {
-        // Placeholder - will implement in GREEN phase
-        fatalError("ScreenshotOrchestrator not implemented yet - RED phase")
-    }
-}
+// MARK: - Production Types
+// ScreenshotResult and ScreenshotOrchestrator are now imported from production code
+// via @testable import ListAll (defined in ListAllMac/Services/Screenshots/)
