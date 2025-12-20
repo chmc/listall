@@ -868,7 +868,7 @@ class MacScreenshotTests: XCTestCase {
 
 ---
 
-## 8. Code Fixes Required
+## 8. Code Fixes Required [COMPLETED]
 
 > 🤖 **SWARM INSTRUCTION - All Code Fixes**
 > ```
@@ -883,7 +883,7 @@ class MacScreenshotTests: XCTestCase {
 > Critical review with @.claude/agents/critic.md after all fixes applied
 > ```
 
-### 8.1 CRITICAL: Keep Shell Hiding (Defense in Depth)
+### 8.1 CRITICAL: Keep Shell Hiding (Defense in Depth) ✅ COMPLETED
 
 > 🤖 **SWARM INSTRUCTION - Fix 8.1**
 > ```
@@ -920,7 +920,7 @@ generate_macos_screenshots() {
 }
 ```
 
-### 8.2 CRITICAL: Fix AppleScript Case Comparison
+### 8.2 CRITICAL: Fix AppleScript Case Comparison ✅ COMPLETED
 
 > 🤖 **SWARM INSTRUCTION - Fix 8.2**
 > ```
@@ -952,7 +952,7 @@ if appName contains "Xcode" or appName contains "xcode" then
 end if
 ```
 
-### 8.3 CRITICAL: Fix TCC Error Detection in Shell [COMPLETED]
+### 8.3 CRITICAL: Fix TCC Error Detection in Shell ✅ COMPLETED
 
 > 🤖 **SWARM INSTRUCTION - Fix 8.3**
 > ```

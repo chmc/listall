@@ -365,11 +365,30 @@ hide_and_quit_background_apps_macos() {
         return 0
     fi
 
+    # Helper function to check for TCC errors in osascript output
+    check_tcc_error() {
+        local output="$1"
+        local exit_code="$2"
+        if [[ ${exit_code} -ne 0 ]]; then
+            if [[ "${output}" == *"not authorized"* ]] || [[ "${output}" == *"(-1743)"* ]]; then
+                log_warn "TCC Automation permissions may not be granted"
+                log_warn "Fix: System Settings > Privacy & Security > Automation > Terminal/Xcode"
+                log_warn "Continuing - Swift layer may still work (defense in depth)"
+                return 1
+            else
+                log_warn "AppleScript warning: ${output}"
+                return 1
+            fi
+        fi
+        return 0
+    }
+
     # STEP 1: Quit non-essential applications completely
     # This is more reliable than hiding - apps stay closed
     log_info "Closing non-essential applications..."
 
-    osascript <<'EOF' 2>/dev/null || true
+    local quit_output
+    quit_output=$(osascript <<'APPLESCRIPT' 2>&1
 tell application "System Events"
     set appList to name of every process whose background only is false
     repeat with appName in appList
@@ -415,7 +434,10 @@ tell application "System Events"
         end if
     end repeat
 end tell
-EOF
+APPLESCRIPT
+) || true
+    local quit_exit=$?
+    check_tcc_error "${quit_output}" "${quit_exit}" || true
 
     log_info "Waiting for applications to quit (3 seconds)..."
     sleep 3
@@ -424,10 +446,11 @@ EOF
     # This targets apps that refused to quit or are system components
     log_info "Hiding remaining visible applications..."
 
-    osascript <<'EOF' 2>/dev/null || true
+    local hide_output
+    hide_output=$(osascript <<'APPLESCRIPT' 2>&1
 tell application "System Events"
     -- Use proper AppleScript syntax with repeat loop
-    -- (the "name is not in {list}" one-liner syntax doesn't work)
+    -- (the "name is not in {list}" one-liner syntax does not work)
     repeat with p in (get every process whose visible is true)
         set appName to name of p
         if appName is not in {"Finder", "SystemUIServer", "Dock", "Terminal"} then
@@ -440,7 +463,10 @@ tell application "System Events"
         end if
     end repeat
 end tell
-EOF
+APPLESCRIPT
+) || true
+    local hide_exit=$?
+    check_tcc_error "${hide_output}" "${hide_exit}" || true
 
     log_info "Waiting for hide animations to complete (2 seconds)..."
     sleep 2
@@ -448,11 +474,15 @@ EOF
     # STEP 3: Minimize Finder windows to clear desktop
     log_info "Minimizing Finder windows..."
 
-    osascript <<'EOF' 2>/dev/null || true
+    local minimize_output
+    minimize_output=$(osascript <<'APPLESCRIPT' 2>&1
 tell application "Finder"
     set miniaturized of every window to true
 end tell
-EOF
+APPLESCRIPT
+) || true
+    local minimize_exit=$?
+    check_tcc_error "${minimize_output}" "${minimize_exit}" || true
 
     sleep 1
 
