@@ -23,6 +23,7 @@ import AppKit
 final class MacScreenshotTests: XCTestCase {
 
     var app: XCUIApplication!
+    var orchestrator: ScreenshotOrchestrator!
 
     /// Timeout for app launch
     private let launchTimeout: TimeInterval = 60
@@ -52,6 +53,21 @@ final class MacScreenshotTests: XCTestCase {
         // Setup Fastlane snapshot
         // This configures locale detection and screenshot directory setup
         setupSnapshot(app)
+
+        // Initialize ScreenshotOrchestrator with real implementations
+        let scriptExecutor = RealAppleScriptExecutor()
+        let captureStrategy = WindowCaptureStrategy()
+        let validator = ScreenshotValidator()
+        let workspace = RealWorkspace()
+        let screenshotCapture = RealScreenshotCapture()
+
+        orchestrator = ScreenshotOrchestrator(
+            scriptExecutor: scriptExecutor,
+            captureStrategy: captureStrategy,
+            validator: validator,
+            workspace: workspace,
+            screenshotCapture: screenshotCapture
+        )
     }
 
     /// Launch app with retry logic to handle "Failed to terminate" errors
@@ -222,7 +238,14 @@ final class MacScreenshotTests: XCTestCase {
 
         // CRITICAL: Hide all other apps to ensure ListAll is the ONLY visible window
         // This prevents other apps from appearing in the screenshot
-        hideAllOtherApps()
+        // Try orchestrator first, fall back to hideAllOtherApps() if it fails
+        do {
+            try orchestrator.hideBackgroundApps()
+            print("  ✓ Background apps hidden via orchestrator")
+        } catch {
+            print("  ⚠️ Orchestrator failed: \(error), using fallback hideAllOtherApps()")
+            hideAllOtherApps()
+        }
 
         // STEP 1: Activate via NSWorkspace with force flag
         if let listAllApp = NSWorkspace.shared.runningApplications.first(where: {
@@ -241,6 +264,10 @@ final class MacScreenshotTests: XCTestCase {
         let sidebar = app.outlines["ListsSidebar"]
         if sidebar.waitForExistence(timeout: 10) {
             print("✅ Window verified - found sidebar content")
+
+            // STEP 4: Verify content is populated
+            verifyContentReady(sidebar: sidebar)
+
             // Give a moment for window to settle after activation
             sleep(1)
         } else {
@@ -258,6 +285,36 @@ final class MacScreenshotTests: XCTestCase {
             } else {
                 print("⚠️ WARNING: Could not verify window - screenshots may have issues")
             }
+        }
+    }
+
+    /// Verify that content is ready for screenshots
+    /// - Parameter sidebar: The sidebar outline element
+    private func verifyContentReady(sidebar: XCUIElement) {
+        print("🔍 Verifying content is ready for screenshot...")
+
+        // Check that sidebar has rows (lists)
+        let rows = sidebar.outlineRows
+        if rows.count > 0 {
+            print("  ✓ Sidebar has \(rows.count) lists")
+        } else {
+            print("  ⚠️ WARNING: Sidebar has no lists - test data may not be loaded")
+        }
+
+        // Check for visible buttons
+        let buttons = app.buttons
+        if buttons.count > 0 {
+            print("  ✓ Found \(buttons.count) buttons")
+        } else {
+            print("  ⚠️ WARNING: No buttons found")
+        }
+
+        // Overall content ready status
+        let hasContent = rows.count > 0 && buttons.count > 0
+        if hasContent {
+            print("  ✅ Content verification PASSED - ready for screenshot")
+        } else {
+            print("  ⚠️ Content verification FAILED - screenshot may be incomplete")
         }
     }
 
