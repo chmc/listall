@@ -25,4 +25,4 @@ MANDATORY RULES:
 ## Problem solving instructions
 
 INSTRUCTIONS
-- When you finish completing successfully problem, write a learning .md file of it to /docs/learnings folder
+- When you finish completing successfully problem, write a learning .md file of it to /documentation/learnings folder
