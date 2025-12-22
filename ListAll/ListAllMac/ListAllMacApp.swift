@@ -219,10 +219,16 @@ struct ListAllMacApp: App {
 
 /// AppDelegate handles macOS-specific lifecycle events.
 /// Primary purpose: Register the ServicesProvider for system-wide Services menu integration.
+/// Also handles fallback window creation for macOS Tahoe where SwiftUI WindowGroup may fail.
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// The services provider instance (must be retained for Services menu to work)
     private var servicesProvider: ServicesProvider?
+
+    /// Fallback window for macOS Tahoe bug workaround
+    /// On macOS 26.x (Tahoe), SwiftUI's WindowGroup may not create initial windows.
+    /// This property holds a manually-created window as a fallback.
+    private var fallbackWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Detect test environment
@@ -236,17 +242,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // CRITICAL: Force app activation during UI tests
-        // macOS UI tests launch the app in background by default, causing test timeouts
-        // SwiftUI WindowGroup won't create windows without proper activation policy
-        if isUITest {
-            print("🧪 AppDelegate: UI test mode - activating app to foreground")
+        // CRITICAL: Always set activation policy to .regular on macOS Tahoe+
+        // This is required for SwiftUI WindowGroup to create windows properly.
+        // Previously only done for UI tests, but macOS 26.x requires it for all launches.
+        NSApp.setActivationPolicy(.regular)
+        NSApplication.shared.activate(ignoringOtherApps: true)
 
-            // CRITICAL FIX: Set activation policy to .regular
-            // Without this, SwiftUI WindowGroup won't create windows for command-line launched apps
-            // This must be called BEFORE any window creation attempts
-            NSApp.setActivationPolicy(.regular)
-            NSApplication.shared.activate(ignoringOtherApps: true)
+        if isUITest {
+            print("🧪 AppDelegate: UI test mode - app activated to foreground")
         }
 
         print("🚀 AppDelegate: Registering Services provider")
@@ -263,6 +266,62 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Request notification permissions for service feedback
         requestNotificationPermissions()
+
+        // WORKAROUND: macOS Tahoe (26.x) SwiftUI WindowGroup bug
+        // SwiftUI may not create initial window on app launch. Check after a delay
+        // and create a fallback window if needed.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.ensureMainWindowExists()
+        }
+    }
+
+    /// Ensure the main window exists, creating a fallback if SwiftUI failed to create one.
+    /// This is a workaround for macOS Tahoe (26.x) where SwiftUI WindowGroup
+    /// may not create the initial window on app launch.
+    private func ensureMainWindowExists() {
+        // Check if SwiftUI already created a window
+        let existingWindows = NSApp.windows.filter { window in
+            // Filter out panels, sheets, and other non-main windows
+            window.isVisible && !window.isSheet && window.styleMask.contains(.titled)
+        }
+
+        if !existingWindows.isEmpty {
+            print("✅ AppDelegate: SwiftUI created \(existingWindows.count) window(s) - no fallback needed")
+            return
+        }
+
+        print("⚠️ AppDelegate: No SwiftUI windows detected - creating fallback window (macOS Tahoe workaround)")
+
+        // Create the main window manually using NSHostingController
+        let contentView = MacMainView()
+            .environmentObject(DataManager.shared)
+            .environment(\.managedObjectContext, CoreDataManager.shared.viewContext)
+
+        let hostingController = NSHostingController(rootView: contentView)
+
+        // Create window with standard macOS app styling
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+
+        window.title = "ListAll"
+        window.contentViewController = hostingController
+        window.center()
+        window.setFrameAutosaveName("MainWindow")
+
+        // Set minimum size for usability
+        window.minSize = NSSize(width: 800, height: 600)
+
+        // Make window key and visible
+        window.makeKeyAndOrderFront(nil)
+
+        // Retain the window
+        self.fallbackWindow = window
+
+        print("✅ AppDelegate: Fallback window created and displayed")
     }
 
     /// Request permission to show notifications for Services feedback

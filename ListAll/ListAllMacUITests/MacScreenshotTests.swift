@@ -589,16 +589,31 @@ final class MacScreenshotTests: XCTestCase {
             // Look for the first outline row (which represents a list in the sidebar)
             let firstRow = sidebar.outlineRows.firstMatch
             if firstRow.waitForExistence(timeout: elementTimeout) {
-                print("✅ Found first list in sidebar, clicking to show detail")
-                firstRow.click()
-                sleep(1)
+                print("✅ Found first list in sidebar, attempting click...")
+                // CRITICAL: On macOS Tahoe, elements may be "not hittable" even when visible
+                // Try click, but continue even if it fails - we still want the screenshot
+                if firstRow.isHittable {
+                    firstRow.click()
+                    sleep(1)
+                } else {
+                    print("⚠️ OutlineRow exists but not hittable - trying coordinate click")
+                    // Try clicking at element's center coordinates as fallback
+                    let coordinate = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    coordinate.tap()
+                    sleep(1)
+                }
             } else {
                 print("⚠️ No outline rows found in sidebar, trying alternative...")
                 // Try clicking on first cell descendant
                 let firstCell = sidebar.cells.firstMatch
                 if firstCell.waitForExistence(timeout: 3) {
                     print("✅ Found first cell in sidebar, clicking")
-                    firstCell.click()
+                    if firstCell.isHittable {
+                        firstCell.click()
+                    } else {
+                        let coordinate = firstCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                        coordinate.tap()
+                    }
                     sleep(1)
                 }
             }
@@ -609,7 +624,12 @@ final class MacScreenshotTests: XCTestCase {
             let firstListCell = mainWindow.staticTexts["Grocery Shopping"].firstMatch
             if firstListCell.waitForExistence(timeout: elementTimeout) {
                 print("✅ Found first list by name, clicking")
-                firstListCell.click()
+                if firstListCell.isHittable {
+                    firstListCell.click()
+                } else {
+                    let coordinate = firstListCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    coordinate.tap()
+                }
                 sleep(1)
             } else {
                 print("⚠️ Could not find any lists, proceeding with screenshot anyway")
@@ -651,16 +671,28 @@ final class MacScreenshotTests: XCTestCase {
             if rows.count > 1 {
                 let secondRow = rows.element(boundBy: 1)
                 if secondRow.waitForExistence(timeout: elementTimeout) {
-                    print("✅ Found second list in sidebar, clicking to show detail")
-                    secondRow.click()
+                    print("✅ Found second list in sidebar, attempting click...")
+                    // CRITICAL: On macOS Tahoe, elements may be "not hittable" even when visible
+                    if secondRow.isHittable {
+                        secondRow.click()
+                    } else {
+                        print("⚠️ OutlineRow exists but not hittable - trying coordinate click")
+                        let coordinate = secondRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                        coordinate.tap()
+                    }
                     sleep(1)
                 }
             } else if rows.count > 0 {
                 // Fall back to first row if only one list exists
                 let firstRow = rows.firstMatch
                 if firstRow.waitForExistence(timeout: elementTimeout) {
-                    print("✅ Found first list in sidebar, clicking to show detail")
-                    firstRow.click()
+                    print("✅ Found first list in sidebar, attempting click...")
+                    if firstRow.isHittable {
+                        firstRow.click()
+                    } else {
+                        let coordinate = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                        coordinate.tap()
+                    }
                     sleep(1)
                 }
             }
@@ -669,7 +701,12 @@ final class MacScreenshotTests: XCTestCase {
             let secondListCell = app.staticTexts["Weekend Projects"].firstMatch
             if secondListCell.waitForExistence(timeout: elementTimeout) {
                 print("✅ Found second list by name, clicking")
-                secondListCell.click()
+                if secondListCell.isHittable {
+                    secondListCell.click()
+                } else {
+                    let coordinate = secondListCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    coordinate.tap()
+                }
                 sleep(1)
             }
         }
@@ -706,8 +743,15 @@ final class MacScreenshotTests: XCTestCase {
         if sidebar.waitForExistence(timeout: elementTimeout) {
             let firstRow = sidebar.outlineRows.firstMatch
             if firstRow.waitForExistence(timeout: elementTimeout) {
-                print("✅ Found first list in sidebar, clicking to show detail")
-                firstRow.click()
+                print("✅ Found first list in sidebar, attempting click...")
+                // CRITICAL: On macOS Tahoe, elements may be "not hittable" even when visible
+                if firstRow.isHittable {
+                    firstRow.click()
+                } else {
+                    print("⚠️ OutlineRow exists but not hittable - trying coordinate click")
+                    let coordinate = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    coordinate.tap()
+                }
                 sleep(1)
             }
         } else {
@@ -715,7 +759,12 @@ final class MacScreenshotTests: XCTestCase {
             let firstListCell = app.staticTexts["Grocery Shopping"].firstMatch
             if firstListCell.waitForExistence(timeout: elementTimeout) {
                 print("✅ Found first list by name, clicking")
-                firstListCell.click()
+                if firstListCell.isHittable {
+                    firstListCell.click()
+                } else {
+                    let coordinate = firstListCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    coordinate.tap()
+                }
                 sleep(1)
             }
         }
@@ -727,11 +776,21 @@ final class MacScreenshotTests: XCTestCase {
 
         if addItemButton.waitForExistence(timeout: elementTimeout) {
             print("✅ Found 'Add Item' button, clicking to show edit sheet")
-            addItemButton.click()
+            if addItemButton.isHittable {
+                addItemButton.click()
+            } else {
+                let coordinate = addItemButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                coordinate.tap()
+            }
             sleep(1)
         } else if plusButton.waitForExistence(timeout: elementTimeout) {
             print("✅ Found '+' button, clicking to show edit sheet")
-            plusButton.click()
+            if plusButton.isHittable {
+                plusButton.click()
+            } else {
+                let coordinate = plusButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                coordinate.tap()
+            }
             sleep(1)
         } else {
             print("⚠️ Could not find add item button, trying to click on existing item")
@@ -742,7 +801,12 @@ final class MacScreenshotTests: XCTestCase {
                 let firstItem = itemsList.tableRows.firstMatch
                 if firstItem.waitForExistence(timeout: elementTimeout) {
                     print("✅ Clicking on first item to show edit sheet")
-                    firstItem.click()
+                    if firstItem.isHittable {
+                        firstItem.click()
+                    } else {
+                        let coordinate = firstItem.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                        coordinate.tap()
+                    }
                     sleep(1)
                 } else {
                     print("⚠️ No items found in list")

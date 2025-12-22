@@ -220,23 +220,44 @@ open class Snapshot: NSObject {
         let contentAccessible = sidebar.waitForExistence(timeout: 10)
 
         // Step 3: Check window accessibility for screenshot method decision
+        // CRITICAL: On macOS Tahoe with NSWindow fallback, window.exists may return false
+        // even when the window IS there. Content elements being accessible proves the window exists.
+        // Trust content accessibility as proof of window existence.
         let mainWindow = app.windows.firstMatch
-        let windowAccessible = mainWindow.exists || mainWindow.isHittable
+        let windowExists = mainWindow.exists
+        let windowHittable = mainWindow.isHittable
+        // If content is accessible, the window MUST be there even if accessibility says otherwise
+        let windowAccessible = windowExists || windowHittable || contentAccessible
 
-        NSLog("[macOS] Screenshot '\(name)': content=\(contentAccessible), window.exists=\(mainWindow.exists), window.isHittable=\(mainWindow.isHittable)")
+        NSLog("[macOS] Screenshot '\(name)': content=\(contentAccessible), window.exists=\(windowExists), window.isHittable=\(windowHittable), windowAccessible=\(windowAccessible)")
 
         // Step 4: Capture screenshot using appropriate method
-        let image: NSImage
+        var image: NSImage
         var captureMethod: String
 
         if windowAccessible {
-            // Window is accessible - capture window only (preferred, clean without background apps)
+            // Window is accessible (or content proves it exists) - try window capture first
             app.activate()
             sleep(1)
+
+            // Attempt window capture - may fail on macOS Tahoe if accessibility is broken
             let screenshot = mainWindow.screenshot()
-            image = screenshot.image
-            captureMethod = "window"
-            NSLog("[macOS] SUCCESS: Window-only screenshot captured (\(image.size))")
+            let windowImage = screenshot.image
+
+            // Validate the capture - if window accessibility is broken, screenshot may be tiny or empty
+            let minValidSize: CGFloat = 400
+            if windowImage.size.width >= minValidSize && windowImage.size.height >= minValidSize {
+                image = windowImage
+                captureMethod = "window"
+                NSLog("[macOS] SUCCESS: Window-only screenshot captured (\(image.size))")
+            } else {
+                // Window capture returned invalid size - fall back to fullscreen
+                NSLog("[macOS] Window capture returned small image (\(windowImage.size)), using fullscreen fallback")
+                let fullscreenShot = XCUIScreen.main.screenshot()
+                image = fullscreenShot.image
+                captureMethod = "fullscreen-fallback"
+                NSLog("[macOS] Full-screen fallback screenshot captured (\(image.size))")
+            }
         } else {
             // Window not accessible - use full-screen fallback
             // Full-screen captures the screen region, may include background apps
