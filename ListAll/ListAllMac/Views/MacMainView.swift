@@ -72,7 +72,7 @@ struct MacMainView: View {
                     onCreateList: { showingCreateListSheet = true },
                     onDeleteList: deleteList
                 )
-                .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 350)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 400)
             }
         } detail: {
             // Detail view for selected list
