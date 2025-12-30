@@ -3777,12 +3777,19 @@ platform :ios do
     # No simulator management needed - runs natively
 
     locales = %w[en-US fi]
-    screenshots_cache_dir = File.expand_path("~/Library/Caches/tools.fastlane/screenshots")
+    # MacSnapshotHelper runs in a sandboxed container, so screenshots are saved to:
+    # ~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/Library/Caches/tools.fastlane/screenshots/
+    # We also need to write language.txt/locale.txt to the container so MacSnapshotHelper can read them
+    container_base = File.expand_path("~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data")
+    fastlane_cache_dir = File.join(container_base, "Library/Caches/tools.fastlane")
+    screenshots_cache_dir = File.join(fastlane_cache_dir, "screenshots")
     mac_output_dir = File.expand_path("screenshots/mac", __dir__)
 
     # Clean previous screenshots
     FileUtils.rm_rf(mac_output_dir) if Dir.exist?(mac_output_dir)
     FileUtils.mkdir_p(mac_output_dir)
+    FileUtils.mkdir_p(fastlane_cache_dir)
+    FileUtils.mkdir_p(screenshots_cache_dir)
 
     # Expected screenshots per locale
     expected_per_locale = 4  # 01_MainWindow, 02_ListDetailView, 03_ItemEditSheet, 04_SettingsWindow
@@ -3798,11 +3805,12 @@ platform :ios do
       FileUtils.mkdir_p(locale_output_dir)
 
       # Write language and locale files for MacSnapshotHelper
-      File.write(File.join(screenshots_cache_dir, "language.txt"), locale.split('-').first)
-      File.write(File.join(screenshots_cache_dir, "locale.txt"), locale)
+      # NOTE: MacSnapshotHelper reads from cacheDirectory (fastlane_cache_dir), not screenshotsDirectory
+      File.write(File.join(fastlane_cache_dir, "language.txt"), locale.split('-').first)
+      File.write(File.join(fastlane_cache_dir, "locale.txt"), locale)
 
-      # Clean cache screenshots directory before test run
-      FileUtils.rm_rf(File.join(screenshots_cache_dir, "screenshots")) if Dir.exist?(File.join(screenshots_cache_dir, "screenshots"))
+      # Clean cache screenshots directory before test run (remove all Mac-*.png files)
+      Dir.glob(File.join(screenshots_cache_dir, "Mac-*.png")).each { |f| FileUtils.rm_f(f) }
 
       # Run macOS UI tests to capture screenshots
       # macOS runs natively, no simulator needed
@@ -3813,7 +3821,7 @@ platform :ios do
         destination: "platform=macOS",
         only_testing: ["ListAllMacUITests/MacScreenshotTests"],
         skip_testing: ["ListAllMacTests"],  # Skip unit tests - they require TEST_HOST which has path issues
-        xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
+        xcargs: "-test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600",
         result_bundle: true,
         fail_build: false  # Continue even if some tests fail to capture all possible screenshots
       )
@@ -3869,15 +3877,18 @@ platform :ios do
       next unless Dir.exist?(locale_dir)
 
       Dir.glob(File.join(locale_dir, "*.png")).each do |shot|
-        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-        w, h = dims.split('x').map(&:to_i)
+        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)} 2>/dev/null`.strip
+        w, h = dims.split('x').map(&:to_i) if dims.include?('x')
 
         # macOS screenshots should be at least Retina (2880x1800) for App Store
         # XCUIScreen.main.screenshot() captures native display resolution
-        UI.message("  #{locale}/#{File.basename(shot)}: #{dims}")
-
-        if w < 2880 || h < 1800
-          UI.important("  ⚠️  Screenshot may be too small for App Store (expected at least 2880x1800)")
+        if w && h
+          UI.message("  #{locale}/#{File.basename(shot)}: #{dims}")
+          if w < 2880 || h < 1800
+            UI.important("  ⚠️  Screenshot may be too small for App Store (expected at least 2880x1800)")
+          end
+        else
+          UI.message("  #{locale}/#{File.basename(shot)}: (dimensions unknown)")
         end
       end
     end
