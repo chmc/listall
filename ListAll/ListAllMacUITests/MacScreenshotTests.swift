@@ -738,81 +738,119 @@ final class MacScreenshotTests: XCTestCase {
         // The window must be visible and frontmost before we can interact with UI elements
         prepareWindowForScreenshot()
 
-        // Navigate to a list
+        // CRITICAL: Ensure sidebar is visible before trying to navigate
+        // The sidebar may be hidden due to previous app state or window size
         let sidebar = app.outlines["ListsSidebar"]
+        if !sidebar.waitForExistence(timeout: 3) {
+            print("⚠️ Sidebar not visible, toggling with keyboard shortcut (Cmd+Option+S)")
+            // Toggle sidebar visibility using View > Toggle Sidebar menu (Cmd+Option+S)
+            app.typeKey("s", modifierFlags: [.command, .option])
+            sleep(1)
+        }
+
+        // Navigate to a list - use multiple strategies for macOS Tahoe compatibility
         if sidebar.waitForExistence(timeout: elementTimeout) {
             let firstRow = sidebar.outlineRows.firstMatch
             if firstRow.waitForExistence(timeout: elementTimeout) {
-                print("✅ Found first list in sidebar, attempting click...")
-                // CRITICAL: On macOS Tahoe, elements may be "not hittable" even when visible
+                print("✅ Found first list in sidebar, attempting to select...")
+
+                // Strategy 1: Try double-click (more reliable for selection)
                 if firstRow.isHittable {
-                    firstRow.click()
+                    print("  → Trying double-click on hittable row")
+                    firstRow.doubleClick()
+                    sleep(1)
                 } else {
-                    print("⚠️ OutlineRow exists but not hittable - trying coordinate click")
+                    print("⚠️ OutlineRow exists but not hittable - trying coordinate double-tap")
                     let coordinate = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                    coordinate.tap()
+                    coordinate.doubleTap()
+                    sleep(1)
                 }
-                sleep(1)
+
+                // Strategy 2: If double-click didn't work, try keyboard navigation
+                let addButton = app.buttons["AddItemButton"].firstMatch
+                if !addButton.waitForExistence(timeout: 2) {
+                    print("  → Double-click didn't select, trying keyboard navigation")
+                    // Click sidebar first to focus it
+                    sidebar.click()
+                    usleep(500_000)  // 0.5 seconds
+                    // Press Down arrow to select first item, then Enter to confirm
+                    app.typeKey(.downArrow, modifierFlags: [])
+                    usleep(300_000)  // 0.3 seconds
+                    app.typeKey(.return, modifierFlags: [])
+                    sleep(1)
+                }
             }
-        } else {
-            // Fallback: Try finding first list by name
-            let firstListCell = app.staticTexts["Grocery Shopping"].firstMatch
-            if firstListCell.waitForExistence(timeout: elementTimeout) {
-                print("✅ Found first list by name, clicking")
-                if firstListCell.isHittable {
-                    firstListCell.click()
-                } else {
-                    let coordinate = firstListCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                    coordinate.tap()
-                }
+        }
+
+        // Fallback: Try finding list by partial name (sidebar truncates text)
+        let addItemButtonCheck = app.buttons["AddItemButton"].firstMatch
+        if !addItemButtonCheck.waitForExistence(timeout: 2) {
+            print("⚠️ List not selected yet, trying to find list by partial text")
+            // Look for text starting with "Grocery"
+            let groceryText = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Grocery'")).firstMatch
+            if groceryText.waitForExistence(timeout: 3) {
+                print("✅ Found text starting with 'Grocery', double-clicking")
+                groceryText.doubleTap()
                 sleep(1)
             }
         }
 
-        // Look for "Add Item" button or similar to open edit sheet
-        // Try multiple possible identifiers
-        let addItemButton = app.buttons["Add Item"].firstMatch
-        let plusButton = app.buttons["+"].firstMatch
+        // Verify list selection succeeded by checking if Add Item button is visible
+        // The Add Item button only appears when a list is selected
+        let addItemButton = app.buttons["AddItemButton"].firstMatch
 
-        if addItemButton.waitForExistence(timeout: elementTimeout) {
-            print("✅ Found 'Add Item' button, clicking to show edit sheet")
+        if addItemButton.waitForExistence(timeout: 5) {
+            print("✅ List selection succeeded - found 'AddItemButton', clicking to show edit sheet")
             if addItemButton.isHittable {
                 addItemButton.click()
             } else {
+                print("⚠️ AddItemButton not hittable - trying coordinate click")
                 let coordinate = addItemButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
                 coordinate.tap()
             }
-            sleep(1)
-        } else if plusButton.waitForExistence(timeout: elementTimeout) {
-            print("✅ Found '+' button, clicking to show edit sheet")
-            if plusButton.isHittable {
-                plusButton.click()
-            } else {
-                let coordinate = plusButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                coordinate.tap()
-            }
-            sleep(1)
+            // Wait for sheet to appear and animate
+            sleep(2)
         } else {
-            print("⚠️ Could not find add item button, trying to click on existing item")
-            // Try clicking on an existing item to open edit sheet
-            // The items list has identifier "ItemsList" (see MacMainView line 826)
-            let itemsList = app.tables["ItemsList"]
-            if itemsList.waitForExistence(timeout: elementTimeout) {
-                let firstItem = itemsList.tableRows.firstMatch
-                if firstItem.waitForExistence(timeout: elementTimeout) {
-                    print("✅ Clicking on first item to show edit sheet")
-                    if firstItem.isHittable {
-                        firstItem.click()
-                    } else {
-                        let coordinate = firstItem.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                        coordinate.tap()
-                    }
-                    sleep(1)
-                } else {
-                    print("⚠️ No items found in list")
+            print("⚠️ AddItemButton not found after first selection attempt")
+
+            // Try using predicate to find truncated list text
+            let groceryListText = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Grocery'")).firstMatch
+            if groceryListText.waitForExistence(timeout: 3) {
+                print("✅ Found list text starting with 'Grocery', double-tapping to select")
+                groceryListText.doubleTap()
+                sleep(2)
+
+                // Try AddItemButton again after selecting
+                if addItemButton.waitForExistence(timeout: 3) {
+                    print("✅ Now found AddItemButton after list selection, clicking")
+                    addItemButton.doubleTap()
+                    sleep(2)
                 }
-            } else {
-                print("⚠️ Could not find ItemsList table")
+            }
+
+            // Final fallback: Try clicking on existing item in list
+            if !addItemButton.exists {
+                print("⚠️ Still no AddItemButton, trying to click on existing item in detail view")
+                // Try clicking on an existing item to open edit sheet
+                // The items list has identifier "ItemsList" (see MacMainView line 826)
+                let itemsList = app.tables["ItemsList"]
+                if itemsList.waitForExistence(timeout: elementTimeout) {
+                    let firstItem = itemsList.tableRows.firstMatch
+                    if firstItem.waitForExistence(timeout: elementTimeout) {
+                        print("✅ Clicking on first item to show edit sheet")
+                        if firstItem.isHittable {
+                            firstItem.click()
+                        } else {
+                            let coordinate = firstItem.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                            coordinate.tap()
+                        }
+                        sleep(2)
+                    } else {
+                        print("⚠️ No items found in list")
+                    }
+                } else {
+                    print("⚠️ Could not find ItemsList table")
+                }
             }
         }
 
