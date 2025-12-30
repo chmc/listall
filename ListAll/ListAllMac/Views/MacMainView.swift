@@ -72,8 +72,9 @@ struct MacMainView: View {
                     onCreateList: { showingCreateListSheet = true },
                     onDeleteList: deleteList
                 )
-                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 400)
             }
+            // Apply column width to NavigationStack wrapper (not inside it)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 400)
         } detail: {
             // Detail view for selected list
             if let list = selectedList {
