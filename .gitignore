@@ -245,9 +245,6 @@ venv.bak/
 
 # --- Claude Flow / Hive / Swarm ---
 
-# All Claude project config & commands (local tooling)
-.claude/
-
 # Local Claude Flow wrapper & config
 claude-flow
 claude-flow.config.json
