@@ -492,6 +492,85 @@ APPLESCRIPT
     return 0
 }
 
+restore_hidden_apps_macos() {
+    log_info "Restoring macOS desktop after screenshot generation..."
+
+    # Check if osascript is available
+    if ! command -v osascript &> /dev/null; then
+        log_warn "osascript not found - skipping app restoration"
+        return 0
+    fi
+
+    # STEP 1: Show all hidden applications
+    log_info "Showing hidden applications..."
+
+    local show_output
+    show_output=$(osascript <<'APPLESCRIPT' 2>&1
+tell application "System Events"
+    repeat with p in (get every process whose visible is false and background only is false)
+        try
+            set visible of p to true
+        end try
+    end repeat
+end tell
+APPLESCRIPT
+) || true
+
+    # STEP 2: Restore Finder windows (un-minimize)
+    log_info "Restoring Finder windows..."
+
+    local restore_output
+    restore_output=$(osascript <<'APPLESCRIPT' 2>&1
+tell application "Finder"
+    set miniaturized of every window to false
+    activate
+end tell
+APPLESCRIPT
+) || true
+
+    # STEP 3: Show completion notification
+    log_info "Displaying completion notification..."
+
+    local notify_output
+    notify_output=$(osascript <<'APPLESCRIPT' 2>&1
+display notification "All screenshots have been generated successfully." with title "Screenshot Generation Complete" sound name "Glass"
+APPLESCRIPT
+) || true
+
+    log_success "Desktop restored - hidden apps are now visible"
+
+    return 0
+}
+
+# Track if we've already called restore to prevent double-execution
+RESTORE_CALLED=false
+
+# Cleanup handler to ensure apps are restored even on failure
+cleanup_restore_apps() {
+    local exit_code=$?
+
+    # Only restore once (prevent double-call)
+    if [[ "${RESTORE_CALLED}" == "true" ]]; then
+        return "${exit_code}"
+    fi
+    RESTORE_CALLED=true
+
+    # Only run on macOS platforms
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # Only restore if we actually hid apps (macOS platform or all)
+        if [[ "${PLATFORM:-}" == "macos" ]] || [[ "${PLATFORM:-}" == "all" ]]; then
+            log_info ""
+            log_info "Cleaning up..."
+            restore_hidden_apps_macos
+        fi
+    fi
+
+    exit "${exit_code}"
+}
+
+# Set trap for cleanup on exit, error, interrupt, and termination
+trap cleanup_restore_apps EXIT
+
 # =============================================================================
 # Screenshot Generation Functions
 # =============================================================================

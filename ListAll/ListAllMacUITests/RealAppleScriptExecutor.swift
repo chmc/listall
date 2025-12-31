@@ -3,21 +3,23 @@
 //  ListAllMac
 //
 //  Created as part of MACOS_PLAN.md Phase 1: TDD Cycle 3
-//  Purpose: Execute AppleScript with timeout handling using DispatchSemaphore
-//  TDD Phase: GREEN - Minimal implementation to pass all tests
+//  Purpose: Execute AppleScript with timeout handling using osascript CLI
+//  TDD Phase: GREEN - Fixed main thread deadlock by using osascript instead of NSAppleScript
+//
+//  FIX: NSAppleScript with DispatchSemaphore caused main thread deadlock when called from
+//  @MainActor context. osascript CLI runs as a separate process, avoiding this issue.
 //
 
 import Foundation
-import Carbon
 
-/// Real AppleScript executor using NSAppleScript with timeout handling
-/// Uses DispatchSemaphore for efficient timeout (not busy-wait)
+/// Real AppleScript executor using osascript CLI with timeout handling
+/// Uses Process for execution to avoid main thread deadlock issues with NSAppleScript
 final class RealAppleScriptExecutor: AppleScriptExecuting {
 
     // MARK: - AppleScriptExecuting Protocol
 
-    /// Execute AppleScript with timeout
-    /// Uses DispatchSemaphore for efficient timeout handling (not busy-wait)
+    /// Execute AppleScript with timeout using osascript CLI
+    /// Uses Process to avoid main thread deadlock (NSAppleScript + semaphore can deadlock on main thread)
     /// - Parameters:
     ///   - script: AppleScript code to execute
     ///   - timeout: Maximum time to wait for script completion
@@ -26,71 +28,79 @@ final class RealAppleScriptExecutor: AppleScriptExecuting {
     func execute(script: String, timeout: TimeInterval) throws -> AppleScriptResult {
         let start = Date()
 
-        // Semaphore for timeout handling
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        // Start the process
+        do {
+            try process.run()
+        } catch {
+            throw AppleScriptError.executionFailed(exitCode: -1, stderr: "Failed to launch osascript: \(error.localizedDescription)")
+        }
+
+        // Wait with timeout using a background thread
         let semaphore = DispatchSemaphore(value: 0)
+        var processTerminated = false
 
-        // Result storage (thread-safe via semaphore)
-        var scriptOutput: String = ""
-        var scriptError: String = ""
-        var exitCode: Int = 0
-        var executionError: AppleScriptError?
-
-        // Execute on background queue
         DispatchQueue.global(qos: .userInitiated).async {
-            let appleScript = NSAppleScript(source: script)
-
-            var errorDict: NSDictionary?
-            let result = appleScript?.executeAndReturnError(&errorDict)
-
-            if let error = errorDict {
-                // Extract error information
-                let errorMessage = error[NSAppleScript.errorMessage] as? String ?? "Unknown error"
-                let errorNumber = error[NSAppleScript.errorNumber] as? Int ?? -1
-
-                scriptError = errorMessage
-                exitCode = errorNumber
-
-                // Check for TCC errors (error -1743)
-                if errorNumber == -1743 ||
-                   errorMessage.lowercased().contains("not authorized") ||
-                   errorMessage.lowercased().contains("not allowed") {
-                    executionError = .permissionDenied
-                } else if errorMessage.lowercased().contains("syntax error") ||
-                          errorMessage.lowercased().contains("expected") {
-                    executionError = .syntaxError
-                } else {
-                    executionError = .executionFailed(exitCode: errorNumber, stderr: errorMessage)
-                }
-            } else if let result = result {
-                // Success - extract string result
-                scriptOutput = result.stringValue ?? ""
-                exitCode = 0
-            }
-
+            process.waitUntilExit()
+            processTerminated = true
             semaphore.signal()
         }
 
-        // Wait for completion or timeout using DispatchSemaphore
         let deadline = DispatchTime.now() + timeout
         let waitResult = semaphore.wait(timeout: deadline)
 
         let duration = Date().timeIntervalSince(start)
 
-        // Check if timed out
+        // Handle timeout
         if waitResult == .timedOut {
+            if process.isRunning {
+                process.terminate()
+            }
             throw AppleScriptError.timeout
         }
 
-        // Check for execution error
-        if let error = executionError {
-            throw error
+        // Read stdout and stderr
+        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+
+        let stdout = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let stderr = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        let exitCode = Int(process.terminationStatus)
+
+        // Check for errors
+        if exitCode != 0 {
+            // Check for TCC permission errors
+            if stderr.contains("-1743") ||
+               stderr.lowercased().contains("not authorized") ||
+               stderr.lowercased().contains("not allowed") ||
+               stderr.contains("System Events got an error") && stderr.contains("is not allowed") {
+                throw AppleScriptError.permissionDenied
+            }
+
+            // Check for syntax errors
+            if stderr.lowercased().contains("syntax error") ||
+               stderr.lowercased().contains("expected") && stderr.lowercased().contains("but found") {
+                throw AppleScriptError.syntaxError
+            }
+
+            // General execution failure
+            throw AppleScriptError.executionFailed(exitCode: exitCode, stderr: stderr)
         }
 
         // Success
         return AppleScriptResult(
             exitCode: exitCode,
-            stdout: scriptOutput,
-            stderr: scriptError,
+            stdout: stdout,
+            stderr: stderr,
             duration: duration
         )
     }
