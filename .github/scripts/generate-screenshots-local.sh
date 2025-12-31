@@ -254,34 +254,112 @@ cleanup_simulators() {
 }
 
 clean_screenshot_directories() {
+    local platform="${1:-all}"
+
     log_header "Cleaning Screenshot Directories"
+    log_info "Platform: ${platform}"
+    log_info "Removing old screenshots for selected platform only..."
 
-    log_info "Removing old screenshots to prevent stale files..."
+    local compat_dir="${PROJECT_ROOT}/fastlane/screenshots_compat"
+    local mac_dir="${PROJECT_ROOT}/fastlane/screenshots/mac"
+    local watch_dir="${PROJECT_ROOT}/fastlane/screenshots/watch"
+    local watch_normalized_dir="${PROJECT_ROOT}/fastlane/screenshots/watch_normalized"
+    local framed_dir="${PROJECT_ROOT}/fastlane/screenshots_framed"
 
-    # Clean screenshots_compat (iPhone/iPad framed output)
-    if [[ -d "${PROJECT_ROOT}/fastlane/screenshots_compat" ]]; then
-        rm -rf "${PROJECT_ROOT}/fastlane/screenshots_compat"
-        log_info "Cleaned: fastlane/screenshots_compat/"
-    fi
+    case "${platform}" in
+        iphone)
+            # Clean only iPhone screenshots from screenshots_compat/
+            log_info "Cleaning iPhone screenshots..."
+            for locale_dir in "${compat_dir}"/*/; do
+                if [[ -d "${locale_dir}" ]]; then
+                    # Remove files matching iPhone pattern
+                    find "${locale_dir}" -name "iPhone*" -type f -delete 2>/dev/null || true
+                    local locale_name
+                    locale_name="$(basename "${locale_dir}")"
+                    log_info "Cleaned: fastlane/screenshots_compat/${locale_name}/iPhone*.png"
+                fi
+            done
+            # Clean raw iPhone screenshots
+            for locale in en-US fi; do
+                rm -rf "${PROJECT_ROOT}/fastlane/screenshots/${locale}/iPhone"* 2>/dev/null || true
+            done
+            ;;
+        ipad)
+            # Clean only iPad screenshots from screenshots_compat/
+            log_info "Cleaning iPad screenshots..."
+            for locale_dir in "${compat_dir}"/*/; do
+                if [[ -d "${locale_dir}" ]]; then
+                    # Remove files matching iPad pattern
+                    find "${locale_dir}" -name "iPad*" -type f -delete 2>/dev/null || true
+                    local locale_name
+                    locale_name="$(basename "${locale_dir}")"
+                    log_info "Cleaned: fastlane/screenshots_compat/${locale_name}/iPad*.png"
+                fi
+            done
+            # Clean raw iPad screenshots
+            for locale in en-US fi; do
+                rm -rf "${PROJECT_ROOT}/fastlane/screenshots/${locale}/iPad"* 2>/dev/null || true
+            done
+            ;;
+        watch)
+            # Clean watch directories only
+            log_info "Cleaning Watch screenshots..."
+            if [[ -d "${watch_dir}" ]]; then
+                rm -rf "${watch_dir}"
+                log_info "Cleaned: fastlane/screenshots/watch/"
+            fi
+            if [[ -d "${watch_normalized_dir}" ]]; then
+                rm -rf "${watch_normalized_dir}"
+                log_info "Cleaned: fastlane/screenshots/watch_normalized/"
+            fi
+            ;;
+        macos)
+            # Clean macOS directory only
+            log_info "Cleaning macOS screenshots..."
+            if [[ -d "${mac_dir}" ]]; then
+                rm -rf "${mac_dir}"
+                log_info "Cleaned: fastlane/screenshots/mac/"
+            fi
+            ;;
+        all)
+            # Clean all screenshot directories (original behavior)
+            log_info "Cleaning ALL screenshot directories..."
 
-    # Clean watch_normalized
-    if [[ -d "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized" ]]; then
-        rm -rf "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized"
-        log_info "Cleaned: fastlane/screenshots/watch_normalized/"
-    fi
+            # Clean screenshots_compat (iPhone/iPad framed output)
+            if [[ -d "${compat_dir}" ]]; then
+                rm -rf "${compat_dir}"
+                log_info "Cleaned: fastlane/screenshots_compat/"
+            fi
 
-    # Clean framed screenshots temp directory
-    if [[ -d "${PROJECT_ROOT}/fastlane/screenshots_framed" ]]; then
-        rm -rf "${PROJECT_ROOT}/fastlane/screenshots_framed"
+            # Clean watch directories
+            if [[ -d "${watch_normalized_dir}" ]]; then
+                rm -rf "${watch_normalized_dir}"
+                log_info "Cleaned: fastlane/screenshots/watch_normalized/"
+            fi
+            if [[ -d "${watch_dir}" ]]; then
+                rm -rf "${watch_dir}"
+                log_info "Cleaned: fastlane/screenshots/watch/"
+            fi
+
+            # Clean macOS directory
+            if [[ -d "${mac_dir}" ]]; then
+                rm -rf "${mac_dir}"
+                log_info "Cleaned: fastlane/screenshots/mac/"
+            fi
+
+            # Clean raw screenshot directories
+            rm -rf "${PROJECT_ROOT}/fastlane/screenshots/en-US" 2>/dev/null || true
+            rm -rf "${PROJECT_ROOT}/fastlane/screenshots/fi" 2>/dev/null || true
+            ;;
+    esac
+
+    # Always clean framed screenshots temp directory
+    if [[ -d "${framed_dir}" ]]; then
+        rm -rf "${framed_dir}"
         log_info "Cleaned: fastlane/screenshots_framed/"
     fi
 
-    # Clean raw screenshot directories
-    rm -rf "${PROJECT_ROOT}/fastlane/screenshots/en-US" 2>/dev/null || true
-    rm -rf "${PROJECT_ROOT}/fastlane/screenshots/fi" 2>/dev/null || true
-    rm -rf "${PROJECT_ROOT}/fastlane/screenshots/watch" 2>/dev/null || true
-
-    log_success "Screenshot directories cleaned"
+    log_success "Screenshot directories cleaned for platform: ${platform}"
     echo ""
 }
 
@@ -835,8 +913,8 @@ main() {
         # Clean simulator state to prevent hangs from previous runs
         cleanup_simulators
 
-        # Clean old screenshots before generating new ones
-        clean_screenshot_directories
+        # Clean old screenshots before generating new ones (platform-specific)
+        clean_screenshot_directories "${PLATFORM}"
     fi
 
     # Generate screenshots based on platform
