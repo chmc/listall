@@ -11,7 +11,8 @@ final class ListAllUITests_Screenshots: XCTestCase {
     private let launchTimeout: TimeInterval = 60
 
     /// Timeout for UI elements to appear after launch
-    private let elementTimeout: TimeInterval = 15
+    /// iPad simulators need significantly more time, especially with locale switching
+    private let elementTimeout: TimeInterval = 30
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -129,13 +130,28 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // Wait for UI to be ready (dynamic wait instead of fixed sleep)
         _ = waitForUIReady()
 
-        // Additional wait for data to load into list
-        // Look for any cell which indicates data is loaded
+        // CRITICAL: Wait for data to load into list - MUST find cells before taking screenshot
+        // iPad + Finnish locale combination is particularly slow due to locale switching overhead
+        // Without this check, we get black screenshots
         let anyCell = app.cells.firstMatch
+
+        // First attempt with standard timeout
         if anyCell.waitForExistence(timeout: elementTimeout) {
             print("✅ Data loaded - found list cells")
         } else {
-            print("⚠️ No cells found, but proceeding with screenshot")
+            // iPad may need extra time - wait longer and check again
+            print("⚠️ No cells found on first attempt, waiting additional time for iPad/locale...")
+            sleep(5)
+
+            if anyCell.waitForExistence(timeout: elementTimeout) {
+                print("✅ Data loaded on retry - found list cells")
+            } else {
+                // Final check - if still no cells, fail the test rather than capture black screenshot
+                print("❌ CRITICAL: No cells found after extended wait - UI did not render")
+                print("❌ This would result in a black/empty screenshot")
+                XCTFail("List cells not found - data did not load in time. Screenshot would be black.")
+                return
+            }
         }
 
         // Screenshot: Main screen with hardcoded test lists
