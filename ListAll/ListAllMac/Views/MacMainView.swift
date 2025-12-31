@@ -643,7 +643,7 @@ private struct MacListDetailView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            TextField("Search items...", text: $viewModel.searchText)
+            TextField(String(localized: "Search items") + "...", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .frame(width: 150)
                 .focused($isSearchFieldFocused)
@@ -1297,7 +1297,7 @@ private struct MacAddItemSheet: View {
                 }
 
                 HStack {
-                    Text("Quantity:")
+                    Text("\(String(localized: "Quantity")):")
                     Stepper(value: $quantity, in: 1...999) {
                         Text("\(quantity)")
                             .frame(width: 40)
@@ -1305,7 +1305,7 @@ private struct MacAddItemSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Notes (optional):")
+                    Text("\(String(localized: "Notes")) (\(String(localized: "optional"))):")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     TextEditor(text: $description)
@@ -1438,7 +1438,7 @@ private struct MacEditItemSheet: View {
                 }
 
                 HStack {
-                    Text("Quantity:")
+                    Text("\(String(localized: "Quantity")):")
                     Stepper(value: $quantity, in: 1...999) {
                         Text("\(quantity)")
                             .frame(width: 40)
@@ -1446,7 +1446,7 @@ private struct MacEditItemSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Notes (optional):")
+                    Text("\(String(localized: "Notes")) (\(String(localized: "optional"))):")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     TextEditor(text: $description)
