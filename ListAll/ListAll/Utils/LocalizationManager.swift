@@ -59,27 +59,55 @@ class LocalizationManager: ObservableObject {
             }
         }
 
-        // For UI tests: Check AppleLanguages which is set by ListAllApp.init() for Fastlane screenshots
-        // This must be checked FIRST before checking saved language preference
-        // IMPORTANT: FASTLANE_LANGUAGE environment variable is NOT accessible to the app process
-        // (xcodebuild env vars don't pass through), so we check AppleLanguages that was already set
-        if isUITesting,
-           let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-           let firstLanguage = appleLanguages.first {
-            print("🧪 UI Test mode: AppleLanguages detected: \(appleLanguages)")
-            if firstLanguage.hasPrefix("fi") {
-                self.currentLanguage = .finnish
-                print("🧪 Set currentLanguage to Finnish from AppleLanguages")
-                // Apply the language immediately
-                applyLanguage(currentLanguage)
-                return
-            } else if firstLanguage.hasPrefix("en") {
-                self.currentLanguage = .english
-                print("🧪 Set currentLanguage to English from AppleLanguages")
-                // Apply the language immediately
-                applyLanguage(currentLanguage)
-                return
+        // For UI tests: Check for language from launch arguments
+        // MacSnapshotHelper sets: -AppleLanguages (fi) as launch arguments
+        // Foundation SHOULD automatically map -Key Value arguments to UserDefaults,
+        // but on macOS this doesn't always work reliably.
+        // So we also parse ProcessInfo.processInfo.arguments directly.
+        if isUITesting {
+            let arguments = ProcessInfo.processInfo.arguments
+            print("🧪 UI Test mode: Launch arguments: \(arguments)")
+
+            // First try: Check UserDefaults (works when Foundation auto-parses launch args)
+            if let appleLanguages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+               let firstLanguage = appleLanguages.first {
+                print("🧪 AppleLanguages from UserDefaults: \(appleLanguages)")
+                if firstLanguage.hasPrefix("fi") {
+                    self.currentLanguage = .finnish
+                    print("🧪 Set currentLanguage to Finnish from UserDefaults AppleLanguages")
+                    applyLanguage(currentLanguage)
+                    return
+                } else if firstLanguage.hasPrefix("en") {
+                    self.currentLanguage = .english
+                    print("🧪 Set currentLanguage to English from UserDefaults AppleLanguages")
+                    applyLanguage(currentLanguage)
+                    return
+                }
             }
+
+            // Fallback: Parse -AppleLanguages directly from command line arguments
+            // Format: -AppleLanguages (fi) or -AppleLanguages "(fi)"
+            if let appleLanguagesIndex = arguments.firstIndex(of: "-AppleLanguages"),
+               appleLanguagesIndex + 1 < arguments.count {
+                let languageArg = arguments[appleLanguagesIndex + 1]
+                // Extract language code from formats like "(fi)", "('fi')", "(en)", etc.
+                let cleanedArg = languageArg.trimmingCharacters(in: CharacterSet(charactersIn: "()\"'"))
+                print("🧪 AppleLanguages from ProcessInfo: \(languageArg) -> \(cleanedArg)")
+
+                if cleanedArg.hasPrefix("fi") {
+                    self.currentLanguage = .finnish
+                    print("🧪 Set currentLanguage to Finnish from ProcessInfo arguments")
+                    applyLanguage(currentLanguage)
+                    return
+                } else if cleanedArg.hasPrefix("en") {
+                    self.currentLanguage = .english
+                    print("🧪 Set currentLanguage to English from ProcessInfo arguments")
+                    applyLanguage(currentLanguage)
+                    return
+                }
+            }
+
+            print("🧪 WARNING: Could not detect language from launch arguments, defaulting to English")
         }
 
         // Load saved language or default to English

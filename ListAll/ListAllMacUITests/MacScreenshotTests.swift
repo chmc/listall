@@ -77,6 +77,11 @@ final class MacScreenshotTests: XCTestCase {
     /// Launch app with retry logic to handle "Failed to terminate" errors
     /// Note: maxRetries=2 gives 2×60s=120s budget, leaving 180s for test execution within 300s timeout
     private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) -> Bool {
+        // CRITICAL: Preserve existing launch arguments set by MacSnapshotHelper
+        // MacSnapshotHelper.setupSnapshot() sets -AppleLanguages for localization
+        // We need to append our test arguments, not replace them!
+        let baseArguments = app.launchArguments
+
         for attempt in 1...maxRetries {
             // Brief pause before retry attempts to let system settle
             if attempt > 1 {
@@ -86,8 +91,8 @@ final class MacScreenshotTests: XCTestCase {
                 // The app instance from setUpWithError() maintains authorization across launches
             }
 
-            // Clear and set launch arguments for this attempt
-            app.launchArguments = arguments
+            // Set launch arguments: preserve MacSnapshotHelper args + test-specific args
+            app.launchArguments = baseArguments + arguments
 
             print("🚀 Launch attempt \(attempt)/\(maxRetries)...")
 

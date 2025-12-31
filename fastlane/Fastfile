@@ -3777,19 +3777,25 @@ platform :ios do
     # No simulator management needed - runs natively
 
     locales = %w[en-US fi]
-    # MacSnapshotHelper runs in a sandboxed container, so screenshots are saved to:
-    # ~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/Library/Caches/tools.fastlane/screenshots/
-    # We also need to write language.txt/locale.txt to the container so MacSnapshotHelper can read them
+    # macOS screenshots use two cache locations:
+    # 1. Container path: ~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/Library/Caches/tools.fastlane/
+    #    - Used for screenshot output when running in sandboxed environment
+    # 2. Home path: ~/Library/Caches/tools.fastlane/
+    #    - MacSnapshotHelper.getCacheDirectory() uses NSHomeDirectory() which returns real HOME
+    #    - language.txt/locale.txt MUST be written here for localization to work
     container_base = File.expand_path("~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data")
-    fastlane_cache_dir = File.join(container_base, "Library/Caches/tools.fastlane")
-    screenshots_cache_dir = File.join(fastlane_cache_dir, "screenshots")
+    container_cache_dir = File.join(container_base, "Library/Caches/tools.fastlane")
+    screenshots_cache_dir = File.join(container_cache_dir, "screenshots")
+    # CRITICAL: MacSnapshotHelper reads from HOME directory, not container
+    home_cache_dir = File.expand_path("~/Library/Caches/tools.fastlane")
     mac_output_dir = File.expand_path("screenshots/mac", __dir__)
 
     # Clean previous screenshots
     FileUtils.rm_rf(mac_output_dir) if Dir.exist?(mac_output_dir)
     FileUtils.mkdir_p(mac_output_dir)
-    FileUtils.mkdir_p(fastlane_cache_dir)
+    FileUtils.mkdir_p(container_cache_dir)
     FileUtils.mkdir_p(screenshots_cache_dir)
+    FileUtils.mkdir_p(home_cache_dir)
 
     # Expected screenshots per locale
     expected_per_locale = 4  # 01_MainWindow, 02_ListDetailView, 03_ItemEditSheet, 04_SettingsWindow
@@ -3805,9 +3811,20 @@ platform :ios do
       FileUtils.mkdir_p(locale_output_dir)
 
       # Write language and locale files for MacSnapshotHelper
-      # NOTE: MacSnapshotHelper reads from cacheDirectory (fastlane_cache_dir), not screenshotsDirectory
-      File.write(File.join(fastlane_cache_dir, "language.txt"), locale.split('-').first)
-      File.write(File.join(fastlane_cache_dir, "locale.txt"), locale)
+      # CRITICAL: macOS XCUITest runner is sandboxed, so NSHomeDirectory() returns the CONTAINER path
+      # MacSnapshotHelper.getCacheDirectory() uses NSHomeDirectory(), which returns:
+      # ~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/
+      # So we MUST write to the CONTAINER path for localization to work!
+      language_code = locale.split('-').first
+
+      # Write to CONTAINER path (where MacSnapshotHelper actually reads from)
+      File.write(File.join(container_cache_dir, "language.txt"), language_code)
+      File.write(File.join(container_cache_dir, "locale.txt"), locale)
+      UI.message("📝 Set language=#{language_code}, locale=#{locale} in #{container_cache_dir}")
+
+      # Also write to home path for debugging/reference
+      File.write(File.join(home_cache_dir, "language.txt"), language_code)
+      File.write(File.join(home_cache_dir, "locale.txt"), locale)
 
       # Clean cache screenshots directory before test run (remove all Mac-*.png files)
       Dir.glob(File.join(screenshots_cache_dir, "Mac-*.png")).each { |f| FileUtils.rm_f(f) }
