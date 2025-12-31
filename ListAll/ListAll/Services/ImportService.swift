@@ -162,12 +162,18 @@ class ImportService: ObservableObject {
     // Lazy initialization to avoid accessing Core Data during unit tests
     // On unsigned macOS builds, eager DataRepository access crashes
     // because App Groups require sandbox permissions
-    private lazy var dataRepository: DataRepository = DataRepository()
+    private var dataRepository: DataRepository
 
     /// Callback for tracking import progress
     var progressHandler: ((ImportProgress) -> Void)?
 
     init() {
+        self.dataRepository = DataRepository()
+    }
+
+    /// Internal initializer for testing with a custom DataRepository
+    init(dataRepository: DataRepository) {
+        self.dataRepository = dataRepository
     }
     
     // MARK: - Auto-detect Format Import

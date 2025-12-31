@@ -78,13 +78,18 @@ class SharingService: ObservableObject {
     @Published var isSharing = false
     @Published var shareError: String?
 
-    // Lazy initialization to avoid accessing Core Data during unit tests
-    // On unsigned macOS builds, eager DataRepository access crashes
-    // because App Groups require sandbox permissions
-    private lazy var dataRepository: DataRepository = DataRepository()
-    private lazy var exportService: ExportService = ExportService()
+    private var dataRepository: DataRepository
+    private var exportService: ExportService
 
     init() {
+        self.dataRepository = DataRepository()
+        self.exportService = ExportService()
+    }
+
+    /// Internal initializer for testing with custom dependencies
+    init(dataRepository: DataRepository, exportService: ExportService) {
+        self.dataRepository = dataRepository
+        self.exportService = exportService
     }
     
     // MARK: - Share Single List

@@ -38,17 +38,13 @@ struct ListAllMacApp: App {
             return
         }
 
-        // CRITICAL: Force app activation during UI tests BEFORE any other initialization
+        // CRITICAL: Force app activation during UI tests
         // macOS UI tests launch the app in background by default, causing test timeouts
-        // We must activate immediately in init() before app.launch() times out
+        // NOTE: We cannot call NSApp.setActivationPolicy() here in init() because
+        // NSApplication may not be fully initialized yet. This causes assertion failures.
+        // The activation is handled in AppDelegate.applicationDidFinishLaunching() instead.
         if ProcessInfo.processInfo.arguments.contains("UITEST_MODE") {
-            print("🧪 ListAllMacApp.init(): UI test mode detected - will activate to foreground")
-            // Schedule activation for next runloop to ensure NSApplication is ready
-            DispatchQueue.main.async {
-                print("🧪 Activating app to foreground for UI tests...")
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                print("🧪 App activation called")
-            }
+            print("🧪 ListAllMacApp.init(): UI test mode detected - activation will happen in AppDelegate")
         }
 
         // CRITICAL: Force CoreDataManager initialization FIRST to ensure UITEST_MODE is detected
@@ -268,10 +264,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         requestNotificationPermissions()
 
         // WORKAROUND: macOS Tahoe (26.x) SwiftUI WindowGroup bug
-        // SwiftUI may not create initial window on app launch. Check after a delay
-        // and create a fallback window if needed.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.ensureMainWindowExists()
+        // SwiftUI may not create initial window on app launch.
+        // For UI tests, create window IMMEDIATELY to avoid launch timeout.
+        // For normal use, wait 1 second to give SwiftUI a chance.
+        if isUITest {
+            print("🧪 AppDelegate: UI test mode - creating window immediately")
+            ensureMainWindowExists()
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.ensureMainWindowExists()
+            }
         }
     }
 

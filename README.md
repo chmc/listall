@@ -84,6 +84,23 @@ To test Fastlane lanes locally (beta uploads, App Store Connect authentication, 
 
 ## App Store Release
 
+### Prerequisites
+
+Local screenshot generation requires:
+
+**Simulator runtimes** (not bundled with Xcode 26+):
+- **iOS 18.1** — for iPhone 16 Pro Max and iPad Pro 13-inch (M4)
+- **watchOS 11.1** — for Apple Watch Series 10 (46mm)
+
+Install via **Xcode → Settings → Components**.
+
+**ImageMagick** (for screenshot normalization):
+```bash
+brew install imagemagick
+```
+
+### Generate Screenshots
+
 1. **Generate screenshots locally:**
    ```bash
    # Generate all platforms (iPhone, iPad, Watch, macOS)

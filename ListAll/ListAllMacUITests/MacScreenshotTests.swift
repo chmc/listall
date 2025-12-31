@@ -40,10 +40,8 @@ final class MacScreenshotTests: XCTestCase {
         print("⏳ Waiting 3 seconds for system to stabilize before test setup...")
         sleep(3)
 
-        // On macOS, explicitly set the bundle identifier to ensure correct app launches
-        // This helps XCUITest find the right app more reliably
-        // CRITICAL: Use XCUIApplication() default initializer to maintain authorization
-        // across test runs. Bundle identifier is resolved automatically.
+        // On macOS, XCUIApplication() uses the test host's bundle identifier
+        // which automatically targets the app under test
         app = XCUIApplication()
 
         // macOS UI tests need more time due to app activation and window management
