@@ -61,8 +61,8 @@ def prepare_screenshots_for_delivery(compat_path)
     end
   end
 
-  # Also copy macOS screenshots from mac_normalized directory
-  macos_src_dir = File.expand_path("screenshots/mac_normalized", __dir__)
+  # Also copy macOS screenshots from mac/processed directory
+  macos_src_dir = File.expand_path("screenshots/mac/processed", __dir__)
   if Dir.exist?(macos_src_dir)
     locales.each do |locale|
       macos_locale_dir = File.join(macos_src_dir, locale)
@@ -623,16 +623,16 @@ platform :ios do
       in_house: false
     )
 
-    # Path to normalized macOS screenshots (exact App Store dimensions)
-    # macOS screenshots are generated locally via screenshots_macos_* lanes
-    screenshots_path = File.expand_path("../screenshots/mac_normalized", __dir__)
+    # Path to processed macOS screenshots (2880x1800 with gradient background)
+    # macOS screenshots are generated locally via generate-screenshots-local.sh macos
+    screenshots_path = File.expand_path("../screenshots/mac/processed", __dir__)
 
-    # Verify normalized screenshots exist
+    # Verify processed screenshots exist
     unless Dir.exist?(screenshots_path)
-      UI.user_error!("macOS screenshots not found at #{screenshots_path}. Run screenshots_macos_normalize first.")
+      UI.user_error!("macOS screenshots not found at #{screenshots_path}. Run '.github/scripts/generate-screenshots-local.sh macos' first.")
     end
 
-    UI.message("📸 Using normalized macOS screenshots from: #{screenshots_path}")
+    UI.message("📸 Using processed macOS screenshots from: #{screenshots_path}")
     UI.message("📦 Creating/updating macOS App Store version: #{version}")
 
     # Code signing for macOS App Store distribution
