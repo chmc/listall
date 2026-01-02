@@ -164,8 +164,13 @@ process_single_screenshot() {
     # Create temp file for intermediate rounded corners image
     # NOTE: Two-step process required because nested composition with DstIn
     #       causes colorspace issues in ImageMagick when combined with gradient
+    # NOTE: macOS mktemp doesn't handle extensions in pattern, so create without
+    #       extension first, then rename
+    local temp_base
     local temp_rounded
-    temp_rounded=$(mktemp /tmp/macos_rounded_XXXXXX.png)
+    temp_base=$(mktemp /tmp/macos_rounded_XXXXXX)
+    temp_rounded="${temp_base}.png"
+    mv "${temp_base}" "${temp_rounded}"
 
     # Calculate proportional corner radius based on window width
     # This ensures consistent visual corner appearance after scaling
