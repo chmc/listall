@@ -90,7 +90,9 @@ test_script_checks_imagemagick() {
 test_rejects_missing_input_dir() {
     # Script must exist first
     [[ -x "${SCRIPT_UNDER_TEST}" ]] || return 1
-    ! "${SCRIPT_UNDER_TEST}" 2>/dev/null
+    # Use an explicit non-existent path since script has defaults
+    # that may exist in the project directory
+    ! "${SCRIPT_UNDER_TEST}" -i "/nonexistent/test/path/for/missing/dir" 2>/dev/null
 }
 
 test_rejects_nonexistent_input_dir() {
@@ -106,7 +108,11 @@ test_handles_empty_input_dir() {
 
     mkdir -p "${temp_dir}/en-US"
     # Should warn but not error on empty directory
-    "${SCRIPT_UNDER_TEST}" -i "${temp_dir}" 2>&1 | grep -qi "warning\|no.*png\|empty"
+    # Capture output to variable to avoid SIGPIPE issues with grep -q
+    # (grep -q exits immediately after match, causing SIGPIPE to producer)
+    local output
+    output=$("${SCRIPT_UNDER_TEST}" -i "${temp_dir}" 2>&1) || true
+    echo "${output}" | grep -qi "warning\|no.*png\|empty"
 }
 
 test_discovers_locales_dynamically() {
