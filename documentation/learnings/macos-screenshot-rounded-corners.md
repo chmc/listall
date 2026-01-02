@@ -2,7 +2,7 @@
 
 **Date:** January 2, 2026
 **Phase:** Phase 1 Enhancement - Core Processing
-**Updated:** January 2, 2026 (corner radius fix)
+**Updated:** January 2, 2026 (proportional corner radius)
 
 ## Problem
 
@@ -24,6 +24,47 @@ Added rounded corner masking with anti-aliasing to the `process_single_screensho
 1. **Increased corner radius from 10px to 22px** - Based on pixel analysis showing 16-21px of visible desktop
 2. **Added anti-aliasing** - Using `-blur 0x0.5 -level 50%,100%` for smooth edge transitions
 3. **Documentation of squircle vs circle difference** - ImageMagick uses circular arcs, macOS uses squircles
+4. **Proportional corner radius** - Scale radius based on window width to ensure consistent visual appearance
+
+### Proportional Corner Radius Fix
+
+A subsequent issue: the fixed 22px radius worked for 800px-wide windows but over-cropped smaller windows like Settings (482px).
+
+**The problem:**
+| Window | Width | Fixed 22px Radius | After Upscaling |
+|--------|-------|-------------------|-----------------|
+| Main | 800px | 22px | ~51px (6.4% of width) |
+| Settings | 482px | 22px | ~86px (17.8% of width) |
+
+The Settings window appeared heavily cropped because the same radius, when applied before scaling, resulted in proportionally larger corners after upscaling.
+
+**The solution:** Scale corner radius based on window width:
+
+```bash
+# Constants
+readonly MACOS_CORNER_RADIUS_BASE=22       # Radius for 800px-wide window
+readonly MACOS_CORNER_RADIUS_REF_WIDTH=800 # Reference width
+readonly MACOS_CORNER_RADIUS_MIN=8         # Minimum radius
+
+# Calculate proportional radius
+calculate_corner_radius() {
+    local input_width="$1"
+    local radius
+    radius=$((MACOS_CORNER_RADIUS_BASE * input_width / MACOS_CORNER_RADIUS_REF_WIDTH))
+    if [[ "${radius}" -lt "${MACOS_CORNER_RADIUS_MIN}" ]]; then
+        radius="${MACOS_CORNER_RADIUS_MIN}"
+    fi
+    echo "${radius}"
+}
+```
+
+**Result after fix:**
+| Window | Width | Calculated Radius | After Upscaling |
+|--------|-------|-------------------|-----------------|
+| Main | 800px | 22px | ~51px |
+| Settings | 482px | 13px | ~51px |
+
+Both windows now have consistent visual corner appearance after processing
 
 ## Key Technical Details
 
@@ -144,6 +185,10 @@ readonly MACOS_CORNER_RADIUS=22  # macOS window corner radius (measured: 16-21px
 5. **Two-step is more reliable:** While single-command ImageMagick operations are elegant, they can have subtle bugs. Temp files add minimal overhead but greatly improve reliability.
 
 6. **Test visually at actual size:** Corner masking issues may not be visible in thumbnails. Always verify at 100% zoom.
+
+7. **Consider scaling effects:** When applying effects before scaling, the effect magnitude changes with the scale factor. Smaller images scaled up more will have proportionally larger effects. Either apply effects after scaling, or scale the effect parameters inversely.
+
+8. **Test with varied inputs:** A parameter tuned for one input size may not work for all sizes. Test with the smallest and largest expected inputs.
 
 ## Files Modified
 
