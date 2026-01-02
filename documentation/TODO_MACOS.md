@@ -25,8 +25,8 @@ This plan addresses the issue that current macOS screenshots do not meet Apple A
 | Phase | Name | Description | Status |
 |-------|------|-------------|--------|
 | 0 | Test Infrastructure | Create test file with 15 test cases (TDD RED) | COMPLETED |
-| 1 | Core Processing | Helper library with single image processing | NOT STARTED |
-| 2 | Batch Processing | Main script with all locales | NOT STARTED |
+| 1 | Core Processing | Helper library with single image processing | COMPLETED |
+| 2 | Batch Processing | Main script with all locales | COMPLETED |
 | 3 | Integration | Integration with generate-screenshots-local.sh | NOT STARTED |
 | 4 | Validation & CI | Validation updates, optional CI job | NOT STARTED |
 
@@ -718,7 +718,7 @@ open /tmp/phase1_test.png
 
 ---
 
-# Phase 2: Batch Processing [NOT STARTED]
+# Phase 2: Batch Processing [COMPLETED]
 
 ## Goal
 
