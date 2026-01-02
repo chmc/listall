@@ -17,6 +17,7 @@ readonly MACOS_SHADOW_OPACITY=50
 readonly MACOS_SHADOW_BLUR=30
 readonly MACOS_SHADOW_OFFSET_Y=15
 readonly MACOS_MAX_FILE_SIZE=10485760  # 10MB in bytes
+readonly MACOS_CORNER_RADIUS=10        # macOS window corner radius in pixels (standard: 10pt)
 
 #------------------------------------------------------------------------------
 # Logging Functions
@@ -131,12 +132,38 @@ process_single_screenshot() {
     # Create output directory if needed
     mkdir -p "$(dirname "${output_file}")"
 
-    # Process with ImageMagick
+    # Get input image dimensions for rounded corner mask
+    local input_dims
+    input_dims=$(magick identify -format "%wx%h" "${input_file}")
+    local input_width="${input_dims%x*}"
+    local input_height="${input_dims#*x}"
+
+    # Create temp file for intermediate rounded corners image
+    # NOTE: Two-step process required because nested composition with DstIn
+    #       causes colorspace issues in ImageMagick when combined with gradient
+    local temp_rounded
+    temp_rounded=$(mktemp /tmp/macos_rounded_XXXXXX.png)
+
+    # Step 1: Apply rounded corner mask to input image (macOS windows have rounded corners)
+    if ! magick "${input_file}" \
+        \( -size "${input_width}x${input_height}" xc:none -fill white \
+           -draw "roundrectangle 0,0,$((input_width-1)),$((input_height-1)),${MACOS_CORNER_RADIUS},${MACOS_CORNER_RADIUS}" \
+        \) -alpha set -compose DstIn -composite \
+        "${temp_rounded}"; then
+        rm -f "${temp_rounded}"
+        log_error "Failed to apply rounded corners for: ${input_file}"
+        return 1
+    fi
+
+    # Step 2: Create final output
+    # - Scale to fit within max bounds (preserving aspect ratio)
+    # - Add drop shadow
+    # - Composite onto radial gradient background
     # NOTE: -resize "WxH>" fits within bounds while preserving aspect ratio
     #       The > flag prevents upscaling if input is smaller
     if ! magick -size "${MACOS_CANVAS_WIDTH}x${MACOS_CANVAS_HEIGHT}" -depth 8 \
         radial-gradient:"${MACOS_GRADIENT_CENTER}-${MACOS_GRADIENT_EDGE}" \
-        \( "${input_file}" \
+        \( "${temp_rounded}" \
             -resize "${max_width}x${max_height}>" \
             \( +clone -background black \
                -shadow "${MACOS_SHADOW_OPACITY}x${MACOS_SHADOW_BLUR}+0+${MACOS_SHADOW_OFFSET_Y}" \) \
@@ -153,9 +180,13 @@ process_single_screenshot() {
         -colorspace sRGB \
         -define png:compression-level=9 \
         "${output_file}"; then
+        rm -f "${temp_rounded}"
         log_error "ImageMagick processing failed for: ${input_file}"
         return 1
     fi
+
+    # Clean up temp file
+    rm -f "${temp_rounded}"
 
     # Validate output was created
     if [[ ! -f "${output_file}" ]]; then
