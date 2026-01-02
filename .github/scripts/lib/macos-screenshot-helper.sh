@@ -12,7 +12,7 @@ readonly MACOS_CANVAS_WIDTH=2880
 readonly MACOS_CANVAS_HEIGHT=1800
 readonly MACOS_GRADIENT_CENTER="#2A5F6D"
 readonly MACOS_GRADIENT_EDGE="#0D1F26"
-readonly MACOS_SCALE_PERCENT=85
+readonly MACOS_SCALE_PERCENT=65
 readonly MACOS_SHADOW_OPACITY=50
 readonly MACOS_SHADOW_BLUR=30
 readonly MACOS_SHADOW_OFFSET_Y=15
@@ -164,11 +164,11 @@ process_single_screenshot() {
     # - Add drop shadow
     # - Composite onto radial gradient background
     # NOTE: -resize "WxH>" fits within bounds while preserving aspect ratio
-    #       The > flag prevents upscaling if input is smaller
+    #       No > flag - allows upscaling small windows to fill the canvas
     if ! magick -size "${MACOS_CANVAS_WIDTH}x${MACOS_CANVAS_HEIGHT}" -depth 8 \
         radial-gradient:"${MACOS_GRADIENT_CENTER}-${MACOS_GRADIENT_EDGE}" \
         \( "${temp_rounded}" \
-            -resize "${max_width}x${max_height}>" \
+            -resize "${max_width}x${max_height}" \
             \( +clone -background black \
                -shadow "${MACOS_SHADOW_OPACITY}x${MACOS_SHADOW_BLUR}+0+${MACOS_SHADOW_OFFSET_Y}" \) \
             +swap \
