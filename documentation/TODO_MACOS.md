@@ -24,7 +24,7 @@ This plan addresses the issue that current macOS screenshots do not meet Apple A
 
 | Phase | Name | Description | Status |
 |-------|------|-------------|--------|
-| 0 | Test Infrastructure | Create test file with 15 test cases (TDD RED) | NOT STARTED |
+| 0 | Test Infrastructure | Create test file with 15 test cases (TDD RED) | COMPLETED |
 | 1 | Core Processing | Helper library with single image processing | NOT STARTED |
 | 2 | Batch Processing | Main script with all locales | NOT STARTED |
 | 3 | Integration | Integration with generate-screenshots-local.sh | NOT STARTED |
@@ -32,7 +32,7 @@ This plan addresses the issue that current macOS screenshots do not meet Apple A
 
 ---
 
-# Phase 0: Test Infrastructure [NOT STARTED]
+# Phase 0: Test Infrastructure [COMPLETED]
 
 ## Goal
 
@@ -365,11 +365,11 @@ None - this is the RED phase. All 15 tests should FAIL.
 
 ## Acceptance Criteria
 
-- [ ] Test file exists at `.github/scripts/tests/test-process-macos-screenshots.sh`
-- [ ] Test file is executable (`chmod +x`)
-- [ ] Running tests shows **15/15 FAILURES** (RED phase verified)
-- [ ] `shellcheck` passes on test file with no errors
-- [ ] `.github/scripts/lib/` directory exists
+- [x] Test file exists at `.github/scripts/tests/test-process-macos-screenshots.sh`
+- [x] Test file is executable (`chmod +x`)
+- [x] Running tests shows **15/15 FAILURES** (RED phase verified)
+- [x] `shellcheck` passes on test file with no errors
+- [x] `.github/scripts/lib/` directory exists
 
 ## How to Verify Completion
 
