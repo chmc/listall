@@ -391,7 +391,7 @@ shellcheck .github/scripts/tests/test-process-macos-screenshots.sh
 
 ---
 
-# Phase 1: Core Processing [NOT STARTED]
+# Phase 1: Core Processing [COMPLETED]
 
 ## Goal
 
@@ -674,15 +674,15 @@ After this phase, these 4 tests should pass:
 
 ## Acceptance Criteria
 
-- [ ] `source lib/macos-screenshot-helper.sh` works without errors
-- [ ] `check_imagemagick` returns 0 when ImageMagick 7+ is installed
-- [ ] `process_single_screenshot input.png output.png` produces valid output
-- [ ] Output is exactly 2880x1800 pixels
-- [ ] Output has no alpha channel (RGB only)
-- [ ] Output has radial gradient background visible
-- [ ] Output has drop shadow below window
-- [ ] Output has window centered on canvas
-- [ ] `shellcheck` passes on helper file
+- [x] `source lib/macos-screenshot-helper.sh` works without errors
+- [x] `check_imagemagick` returns 0 when ImageMagick 7+ is installed
+- [x] `process_single_screenshot input.png output.png` produces valid output
+- [x] Output is exactly 2880x1800 pixels
+- [x] Output has no alpha channel (RGB only)
+- [x] Output has radial gradient background visible
+- [x] Output has drop shadow below window
+- [x] Output has window centered on canvas
+- [x] `shellcheck` passes on helper file
 
 ## How to Verify Completion
 
