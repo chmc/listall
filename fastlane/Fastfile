@@ -4077,10 +4077,10 @@ platform :ios do
       warnings << "⚠️  Watch screenshots directory not found: #{watch_dir}"
     end
 
-    # Check macOS normalized screenshots
+    # Check macOS processed screenshots
     # macOS screenshots should be exactly 2880x1800 (16:10 aspect ratio)
     macos_size = { width: 2880, height: 1800, tolerance: 0 }  # macOS Retina exact
-    macos_dir = File.expand_path("screenshots/mac_normalized", __dir__)
+    macos_dir = File.expand_path("screenshots/mac/processed", __dir__)
     if Dir.exist?(macos_dir)
       locales.each do |locale|
         locale_dir = File.join(macos_dir, locale)

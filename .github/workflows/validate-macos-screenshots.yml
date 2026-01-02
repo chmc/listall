@@ -1,0 +1,148 @@
+name: Validate macOS Screenshots
+
+on:
+  pull_request:
+    paths:
+      - 'fastlane/screenshots/mac/**'
+  push:
+    branches: [main]
+    paths:
+      - 'fastlane/screenshots/mac/**'
+
+# Cancel in-progress runs when new commits are pushed
+concurrency:
+  group: validate-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-macos-screenshots:
+    name: Validate macOS Screenshots
+    runs-on: macos-14
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ImageMagick
+        run: brew install imagemagick
+
+      - name: Check processed screenshots exist
+        run: |
+          set -e
+          if [ ! -d "fastlane/screenshots/mac/processed" ]; then
+            echo "::error::macOS processed screenshots not found."
+            echo "::error::Run '.github/scripts/generate-screenshots-local.sh macos' locally first."
+            exit 1
+          fi
+
+          # Count processed screenshots
+          count=$(find fastlane/screenshots/mac/processed -name "*.png" -type f | wc -l | tr -d ' ')
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No processed screenshots found in fastlane/screenshots/mac/processed/"
+            exit 1
+          fi
+
+          echo "Found $count processed macOS screenshots"
+
+      - name: Validate dimensions
+        run: |
+          set -e
+          error_count=0
+
+          for f in fastlane/screenshots/mac/processed/*/*.png; do
+            if [ ! -f "$f" ]; then
+              continue
+            fi
+
+            dims=$(magick identify -format "%wx%h" "$f")
+            if [[ "$dims" != "2880x1800" ]]; then
+              echo "::error file=$f::Invalid dimensions for $(basename "$f"): $dims (expected 2880x1800)"
+              ((error_count++)) || true
+            fi
+          done
+
+          if [ "$error_count" -gt 0 ]; then
+            echo "::error::$error_count screenshot(s) have invalid dimensions"
+            exit 1
+          fi
+
+          echo "All macOS screenshots have correct dimensions (2880x1800)"
+
+      - name: Validate no alpha channel
+        run: |
+          set -e
+          error_count=0
+
+          for f in fastlane/screenshots/mac/processed/*/*.png; do
+            if [ ! -f "$f" ]; then
+              continue
+            fi
+
+            channels=$(magick identify -format "%[channels]" "$f")
+            if [[ "$channels" == *"a"* ]] || [[ "$channels" == *"alpha"* ]]; then
+              echo "::error file=$f::Alpha channel found in $(basename "$f"): $channels"
+              ((error_count++)) || true
+            fi
+          done
+
+          if [ "$error_count" -gt 0 ]; then
+            echo "::error::$error_count screenshot(s) have alpha channel (not allowed for App Store)"
+            exit 1
+          fi
+
+          echo "All macOS screenshots have no alpha channel"
+
+      - name: Validate file size
+        run: |
+          set -e
+          error_count=0
+          max_size=10485760  # 10MB in bytes
+
+          for f in fastlane/screenshots/mac/processed/*/*.png; do
+            if [ ! -f "$f" ]; then
+              continue
+            fi
+
+            size=$(stat -f%z "$f")
+            if [ "$size" -gt "$max_size" ]; then
+              size_mb=$(echo "scale=2; $size / 1048576" | bc)
+              echo "::error file=$f::File too large: $(basename "$f") is ${size_mb}MB (max 10MB)"
+              ((error_count++)) || true
+            fi
+          done
+
+          if [ "$error_count" -gt 0 ]; then
+            echo "::error::$error_count screenshot(s) exceed 10MB size limit"
+            exit 1
+          fi
+
+          echo "All macOS screenshots are under 10MB size limit"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## macOS Screenshot Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "fastlane/screenshots/mac/processed" ]; then
+            echo "### Processed Screenshots" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Locale | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+
+            for locale_dir in fastlane/screenshots/mac/processed/*/; do
+              if [ -d "$locale_dir" ]; then
+                locale=$(basename "$locale_dir")
+                count=$(find "$locale_dir" -name "*.png" -type f | wc -l | tr -d ' ')
+                echo "| $locale | $count |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Expected dimensions:** 2880x1800" >> $GITHUB_STEP_SUMMARY
+            echo "**Expected format:** PNG without alpha channel" >> $GITHUB_STEP_SUMMARY
+            echo "**Max file size:** 10MB" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No processed screenshots found." >> $GITHUB_STEP_SUMMARY
+          fi

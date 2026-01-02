@@ -4,7 +4,7 @@ set -euo pipefail
 # ==============================================================================
 # Screenshot Validation Script
 # ==============================================================================
-# Validates raw screenshots for App Store Connect delivery requirements.
+# Validates screenshots for App Store Connect delivery requirements.
 # Checks dimensions against exact App Store requirements for each platform.
 #
 # Usage:
@@ -12,7 +12,12 @@ set -euo pipefail
 #
 # Arguments:
 #   screenshots_dir - Directory containing screenshots to validate
-#   device_type     - Device type: iphone, ipad, watch, or mac
+#   device_type     - Device type: iphone, ipad, watch, mac, or macos-processed
+#
+# Device Types:
+#   iphone, ipad, watch, mac - Validates raw screenshots with platform dimensions
+#   macos-processed          - Validates processed macOS screenshots (2880x1800,
+#                              no alpha, <10MB) ready for App Store
 #
 # Exit Codes:
 #   0 - All validations passed
@@ -55,10 +60,17 @@ readonly -a MACOS_VALID_DIMENSIONS=(
     "2880x1800"  # 15/16" MacBook Pro Retina (Recommended)
 )
 
+# macOS Processed: App Store ready format (exact dimension required)
+readonly MACOS_PROCESSED_DIMENSION="2880x1800"
+readonly MACOS_PROCESSED_MAX_SIZE=10485760  # 10MB in bytes
+
 # Counters for tracking
 ERROR_COUNT=0
 WARNING_COUNT=0
 VALIDATED_COUNT=0
+
+# ImageMagick command (set by check_dependencies)
+IDENTIFY_CMD=""
 
 # ==============================================================================
 # Helper Functions
@@ -90,7 +102,11 @@ log_info() {
 
 # Check if ImageMagick is available
 check_dependencies() {
-    if ! command -v identify &>/dev/null; then
+    if command -v magick &>/dev/null; then
+        IDENTIFY_CMD="magick identify"
+    elif command -v identify &>/dev/null; then
+        IDENTIFY_CMD="identify"
+    else
         echo -e "${RED}Error: ImageMagick not found. Install with: brew install imagemagick${NC}" >&2
         exit 1
     fi
@@ -180,7 +196,7 @@ validate_screenshots() {
 
         # Get dimensions using ImageMagick identify
         local dims
-        if ! dims=$(identify -format '%wx%h' "${screenshot}" 2>/dev/null); then
+        if ! dims=$(${IDENTIFY_CMD} -format '%wx%h' "${screenshot}" 2>/dev/null); then
             log_error "Failed to read dimensions: $(basename "${screenshot}")"
             continue
         fi
@@ -204,6 +220,86 @@ validate_screenshots() {
     fi
 }
 
+# Get file size in bytes (cross-platform)
+get_file_size() {
+    local file="$1"
+    # Try macOS stat first, fall back to Linux stat
+    stat -f%z "${file}" 2>/dev/null || stat -c%s "${file}" 2>/dev/null
+}
+
+validate_macos_processed_screenshots() {
+    local screenshots_dir="$1"
+
+    log_header "Validating macOS processed screenshots in ${screenshots_dir}"
+
+    # Check if directory exists
+    if [[ ! -d "${screenshots_dir}" ]]; then
+        log_error "Screenshots directory not found: ${screenshots_dir}"
+        return 1
+    fi
+
+    local file_count=0
+
+    while IFS= read -r -d '' screenshot; do
+        ((file_count++)) || true
+
+        local filename
+        filename=$(basename "${screenshot}")
+        local validation_passed=true
+
+        # 1. Check dimensions = 2880x1800 exactly
+        local dims
+        if ! dims=$(${IDENTIFY_CMD} -format '%wx%h' "${screenshot}" 2>/dev/null); then
+            log_error "${filename}: Failed to read dimensions"
+            validation_passed=false
+        elif [[ "${dims}" != "${MACOS_PROCESSED_DIMENSION}" ]]; then
+            log_error "${filename}: Wrong dimensions ${dims}, expected exactly ${MACOS_PROCESSED_DIMENSION}"
+            validation_passed=false
+        fi
+
+        # 2. Check no alpha channel (channels should NOT contain "a" or "alpha")
+        local channels
+        if channels=$(${IDENTIFY_CMD} -format '%[channels]' "${screenshot}" 2>/dev/null); then
+            if [[ "${channels}" == *"a"* ]] || [[ "${channels}" == *"alpha"* ]]; then
+                log_error "${filename}: Has alpha channel (${channels}), should be RGB only"
+                validation_passed=false
+            fi
+        else
+            log_error "${filename}: Failed to read channel information"
+            validation_passed=false
+        fi
+
+        # 3. Check file size < 10MB
+        local file_size
+        if file_size=$(get_file_size "${screenshot}"); then
+            if [[ ${file_size} -gt ${MACOS_PROCESSED_MAX_SIZE} ]]; then
+                local size_mb
+                size_mb=$((file_size / 1024 / 1024))
+                log_error "${filename}: File too large (${size_mb}MB), must be under 10MB"
+                validation_passed=false
+            fi
+        else
+            log_error "${filename}: Failed to read file size"
+            validation_passed=false
+        fi
+
+        # Report result
+        if ${validation_passed}; then
+            local size_kb
+            size_kb=$((file_size / 1024))
+            log_success "${filename}: ${dims}, no alpha, ${size_kb}KB"
+            ((VALIDATED_COUNT++)) || true
+        fi
+    done < <(find "${screenshots_dir}" -name "*.png" -type f -print0 2>/dev/null)
+
+    if [[ "${file_count}" -eq 0 ]]; then
+        log_error "No screenshots found in ${screenshots_dir}"
+        return 1
+    else
+        log_info "Processed ${file_count} screenshot(s)"
+    fi
+}
+
 # ==============================================================================
 # Main Execution
 # ==============================================================================
@@ -214,12 +310,21 @@ Usage: $0 <screenshots_dir> <device_type>
 
 Arguments:
   screenshots_dir - Directory containing screenshots to validate
-  device_type     - Device type: iphone, ipad, watch, or mac
+  device_type     - Device type: iphone, ipad, watch, mac, or macos-processed
+
+Device Types:
+  iphone          - iPhone 6.7" display (1290x2796)
+  ipad            - iPad 13" display (2064x2752)
+  watch           - Apple Watch Series 7+ (396x484)
+  mac             - Raw macOS screenshots (various dimensions)
+  macos-processed - Processed macOS screenshots for App Store
+                    Validates: 2880x1800, no alpha channel, <10MB
 
 Examples:
   $0 fastlane/screenshots_compat/en-US iphone
   $0 fastlane/screenshots/watch_normalized/en-US watch
   $0 fastlane/screenshots/mac/en-US mac
+  $0 fastlane/screenshots/mac/processed/en-US macos-processed
 
 Exit Codes:
   0 - All validations passed
@@ -241,11 +346,11 @@ main() {
 
     # Validate device type
     case "${device_type}" in
-        iphone|ipad|watch|mac)
+        iphone|ipad|watch|mac|macos-processed)
             ;;
         *)
             echo -e "${RED}Error: Invalid device type '${device_type}'${NC}" >&2
-            echo -e "${RED}Must be one of: iphone, ipad, watch, mac${NC}" >&2
+            echo -e "${RED}Must be one of: iphone, ipad, watch, mac, macos-processed${NC}" >&2
             echo "" >&2
             usage
             ;;
@@ -253,7 +358,7 @@ main() {
 
     # Convert device type to uppercase for display
     local device_type_upper
-    device_type_upper=$(echo "${device_type}" | tr '[:lower:]' '[:upper:]')
+    device_type_upper=$(echo "${device_type}" | tr '[:lower:]' '[:upper:]' | tr '-' ' ')
 
     echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║  Screenshot Validation - ${device_type_upper}${NC}"
@@ -262,8 +367,12 @@ main() {
     # Check dependencies first
     check_dependencies
 
-    # Run validation
-    validate_screenshots "${screenshots_dir}" "${device_type}"
+    # Run validation based on device type
+    if [[ "${device_type}" == "macos-processed" ]]; then
+        validate_macos_processed_screenshots "${screenshots_dir}"
+    else
+        validate_screenshots "${screenshots_dir}" "${device_type}"
+    fi
 
     # Print summary
     log_header "Summary"
@@ -284,8 +393,15 @@ main() {
         echo -e "${RED}❌ FAILED: ${ERROR_COUNT} error(s) found${NC}"
         echo ""
         echo "Please fix the errors before proceeding."
-        echo "Expected dimensions for ${device_type}:"
-        get_expected_dimensions "${device_type}" | tr ' ' '\n' | sed 's/^/  - /'
+        if [[ "${device_type}" == "macos-processed" ]]; then
+            echo "Requirements for macos-processed:"
+            echo "  - Dimensions: ${MACOS_PROCESSED_DIMENSION}"
+            echo "  - No alpha channel (RGB only)"
+            echo "  - File size: < 10MB"
+        else
+            echo "Expected dimensions for ${device_type}:"
+            get_expected_dimensions "${device_type}" | tr ' ' '\n' | sed 's/^/  - /'
+        fi
         echo ""
         exit 1
     fi
