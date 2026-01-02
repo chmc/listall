@@ -424,7 +424,7 @@ readonly MACOS_CANVAS_WIDTH=2880
 readonly MACOS_CANVAS_HEIGHT=1800
 readonly MACOS_GRADIENT_CENTER="#2A5F6D"
 readonly MACOS_GRADIENT_EDGE="#0D1F26"
-readonly MACOS_SCALE_PERCENT=85
+readonly MACOS_SCALE_PERCENT=65
 readonly MACOS_SHADOW_OPACITY=50
 readonly MACOS_SHADOW_BLUR=30
 readonly MACOS_SHADOW_OFFSET_Y=15
@@ -536,9 +536,9 @@ process_single_screenshot() {
         return 1
     fi
 
-    # Calculate max dimensions (85% of canvas, fits within both bounds)
-    local max_width=$((MACOS_CANVAS_WIDTH * MACOS_SCALE_PERCENT / 100))   # 2448
-    local max_height=$((MACOS_CANVAS_HEIGHT * MACOS_SCALE_PERCENT / 100)) # 1530
+    # Calculate max dimensions (65% of canvas, fits within both bounds)
+    local max_width=$((MACOS_CANVAS_WIDTH * MACOS_SCALE_PERCENT / 100))   # 1872
+    local max_height=$((MACOS_CANVAS_HEIGHT * MACOS_SCALE_PERCENT / 100)) # 1170
 
     # Create output directory if needed
     mkdir -p "$(dirname "${output_file}")"
@@ -1062,13 +1062,13 @@ Previous 4 tests plus:
 
 ## Acceptance Criteria
 
-- [ ] Script exists at `.github/scripts/process-macos-screenshots.sh`
-- [ ] Script is executable
-- [ ] `--help` shows usage documentation
-- [ ] Processes all locales dynamically (not hardcoded)
-- [ ] Creates `processed/en-US/` and `processed/fi/` directories
-- [ ] All 8 screenshots processed (4 en-US + 4 fi)
-- [ ] `shellcheck` passes on script
+- [x] Script exists at `.github/scripts/process-macos-screenshots.sh`
+- [x] Script is executable
+- [x] `--help` shows usage documentation
+- [x] Processes all locales dynamically (not hardcoded)
+- [x] Creates `processed/en-US/` and `processed/fi/` directories
+- [x] All 8 screenshots processed (4 en-US + 4 fi)
+- [x] `shellcheck` passes on script
 
 ## How to Verify Completion
 
@@ -1466,20 +1466,20 @@ Color:      rgba(0,0,0,0.5)
 
 ## Window Scaling (CRITICAL)
 
-The `-resize 85%` flag scales to 85% of the *input* size, NOT the canvas. We calculate target dimensions based on canvas size.
+The `-resize 65%` flag scales to 65% of the *canvas* size (intentionally chosen for visual balance). We calculate target dimensions based on canvas size.
 
 **Scaling Strategy:**
 ```
 Canvas:           2880x1800
-Max width:        2880 * 0.85 = 2448px
-Max height:       1800 * 0.85 = 1530px
-ImageMagick:      -resize "2448x1530>" (fits within bounds, preserves aspect ratio)
+Max width:        2880 * 0.65 = 1872px
+Max height:       1800 * 0.65 = 1170px
+ImageMagick:      -resize "1872x1170>" (fits within bounds, preserves aspect ratio)
 
-For 800x652:      Scale factor = min(2448/800, 1530/652) = min(3.06, 2.35) = 2.35
-                  Result: 800*2.35 x 652*2.35 = 1880x1532 -> fits!
+For 900x652:      Scale factor = min(1872/900, 1170/652) = min(2.08, 1.79) = 1.79
+                  Result: 900*1.79 x 652*1.79 = 1611x1167 -> fits!
 
 For 482x420:      Same bounds, smaller result (proportionally smaller on canvas)
-                  Result: ~1133x988 (smaller dialog appearance)
+                  Result: ~863x752 (smaller dialog appearance)
 ```
 
 **User Decision:** Settings window (482x420) will remain proportionally smaller on canvas to show it's a dialog, not scaled to same size as main windows.
@@ -1495,7 +1495,7 @@ For 482x420:      Same bounds, smaller result (proportionally smaller on canvas)
 ```bash
 magick -size 2880x1800 -depth 8 radial-gradient:"#2A5F6D-#0D1F26" \
     \( "${input_file}" \
-        -resize "2448x1530>" \
+        -resize "1872x1170>" \
         \( +clone -background black -shadow 50x30+0+15 \) \
         +swap \
         -background none \
@@ -1518,7 +1518,7 @@ magick -size 2880x1800 -depth 8 radial-gradient:"#2A5F6D-#0D1F26" \
 | `-size 2880x1800` | Create canvas at target dimensions |
 | `-depth 8` | Use 8-bit color depth (prevents 16-bit intermediates) |
 | `radial-gradient:"#2A5F6D-#0D1F26"` | Create radial gradient from center to edge |
-| `-resize "2448x1530>"` | Scale to fit within bounds (> prevents upscaling) |
+| `-resize "1872x1170>"` | Scale to fit within bounds (> prevents upscaling) |
 | `-shadow 50x30+0+15` | Create shadow: 50% opacity, 30px blur, 15px Y offset |
 | `-layers merge` | Merge window and shadow layers |
 | `-gravity center` | Center the composite on canvas |
@@ -1535,7 +1535,7 @@ cd /Users/aleksi/source/listall
 
 magick -size 2880x1800 -depth 8 radial-gradient:"#2A5F6D-#0D1F26" \
     \( fastlane/screenshots/mac/en-US/01_MainWindow.png \
-        -resize "2448x1530>" \
+        -resize "1872x1170>" \
         \( +clone -background black -shadow 50x30+0+15 \) \
         +swap \
         -background none \
@@ -1586,7 +1586,7 @@ stat -c%s screenshot.png  # Linux
 
 | Issue | Severity | Status | Fix Applied |
 |-------|----------|--------|-------------|
-| `-resize 85%` scales input, not canvas | CRITICAL | FIXED | Changed to `-resize "2448x1530>"` |
+| `-resize 85%` scales input, not canvas | CRITICAL | FIXED | Changed to `-resize "1872x1170>"` |
 | Settings window different size | CRITICAL | FIXED | User chose: keep proportionally smaller |
 | Aspect ratio mismatch could exceed canvas | IMPORTANT | FIXED | Using both width AND height bounds |
 | Missing error handling | IMPORTANT | FIXED | Added ImageMagick exit code check |

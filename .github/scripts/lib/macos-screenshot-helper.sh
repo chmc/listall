@@ -148,9 +148,9 @@ process_single_screenshot() {
         return 1
     fi
 
-    # Calculate max dimensions (85% of canvas, fits within both bounds)
-    local max_width=$((MACOS_CANVAS_WIDTH * MACOS_SCALE_PERCENT / 100))   # 2448
-    local max_height=$((MACOS_CANVAS_HEIGHT * MACOS_SCALE_PERCENT / 100)) # 1530
+    # Calculate max dimensions (65% of canvas, fits within both bounds)
+    local max_width=$((MACOS_CANVAS_WIDTH * MACOS_SCALE_PERCENT / 100))   # 1872
+    local max_height=$((MACOS_CANVAS_HEIGHT * MACOS_SCALE_PERCENT / 100)) # 1170
 
     # Create output directory if needed
     mkdir -p "$(dirname "${output_file}")"
