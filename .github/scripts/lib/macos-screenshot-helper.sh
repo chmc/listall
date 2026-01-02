@@ -17,7 +17,9 @@ readonly MACOS_SHADOW_OPACITY=50
 readonly MACOS_SHADOW_BLUR=30
 readonly MACOS_SHADOW_OFFSET_Y=15
 readonly MACOS_MAX_FILE_SIZE=10485760  # 10MB in bytes
-readonly MACOS_CORNER_RADIUS=22        # macOS window corner radius in pixels (measured: 16-21px visible desktop in corners)
+readonly MACOS_CORNER_RADIUS_BASE=22   # Corner radius for 800px-wide window (measured: 16-21px visible desktop)
+readonly MACOS_CORNER_RADIUS_REF_WIDTH=800  # Reference width for corner radius scaling
+readonly MACOS_CORNER_RADIUS_MIN=8     # Minimum corner radius for very small windows
 
 #------------------------------------------------------------------------------
 # Logging Functions
@@ -37,6 +39,27 @@ log_error() {
 
 log_success() {
     echo "[OK] $*"
+}
+
+#------------------------------------------------------------------------------
+# Corner Radius Calculation
+#------------------------------------------------------------------------------
+
+# Calculate proportional corner radius based on window width
+# macOS uses constant point-based radius, but when we apply radius before scaling,
+# smaller windows end up with proportionally larger corners after upscaling.
+# This function scales the radius to maintain consistent visual appearance.
+calculate_corner_radius() {
+    local input_width="$1"
+    # Scale corner radius proportionally to window width
+    # 22px was tuned for 800px wide windows
+    local radius
+    radius=$((MACOS_CORNER_RADIUS_BASE * input_width / MACOS_CORNER_RADIUS_REF_WIDTH))
+    # Minimum radius to avoid issues with very small windows
+    if [[ "${radius}" -lt "${MACOS_CORNER_RADIUS_MIN}" ]]; then
+        radius="${MACOS_CORNER_RADIUS_MIN}"
+    fi
+    echo "${radius}"
 }
 
 #------------------------------------------------------------------------------
@@ -144,13 +167,18 @@ process_single_screenshot() {
     local temp_rounded
     temp_rounded=$(mktemp /tmp/macos_rounded_XXXXXX.png)
 
+    # Calculate proportional corner radius based on window width
+    # This ensures consistent visual corner appearance after scaling
+    local corner_radius
+    corner_radius=$(calculate_corner_radius "${input_width}")
+
     # Step 1: Apply rounded corner mask to input image (macOS windows have rounded corners)
     # NOTE: macOS uses "continuous corners" (squircles) not perfect circles.
-    #       ImageMagick's roundrectangle uses circular arcs. Using a larger radius (22px)
-    #       compensates for this difference. The blur+level creates anti-aliased edges.
+    #       ImageMagick's roundrectangle uses circular arcs. The blur+level creates anti-aliased edges.
+    #       Radius is scaled proportionally: 22px for 800px windows, ~13px for 482px windows.
     if ! magick "${input_file}" \
         \( -size "${input_width}x${input_height}" xc:none -fill white \
-           -draw "roundrectangle 0,0,$((input_width-1)),$((input_height-1)),${MACOS_CORNER_RADIUS},${MACOS_CORNER_RADIUS}" \
+           -draw "roundrectangle 0,0,$((input_width-1)),$((input_height-1)),${corner_radius},${corner_radius}" \
            -blur 0x0.5 -level 50%,100% \
         \) -alpha set -compose DstIn -composite \
         "${temp_rounded}"; then
