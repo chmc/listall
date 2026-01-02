@@ -17,7 +17,7 @@ readonly MACOS_SHADOW_OPACITY=50
 readonly MACOS_SHADOW_BLUR=30
 readonly MACOS_SHADOW_OFFSET_Y=15
 readonly MACOS_MAX_FILE_SIZE=10485760  # 10MB in bytes
-readonly MACOS_CORNER_RADIUS=10        # macOS window corner radius in pixels (standard: 10pt)
+readonly MACOS_CORNER_RADIUS=22        # macOS window corner radius in pixels (measured: 16-21px visible desktop in corners)
 
 #------------------------------------------------------------------------------
 # Logging Functions
@@ -145,9 +145,13 @@ process_single_screenshot() {
     temp_rounded=$(mktemp /tmp/macos_rounded_XXXXXX.png)
 
     # Step 1: Apply rounded corner mask to input image (macOS windows have rounded corners)
+    # NOTE: macOS uses "continuous corners" (squircles) not perfect circles.
+    #       ImageMagick's roundrectangle uses circular arcs. Using a larger radius (22px)
+    #       compensates for this difference. The blur+level creates anti-aliased edges.
     if ! magick "${input_file}" \
         \( -size "${input_width}x${input_height}" xc:none -fill white \
            -draw "roundrectangle 0,0,$((input_width-1)),$((input_height-1)),${MACOS_CORNER_RADIUS},${MACOS_CORNER_RADIUS}" \
+           -blur 0x0.5 -level 50%,100% \
         \) -alpha set -compose DstIn -composite \
         "${temp_rounded}"; then
         rm -f "${temp_rounded}"
