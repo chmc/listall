@@ -102,8 +102,16 @@ The processing script uses sensible defaults:
 2. **Use relative paths via script dir**: `${SCRIPT_DIR}` ensures portability
 3. **Update all summary locations**: The same path was shown in multiple places (single-platform vs all-platform summaries)
 4. **Test existing tests first**: Running the existing test suite validates the integration works with all edge cases already covered
+5. **macOS mktemp quirk**: On macOS, `mktemp /tmp/pattern_XXXXXX.png` doesn't work - the XXXXXX must be at the end. Solution: create without extension first, then rename:
+   ```bash
+   temp_base=$(mktemp /tmp/macos_rounded_XXXXXX)
+   temp_rounded="${temp_base}.png"
+   mv "${temp_base}" "${temp_rounded}"
+   ```
+6. **Always run the actual script**: Unit tests may pass but the real script can fail due to environment differences
 
 ## Files Modified
 
 - `.github/scripts/generate-screenshots-local.sh` - Added post-processing call and updated summary paths
+- `.github/scripts/lib/macos-screenshot-helper.sh` - Fixed mktemp pattern for macOS compatibility
 - `documentation/TODO_MACOS.md` - Marked Phase 3 complete
