@@ -1104,7 +1104,7 @@ done
 
 ---
 
-# Phase 3: Integration [NOT STARTED]
+# Phase 3: Integration [COMPLETED]
 
 ## Goal
 
@@ -1180,12 +1180,12 @@ Previous 12 tests plus:
 
 ## Acceptance Criteria
 
-- [ ] `generate-screenshots-local.sh macos` runs post-processing automatically
-- [ ] Post-processing is called after successful Fastlane run
-- [ ] Failed individual images do not stop batch processing
-- [ ] Partial failures leave clean state (atomic processing)
-- [ ] Summary shows correct output paths
-- [ ] **15/15 tests pass**
+- [x] `generate-screenshots-local.sh macos` runs post-processing automatically
+- [x] Post-processing is called after successful Fastlane run
+- [x] Failed individual images do not stop batch processing
+- [x] Partial failures leave clean state (atomic processing)
+- [x] Summary shows correct output paths
+- [x] **15/15 tests pass**
 
 ## How to Verify Completion
 

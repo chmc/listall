@@ -716,6 +716,13 @@ generate_macos_screenshots() {
         return "${EXIT_GENERATION_FAILED}"
     fi
 
+    # Post-process screenshots for App Store format (2880x1800 with gradient background)
+    log_info "Processing screenshots for App Store dimensions..."
+    if ! "${SCRIPT_DIR}/process-macos-screenshots.sh"; then
+        log_error "macOS screenshot processing failed"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
     return 0
 }
 
@@ -832,9 +839,9 @@ show_summary() {
         echo "    fastlane/screenshots/watch_normalized/en-US/"
         echo "    fastlane/screenshots/watch_normalized/fi/"
     elif [[ "${platform}" == "macos" ]]; then
-        echo "  macOS (unframed):"
-        echo "    fastlane/screenshots/mac/en-US/"
-        echo "    fastlane/screenshots/mac/fi/"
+        echo "  macOS (processed with gradient background):"
+        echo "    fastlane/screenshots/mac/processed/en-US/"
+        echo "    fastlane/screenshots/mac/processed/fi/"
     elif [[ "${platform}" == "all" ]]; then
         echo "  iPhone/iPad (framed with device bezels):"
         echo "    fastlane/screenshots_compat/en-US/"
@@ -844,9 +851,9 @@ show_summary() {
         echo "    fastlane/screenshots/watch_normalized/en-US/"
         echo "    fastlane/screenshots/watch_normalized/fi/"
         echo ""
-        echo "  macOS (unframed):"
-        echo "    fastlane/screenshots/mac/en-US/"
-        echo "    fastlane/screenshots/mac/fi/"
+        echo "  macOS (processed with gradient background):"
+        echo "    fastlane/screenshots/mac/processed/en-US/"
+        echo "    fastlane/screenshots/mac/processed/fi/"
     else
         echo "  iPhone/iPad (framed with device bezels):"
         echo "    fastlane/screenshots_compat/en-US/"
@@ -856,7 +863,7 @@ show_summary() {
     echo ""
     echo "Next steps:"
     echo "  1. Review screenshots manually"
-    echo "  2. Commit to git: git add fastlane/screenshots_compat/ fastlane/screenshots/watch_normalized/ fastlane/screenshots/mac_normalized/"
+    echo "  2. Commit to git: git add fastlane/screenshots_compat/ fastlane/screenshots/watch_normalized/ fastlane/screenshots/mac/processed/"
     echo "  3. Upload to App Store: bundle exec fastlane ios release version:X.Y.Z"
     echo ""
 }
