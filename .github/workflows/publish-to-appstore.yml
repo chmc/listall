@@ -45,18 +45,18 @@ jobs:
           echo ""
           echo "iPhone/iPad screenshots (screenshots_compat):"
           find fastlane/screenshots_compat -name "*.png" -type f | wc -l | xargs echo "  Total files:"
-          ls -la fastlane/screenshots_compat/en-US/ || { echo "❌ Missing en-US screenshots"; exit 1; }
-          ls -la fastlane/screenshots_compat/fi/ || { echo "❌ Missing fi screenshots"; exit 1; }
+          ls -la fastlane/screenshots_compat/en-US/ || { echo "::error::Missing en-US iPhone/iPad screenshots"; exit 1; }
+          ls -la fastlane/screenshots_compat/fi/ || { echo "::error::Missing fi iPhone/iPad screenshots"; exit 1; }
           echo ""
           echo "Watch screenshots (watch_normalized):"
           find fastlane/screenshots/watch_normalized -name "*.png" -type f | wc -l | xargs echo "  Total files:"
-          ls -la fastlane/screenshots/watch_normalized/en-US/ || { echo "❌ Missing en-US Watch screenshots"; exit 1; }
-          ls -la fastlane/screenshots/watch_normalized/fi/ || { echo "❌ Missing fi Watch screenshots"; exit 1; }
+          ls -la fastlane/screenshots/watch_normalized/en-US/ || { echo "::error::Missing en-US Watch screenshots"; exit 1; }
+          ls -la fastlane/screenshots/watch_normalized/fi/ || { echo "::error::Missing fi Watch screenshots"; exit 1; }
           echo ""
           echo "macOS screenshots (mac/processed):"
           find fastlane/screenshots/mac/processed -name "*.png" -type f | wc -l | xargs echo "  Total files:"
-          ls -la fastlane/screenshots/mac/processed/en-US/ || { echo "❌ Missing en-US macOS screenshots"; exit 1; }
-          ls -la fastlane/screenshots/mac/processed/fi/ || { echo "❌ Missing fi macOS screenshots"; exit 1; }
+          ls -la fastlane/screenshots/mac/processed/en-US/ || { echo "::error::Missing en-US macOS screenshots"; exit 1; }
+          ls -la fastlane/screenshots/mac/processed/fi/ || { echo "::error::Missing fi macOS screenshots"; exit 1; }
 
       - name: Verify macOS screenshots exist
         run: |
