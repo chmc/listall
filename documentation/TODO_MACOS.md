@@ -1,8 +1,8 @@
 # macOS Screenshot Processing - Implementation Plan
 
 **Date:** January 2, 2026
-**Status:** COMPLETED
-**Revision:** 2.0 - Restructured for Phase-by-Phase Implementation
+**Status:** IN PROGRESS
+**Revision:** 2.1 - Added Phase 5 for App Store Pipeline Integration
 
 ---
 
@@ -29,6 +29,7 @@ This plan addresses the issue that current macOS screenshots do not meet Apple A
 | 2 | Batch Processing | Main script with all locales | COMPLETED |
 | 3 | Integration | Integration with generate-screenshots-local.sh | COMPLETED |
 | 4 | Validation & CI | Validation updates, optional CI job | COMPLETED |
+| 5 | App Store Pipeline Integration | Add macOS verification to publish-to-appstore.yml | NOT STARTED |
 
 ---
 
@@ -1682,6 +1683,136 @@ fastlane/screenshots/mac/
 
 ---
 
-**Document Status:** READY FOR IMPLEMENTATION
-**Revision:** 2.0 (Restructured for Phase-by-Phase Implementation)
-**Next Step:** Begin Phase 0 - Create test file with 15 test cases
+# Phase 5: App Store Pipeline Integration [NOT STARTED]
+
+## Goal
+
+Add macOS screenshot verification to `publish-to-appstore.yml` workflow. Ensure macOS processed screenshots exist before publishing and include macOS in the GitHub Actions step summary.
+
+## Files to Modify
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `.github/workflows/publish-to-appstore.yml` | MODIFY | Add macOS verification and summary |
+
+## Implementation Instructions
+
+### Step 1: Add macOS screenshot verification step
+
+Add a new step before the upload/delivery step to verify macOS processed screenshots exist:
+
+```yaml
+- name: Verify macOS screenshots exist
+  run: |
+    MACOS_DIR="fastlane/screenshots/mac/processed"
+
+    if [[ ! -d "${MACOS_DIR}" ]]; then
+      echo "::error::macOS processed screenshots directory not found: ${MACOS_DIR}"
+      echo "::error::Run '.github/scripts/generate-screenshots-local.sh macos' locally first."
+      exit 1
+    fi
+
+    # Count screenshots per locale (expect 4 per locale)
+    EXPECTED_PER_LOCALE=4
+
+    for locale_dir in "${MACOS_DIR}"/*/; do
+      if [[ -d "${locale_dir}" ]]; then
+        locale_name=$(basename "${locale_dir}")
+        count=$(find "${locale_dir}" -name "*.png" -type f | wc -l | tr -d ' ')
+
+        if [[ ${count} -ne ${EXPECTED_PER_LOCALE} ]]; then
+          echo "::error::macOS locale ${locale_name}: expected ${EXPECTED_PER_LOCALE} screenshots, found ${count}"
+          exit 1
+        fi
+
+        echo "macOS locale ${locale_name}: ${count} screenshots OK"
+      fi
+    done
+
+    echo "macOS screenshot verification passed"
+```
+
+### Step 2: Update GitHub Actions step summary
+
+Locate the step summary output section and add macOS to the platform list. Update from:
+
+```yaml
+echo "| Platform | Locales | Screenshots |" >> $GITHUB_STEP_SUMMARY
+echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+echo "| iPhone | en-US, fi | ... |" >> $GITHUB_STEP_SUMMARY
+echo "| iPad | en-US, fi | ... |" >> $GITHUB_STEP_SUMMARY
+echo "| Watch | en-US, fi | ... |" >> $GITHUB_STEP_SUMMARY
+```
+
+To include macOS:
+
+```yaml
+echo "| Platform | Locales | Screenshots |" >> $GITHUB_STEP_SUMMARY
+echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+echo "| iPhone | en-US, fi | ... |" >> $GITHUB_STEP_SUMMARY
+echo "| iPad | en-US, fi | ... |" >> $GITHUB_STEP_SUMMARY
+echo "| Watch | en-US, fi | ... |" >> $GITHUB_STEP_SUMMARY
+echo "| macOS | en-US, fi | 4 per locale |" >> $GITHUB_STEP_SUMMARY
+```
+
+### Step 3: Validate screenshot count
+
+Add validation that confirms expected macOS screenshot count (4 screenshots x 2 locales = 8 total):
+
+```yaml
+- name: Validate macOS screenshot count
+  run: |
+    MACOS_DIR="fastlane/screenshots/mac/processed"
+    TOTAL_COUNT=$(find "${MACOS_DIR}" -name "*.png" -type f | wc -l | tr -d ' ')
+    EXPECTED_TOTAL=8  # 4 screenshots x 2 locales
+
+    if [[ ${TOTAL_COUNT} -ne ${EXPECTED_TOTAL} ]]; then
+      echo "::warning::macOS screenshot count mismatch: expected ${EXPECTED_TOTAL}, found ${TOTAL_COUNT}"
+    fi
+
+    echo "macOS total screenshots: ${TOTAL_COUNT}"
+```
+
+## Acceptance Criteria
+
+- [ ] `publish-to-appstore.yml` has a step to verify `fastlane/screenshots/mac/processed/` exists
+- [ ] Workflow fails with clear error if macOS screenshots are missing
+- [ ] Each locale directory is validated to contain exactly 4 PNG files
+- [ ] GitHub Actions step summary includes macOS in the platform table
+- [ ] Step summary shows correct locale and screenshot count for macOS
+- [ ] Workflow logs show macOS verification status
+
+## How to Verify Completion
+
+```bash
+# 1. Check workflow file has macOS verification step
+grep -A 20 "Verify macOS screenshots" .github/workflows/publish-to-appstore.yml
+
+# 2. Check workflow file has macOS in step summary
+grep -i "macos" .github/workflows/publish-to-appstore.yml
+
+# 3. Verify locally that processed screenshots exist
+ls -la fastlane/screenshots/mac/processed/
+ls -la fastlane/screenshots/mac/processed/en-US/
+ls -la fastlane/screenshots/mac/processed/fi/
+
+# 4. Count screenshots per locale (should be 4 each)
+find fastlane/screenshots/mac/processed/en-US -name "*.png" | wc -l
+find fastlane/screenshots/mac/processed/fi -name "*.png" | wc -l
+
+# 5. Test the verification logic locally
+MACOS_DIR="fastlane/screenshots/mac/processed"
+for locale_dir in "${MACOS_DIR}"/*/; do
+  locale_name=$(basename "${locale_dir}")
+  count=$(find "${locale_dir}" -name "*.png" -type f | wc -l)
+  echo "${locale_name}: ${count} screenshots"
+done
+
+# 6. Trigger a test workflow run (if possible) or wait for next publish
+```
+
+---
+
+**Document Status:** IN PROGRESS
+**Revision:** 2.1 (Added Phase 5 for App Store Pipeline Integration)
+**Next Step:** Begin Phase 5 - Add macOS verification to publish-to-appstore.yml
