@@ -29,7 +29,7 @@ This plan addresses the issue that current macOS screenshots do not meet Apple A
 | 2 | Batch Processing | Main script with all locales | COMPLETED |
 | 3 | Integration | Integration with generate-screenshots-local.sh | COMPLETED |
 | 4 | Validation & CI | Validation updates, optional CI job | COMPLETED |
-| 5 | App Store Pipeline Integration | Add macOS verification to publish-to-appstore.yml | NOT STARTED |
+| 5 | App Store Pipeline Integration | Add macOS verification to publish-to-appstore.yml | COMPLETED |
 
 ---
 
@@ -1683,7 +1683,7 @@ fastlane/screenshots/mac/
 
 ---
 
-# Phase 5: App Store Pipeline Integration [NOT STARTED]
+# Phase 5: App Store Pipeline Integration [COMPLETED]
 
 ## Goal
 
@@ -1775,12 +1775,12 @@ Add validation that confirms expected macOS screenshot count (4 screenshots x 2 
 
 ## Acceptance Criteria
 
-- [ ] `publish-to-appstore.yml` has a step to verify `fastlane/screenshots/mac/processed/` exists
-- [ ] Workflow fails with clear error if macOS screenshots are missing
-- [ ] Each locale directory is validated to contain exactly 4 PNG files
-- [ ] GitHub Actions step summary includes macOS in the platform table
-- [ ] Step summary shows correct locale and screenshot count for macOS
-- [ ] Workflow logs show macOS verification status
+- [x] `publish-to-appstore.yml` has a step to verify `fastlane/screenshots/mac/processed/` exists
+- [x] Workflow fails with clear error if macOS screenshots are missing
+- [x] Each locale directory is validated to contain exactly 4 PNG files
+- [x] GitHub Actions step summary includes macOS in the platform table
+- [x] Step summary shows correct locale and screenshot count for macOS
+- [x] Workflow logs show macOS verification status
 
 ## How to Verify Completion
 
@@ -1813,6 +1813,6 @@ done
 
 ---
 
-**Document Status:** IN PROGRESS
-**Revision:** 2.1 (Added Phase 5 for App Store Pipeline Integration)
-**Next Step:** Begin Phase 5 - Add macOS verification to publish-to-appstore.yml
+**Document Status:** COMPLETED
+**Revision:** 2.2 (Phase 5 implemented)
+**All Phases Complete:** macOS screenshot processing pipeline fully integrated with App Store publishing workflow
