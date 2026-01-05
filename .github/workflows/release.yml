@@ -219,11 +219,13 @@ jobs:
           echo "✅ Pushed tag v${NEW_VERSION}"
 
       - name: Upload version artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: version-info
           path: .version
           retention-days: 7
+          if-no-files-found: warn
 
   #############################################################################
   # JOB 2: iOS + watchOS Build (parallel with macOS)
