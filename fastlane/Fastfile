@@ -324,7 +324,7 @@ platform :ios do
       type: 'appstore',
       platform: 'macos',
       app_identifier: ["io.github.chmc.ListAll"],
-      additional_cert_types: ["mac_installer_distribution"],
+      # Note: Not including additional_cert_types here to avoid certificate validation issues
       force: true,  # Force regenerate even if profile exists
       readonly: false,  # Allow writing to Match repo
       verbose: true,
