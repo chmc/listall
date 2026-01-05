@@ -464,10 +464,12 @@ platform :ios do
     end
 
     # Code signing for macOS App Store distribution
+    # Requires both appstore cert (for app signing) and mac_installer_distribution cert (for .pkg signing)
     match(
       type: 'appstore',
       platform: 'macos',
       app_identifier: ["io.github.chmc.ListAllMac"],
+      additional_cert_types: ["mac_installer_distribution"],
       verbose: true,
       keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
       skip_set_partition_list: true  # Skip partition list in CI to avoid SecItemCopyMatching error
@@ -647,6 +649,7 @@ platform :ios do
       type: 'appstore',
       platform: 'macos',
       app_identifier: ["io.github.chmc.ListAllMac"],
+      additional_cert_types: ["mac_installer_distribution"],
       verbose: true,
       keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
       skip_set_partition_list: true,
