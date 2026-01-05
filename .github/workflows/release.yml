@@ -178,12 +178,9 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-          # Verify we're on main branch (safety check)
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "${CURRENT_BRANCH}" != "main" ]] && [[ "${CURRENT_BRANCH}" != "HEAD" ]]; then
-            echo "❌ Not on main branch (current: ${CURRENT_BRANCH})" >&2
-            exit 1
-          fi
+          # Get the branch that triggered the workflow
+          TARGET_BRANCH="${{ github.ref_name }}"
+          echo "📍 Target branch: ${TARGET_BRANCH}"
 
           # Stage version files
           git add .version ListAll/ListAll.xcodeproj/project.pbxproj
@@ -206,12 +203,12 @@ jobs:
           git tag "v${NEW_VERSION}"
           echo "✅ Created tag v${NEW_VERSION}"
 
-          # Push changes to main
-          if ! git push origin main; then
-            echo "❌ Failed to push changes to main" >&2
+          # Push changes to the target branch
+          if ! git push origin HEAD:"${TARGET_BRANCH}"; then
+            echo "❌ Failed to push changes to ${TARGET_BRANCH}" >&2
             exit 1
           fi
-          echo "✅ Pushed changes to main"
+          echo "✅ Pushed changes to ${TARGET_BRANCH}"
 
           # Push tag
           if ! git push origin "v${NEW_VERSION}"; then
@@ -252,9 +249,10 @@ jobs:
       - name: Pull latest version changes
         run: |
           set -euo pipefail
-          git fetch origin main
-          git reset --hard origin/main
-          echo "✅ Checked out latest main with version changes"
+          BRANCH="${{ github.ref_name }}"
+          git fetch origin "${BRANCH}"
+          git reset --hard "origin/${BRANCH}"
+          echo "✅ Checked out latest ${BRANCH} with version changes"
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -377,9 +375,10 @@ jobs:
       - name: Pull latest version changes
         run: |
           set -euo pipefail
-          git fetch origin main
-          git reset --hard origin/main
-          echo "✅ Checked out latest main with version changes"
+          BRANCH="${{ github.ref_name }}"
+          git fetch origin "${BRANCH}"
+          git reset --hard "origin/${BRANCH}"
+          echo "✅ Checked out latest ${BRANCH} with version changes"
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
