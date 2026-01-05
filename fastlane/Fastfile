@@ -485,7 +485,7 @@ platform :ios do
       output_directory: "./ListAll/build",
       export_options: {
         provisioningProfiles: {
-          "io.github.chmc.ListAllMac" => "match AppStore io.github.chmc.ListAllMac"
+          "io.github.chmc.ListAllMac" => "match AppStore io.github.chmc.ListAllMac macos"
         }
       }
     )
