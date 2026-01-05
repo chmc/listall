@@ -84,24 +84,35 @@ To test Fastlane lanes locally (beta uploads, App Store Connect authentication, 
 
 ## CloudKit Schema Deployment
 
-ListAll uses CloudKit for cross-device sync. **Before every TestFlight/App Store release**, verify the CloudKit schema is deployed:
+ListAll uses CloudKit for cross-device sync. The CI **automatically blocks releases** if schema drift is detected.
 
-1. **Check schema status:**
-   - Open [CloudKit Dashboard](https://icloud.developer.apple.com/)
-   - Select `iCloud.io.github.chmc.ListAll` container
-   - Compare **Development** vs **Production** schemas
+### CI Automation
 
-2. **Deploy if needed:**
-   - Switch to Development environment
-   - Click ⚙️ → **"Deploy Schema Changes..."**
-   - Review diff and click **Deploy**
+The release workflow checks for schema drift before building:
+- ✅ Schemas match → release proceeds
+- ❌ Drift detected → release fails with instructions
 
-**When to deploy:**
-- First release to TestFlight/App Store
+**Required secrets** (add to GitHub repository):
+| Secret | Description |
+|--------|-------------|
+| `CLOUDKIT_MANAGEMENT_TOKEN` | From CloudKit Dashboard → API Access → Management Tokens |
+| `APPLE_TEAM_ID` | Your Apple Developer Team ID |
+
+### Manual Deployment
+
+If CI fails due to schema drift:
+
+1. Open [CloudKit Dashboard](https://icloud.developer.apple.com/)
+2. Select `iCloud.io.github.chmc.ListAll` → Development
+3. Click ⚙️ → **"Deploy Schema Changes..."**
+4. Review diff and click **Deploy**
+5. Re-run the release workflow
+
+**When deployment is needed:**
 - After adding new Core Data entities or attributes
 - After any `.xcdatamodeld` changes
 
-> ⚠️ Without deployment, sync silently fails in Production builds. See [`documentation/learnings/cloudkit-schema-deployment-production.md`](./documentation/learnings/cloudkit-schema-deployment-production.md)
+> ⚠️ See [`documentation/learnings/cloudkit-schema-deployment-production.md`](./documentation/learnings/cloudkit-schema-deployment-production.md) for details
 
 ## App Store Release
 

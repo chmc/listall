@@ -81,12 +81,42 @@ Before every TestFlight/App Store submission:
 - [ ] Wait for deployment success
 - [ ] Build and submit to TestFlight/App Store
 
-## Automation Limitations
+## CI Automation: Schema Drift Detection
 
-Apple's `cktool` can export/import Development schema but **cannot deploy to Production**. The deploy button in CloudKit Dashboard is the only way - by design.
+The release workflow (`release.yml`) includes automatic schema drift detection that **blocks TestFlight releases** if Development has undeployed changes.
+
+### How It Works
+
+1. Before version bump, CI exports both Development and Production schemas
+2. Compares them with `diff`
+3. If schemas differ → release fails with instructions to deploy
+
+### Required GitHub Secrets
+
+| Secret | Where to Get |
+|--------|--------------|
+| `CLOUDKIT_MANAGEMENT_TOKEN` | [CloudKit Dashboard](https://icloud.developer.apple.com/) → API Tokens → Management Tokens |
+| `APPLE_TEAM_ID` | Your Apple Developer Team ID (e.g., `M9BR5FY93A`) |
+
+### Creating Management Token
+
+1. Go to [CloudKit Dashboard](https://icloud.developer.apple.com/)
+2. Click your account (top right) → **API Access**
+3. Create new **Management Token** (not User Token)
+4. Copy token and add as `CLOUDKIT_MANAGEMENT_TOKEN` secret in GitHub
+
+### Skip Schema Check (Temporary)
+
+If you need to release without schema check:
+- Set repository variable `SKIP_CLOUDKIT_CHECK=true`
+- Or release will warn but continue if secrets aren't configured
+
+### What CI Cannot Do
+
+Apple's `cktool` **cannot deploy to Production** - only the CloudKit Dashboard can. This is by design.
 
 ```bash
-# Can do: Export Development schema
+# Can do: Export and compare schemas
 xcrun cktool export-schema \
   --team-id $TEAM_ID \
   --container-id iCloud.io.github.chmc.ListAll \

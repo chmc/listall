@@ -36,9 +36,61 @@ concurrency:
 
 jobs:
   #############################################################################
+  # JOB 0: CloudKit Schema Check (runs FIRST - blocks release if drift detected)
+  #############################################################################
+  schema-check:
+    name: CloudKit Schema Check
+    runs-on: macos-14
+    timeout-minutes: 5
+    # Skip schema check if secret not configured (allows gradual adoption)
+    if: ${{ vars.SKIP_CLOUDKIT_CHECK != 'true' }}
+    env:
+      CLOUDKIT_MANAGEMENT_TOKEN: ${{ secrets.CLOUDKIT_MANAGEMENT_TOKEN }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Check CloudKit schema drift
+        id: schema
+        run: |
+          # Skip if token not configured
+          if [[ -z "${CLOUDKIT_MANAGEMENT_TOKEN}" ]]; then
+            echo "::warning::CLOUDKIT_MANAGEMENT_TOKEN not configured - skipping schema check"
+            echo "To enable: Add CLOUDKIT_MANAGEMENT_TOKEN secret from CloudKit Dashboard"
+            exit 0
+          fi
+
+          if [[ -z "${APPLE_TEAM_ID}" ]]; then
+            echo "::warning::APPLE_TEAM_ID not configured - skipping schema check"
+            exit 0
+          fi
+
+          .github/scripts/check-cloudkit-schema.sh
+
+      - name: Schema check summary
+        if: always()
+        run: |
+          echo "## CloudKit Schema Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.schema.outcome }}" == "success" ]]; then
+            echo "✅ Development and Production schemas are in sync" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Schema drift detected - deploy via CloudKit Dashboard" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "[Open CloudKit Dashboard](https://icloud.developer.apple.com/)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  #############################################################################
   # JOB 1: Version Bump (runs ONCE, FIRST) - Synchronized across all platforms
   #############################################################################
   version-bump:
+    needs: schema-check
+    if: ${{ always() && (needs.schema-check.result == 'success' || needs.schema-check.result == 'skipped') }}
     name: Version Bump & Sync
     runs-on: macos-14
     outputs:
@@ -484,7 +536,7 @@ jobs:
   #############################################################################
   verify-release:
     name: Verify Release
-    needs: [version-bump, beta-ios, beta-macos]
+    needs: [schema-check, version-bump, beta-ios, beta-macos]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -494,6 +546,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version**: ${{ needs.version-bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build**: ${{ needs.version-bump.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pre-flight Checks" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CloudKit Schema | ${{ needs.schema-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Platform Results" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
