@@ -2,6 +2,8 @@
 
 ## Date: 2026-01-05
 
+## Status: RESOLVED
+
 ## Problem
 macOS build failed with error:
 ```
