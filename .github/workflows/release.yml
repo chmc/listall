@@ -57,6 +57,18 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Select Xcode version
+        run: |
+          if [[ ! -d /Applications/Xcode_16.1.app ]]; then
+            echo "❌ Xcode 16.1 not found" >&2
+            xcodebuild -version
+            exit 1
+          fi
+          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
       - name: Verify version synchronization (pre-flight)
         run: .github/scripts/verify-version-sync.sh
 
