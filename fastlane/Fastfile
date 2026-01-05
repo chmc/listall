@@ -468,7 +468,7 @@ platform :ios do
     match(
       type: 'appstore',
       platform: 'macos',
-      app_identifier: ["io.github.chmc.ListAllMac"],
+      app_identifier: ["io.github.chmc.ListAll"],
       additional_cert_types: ["mac_installer_distribution"],
       verbose: true,
       keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
@@ -487,7 +487,7 @@ platform :ios do
       output_directory: "./ListAll/build",
       export_options: {
         provisioningProfiles: {
-          "io.github.chmc.ListAllMac" => "match AppStore io.github.chmc.ListAllMac macos"
+          "io.github.chmc.ListAll" => "match AppStore io.github.chmc.ListAll macos"
         }
       }
     )
@@ -648,7 +648,7 @@ platform :ios do
     match(
       type: 'appstore',
       platform: 'macos',
-      app_identifier: ["io.github.chmc.ListAllMac"],
+      app_identifier: ["io.github.chmc.ListAll"],
       additional_cert_types: ["mac_installer_distribution"],
       verbose: true,
       keychain_password: ENV["KEYCHAIN_PASSWORD"] || "",
@@ -658,7 +658,7 @@ platform :ios do
 
     deliver(
       api_key: api_key,
-      app_identifier: "io.github.chmc.ListAllMac",
+      app_identifier: "io.github.chmc.ListAll",
       app_version: version,  # Creates new version if doesn't exist
       app_platform: "osx",   # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS
       screenshots_path: screenshots_path,
