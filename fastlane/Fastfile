@@ -475,6 +475,11 @@ platform :ios do
       skip_set_partition_list: true  # Skip partition list in CI to avoid SecItemCopyMatching error
     )
 
+    # Get the profile name that Match installed (don't hardcode it)
+    # Match sets this env var after installing the profile
+    macos_profile_name = ENV["sigh_io.github.chmc.ListAll_appstore_macos_profile-name"]
+    UI.message("Using macOS provisioning profile: #{macos_profile_name}")
+
     # Build macOS app archive and export as .pkg for App Store submission
     # Note: build_mac_app automatically handles:
     # - Hardened Runtime (ENABLE_HARDENED_RUNTIME = YES)
@@ -485,9 +490,10 @@ platform :ios do
       scheme: "ListAllMac",
       export_method: "app-store",
       output_directory: "./ListAll/build",
+      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{macos_profile_name}'",  # Override project setting with Match-installed profile
       export_options: {
         provisioningProfiles: {
-          "io.github.chmc.ListAll" => "match AppStore io.github.chmc.ListAll macos"
+          "io.github.chmc.ListAll" => macos_profile_name
         }
       }
     )
