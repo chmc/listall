@@ -6,7 +6,8 @@ require 'shellwords'
 require_relative 'lib/version_helper'
 require_relative 'lib/watch_screenshot_helper'
 require_relative 'lib/screenshot_helper'
-require_relative 'lib/fastlane_patch_ipad13'
+# NOTE: fastlane_patch_ipad13 removed - iPad Pro 13" (2064x2752) is now natively
+# supported in fastlane 2.230.0+ via DEVICE_RESOLUTIONS constant
 
 default_platform(:ios)
 
