@@ -5,10 +5,10 @@ storage_mode("git")
 type("appstore") # The default type, can be: appstore, adhoc, enterprise or development
 
 # Bundle identifiers to manage
+# Note: macOS now uses same bundle ID as iOS for Universal Purchase
 app_identifier([
 	"io.github.chmc.ListAll",
-	"io.github.chmc.ListAll.watchkitapp",
-	"io.github.chmc.ListAllMac"
+	"io.github.chmc.ListAll.watchkitapp"
 ])
 
 # app_identifier(["tools.fastlane.app", "tools.fastlane.app2"])
