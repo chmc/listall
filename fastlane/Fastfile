@@ -301,6 +301,40 @@ platform :ios do
     )
   end
 
+  desc "Regenerate macOS provisioning profiles in Match repo"
+  desc "Run this locally when profile/certificate mismatch occurs"
+  desc "Requires ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_BASE64 env vars"
+  desc "Usage: fastlane refresh_macos_profiles"
+  lane :refresh_macos_profiles do
+    require_asc_env!
+
+    UI.message("🔄 Regenerating macOS provisioning profile...")
+    UI.message("This will delete the existing profile and create a new one with the current certificate.")
+
+    # Create API key for Match to use
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    match(
+      type: 'appstore',
+      platform: 'macos',
+      app_identifier: ["io.github.chmc.ListAll"],
+      additional_cert_types: ["mac_installer_distribution"],
+      force: true,  # Force regenerate even if profile exists
+      readonly: false,  # Allow writing to Match repo
+      verbose: true,
+      api_key: api_key
+    )
+
+    UI.success("✅ macOS provisioning profile regenerated!")
+    UI.message("Push the changes and re-run CI.")
+  end
+
   desc "Build and upload to TestFlight"
   desc "Options:"
   desc "  bump_type: 'patch' (default), 'minor', or 'major' - Type of version increment"
