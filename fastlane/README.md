@@ -31,6 +31,20 @@ Run unit and UI tests (xcodebuild like CI)
 
 Run tests via scan (Fastlane)
 
+### ios refresh_macos_profiles
+
+```sh
+[bundle exec] fastlane ios refresh_macos_profiles
+```
+
+Regenerate macOS provisioning profiles in Match repo
+
+Run this locally when profile/certificate mismatch occurs
+
+Requires ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_BASE64 env vars
+
+Usage: fastlane refresh_macos_profiles
+
 ### ios beta
 
 ```sh

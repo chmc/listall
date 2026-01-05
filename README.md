@@ -82,6 +82,27 @@ To test Fastlane lanes locally (beta uploads, App Store Connect authentication, 
 
 **Version Management:** ListAll uses semantic versioning (X.Y.Z). See [`documentation/version_management.md`](./documentation/version_management.md) for detailed information about version numbering, bumping strategies, and CI/CD integration.
 
+## CloudKit Schema Deployment
+
+ListAll uses CloudKit for cross-device sync. **Before every TestFlight/App Store release**, verify the CloudKit schema is deployed:
+
+1. **Check schema status:**
+   - Open [CloudKit Dashboard](https://icloud.developer.apple.com/)
+   - Select `iCloud.io.github.chmc.ListAll` container
+   - Compare **Development** vs **Production** schemas
+
+2. **Deploy if needed:**
+   - Switch to Development environment
+   - Click ⚙️ → **"Deploy Schema Changes..."**
+   - Review diff and click **Deploy**
+
+**When to deploy:**
+- First release to TestFlight/App Store
+- After adding new Core Data entities or attributes
+- After any `.xcdatamodeld` changes
+
+> ⚠️ Without deployment, sync silently fails in Production builds. See [`documentation/learnings/cloudkit-schema-deployment-production.md`](./documentation/learnings/cloudkit-schema-deployment-production.md)
+
 ## App Store Release
 
 ### Prerequisites
