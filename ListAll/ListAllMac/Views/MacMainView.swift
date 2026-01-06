@@ -913,6 +913,7 @@ private struct MacListDetailView: View {
         viewModel.moveItems(from: source, to: destination)
     }
 
+    @ViewBuilder
     private func makeItemRow(item: Item) -> some View {
         MacItemRowView(
             item: item,

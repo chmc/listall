@@ -790,7 +790,8 @@ class DataManager: ObservableObject {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
 
         // CRITICAL: Eagerly fetch items relationship to avoid empty items arrays
-        request.relationshipKeyPathsForPrefetching = ["items"]
+        // Also prefetch items.images to prevent N+1 query when loading images
+        request.relationshipKeyPathsForPrefetching = ["items", "items.images"]
 
         do {
             let listEntities = try coreDataManager.viewContext.fetch(request)
@@ -837,7 +838,8 @@ class DataManager: ObservableObject {
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
-        request.relationshipKeyPathsForPrefetching = ["items"]
+        // Prefetch items and their images to prevent N+1 query problems
+        request.relationshipKeyPathsForPrefetching = ["items", "items.images"]
 
         do {
             let listEntities = try coreDataManager.viewContext.fetch(request)

@@ -663,6 +663,28 @@ class ImageService: ObservableObject {
         return thumbnail
     }
 
+    /// Creates a thumbnail asynchronously from image data with caching
+    /// Use this when loading multiple images to avoid blocking the main thread
+    func createThumbnailAsync(from data: Data, size: CGSize = Configuration.thumbnailSize) async -> NSImage? {
+        let cacheKey = "\(data.hashValue)_\(Int(size.width))x\(Int(size.height))" as NSString
+
+        // Check cache on current thread first
+        if let cachedThumbnail = thumbnailCache.object(forKey: cacheKey) {
+            return cachedThumbnail
+        }
+
+        // Generate thumbnail on background thread
+        return await Task.detached(priority: .userInitiated) { [self] in
+            guard let image = NSImage(data: data) else { return nil }
+            let thumbnail = createThumbnail(from: image, size: size)
+
+            // Store in cache (NSCache is thread-safe)
+            thumbnailCache.setObject(thumbnail, forKey: cacheKey)
+
+            return thumbnail
+        }.value
+    }
+
     /// Clears the thumbnail cache
     func clearThumbnailCache() {
         thumbnailCache.removeAllObjects()

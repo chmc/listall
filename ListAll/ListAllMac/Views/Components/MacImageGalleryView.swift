@@ -668,8 +668,8 @@ private struct MacImageThumbnailCell: View {
         let loadedThumbnail = await Task.detached(priority: .userInitiated) {
             guard let data = imageData else { return nil as NSImage? }
 
-            // Use ImageService's cached thumbnail creation
-            return await ImageService.shared.createThumbnail(from: data, size: thumbnailSize)
+            // Use ImageService's async thumbnail creation for better performance
+            return await ImageService.shared.createThumbnailAsync(from: data, size: thumbnailSize)
         }.value
 
         // Update UI on main thread with no implicit animation
