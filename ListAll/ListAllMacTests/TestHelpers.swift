@@ -90,15 +90,38 @@ class TestHelpers {
         }
     }
 
-    /// WARNING: This method is deprecated and should not be used
-    /// Use createTestMainViewModel() instead for proper test isolation
-    @available(*, deprecated, message: "Use createTestMainViewModel() for proper test isolation")
-    static func resetSharedSingletons() {
-        resetUserDefaults()
+    // MARK: - Unsigned Build Detection
 
-        // Note: Resetting shared singletons doesn't provide proper test isolation
-        // because Core Data contexts are still shared. Use isolated test instances instead.
-        DataManager.shared.lists = []
+    /// Returns true if the test build is unsigned (would trigger App Groups permission dialogs)
+    /// Use this to skip tests that require signed entitlements
+    static var isUnsignedTestBuild: Bool {
+        // Check if code signing is valid
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        task.arguments = ["-v", "--deep", Bundle.main.bundlePath]
+
+        let pipe = Pipe()
+        task.standardError = pipe
+        task.standardOutput = pipe
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+            return task.terminationStatus != 0
+        } catch {
+            // If we can't check, assume unsigned
+            return true
+        }
+    }
+
+    /// Skip test if running on unsigned build (would trigger permission dialog)
+    /// Returns true if test should be skipped
+    static func shouldSkipAppGroupsTest() -> Bool {
+        if isUnsignedTestBuild {
+            print("⚠️ Skipping test: unsigned build would trigger App Groups permission dialog")
+            return true
+        }
+        return false
     }
 
     #if os(macOS)

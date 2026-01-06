@@ -109,6 +109,32 @@ Some differences from iOS:
 - Test suites: Labels, Hints, Values, Traits, Containers, Keyboard, Dynamic Content
 - All 108 macOS tests passing
 
+## macOS Test Build Permissions
+
+### Problem
+Unsigned macOS test builds trigger "would like to access data from other apps" dialogs when tests access App Groups (Core Data storage).
+
+### Solution
+1. Write pure unit tests that don't access `DataManager.shared`, `DataRepository()`, or `CoreDataManager.shared`
+2. Use `TestHelpers.createTestDataManager()` for isolated in-memory Core Data
+3. Use `TestHelpers.shouldSkipAppGroupsTest()` to skip tests on unsigned builds
+4. Focus on testing model logic directly (no Core Data access)
+
+### Example
+```swift
+// GOOD - Pure unit test (no dialog)
+func testItemAccessibilityLabel() {
+    let item = Item(title: "Test", listId: UUID())
+    #expect(!item.title.isEmpty)
+}
+
+// BAD - Triggers permission dialog on unsigned builds
+func testDataManagerListCount() {
+    let count = DataManager.shared.lists.count  // Triggers App Groups access!
+    XCTAssertGreaterThanOrEqual(count, 0)
+}
+```
+
 ## Related Resources
 - [Apple: Accessibility for Developers](https://developer.apple.com/accessibility/)
 - [Apple: SwiftUI Accessibility](https://developer.apple.com/documentation/swiftui/accessibility)
