@@ -1,0 +1,65 @@
+# List Management Features
+
+[< Back to Summary](./SUMMARY.md)
+
+## Status: iOS 13/13 | macOS 11/13
+
+---
+
+## Feature Matrix
+
+| Feature | iOS | macOS | Implementation |
+|---------|:---:|:-----:|----------------|
+| Create List | ✅ | ✅ | Shared ViewModel |
+| Edit List Name | ✅ | ✅ | Shared ViewModel |
+| Delete List | ✅ | ✅ | Shared ViewModel |
+| Archive List | ✅ | ✅ | Shared ViewModel |
+| Restore Archived List | ✅ | ✅ | Shared ViewModel |
+| Permanently Delete Archived | ✅ | ✅ | Shared ViewModel |
+| Duplicate List | ✅ | ✅ | Shared ViewModel |
+| Reorder Lists (drag-drop) | ✅ | ✅ | Platform UI |
+| Multi-Select Lists | ✅ | ❌ | iOS only |
+| Bulk Archive/Delete | ✅ | ❌ | iOS only |
+| Sample List Templates | ✅ | ✅ | Shared Service |
+| Active/Archived Toggle | ✅ | ✅ | Platform UI |
+| List Item Count Display | ✅ | ✅ | Platform UI |
+
+---
+
+## Gaps (macOS)
+
+| Feature | Priority | iOS Implementation | Notes |
+|---------|:--------:|-------------------|-------|
+| Multi-Select Lists | HIGH | Selection checkboxes, Edit mode | Need MacOS selection mode |
+| Bulk Archive/Delete | HIGH | Bulk operations toolbar | Depends on multi-select |
+
+---
+
+## iOS-Specific Patterns
+- Swipe-to-archive gesture
+- Swipe actions (Share, Duplicate, Edit)
+- Pull-to-refresh
+- Selection mode with checkboxes
+- Bulk operations toolbar
+
+## macOS-Specific Patterns
+- Right-click context menu
+- Keyboard navigation (arrow keys, Enter, Delete)
+- Sidebar navigation pattern
+- Menu bar commands (Cmd+Shift+N, Cmd+Delete)
+
+---
+
+## Implementation Files
+
+**Shared**:
+- `ViewModels/MainViewModel.swift` - List CRUD operations
+- `Services/DataRepository.swift` - Persistence layer
+- `Services/SampleDataService.swift` - Templates
+
+**iOS**:
+- `Views/MainView.swift` - List display
+- `Views/Components/ListRowView.swift` - Row with swipe actions
+
+**macOS**:
+- `ListAllMac/Views/MacMainView.swift` - Sidebar with lists
