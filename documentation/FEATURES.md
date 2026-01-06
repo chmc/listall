@@ -209,9 +209,11 @@ macOS: NSSharingServicePicker with native services
 
 ## 7. Sync & Cloud Features
 
+> **Note**: iCloud sync is **mandatory and built-in** via NSPersistentCloudKitContainer. There is no toggle to disable sync - all data automatically syncs across devices when signed into iCloud.
+
 | Feature | iOS | macOS | Implementation |
 |---------|-----|-------|----------------|
-| iCloud Sync (CloudKit) | Yes | Yes | Shared Service |
+| iCloud Sync (CloudKit) | Yes (mandatory) | Yes (mandatory) | Shared Service (NSPersistentCloudKitContainer) |
 | Multi-Device Sync | Yes | Yes | Shared Service |
 | Sync Status Display | Yes | Yes | Platform UI |
 | Manual Sync Button | Yes | Yes | Platform UI |
@@ -251,10 +253,11 @@ macOS: NSSharingServicePicker with native services
 ### Settings - macOS-Specific
 ```
 - Preferences window (Cmd+,)
-- Tab-based layout (General, Sync, Data, About)
+- Tab-based layout (General, Data, About)
 - Touch ID support only
 - Website link
 ```
+> **BUG**: The current macOS Settings has a "Sync" tab with "Enable iCloud Sync" toggle that should be removed. iCloud sync is mandatory via NSPersistentCloudKitContainer - the toggle is misleading.
 
 ---
 

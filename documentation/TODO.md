@@ -3677,6 +3677,18 @@ fastlane/metadata/macos/
 
 ---
 
+#### BUG: Remove iCloud Sync Toggle from macOS Settings
+
+**Issue**: MacSettingsView.swift has an "Enable iCloud Sync" toggle (`@AppStorage("iCloudSyncEnabled")`) that is misleading.
+
+**Reason**: iCloud sync is **mandatory and built-in** - NSPersistentCloudKitContainer automatically syncs all data. The toggle doesn't actually disable sync at the Core Data level.
+
+**Fix Required**: Remove the `SyncSettingsTab` from MacSettingsView or replace it with read-only sync status information.
+
+**Location**: `/ListAll/ListAllMac/Views/MacSettingsView.swift` lines 80-98
+
+---
+
 #### iOS-Only Features (Not Applicable to macOS)
 
 These features are intentionally iOS-only due to platform differences:
