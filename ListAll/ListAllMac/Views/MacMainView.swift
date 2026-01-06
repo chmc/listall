@@ -246,6 +246,8 @@ struct MacMainView: View {
 
         print("🔄 macOS: Starting sync polling timer (every \(Int(syncPollingInterval))s)")
 
+        // Note: [self] is correct for SwiftUI structs - they are value types that get copied,
+        // so no retain cycle is created. The closure captures a copy of the struct state.
         syncPollingTimer = Timer.scheduledTimer(withTimeInterval: syncPollingInterval, repeats: true) { [self] _ in
             // Skip polling if user is editing - prevents UI interruption during sheet presentation
             guard !isEditingAnyItem else {
