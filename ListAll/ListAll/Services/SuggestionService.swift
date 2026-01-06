@@ -104,18 +104,18 @@ private class SuggestionCache {
 
 class SuggestionService: ObservableObject {
     @Published var suggestions: [ItemSuggestion] = []
-    
-    private let dataRepository: DataRepository
+
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var dataRepository: DataRepository = DataRepository()
     private let suggestionCache = SuggestionCache()
-    
+
     // Advanced suggestion configuration
     private let recencyWeight: Double = 0.3
     private let frequencyWeight: Double = 0.4
     private let matchWeight: Double = 0.3
     private let maxRecencyDays: Double = 30.0 // Items older than 30 days get reduced recency score
-    
-    init(dataRepository: DataRepository = DataRepository()) {
-        self.dataRepository = dataRepository
+
+    init() {
         // Temporarily disable notification observers to fix test issues
         // setupNotificationObservers()
     }

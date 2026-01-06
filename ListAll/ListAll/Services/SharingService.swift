@@ -78,18 +78,30 @@ class SharingService: ObservableObject {
     @Published var isSharing = false
     @Published var shareError: String?
 
-    private var dataRepository: DataRepository
-    private var exportService: ExportService
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var _lazyDataRepository: DataRepository = DataRepository()
+    private lazy var _lazyExportService: ExportService = ExportService()
+
+    /// Injected dependencies for testing
+    private var _injectedDataRepository: DataRepository?
+    private var _injectedExportService: ExportService?
+
+    private var dataRepository: DataRepository {
+        _injectedDataRepository ?? _lazyDataRepository
+    }
+
+    private var exportService: ExportService {
+        _injectedExportService ?? _lazyExportService
+    }
 
     init() {
-        self.dataRepository = DataRepository()
-        self.exportService = ExportService()
+        // Dependencies are lazy-initialized when first accessed
     }
 
     /// Internal initializer for testing with custom dependencies
     init(dataRepository: DataRepository, exportService: ExportService) {
-        self.dataRepository = dataRepository
-        self.exportService = exportService
+        self._injectedDataRepository = dataRepository
+        self._injectedExportService = exportService
     }
     
     // MARK: - Share Single List
