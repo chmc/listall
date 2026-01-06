@@ -30,12 +30,14 @@ struct MacShareFormatPickerView: View {
             HStack {
                 Text("Share List")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close")
             }
 
             Divider()
@@ -45,6 +47,7 @@ struct MacShareFormatPickerView: View {
                 Text("Format")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .accessibilityAddTraits(.isHeader)
 
                 FormatOptionRow(
                     format: .plainText,
@@ -72,6 +75,7 @@ struct MacShareFormatPickerView: View {
                 Text("Options")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .accessibilityAddTraits(.isHeader)
 
                 Toggle("Include crossed-out items", isOn: $shareOptions.includeCrossedOutItems)
                 Toggle("Include descriptions", isOn: $shareOptions.includeDescriptions)
@@ -120,6 +124,7 @@ struct MacShareFormatPickerView: View {
                 .buttonStyle(.bordered)
                 .keyboardShortcut("c", modifiers: .command)
                 .help("Copy list content to clipboard (⌘C)")
+                .accessibilityLabel("Copy to clipboard")
 
                 Spacer()
 
@@ -134,6 +139,7 @@ struct MacShareFormatPickerView: View {
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
                 .disabled(isSharing)
+                .accessibilityHint("Opens system share sheet")
             }
         }
         .padding()
@@ -270,6 +276,9 @@ private struct FormatOptionRow: View {
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isSelected ? "Selected" : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 

@@ -74,6 +74,8 @@ struct MacImageGalleryView: View {
             .background(Color(nsColor: .controlBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(borderOverlay)
+            .accessibilityLabel("Image gallery")
+            .accessibilityValue("\(images.count) images")
             .onDrop(of: [.image, .fileURL], isTargeted: $isDropTargeted) { providers in
                 handleExternalDrop(providers: providers)
                 return true
@@ -432,12 +434,14 @@ private struct MacImageGalleryToolbar: View {
             Button(action: onAddImages) {
                 Label("Add", systemImage: "plus")
             }
+            .accessibilityLabel("Add images")
             .help("Add images (drag & drop or click)")
 
             // Delete button
             Button(action: onDeleteSelected) {
                 Label("Delete", systemImage: "trash")
             }
+            .accessibilityLabel("Delete selected images")
             .disabled(!canDelete)
             .help("Delete selected images (Delete key)")
 
@@ -445,6 +449,7 @@ private struct MacImageGalleryToolbar: View {
             Button(action: onQuickLook) {
                 Label("Preview", systemImage: "eye")
             }
+            .accessibilityLabel("Preview images")
             .disabled(!canQuickLook)
             .help("Quick Look preview (Space)")
 
@@ -462,6 +467,7 @@ private struct MacImageGalleryToolbar: View {
                     .foregroundColor(.secondary)
 
                 Slider(value: $thumbnailSize, in: 80...200, step: 20)
+                    .accessibilityLabel("Thumbnail size")
                     .frame(width: 100)
 
                 Image(systemName: "square.grid.2x2")
@@ -645,6 +651,9 @@ private struct MacImageThumbnailCell: View {
                 onSelect(image.id, [])
             }
         }
+        .accessibilityLabel("Image \(image.orderNumber + 1)")
+        .accessibilityValue(isSelected ? "Selected" : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isImage] : [.isImage])
     }
 
     // MARK: - Async Thumbnail Loading
@@ -686,11 +695,13 @@ private struct MacImageGalleryEmptyState: View {
             Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 48))
                 .foregroundColor(isDropTargeted ? .accentColor : .secondary)
+                .accessibilityHidden(true)
 
             Text("No Images")
                 .font(.title3)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
+                .accessibilityAddTraits(.isHeader)
 
             Text("Drop images here, paste with ⌘V, or click Add")
                 .font(.caption)
@@ -707,6 +718,8 @@ private struct MacImageGalleryEmptyState: View {
                 )
         )
         .padding()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("No images. Drop images here, paste with Command V, or click Add button")
     }
 }
 

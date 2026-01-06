@@ -107,6 +107,8 @@ struct QuickLookButton: View {
         }
         .disabled(!item.hasImages)
         .help(item.hasImages ? "Quick Look (Space)" : "No images to preview")
+        .accessibilityLabel(label ?? "Quick Look")
+        .accessibilityHint("Opens image preview")
     }
 }
 
@@ -147,6 +149,8 @@ struct QuickLookThumbnailView: View {
                         isShowing: $isShowingPreview
                     )
                     .help("Double-click or press Space to preview")
+                    .accessibilityLabel("Image thumbnail")
+                    .accessibilityHint("Double-tap or press Space to preview")
 
                     // Badge for multiple images
                     .overlay(alignment: .bottomTrailing) {
@@ -209,7 +213,8 @@ struct MacImagePreviewGrid: View {
                 ImageThumbnail(
                     itemImage: itemImage,
                     size: thumbnailSize,
-                    isSelected: selectedImageIndex == index
+                    isSelected: selectedImageIndex == index,
+                    index: index
                 )
                 .onTapGesture {
                     selectedImageIndex = index
@@ -236,6 +241,7 @@ private struct ImageThumbnail: View {
     let itemImage: ItemImage
     let size: CGFloat
     let isSelected: Bool
+    let index: Int
 
     var body: some View {
         Group {
@@ -260,6 +266,9 @@ private struct ImageThumbnail: View {
                 .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
         )
         .shadow(color: isSelected ? Color.accentColor.opacity(0.3) : Color.clear, radius: 4)
+        .accessibilityLabel("Image \(index + 1)")
+        .accessibilityValue(isSelected ? "Selected" : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isImage] : [.isImage])
     }
 }
 

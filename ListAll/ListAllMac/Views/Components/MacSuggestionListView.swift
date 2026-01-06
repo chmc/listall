@@ -58,6 +58,7 @@ struct MacSuggestionListView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
             )
+            .accessibilityLabel("Item suggestions")
         }
     }
 
@@ -67,6 +68,7 @@ struct MacSuggestionListView: View {
             Image(systemName: "lightbulb.fill")
                 .foregroundColor(.yellow)
                 .font(.caption)
+                .accessibilityHidden(true)
 
             Text("Suggestions (\(suggestions.count))")
                 .font(.caption)
@@ -86,6 +88,7 @@ struct MacSuggestionListView: View {
                         .foregroundColor(.accentColor)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(showAllSuggestions ? "Show fewer suggestions" : "Show all suggestions")
             }
         }
         .padding(.horizontal, 12)
@@ -198,6 +201,8 @@ private struct MacSuggestionRowView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(suggestion.title), quantity \(suggestion.quantity)")
+        .accessibilityHint("Double-tap to use this suggestion")
     }
 
     @ViewBuilder

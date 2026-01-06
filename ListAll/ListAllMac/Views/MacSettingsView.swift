@@ -67,8 +67,10 @@ private struct GeneralSettingsTab: View {
                     Text("Date Modified").tag("modifiedAt")
                 }
                 .pickerStyle(.menu)
+                .accessibilityLabel("Default sort order")
             } header: {
                 Text("Lists")
+                    .accessibilityAddTraits(.isHeader)
             }
         }
         .formStyle(.grouped)
@@ -84,12 +86,14 @@ private struct SyncSettingsTab: View {
         Form {
             Section {
                 Toggle("Enable iCloud Sync", isOn: $iCloudSyncEnabled)
+                    .accessibilityHint("When enabled, syncs lists across your devices")
 
                 Text("Sync your lists across all your Apple devices using iCloud.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             } header: {
                 Text("iCloud")
+                    .accessibilityAddTraits(.isHeader)
             }
         }
         .formStyle(.grouped)
@@ -109,6 +113,7 @@ private struct DataSettingsTab: View {
                         object: nil
                     )
                 }
+                .accessibilityHint("Opens export options")
 
                 Button("Import Data...") {
                     // TODO: Implement import in Task 3.6
@@ -117,8 +122,10 @@ private struct DataSettingsTab: View {
                         object: nil
                     )
                 }
+                .accessibilityHint("Opens file picker to import data")
             } header: {
                 Text("Import / Export")
+                    .accessibilityAddTraits(.isHeader)
             }
         }
         .formStyle(.grouped)
@@ -141,14 +148,17 @@ private struct AboutSettingsTab: View {
             Image(systemName: "list.bullet.clipboard")
                 .font(.system(size: 64))
                 .foregroundColor(.accentColor)
+                .accessibilityHidden(true)
 
             Text("ListAll")
                 .font(.title)
                 .fontWeight(.bold)
+                .accessibilityAddTraits(.isHeader)
 
             Text("Version \(appVersion) (\(buildNumber))")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .accessibilityLabel("Version \(appVersion), build \(buildNumber)")
 
             Divider()
 
@@ -161,6 +171,7 @@ private struct AboutSettingsTab: View {
 
             Link("Visit Website", destination: URL(string: "https://github.com/chmc/listall")!)
                 .font(.caption)
+                .accessibilityHint("Opens GitHub page in browser")
         }
         .padding()
     }

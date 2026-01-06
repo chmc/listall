@@ -361,6 +361,10 @@ private struct MacSidebarView: View {
                     .focusable()
                     .focused($focusedListID, equals: list.id)
                     .accessibilityIdentifier("SidebarListCell_\(list.name)")
+                    // MARK: VoiceOver Accessibility
+                    .accessibilityLabel("\(list.name)")
+                    .accessibilityValue("\(list.items.filter { !$0.isCrossedOut }.count) active, \(list.items.count) total items")
+                    .accessibilityHint("Double-tap to view list items")
                     // MARK: Drag-and-Drop Support
                     .draggable(list) // Enable dragging lists to reorder
                     .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
@@ -390,6 +394,7 @@ private struct MacSidebarView: View {
                     }
                     .buttonStyle(.plain)
                     .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+                    .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
                 }
             }
         }
@@ -444,6 +449,7 @@ private struct MacSidebarView: View {
                     Label("Add List", systemImage: "plus")
                 }
                 .accessibilityIdentifier("AddListButton")
+                .accessibilityHint("Opens sheet to create new list")
             }
         }
         .sheet(isPresented: $showingSharePopover) {
@@ -611,6 +617,7 @@ private struct MacListDetailView: View {
             Text(displayName)
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
 
@@ -630,6 +637,7 @@ private struct MacListDetailView: View {
         .buttonStyle(.plain)
         .help("Share List (⇧⌘S)")
         .accessibilityIdentifier("ShareListButton")
+        .accessibilityLabel("Share list")
         .popover(isPresented: $showingSharePopover) {
             MacShareFormatPickerView(
                 list: currentList ?? list,
@@ -643,11 +651,13 @@ private struct MacListDetailView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
             TextField(String(localized: "Search items") + "...", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .frame(width: 150)
                 .focused($isSearchFieldFocused)
                 .accessibilityIdentifier("ListSearchField")
+                .accessibilityLabel("Search items")
                 .onExitCommand {
                     // Escape clears search when search field is focused
                     if !viewModel.searchText.isEmpty {
@@ -665,6 +675,7 @@ private struct MacListDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(.horizontal, 8)
@@ -681,6 +692,8 @@ private struct MacListDetailView: View {
         .buttonStyle(.plain)
         .help("Filter & Sort")
         .accessibilityIdentifier("FilterSortButton")
+        .accessibilityLabel("Filter and sort items")
+        .accessibilityHint("Opens filter and sort options")
         .popover(isPresented: $showingOrganizationPopover) {
             MacItemOrganizationView(viewModel: viewModel)
         }
@@ -694,6 +707,7 @@ private struct MacListDetailView: View {
         .buttonStyle(.plain)
         .help("Edit List")
         .accessibilityIdentifier("EditListButton")
+        .accessibilityLabel("Edit list name")
     }
 
     // MARK: - Active Filters Bar
@@ -936,6 +950,7 @@ private struct MacListDetailView: View {
                     Label("Add Item", systemImage: "plus")
                 }
                 .accessibilityIdentifier("AddItemButton")
+                .accessibilityHint("Opens sheet to add new item")
             }
         }
         // Sync ViewModel items with DataManager for proper reactivity
@@ -1115,6 +1130,22 @@ private struct MacItemRowView: View {
 
     @State private var isHovering = false
 
+    /// Combined accessibility label for VoiceOver
+    private var itemAccessibilityLabel: String {
+        var label = item.title
+        label += ", \(item.isCrossedOut ? "completed" : "active")"
+        if item.quantity > 1 {
+            label += ", quantity \(item.quantity)"
+        }
+        if item.hasImages {
+            label += ", \(item.imageCount) \(item.imageCount == 1 ? "image" : "images")"
+        }
+        if let description = item.itemDescription, !description.isEmpty {
+            label += ", \(description)"
+        }
+        return label
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Checkbox button
@@ -1124,6 +1155,8 @@ private struct MacItemRowView: View {
                     .foregroundColor(item.isCrossedOut ? .green : .secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
+            .accessibilityHint("Double-tap to toggle completion status")
 
             // Image thumbnail (if item has images)
             if item.hasImages, let firstImage = item.sortedImages.first, let nsImage = firstImage.nsImage {
@@ -1149,11 +1182,13 @@ private struct MacItemRowView: View {
                                 .background(Color.black.opacity(0.7))
                                 .clipShape(Capsule())
                                 .offset(x: 2, y: 2)
+                                .accessibilityHidden(true)
                         }
                     }
                 }
                 .buttonStyle(.plain)
                 .help("Quick Look (Space)")
+                .accessibilityLabel("View \(item.imageCount) images")
             }
 
             // Item content
@@ -1171,6 +1206,7 @@ private struct MacItemRowView: View {
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.2))
                             .cornerRadius(4)
+                            .accessibilityHidden(true)
                     }
 
                     // Show photo icon only when no thumbnail (fallback indicator)
@@ -1201,6 +1237,8 @@ private struct MacItemRowView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Quick Look (Space)")
+                        .accessibilityLabel("Quick Look")
+                        .accessibilityHint("Opens image preview")
                     }
 
                     Button(action: onEdit) {
@@ -1208,6 +1246,8 @@ private struct MacItemRowView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Edit Item")
+                    .accessibilityLabel("Edit item")
+                    .accessibilityHint("Opens edit sheet")
 
                     Button(action: onDelete) {
                         Image(systemName: "trash")
@@ -1215,6 +1255,8 @@ private struct MacItemRowView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Delete Item")
+                    .accessibilityLabel("Delete item")
+                    .accessibilityHint("Permanently removes this item")
                 }
             }
         }
@@ -1230,6 +1272,11 @@ private struct MacItemRowView: View {
         }
         .contentShape(Rectangle())  // Move contentShape AFTER onDoubleClick so it doesn't block events
         .listRowBackground(Color.clear)  // Disable default selection overlay
+        // MARK: - Accessibility (Task 11.2)
+        // Combine child elements into a single accessible element for cleaner VoiceOver navigation
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(itemAccessibilityLabel)
+        .accessibilityHint("Double-tap to edit. Use actions menu for more options.")
         .contextMenu {
             Button("Edit") { onEdit() }
             Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
@@ -1276,12 +1323,14 @@ private struct MacAddItemSheet: View {
             Text("Add Item")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: 12) {
                 // Title field with suggestions
                 VStack(alignment: .leading, spacing: 4) {
                     TextField("Item Name", text: $title)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Item name")
                         .onChange(of: title) { _, newValue in
                             handleTitleChange(newValue)
                         }
@@ -1320,6 +1369,7 @@ private struct MacAddItemSheet: View {
                     onCancel()
                 }
                 .keyboardShortcut(.escape)
+                .accessibilityHint("Discards changes")
 
                 Button("Add") {
                     onSave(title, quantity, description.isEmpty ? nil : description)
@@ -1327,6 +1377,7 @@ private struct MacAddItemSheet: View {
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityHint("Saves new item")
             }
         }
         .padding(30)
@@ -1417,12 +1468,14 @@ private struct MacEditItemSheet: View {
             Text("Edit Item")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: 12) {
                 // Title field with suggestions
                 VStack(alignment: .leading, spacing: 4) {
                     TextField("Item Name", text: $title)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Item name")
                         .onChange(of: title) { _, newValue in
                             handleTitleChange(newValue)
                         }
@@ -1486,6 +1539,7 @@ private struct MacEditItemSheet: View {
                     onCancel()
                 }
                 .keyboardShortcut(.escape)
+                .accessibilityHint("Discards changes")
 
                 Button("Save") {
                     onSave(title, quantity, description.isEmpty ? nil : description, images)
@@ -1493,6 +1547,7 @@ private struct MacEditItemSheet: View {
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityHint("Saves changes")
             }
         }
         .padding(30)
@@ -1575,10 +1630,12 @@ private struct MacEditListSheet: View {
             Text("Edit List")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .accessibilityAddTraits(.isHeader)
 
             TextField("List Name", text: $name)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 300)
+                .accessibilityLabel("List name")
                 .onSubmit {
                     if !name.isEmpty {
                         onSave(name)
@@ -1590,6 +1647,7 @@ private struct MacEditListSheet: View {
                     onCancel()
                 }
                 .keyboardShortcut(.escape)
+                .accessibilityHint("Discards changes")
 
                 Button("Save") {
                     onSave(name)
@@ -1597,6 +1655,7 @@ private struct MacEditListSheet: View {
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityHint("Saves changes")
             }
         }
         .padding(30)
@@ -1614,10 +1673,12 @@ private struct MacEmptyStateView: View {
             Image(systemName: "list.bullet.clipboard")
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
 
             Text("No List Selected")
                 .font(.title2)
                 .foregroundColor(.secondary)
+                .accessibilityAddTraits(.isHeader)
 
             Text("Select a list from the sidebar or create a new one.")
                 .foregroundColor(.secondary)
@@ -1627,6 +1688,7 @@ private struct MacEmptyStateView: View {
                 onCreateList()
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityHint("Opens sheet to create new list")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -1670,10 +1732,12 @@ private struct MacCreateListSheet: View {
             Text("New List")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .accessibilityAddTraits(.isHeader)
 
             TextField("List Name", text: $listName)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 300)
+                .accessibilityLabel("List name")
                 .onSubmit {
                     if !listName.isEmpty {
                         onSave(listName)
@@ -1685,6 +1749,7 @@ private struct MacCreateListSheet: View {
                     onCancel()
                 }
                 .keyboardShortcut(.escape)
+                .accessibilityHint("Discards changes")
 
                 Button("Create") {
                     onSave(listName)
@@ -1692,6 +1757,7 @@ private struct MacCreateListSheet: View {
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
                 .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityHint("Creates new list")
             }
         }
         .padding(30)

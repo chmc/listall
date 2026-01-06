@@ -46,6 +46,7 @@ struct MacItemOrganizationView: View {
             Label("Sorting", systemImage: "arrow.up.arrow.down")
                 .font(.headline)
                 .foregroundColor(.primary)
+                .accessibilityAddTraits(.isHeader)
 
             // Sort options grid (2 columns)
             LazyVGrid(columns: [
@@ -84,6 +85,8 @@ struct MacItemOrganizationView: View {
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Sort direction")
+                .accessibilityValue(viewModel.currentSortDirection.displayName)
             }
             .padding(.top, 4)
         }
@@ -96,6 +99,7 @@ struct MacItemOrganizationView: View {
             Label("Filtering", systemImage: "line.3.horizontal.decrease")
                 .font(.headline)
                 .foregroundColor(.primary)
+                .accessibilityAddTraits(.isHeader)
 
             // Filter options (vertical list)
             VStack(spacing: 6) {
@@ -190,6 +194,9 @@ private struct SortOptionButton: View {
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(option.displayName)
+        .accessibilityValue(isSelected ? "Selected" : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
@@ -226,6 +233,9 @@ private struct FilterOptionButton: View {
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(option.displayName)
+        .accessibilityValue(isSelected ? "Selected" : "")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
