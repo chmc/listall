@@ -1172,14 +1172,15 @@ private struct MacItemRowView: View {
                                     .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
                             )
 
-                        // Badge for multiple images
+                        // Badge for multiple images (dark mode compatible)
                         if item.imageCount > 1 {
                             Text("\(item.imageCount)")
                                 .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 3)
                                 .padding(.vertical, 1)
-                                .background(Color.black.opacity(0.7))
+                                .background(.ultraThinMaterial.opacity(0.9))
+                                .background(Color(nsColor: .darkGray))
                                 .clipShape(Capsule())
                                 .offset(x: 2, y: 2)
                                 .accessibilityHidden(true)

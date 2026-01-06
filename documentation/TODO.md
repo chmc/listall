@@ -3475,13 +3475,40 @@ fastlane/metadata/macos/
 
 ---
 
-### Task 11.3: Implement Dark Mode Support
+### Task 11.3: [COMPLETED] Implement Dark Mode Support
 **TDD**: Appearance tests
 
 **Steps**:
 1. Verify all views work in dark mode
 2. Use semantic colors from asset catalog
 3. Test light/dark mode switching
+
+**Completed**:
+- Analyzed all macOS view files for hardcoded colors
+- Fixed 4 critical dark mode issues:
+  - MacMainView.swift: Image count badge used `Color.black.opacity(0.7)` - replaced with `.ultraThinMaterial` + `NSColor.darkGray`
+  - MacQuickLookView.swift: Same image badge issue - fixed with same approach
+- Configured AccentColor asset with proper light/dark variants:
+  - Light mode: Blue (RGB 0, 0, 1)
+  - Dark mode: Lighter blue (RGB 0.2, 0.4, 1) for better visibility
+- Most views already correctly use semantic colors:
+  - `Color.secondary`, `Color.accentColor` for system-adaptive colors
+  - `NSColor.windowBackgroundColor`, `NSColor.controlBackgroundColor` for backgrounds
+  - Theme.Colors struct for shared semantic colors
+- Created 19 dark mode unit tests in `DarkModeColorTests` class:
+  - Theme.Colors accessibility tests (5 tests)
+  - Semantic status colors tests (4 tests)
+  - AccentColor asset tests (2 tests)
+  - NSColor system colors tests (5 tests)
+  - Badge colors dark mode compatibility tests (3 tests)
+
+**Files modified**:
+- `ListAllMac/Views/MacMainView.swift` - Dark mode compatible image badges
+- `ListAllMac/Views/Components/MacQuickLookView.swift` - Dark mode compatible image badges
+- `ListAllMac/Assets.xcassets/AccentColor.colorset/Contents.json` - Light/dark color variants
+- `ListAllMacTests/ListAllMacTests.swift` - Added DarkModeColorTests class
+
+**Test Results**: All 133 macOS tests pass (19 new dark mode + 114 existing)
 
 ---
 

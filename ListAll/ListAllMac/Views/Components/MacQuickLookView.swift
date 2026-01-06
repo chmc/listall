@@ -152,15 +152,16 @@ struct QuickLookThumbnailView: View {
                     .accessibilityLabel("Image thumbnail")
                     .accessibilityHint("Double-tap or press Space to preview")
 
-                    // Badge for multiple images
+                    // Badge for multiple images (dark mode compatible)
                     .overlay(alignment: .bottomTrailing) {
                         if item.imageCount > 1 {
                             Text("\(item.imageCount)")
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 2)
-                                .background(Color.black.opacity(0.6))
+                                .background(.ultraThinMaterial.opacity(0.9))
+                                .background(Color(nsColor: .darkGray))
                                 .clipShape(Capsule())
                                 .offset(x: 2, y: 2)
                         }

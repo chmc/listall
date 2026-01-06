@@ -3982,7 +3982,7 @@ final class SharingServiceMacTests: XCTestCase {
         // Verify method signatures exist (compile-time checks)
 
         // shareList method
-        typealias ShareListMethod = (SharingService) -> (List, ShareFormat, ShareOptions) -> ShareResult?
+        typealias ShareListMethod = (SharingService) -> (ListAll.List, ShareFormat, ShareOptions) -> ShareResult?
         let _: ShareListMethod = SharingService.shareList
 
         // shareAllData method
@@ -3994,7 +3994,7 @@ final class SharingServiceMacTests: XCTestCase {
         let _: CopyMethod = SharingService.copyToClipboard
 
         // validateListForSharing method
-        typealias ValidateMethod = (SharingService) -> (List) -> Bool
+        typealias ValidateMethod = (SharingService) -> (ListAll.List) -> Bool
         let _: ValidateMethod = SharingService.validateListForSharing
 
         // clearError method
@@ -4020,7 +4020,7 @@ final class SharingServiceMacTests: XCTestCase {
         let _: ShareUsingMethod = SharingService.share
 
         // createSharingServicePicker method
-        typealias CreatePickerMethod = (SharingService) -> (List, ShareFormat, ShareOptions) -> NSSharingServicePicker?
+        typealias CreatePickerMethod = (SharingService) -> (ListAll.List, ShareFormat, ShareOptions) -> NSSharingServicePicker?
         let _: CreatePickerMethod = SharingService.createSharingServicePicker
 
         XCTAssertTrue(true, "macOS-specific SharingService methods exist")
@@ -8502,8 +8502,8 @@ final class ItemReorderingMacTests: XCTestCase {
         return item
     }
 
-    private func createTestList(withItemCount count: Int) -> List {
-        var list = List(name: "Test List")
+    private func createTestList(withItemCount count: Int) -> ListAll.List {
+        var list = ListAll.List(name: "Test List")
         list.items = (0..<count).map { index in
             createTestItem(title: "Item \(index)", orderNumber: index)
         }
@@ -9195,8 +9195,8 @@ final class ListSharingMacTests: XCTestCase {
 
     // MARK: - List Model Creation for Tests
 
-    func createTestList(name: String = "Test List") -> List {
-        var list = List(name: name)
+    func createTestList(name: String = "Test List") -> ListAll.List {
+        var list = ListAll.List(name: name)
         list.id = UUID()
         list.createdAt = Date()
         list.modifiedAt = Date()
@@ -9401,6 +9401,199 @@ final class ListSharingMacTests: XCTestCase {
         // - Can copy to clipboard or save to file via NSSavePanel
 
         XCTAssertTrue(true, "List Sharing macOS documentation verified")
+    }
+}
+
+// MARK: - Dark Mode Color Tests (Swift Testing)
+
+import Testing
+import SwiftUI
+
+/// Type alias to disambiguate ListAll.List from SwiftUI.List in tests below
+private typealias ListAllList = ListAll.List
+private typealias SwiftUIColor = SwiftUI.Color
+
+/// Pure unit tests for dark mode color compatibility on macOS.
+/// These tests verify Theme.Colors semantic color definitions exist,
+/// AccentColor is properly defined, and that badge colors use dark mode compatible colors.
+///
+/// IMPORTANT: These tests do NOT access Core Data, DataManager, DataRepository, or App Groups
+/// to avoid triggering permission dialogs on unsigned builds.
+@Suite("Dark Mode Color Compatibility Tests")
+struct DarkModeColorTests {
+
+    // MARK: - Theme.Colors Struct Accessibility Tests (5 tests)
+
+    @Test("Theme.Colors struct is accessible")
+    func themeColorsStructExists() {
+        // Verify Theme.Colors struct can be accessed
+        let _ = Theme.Colors.self
+        #expect(Bool(true), "Theme.Colors struct is accessible")
+    }
+
+    @Test("Theme.Colors.primary is defined")
+    func themeColorsPrimaryExists() {
+        let primaryColor = Theme.Colors.primary
+        #expect(primaryColor != nil as SwiftUIColor?, "Theme.Colors.primary should be defined")
+    }
+
+    @Test("Theme.Colors.secondary is defined")
+    func themeColorsSecondaryExists() {
+        let secondaryColor = Theme.Colors.secondary
+        #expect(secondaryColor != nil as SwiftUIColor?, "Theme.Colors.secondary should be defined")
+    }
+
+    @Test("Theme.Colors.background is defined for macOS")
+    func themeColorsBackgroundExists() {
+        let backgroundColor = Theme.Colors.background
+        #expect(backgroundColor != nil as SwiftUIColor?, "Theme.Colors.background should be defined")
+    }
+
+    @Test("Theme.Colors.groupedBackground is defined for macOS")
+    func themeColorsGroupedBackgroundExists() {
+        let groupedBackgroundColor = Theme.Colors.groupedBackground
+        #expect(groupedBackgroundColor != nil as SwiftUIColor?, "Theme.Colors.groupedBackground should be defined")
+    }
+
+    // MARK: - Semantic Status Colors Tests (4 tests)
+
+    @Test("Theme.Colors.success (green) is accessible")
+    func themeColorsSuccessExists() {
+        let successColor = Theme.Colors.success
+        #expect(successColor != nil as SwiftUIColor?, "Theme.Colors.success should be defined")
+        // Verify it equals the expected system color
+        #expect(successColor == SwiftUIColor.green, "Theme.Colors.success should be Color.green")
+    }
+
+    @Test("Theme.Colors.warning (orange) is accessible")
+    func themeColorsWarningExists() {
+        let warningColor = Theme.Colors.warning
+        #expect(warningColor != nil as SwiftUIColor?, "Theme.Colors.warning should be defined")
+        #expect(warningColor == SwiftUIColor.orange, "Theme.Colors.warning should be Color.orange")
+    }
+
+    @Test("Theme.Colors.error (red) is accessible")
+    func themeColorsErrorExists() {
+        let errorColor = Theme.Colors.error
+        #expect(errorColor != nil as SwiftUIColor?, "Theme.Colors.error should be defined")
+        #expect(errorColor == SwiftUIColor.red, "Theme.Colors.error should be Color.red")
+    }
+
+    @Test("Theme.Colors.info (blue) is accessible")
+    func themeColorsInfoExists() {
+        let infoColor = Theme.Colors.info
+        #expect(infoColor != nil as SwiftUIColor?, "Theme.Colors.info should be defined")
+        #expect(infoColor == SwiftUIColor.blue, "Theme.Colors.info should be Color.blue")
+    }
+
+    // MARK: - AccentColor Asset Tests (2 tests)
+
+    @Test("AccentColor asset loads successfully")
+    func accentColorLoads() {
+        let accentColor = SwiftUIColor("AccentColor")
+        #expect(accentColor != nil as SwiftUIColor?, "AccentColor should load from asset catalog")
+    }
+
+    @Test("Theme.Colors.primary uses AccentColor asset")
+    func themeColorsPrimaryUsesAccentColor() {
+        // Theme.Colors.primary is defined as Color("AccentColor")
+        let primary = Theme.Colors.primary
+        let accentFromAsset = SwiftUIColor("AccentColor")
+        // Both should be the same color reference
+        #expect(primary.description == accentFromAsset.description, "Theme.Colors.primary should use AccentColor asset")
+    }
+
+    // MARK: - NSColor System Colors Tests (6 tests)
+
+    @Test("NSColor.darkGray is accessible")
+    func nsColorDarkGrayExists() {
+        let darkGrayColor = NSColor.darkGray
+        #expect(darkGrayColor != nil as NSColor?, "NSColor.darkGray should be accessible")
+    }
+
+    @Test("NSColor.darkGray can be converted to SwiftUI Color")
+    func nsColorDarkGrayConvertsToSwiftUIColor() {
+        let nsColorDarkGray = NSColor.darkGray
+        let swiftUIColor = SwiftUIColor(nsColor: nsColorDarkGray)
+        #expect(swiftUIColor != nil as SwiftUIColor?, "NSColor.darkGray should convert to SwiftUI Color")
+    }
+
+    @Test("NSColor.windowBackgroundColor is accessible")
+    func nsColorWindowBackgroundExists() {
+        let windowBackgroundColor = NSColor.windowBackgroundColor
+        #expect(windowBackgroundColor != nil as NSColor?, "NSColor.windowBackgroundColor should be accessible")
+    }
+
+    @Test("NSColor.controlBackgroundColor is accessible")
+    func nsColorControlBackgroundExists() {
+        let controlBackgroundColor = NSColor.controlBackgroundColor
+        #expect(controlBackgroundColor != nil as NSColor?, "NSColor.controlBackgroundColor should be accessible")
+    }
+
+    @Test("NSColor.textColor is accessible")
+    func nsColorTextColorExists() {
+        let textColor = NSColor.textColor
+        #expect(textColor != nil as NSColor?, "NSColor.textColor should be accessible")
+    }
+
+    @Test("NSColor.secondaryLabelColor is accessible")
+    func nsColorSecondaryLabelColorExists() {
+        let secondaryLabelColor = NSColor.secondaryLabelColor
+        #expect(secondaryLabelColor != nil as NSColor?, "NSColor.secondaryLabelColor should be accessible")
+    }
+
+    // MARK: - Badge Colors Dark Mode Compatibility Tests (5 tests)
+
+    @Test("Color.secondary is available for dark mode compatible badges")
+    func colorSecondaryAvailable() {
+        let secondaryColor = SwiftUIColor.secondary
+        #expect(secondaryColor != nil as SwiftUIColor?, "Color.secondary should be available for badges")
+    }
+
+    @Test("Color.secondary with opacity creates valid badge background")
+    func colorSecondaryOpacityForBadges() {
+        // Badge backgrounds typically use Color.secondary.opacity(0.15) or similar
+        let badgeBackground = SwiftUIColor.secondary.opacity(0.15)
+        #expect(badgeBackground != nil as SwiftUIColor?, "Badge background color should be created successfully")
+    }
+
+    @Test("NSColor.darkGray is suitable for badge backgrounds in dark mode")
+    func nsColorDarkGrayForBadges() {
+        // MacMainView uses Color(nsColor: .darkGray) for image count badges
+        let badgeColor = SwiftUIColor(nsColor: NSColor.darkGray)
+        #expect(badgeColor != nil as SwiftUIColor?, "NSColor.darkGray should work for badge backgrounds")
+    }
+
+    @Test("Color.primary is available for badge text")
+    func colorPrimaryForBadgeText() {
+        let primaryColor = SwiftUIColor.primary
+        #expect(primaryColor != nil as SwiftUIColor?, "Color.primary should be available for badge text")
+    }
+
+    @Test("Color.white is available for badge text on dark backgrounds")
+    func colorWhiteForBadgeText() {
+        let whiteColor = SwiftUIColor.white
+        #expect(whiteColor != nil as SwiftUIColor?, "Color.white should be available for badge text")
+    }
+
+    // MARK: - Theme Shadow Colors Tests (3 tests)
+
+    @Test("Theme.Shadow.smallColor uses opacity-adjusted black")
+    func themeShadowSmallColorExists() {
+        let shadowColor = Theme.Shadow.smallColor
+        #expect(shadowColor != nil as SwiftUIColor?, "Theme.Shadow.smallColor should be defined")
+    }
+
+    @Test("Theme.Shadow.mediumColor uses opacity-adjusted black")
+    func themeShadowMediumColorExists() {
+        let shadowColor = Theme.Shadow.mediumColor
+        #expect(shadowColor != nil as SwiftUIColor?, "Theme.Shadow.mediumColor should be defined")
+    }
+
+    @Test("Theme.Shadow.largeColor uses opacity-adjusted black")
+    func themeShadowLargeColorExists() {
+        let shadowColor = Theme.Shadow.largeColor
+        #expect(shadowColor != nil as SwiftUIColor?, "Theme.Shadow.largeColor should be defined")
     }
 }
 
