@@ -56,23 +56,33 @@ class CoreDataManager: ObservableObject {
             return container
         }
 
-        // INDUSTRY STANDARD: Always use NSPersistentCloudKitContainer for CloudKit sync
-        // CloudKit has TWO separate environments (Development vs Production) - they are isolated
-        // - Debug builds automatically use Development environment (sandbox data)
-        // - Release builds automatically use Production environment (live data)
-        // This enables cross-device sync during development (iOS ↔ macOS) with complete data isolation
-        // Note: Temporarily disabled for watchOS due to persistent portal configuration issues
-        // CRITICAL: Also disabled for UI tests to prevent CloudKit crashes on unsigned builds
-        #if os(watchOS)
-        let container = NSPersistentContainer(name: "ListAll")
-        print("📦 CoreDataManager: Using NSPersistentContainer (watchOS - CloudKit disabled due to portal issues)")
-        #else
-        // iOS and macOS: Use CloudKit container EXCEPT for UI tests
+        // CloudKit container selection based on platform and build configuration
+        // - watchOS: CloudKit disabled due to portal configuration issues
+        // - UI tests: CloudKit disabled to prevent crashes on unsigned builds
+        // - macOS Debug: CloudKit disabled - unsigned Xcode builds lack entitlements
+        // - iOS Debug: CloudKit enabled (simulators work with iCloud login)
+        // - Release builds: CloudKit always enabled
         let container: NSPersistentContainer
+
+        #if os(watchOS)
+        container = NSPersistentContainer(name: "ListAll")
+        print("📦 CoreDataManager: Using NSPersistentContainer (watchOS - CloudKit disabled)")
+        #elseif os(macOS) && DEBUG
+        // macOS Debug builds from Xcode are unsigned and lack CloudKit entitlements
+        // Using NSPersistentCloudKitContainer crashes with "must have entitlement" error
         if isUITest {
-            // UI tests must use regular container to avoid CloudKit crashes on unsigned builds
             container = NSPersistentContainer(name: "ListAll")
-            print("🧪 CoreDataManager: Using NSPersistentContainer (UI test mode - CloudKit disabled)")
+            print("🧪 CoreDataManager: Using NSPersistentContainer (UI test mode)")
+        } else {
+            container = NSPersistentContainer(name: "ListAll")
+            print("📦 CoreDataManager: Using NSPersistentContainer (macOS Debug - CloudKit disabled)")
+            print("📦 CoreDataManager: Note: CloudKit sync available in Release builds only")
+        }
+        #else
+        // iOS Debug, iOS Release, macOS Release: Use CloudKit
+        if isUITest {
+            container = NSPersistentContainer(name: "ListAll")
+            print("🧪 CoreDataManager: Using NSPersistentContainer (UI test mode)")
         } else {
             container = NSPersistentCloudKitContainer(name: "ListAll")
             #if DEBUG
@@ -101,10 +111,27 @@ class CoreDataManager: ObservableObject {
         } else {
             // Configure App Groups shared container URL (normal app operation)
             let appGroupID = "group.io.github.chmc.ListAll"
-            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-                let databaseFileName = "ListAll.sqlite"
+
+            // CRITICAL: Use separate database files for Debug vs Release builds
+            // - Debug builds use CloudKit Development environment (sandbox data)
+            // - Release builds use CloudKit Production environment (live data)
+            #if DEBUG
+            let databaseFileName = "ListAll-Debug.sqlite"
+            #else
+            let databaseFileName = "ListAll.sqlite"
+            #endif
+
+            // Try App Groups container first, but verify we have write access
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID),
+               FileManager.default.isWritableFile(atPath: containerURL.path) {
+
                 let storeURL = containerURL.appendingPathComponent(databaseFileName)
-                print("📦 CoreDataManager: App Groups container accessible")
+                #if DEBUG
+                print("📦 CoreDataManager: Using DEBUG database (CloudKit Development environment)")
+                #else
+                print("📦 CoreDataManager: Using RELEASE database (CloudKit Production environment)")
+                #endif
+                print("📦 CoreDataManager: App Groups container accessible and writable")
                 print("📦 CoreDataManager: Store URL = \(storeURL.path)")
 
                 // Migrate from old location if needed (iOS/macOS only - first time after App Groups was added)
@@ -114,13 +141,13 @@ class CoreDataManager: ObservableObject {
 
                 storeDescription.url = storeURL
             } else {
-                // FALLBACK: When App Groups fails (e.g., Debug builds without proper entitlements),
+                // FALLBACK: When App Groups fails (e.g., unsigned Debug builds),
                 // use app's Documents directory as fallback to ensure data persists
-                print("⚠️ CoreDataManager: App Groups container NOT accessible for '\(appGroupID)'")
-                print("⚠️ CoreDataManager: Falling back to Documents directory (Debug builds only)")
+                print("⚠️ CoreDataManager: App Groups container NOT accessible or not writable for '\(appGroupID)'")
+                print("⚠️ CoreDataManager: Falling back to Documents directory (data will NOT sync with iOS)")
 
                 if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                    let fallbackURL = documentsURL.appendingPathComponent("ListAll.sqlite")
+                    let fallbackURL = documentsURL.appendingPathComponent(databaseFileName)
                     storeDescription.url = fallbackURL
                     print("⚠️ CoreDataManager: Fallback store URL = \(fallbackURL.path)")
                 } else {
@@ -146,10 +173,12 @@ class CoreDataManager: ObservableObject {
         // This is required for NSPersistentStoreRemoteChange notifications to fire
         storeDescription.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
 
-        // Enable CloudKit sync for iOS/macOS builds EXCEPT UI tests
-        // Note: watchOS CloudKit is disabled due to persistent portal configuration issues
-        // CRITICAL: UI tests must skip CloudKit to avoid crashes and permission dialogs
-        #if os(iOS) || os(macOS)
+        // Enable CloudKit sync based on platform and build configuration
+        // - watchOS: CloudKit disabled
+        // - macOS Debug: CloudKit disabled (unsigned builds lack entitlements)
+        // - UI tests: CloudKit disabled
+        // - iOS Debug/Release, macOS Release: CloudKit enabled
+        #if os(iOS) || (os(macOS) && !DEBUG)
         if !isUITest {
             let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.io.github.chmc.ListAll")
             storeDescription.cloudKitContainerOptions = cloudKitContainerOptions
@@ -161,15 +190,30 @@ class CoreDataManager: ObservableObject {
         } else {
             print("🧪 CoreDataManager: Skipping CloudKit container options in UI test mode")
         }
+        #elseif os(macOS) && DEBUG
+        print("📦 CoreDataManager: Skipping CloudKit options (macOS Debug - unsigned build)")
         #endif
 
         container.loadPersistentStores { [weak self] storeDescription, error in
             if let error = error as NSError? {
-                // If migration fails, try to delete and recreate the store
-                if error.code == 134110 { // Migration error
+                print("❌ CoreDataManager: Failed to load persistent store: \(error)")
+                print("❌ CoreDataManager: Error code: \(error.code), domain: \(error.domain)")
+                print("❌ CoreDataManager: UserInfo: \(error.userInfo)")
+
+                // Handle recoverable errors by deleting and recreating the store
+                // - 134110: Migration error (schema change)
+                // - 256: NSFileReadUnknownError (corrupted store or CloudKit schema mismatch)
+                // - 134060: NSPersistentStoreIncompatibleVersionHashError
+                // - 513: NSFileWriteNoPermissionError (sandbox permission issue)
+                // - 4: NSFileReadNoPermissionError
+                let recoverableErrorCodes = [134110, 256, 134060, 513, 4]
+
+                if recoverableErrorCodes.contains(error.code) {
+                    print("⚠️ CoreDataManager: Attempting to recover by deleting and recreating store...")
                     self?.deleteAndRecreateStore(container: container, storeDescription: storeDescription)
                 } else {
-                    fatalError("Unresolved error \(error), \(error.userInfo)")
+                    // For truly unrecoverable errors, crash with details
+                    fatalError("Unresolved Core Data error \(error.code): \(error), \(error.userInfo)")
                 }
             }
         }
@@ -523,33 +567,84 @@ class CoreDataManager: ObservableObject {
     }
     
     private func deleteAndRecreateStore(container: NSPersistentContainer, storeDescription: NSPersistentStoreDescription) {
-        guard let storeURL = storeDescription.url else {
+        guard var storeURL = storeDescription.url else {
+            print("⚠️ CoreDataManager: No store URL to delete")
             return
         }
-        
+
+        // Check if we can write to the store directory - if not, use Documents fallback
+        let storeDirectory = storeURL.deletingLastPathComponent()
+        if !FileManager.default.isWritableFile(atPath: storeDirectory.path) {
+            print("⚠️ CoreDataManager: No write permission to \(storeDirectory.path)")
+            print("⚠️ CoreDataManager: Using Documents directory fallback")
+
+            if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                #if DEBUG
+                storeURL = documentsURL.appendingPathComponent("ListAll-Debug.sqlite")
+                #else
+                storeURL = documentsURL.appendingPathComponent("ListAll.sqlite")
+                #endif
+                storeDescription.url = storeURL
+            }
+        }
+
+        print("🗑️ CoreDataManager: Deleting and recreating store at \(storeURL.path)")
+
         do {
             // Delete the existing store files
             let fileManager = FileManager.default
             let storeDirectory = storeURL.deletingLastPathComponent()
-            
-            // Find all store files
+
+            // Find all store-related files and directories
             let storeFiles = try fileManager.contentsOfDirectory(at: storeDirectory, includingPropertiesForKeys: nil)
             let storeFileExtensions = ["sqlite", "sqlite-wal", "sqlite-shm"]
-            
+            let storeName = storeURL.deletingPathExtension().lastPathComponent
+
             for file in storeFiles {
-                if storeFileExtensions.contains(file.pathExtension) {
+                let fileName = file.lastPathComponent
+                let fileExtension = file.pathExtension
+
+                // Delete SQLite files
+                if storeFileExtensions.contains(fileExtension) && fileName.hasPrefix(storeName) {
+                    print("🗑️ CoreDataManager: Deleting \(fileName)")
+                    try fileManager.removeItem(at: file)
+                }
+
+                // Also delete CloudKit cache directory if it exists (e.g., "ListAll_ckAssets")
+                if fileName.hasPrefix(storeName) && fileName.hasSuffix("_ckAssets") {
+                    print("🗑️ CoreDataManager: Deleting CloudKit cache \(fileName)")
                     try fileManager.removeItem(at: file)
                 }
             }
-            
-            // Reload the store
-            try container.persistentStoreCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
-            
+
+            // Reload the store with proper options
+            let options: [String: Any] = [
+                NSMigratePersistentStoresAutomaticallyOption: true,
+                NSInferMappingModelAutomaticallyOption: true,
+                NSPersistentHistoryTrackingKey: true
+            ]
+
+            print("🔄 CoreDataManager: Recreating store...")
+            try container.persistentStoreCoordinator.addPersistentStore(
+                ofType: NSSQLiteStoreType,
+                configurationName: nil,
+                at: storeURL,
+                options: options
+            )
+            print("✅ CoreDataManager: Store recreated successfully")
+
         } catch {
-            print("Failed to delete and recreate store: \(error)")
+            print("❌ CoreDataManager: Failed to delete and recreate store: \(error)")
             // If we still can't create the store, use in-memory store as fallback
             do {
-                try container.persistentStoreCoordinator.addPersistentStore(ofType: NSInMemoryStoreType, configurationName: nil, at: nil, options: nil)
+                print("⚠️ CoreDataManager: Falling back to in-memory store")
+                try container.persistentStoreCoordinator.addPersistentStore(
+                    ofType: NSInMemoryStoreType,
+                    configurationName: nil,
+                    at: nil,
+                    options: nil
+                )
+                print("✅ CoreDataManager: In-memory store created (data will not persist)")
             } catch {
                 fatalError("Failed to create any persistent store: \(error)")
             }
