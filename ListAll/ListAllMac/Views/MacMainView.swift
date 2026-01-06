@@ -120,7 +120,19 @@ struct MacMainView: View {
                 )
                 .id(list.id) // Force refresh when selection changes
             } else {
-                MacEmptyStateView(onCreateList: { showingCreateListSheet = true })
+                // Show different empty states based on whether any lists exist
+                if dataManager.lists.isEmpty {
+                    // No lists at all - show welcome with sample templates
+                    MacListsEmptyStateView(
+                        onCreateSampleList: { template in
+                            createSampleList(from: template)
+                        },
+                        onCreateCustomList: { showingCreateListSheet = true }
+                    )
+                } else {
+                    // Lists exist but none selected - simple prompt
+                    MacNoListSelectedView(onCreateList: { showingCreateListSheet = true })
+                }
             }
         }
         .frame(minWidth: 800, minHeight: 600)
@@ -277,6 +289,14 @@ struct MacMainView: View {
         if let createdList = dataManager.lists.first(where: { $0.name == trimmedName }) {
             selectedList = createdList
         }
+    }
+
+    private func createSampleList(from template: SampleDataService.SampleListTemplate) {
+        // Use SampleDataService to create and populate the list
+        let createdList = SampleDataService.saveTemplateList(template, using: dataManager)
+
+        // Select the newly created list
+        selectedList = createdList
     }
 
     private func deleteList(_ list: List) {
@@ -1661,37 +1681,6 @@ private struct MacEditListSheet: View {
         }
         .padding(30)
         .frame(minWidth: 350)
-    }
-}
-
-// MARK: - Empty State View
-
-private struct MacEmptyStateView: View {
-    let onCreateList: () -> Void
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "list.bullet.clipboard")
-                .font(.system(size: 64))
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
-
-            Text("No List Selected")
-                .font(.title2)
-                .foregroundColor(.secondary)
-                .accessibilityAddTraits(.isHeader)
-
-            Text("Select a list from the sidebar or create a new one.")
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button("Create New List") {
-                onCreateList()
-            }
-            .buttonStyle(.borderedProminent)
-            .accessibilityHint("Opens sheet to create new list")
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
