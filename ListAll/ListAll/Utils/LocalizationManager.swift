@@ -44,18 +44,21 @@ class LocalizationManager: ObservableObject {
     private let userDefaults: UserDefaults
     
     private init() {
-        // CRITICAL: Check UI test mode FIRST to avoid App Groups access on macOS
+        // CRITICAL: Check test mode FIRST to avoid App Groups access on macOS
         // App Groups triggers privacy dialogs on unsigned macOS development builds
         let isUITesting = ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
+        let isUnitTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil && !isUITesting
 
-        // Use shared UserDefaults for App Groups (iOS and watchOS) - SKIP for UI tests
-        if !isUITesting, let sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll") {
+        // Use shared UserDefaults for App Groups (iOS and watchOS) - SKIP for all tests
+        if !isUITesting && !isUnitTesting, let sharedDefaults = UserDefaults(suiteName: "group.io.github.chmc.ListAll") {
             self.userDefaults = sharedDefaults
         } else {
-            // Fallback to standard UserDefaults if App Groups not available or in UI test mode
+            // Fallback to standard UserDefaults if App Groups not available or in test mode
             self.userDefaults = .standard
             if isUITesting {
                 print("🧪 LocalizationManager: UI test mode - using standard UserDefaults (no App Groups)")
+            } else if isUnitTesting {
+                print("🧪 LocalizationManager: Unit test mode - using standard UserDefaults (no App Groups)")
             }
         }
 

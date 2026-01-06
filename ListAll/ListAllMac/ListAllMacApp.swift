@@ -21,9 +21,19 @@ struct ListAllMacApp: App {
         !ProcessInfo.processInfo.arguments.contains("UITEST_MODE")
     }()
 
-    // Note: DataManager.shared is accessed during property initialization.
-    // In unit test mode, CoreDataManager will use /dev/null store for isolation.
-    @StateObject private var dataManager = DataManager.shared
+    /// Lazy wrapper to prevent DataManager initialization during unit tests.
+    /// @StateObject properties initialize BEFORE init() runs, so we can't use init() checks.
+    /// This wrapper defers DataManager.shared access until first use in the view body.
+    private class DataManagerWrapper: ObservableObject {
+        lazy var instance: DataManager = DataManager.shared
+    }
+
+    @StateObject private var dataManagerWrapper = DataManagerWrapper()
+
+    /// Convenience accessor for views that need DataManager
+    private var dataManager: DataManager {
+        dataManagerWrapper.instance
+    }
 
     init() {
         print("🚀 ListAllMacApp.init() STARTING")
@@ -63,18 +73,25 @@ struct ListAllMacApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MacMainView()
-                .environmentObject(dataManager)
-                .environment(\.managedObjectContext, CoreDataManager.shared.viewContext)
-                .onContinueUserActivity("io.github.chmc.ListAll.viewing-list") { activity in
-                    handleIncomingActivity(activity)
-                }
-                .onContinueUserActivity("io.github.chmc.ListAll.viewing-item") { activity in
-                    handleIncomingActivity(activity)
-                }
-                .onContinueUserActivity("io.github.chmc.ListAll.browsing-lists") { activity in
-                    handleIncomingActivity(activity)
-                }
+            // CRITICAL: Unit tests must not access singletons (DataManager, CoreDataManager)
+            // This prevents App Groups permission dialogs on unsigned test builds
+            if Self.isUnitTesting {
+                Text("Unit Test Mode")
+                    .frame(width: 200, height: 100)
+            } else {
+                MacMainView()
+                    .environmentObject(dataManager)
+                    .environment(\.managedObjectContext, CoreDataManager.shared.viewContext)
+                    .onContinueUserActivity("io.github.chmc.ListAll.viewing-list") { activity in
+                        handleIncomingActivity(activity)
+                    }
+                    .onContinueUserActivity("io.github.chmc.ListAll.viewing-item") { activity in
+                        handleIncomingActivity(activity)
+                    }
+                    .onContinueUserActivity("io.github.chmc.ListAll.browsing-lists") { activity in
+                        handleIncomingActivity(activity)
+                    }
+            }
         }
         .commands {
             // Add macOS-specific menu commands
@@ -83,8 +100,14 @@ struct ListAllMacApp: App {
 
         #if os(macOS)
         Settings {
-            MacSettingsView()
-                .environmentObject(dataManager)
+            // CRITICAL: Unit tests must not access DataManager to avoid App Groups dialogs
+            if Self.isUnitTesting {
+                Text("Settings disabled in unit test mode")
+                    .frame(width: 200, height: 100)
+            } else {
+                MacSettingsView()
+                    .environmentObject(dataManager)
+            }
         }
         #endif
     }
