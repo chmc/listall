@@ -36,14 +36,15 @@ class ListViewModel: ObservableObject {
     // Watch sync properties
     @Published var isSyncingFromWatch = false
     
-    private let dataManager = DataManager.shared // Changed from coreDataManager
-    private let dataRepository = DataRepository()
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var dataManager = DataManager.shared
+    private lazy var dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
     private let list: List
     private var undoTimer: Timer?
     private var deleteUndoTimer: Timer?
     private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
-    private let hapticManager = HapticManager.shared
+    private lazy var hapticManager = HapticManager.shared
     
     init(list: List) {
         self.list = list

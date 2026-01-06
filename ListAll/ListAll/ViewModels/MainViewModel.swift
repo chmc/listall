@@ -40,11 +40,12 @@ class MainViewModel: ObservableObject {
     // Force ForEach refresh on reorder - increment this to break SwiftUI animation identity
     @Published var listsReorderTrigger: Int = 0
 
-    private let dataManager = DataManager.shared
-    private let dataRepository = DataRepository()
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var dataManager = DataManager.shared
+    private lazy var dataRepository = DataRepository()
     private var archiveNotificationTimer: Timer?
     private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
-    private let hapticManager = HapticManager.shared
+    private lazy var hapticManager = HapticManager.shared
 
     // Watch sync properties
     @Published var isSyncingFromWatch = false

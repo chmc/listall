@@ -3,7 +3,8 @@ import CoreData
 import Combine
 
 class DataMigrationService {
-    private let coreDataManager = CoreDataManager.shared
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var coreDataManager = CoreDataManager.shared
     
     // MARK: - Migration Status
     

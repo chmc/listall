@@ -12,12 +12,16 @@ class CloudKitService: ObservableObject {
     @Published var pendingOperations: Int = 0
     
     private let container: CKContainer?
-    private let coreDataManager = CoreDataManager.shared
-    private let dataRepository = DataRepository()
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var coreDataManager = CoreDataManager.shared
+    private lazy var dataRepository = DataRepository()
     private var syncQueue = DispatchQueue(label: "com.listall.cloudkit.sync", qos: .background)
     private var retryCount = 0
     private let maxRetries = 3
     
+    /// Track whether observers have been set up (deferred to avoid App Groups access during init)
+    private var observersSetUp = false
+
     init() {
         // Check if CloudKit is available by looking for entitlements
         if Bundle.main.object(forInfoDictionaryKey: "com.apple.developer.icloud-services") != nil {
@@ -27,9 +31,17 @@ class CloudKitService: ObservableObject {
             self.container = nil
             self.syncStatus = .offline
         }
-        
-        setupCloudKitObservers()
+
+        // Note: Observer setup is deferred to avoid App Groups access dialog on unsigned test builds
+        // Observers will be set up on first sync or status check that needs Core Data
         checkInitialStatus()
+    }
+
+    /// Ensures CloudKit observers are set up (deferred initialization)
+    private func ensureObserversSetUp() {
+        guard !observersSetUp else { return }
+        observersSetUp = true
+        setupCloudKitObservers()
     }
     
     enum SyncStatus: Equatable {
@@ -114,13 +126,15 @@ class CloudKitService: ObservableObject {
             return
         }
         
+        // Ensure observers are set up on first actual sync
         await MainActor.run {
+            ensureObserversSetUp()
             isSyncing = true
             syncError = nil
             syncStatus = .syncing
             syncProgress = 0.0
         }
-        
+
         // Check for remote changes first
         await checkForRemoteChanges()
         

@@ -3,10 +3,11 @@ import CoreData
 import Combine
 
 class DataRepository: ObservableObject {
-    private let coreDataManager = CoreDataManager.shared
-    private let dataManager = DataManager.shared
+    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
+    private lazy var coreDataManager = CoreDataManager.shared
+    private lazy var dataManager = DataManager.shared
     #if os(iOS)
-    private let watchConnectivityService = WatchConnectivityService.shared
+    private lazy var watchConnectivityService = WatchConnectivityService.shared
     #endif
 
     // MARK: - Initialization
