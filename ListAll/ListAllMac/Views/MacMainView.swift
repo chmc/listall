@@ -567,7 +567,22 @@ private struct MacSidebarView: View {
                 }
                 .onMove(perform: isInSelectionMode ? nil : moveList) // Disable reorder during selection mode
             } header: {
-                Text(showingArchivedLists ? "Archived Lists" : "Lists")
+                HStack {
+                    Text(showingArchivedLists ? "Archived Lists" : "Lists")
+                    Spacer()
+                    if !isInSelectionMode {
+                        Button(action: {
+                            showingArchivedLists.toggle()
+                        }) {
+                            Image(systemName: showingArchivedLists ? "tray.full" : "archivebox")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+                        .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
+                        .accessibilityIdentifier("ArchivedListsButton")
+                    }
+                }
             } footer: {
                 // Show last sync time in sidebar footer
                 HStack {
@@ -713,18 +728,6 @@ private struct MacSidebarView: View {
                         .accessibilityLabel("Refresh data from iCloud")
                         .accessibilityHint("Manually syncs data from CloudKit")
                         .help(lastSyncTooltip)
-
-                        Button(action: {
-                            showingArchivedLists.toggle()
-                        }) {
-                            Label(
-                                showingArchivedLists ? "Show Active Lists" : "Show Archived Lists",
-                                systemImage: showingArchivedLists ? "tray.full" : "archivebox"
-                            )
-                        }
-                        .accessibilityIdentifier("ArchivedListsButton")
-                        .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
-                        .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
 
                         Button(action: enterSelectionMode) {
                             Label("Select", systemImage: "pencil")

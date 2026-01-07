@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
@@ -7,15 +8,22 @@ struct MainView: View {
     @StateObject private var sharingService = SharingService()
     @StateObject private var tooltipManager = TooltipManager.shared
     @Environment(\.scenePhase) private var scenePhase
-    
+
     // State restoration: Persist which list user was viewing
     @SceneStorage("selectedListId") private var selectedListIdString: String?
     @State private var hasRestoredNavigation = false
-    
+
     @State private var showingCreateList = false
     @State private var showingSettings = false
     @State private var editMode: EditMode = .inactive
     @State private var showingDeleteConfirmation = false
+
+    // MARK: - CloudKit Sync Polling (iOS fallback)
+    // Apple's CloudKit push notifications on iOS can be unreliable when the app is frontmost.
+    // This timer serves as a safety net to ensure data refreshes even if notifications miss.
+    // Using Timer.publish with .onReceive is the correct SwiftUI pattern (not Timer.scheduledTimer).
+    @State private var isSyncPollingActive = false
+    private let syncPollingTimer = Timer.publish(every: 30.0, on: .main, in: .common).autoconnect()
 
     @State private var showingShareFormatPicker = false
     @State private var showingShareSheet = false
@@ -313,6 +321,9 @@ struct MainView: View {
                 await conflictManager.checkForConflicts()
             }
 
+            // Enable sync polling timer (fallback for unreliable CloudKit push notifications)
+            isSyncPollingActive = true
+
             // Advertise Handoff activity for browsing lists
             HandoffService.shared.startBrowsingListsActivity()
             
@@ -345,14 +356,23 @@ struct MainView: View {
             viewModel.setEditModeActive(newEditMode.isEditing)
         }
         .onChange(of: scenePhase) { newPhase in
-            // Restore navigation when app becomes active
             if newPhase == .active {
+                // CRITICAL: Refresh data when app becomes active to catch CloudKit changes
+                // This handles changes made on other devices while iOS was in background
+                print("🔄 iOS: App became active - refreshing data from CloudKit")
+                let viewContext = CoreDataManager.shared.viewContext
+                viewContext.performAndWait {
+                    viewContext.refreshAllObjects()
+                }
+                viewModel.loadLists()
+
+                // Enable sync polling timer when app is active
+                isSyncPollingActive = true
+                print("🔄 iOS: Sync polling enabled")
+
                 // Restore navigation to the list user was viewing
                 if let listIdString = selectedListIdString,
                    let listId = UUID(uuidString: listIdString) {
-                    // Reload lists to ensure we have the latest data
-                    viewModel.loadLists()
-                    
                     // Find the list in loaded lists
                     if let list = viewModel.lists.first(where: { $0.id == listId }) {
                         // Only restore if we're not already viewing that list
@@ -367,7 +387,27 @@ struct MainView: View {
                         selectedListIdString = nil
                     }
                 }
+            } else if newPhase == .background || newPhase == .inactive {
+                // Disable polling to save battery when app is not active
+                isSyncPollingActive = false
+                print("🔄 iOS: Sync polling disabled")
             }
+        }
+        .onReceive(syncPollingTimer) { _ in
+            // Only poll when app is active (controlled by scenePhase)
+            guard isSyncPollingActive else { return }
+
+            print("🔄 iOS: Polling for CloudKit changes (timer-based fallback)")
+
+            // CRITICAL FIX: Use performAndWait (synchronous) to ensure refreshAllObjects()
+            // completes BEFORE loadLists() fetches. This matches the macOS fix pattern.
+            let viewContext = CoreDataManager.shared.viewContext
+            viewContext.performAndWait {
+                viewContext.refreshAllObjects()
+            }
+
+            // Now safe to load data - viewContext has been refreshed
+            viewModel.loadLists()
         }
         .sheet(isPresented: $conflictManager.showingConflictResolution) {
             if let conflict = conflictManager.currentConflict {
