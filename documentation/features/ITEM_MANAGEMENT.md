@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 17/17 | macOS 11/17
+## Status: iOS 17/17 | macOS 17/17
 
 ---
 
@@ -20,26 +20,19 @@
 | Item Images (up to 10) | ✅ | ✅ | Shared Service |
 | Duplicate Item | ✅ | ✅ | Shared ViewModel |
 | Reorder Items (drag-drop) | ✅ | ✅ | Platform UI |
-| Multi-Select Items | ✅ | ❌ | iOS only |
-| Move Items to Another List | ✅ | ❌ | iOS only |
-| Copy Items to Another List | ✅ | ❌ | iOS only |
-| Bulk Delete | ✅ | ❌ | iOS only |
-| Undo Complete (5 sec) | ✅ | ❌ | iOS only |
-| Undo Delete (5 sec) | ✅ | ❌ | iOS only |
+| Multi-Select Items | ✅ | ✅ | Shared ViewModel + Platform UI |
+| Move Items to Another List | ✅ | ✅ | Shared ViewModel + Platform Picker |
+| Copy Items to Another List | ✅ | ✅ | Shared ViewModel + Platform Picker |
+| Bulk Delete | ✅ | ✅ | Shared ViewModel + Platform UI |
+| Undo Complete (5 sec) | ✅ | ✅ | Shared ViewModel + macOS MacUndoBanner |
+| Undo Delete (5 sec) | ✅ | ✅ | Shared ViewModel + macOS MacDeleteUndoBanner |
 | Smart Suggestions | ✅ | ✅ | Shared Service |
 
 ---
 
 ## Gaps (macOS)
 
-| Feature | Priority | iOS Implementation | Notes |
-|---------|:--------:|-------------------|-------|
-| Multi-Select Items | HIGH | Selection checkboxes | Need macOS selection mode |
-| Move Items Between Lists | HIGH | DestinationListPickerView | Need macOS destination picker |
-| Copy Items Between Lists | HIGH | DestinationListPickerView | Share with Move |
-| Bulk Delete | HIGH | Bulk operations toolbar | Depends on multi-select |
-| Undo Complete | HIGH | 5-second undo banner | Need macOS undo UI |
-| Undo Delete | HIGH | 5-second undo banner | Need macOS undo UI |
+*No remaining gaps - full feature parity achieved!*
 
 ---
 
@@ -59,6 +52,10 @@
 - Keyboard shortcuts (Space, Return, Delete, C)
 - Hover action buttons
 - Quick Look preview (Space key)
+- Undo banners with material background (MacUndoBanner, MacDeleteUndoBanner)
+- Selection mode with checkmark button
+- Ellipsis menu for bulk actions (Move, Copy, Delete)
+- MacDestinationListPickerSheet for destination selection
 
 ---
 
@@ -76,3 +73,4 @@
 
 **macOS**:
 - `ListAllMac/Views/MacMainView.swift` - MacListDetailView, MacItemRowView
+- `ListAllMac/Views/Components/MacDestinationListPickerSheet.swift` - Move/Copy destination picker

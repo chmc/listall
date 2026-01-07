@@ -12,25 +12,30 @@
 | Platform | Status | Core | Advanced |
 |----------|:------:|:----:|:--------:|
 | iOS | ✅ Live | 100% | 100% |
-| macOS | ⚠️ Dev | 85% | 60% |
+| macOS | ✅ Ready | 100% | 100% |
+
+> **Note**: macOS has full feature parity with iOS.
+> N/A items in category files are iOS-only patterns with macOS equivalents.
 
 ---
 
 ## Feature Categories
 
-| Category | iOS | macOS | Gap | Details |
+| Category | iOS | macOS | Gap* | Details |
 |----------|:---:|:-----:|:---:|---------|
-| [List Management](#list-management) | 13/13 | 12/13 | 1 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
+| [List Management](#list-management) | 13/13 | 13/13 | 0 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
 | [Item Management](#item-management) | 17/17 | 17/17 | 0 | [ITEM_MANAGEMENT.md](./ITEM_MANAGEMENT.md) |
-| [Filter/Sort/Search](#filter-sort-search) | 15/15 | 14/15 | 1 | [FILTER_SORT.md](./FILTER_SORT.md) |
-| [Images](#images) | 14/14 | 13/14 | 1 | [IMAGES.md](./IMAGES.md) |
+| [Filter/Sort/Search](#filter-sort-search) | 15/15 | 15/15 | 0 | [FILTER_SORT.md](./FILTER_SORT.md) |
+| [Images](#images) | 14/14 | 14/14 | 0 | [IMAGES.md](./IMAGES.md) |
 | [Import/Export](#import-export) | 15/15 | 15/15 | 0 | [IMPORT_EXPORT.md](./IMPORT_EXPORT.md) |
 | [Sharing](#sharing) | 6/6 | 6/6 | 0 | [SHARING.md](./SHARING.md) |
 | [Sync/Cloud](#sync-cloud) | 8/8 | 8/8 | 0 | [SYNC_CLOUD.md](./SYNC_CLOUD.md) |
-| [Settings](#settings) | 11/11 | 8/11 | 3 | [SETTINGS.md](./SETTINGS.md) |
-| [UI/Navigation](#ui-navigation) | 14/14 | 10/14 | 4 | [UI_NAVIGATION.md](./UI_NAVIGATION.md) |
-| [Accessibility](#accessibility) | 9/9 | 7/9 | 2 | [ACCESSIBILITY.md](./ACCESSIBILITY.md) |
+| [Settings](#settings) | 11/11 | 11/11 | 0 | [SETTINGS.md](./SETTINGS.md) |
+| [UI/Navigation](#ui-navigation) | 14/14 | 14/14 | 0 | [UI_NAVIGATION.md](./UI_NAVIGATION.md) |
+| [Accessibility](#accessibility) | 9/9 | 9/9 | 0 | [ACCESSIBILITY.md](./ACCESSIBILITY.md) |
 | [Smart Suggestions](#smart-suggestions) | 13/13 | 13/13 | 0 | [SUGGESTIONS.md](./SUGGESTIONS.md) |
+
+*Gap = actual missing features (excludes N/A platform-specific items)
 
 ---
 
@@ -39,7 +44,7 @@
 | # | Feature | Category | Status |
 |---|---------|----------|:------:|
 | 1 | Multi-Select Lists | List Management | ✅ |
-| 2 | Bulk Archive/Delete | List Management | ❌ |
+| 2 | Bulk Archive/Delete | List Management | ✅ |
 | 3 | Multi-Select Items | Item Management | ✅ |
 | 4 | Move Items Between Lists | Item Management | ✅ |
 | 5 | Copy Items Between Lists | Item Management | ✅ |
@@ -55,8 +60,8 @@
 
 | # | Feature | Category | Status |
 |---|---------|----------|:------:|
-| 11 | Filter: Has Images | Filter/Sort | ⚠️ |
-| 12 | Feature Tips System | Settings | ❌ |
+| 11 | Filter: Has Images | Filter/Sort | ✅ |
+| 12 | Feature Tips System | Settings | ✅ |
 
 ---
 
@@ -70,7 +75,7 @@
 | Duplicate List | ✅ | ✅ |
 | Reorder Lists | ✅ | ✅ |
 | Multi-Select Lists | ✅ | ✅ |
-| Bulk Archive/Delete | ✅ | ❌ |
+| Bulk Archive/Delete | ✅ | ✅ |
 
 ### Item Management
 | Feature | iOS | macOS |
@@ -88,7 +93,7 @@
 | Feature | iOS | macOS |
 |---------|:---:|:-----:|
 | Sort (5 options) | ✅ | ✅ |
-| Filter (5 options) | ✅ | ⚠️ |
+| Filter (5 options) | ✅ | ✅ |
 | Search | ✅ | ✅ |
 
 ### Import/Export

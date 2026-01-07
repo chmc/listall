@@ -342,6 +342,12 @@ private struct MacSidebarView: View {
     // DataRepository for drag-and-drop operations
     private let dataRepository = DataRepository()
 
+    // MARK: - Multi-Select Mode State
+    @State private var isInSelectionMode = false
+    @State private var selectedLists: Set<UUID> = []
+    @State private var showingArchiveConfirmation = false
+    @State private var showingPermanentDeleteConfirmation = false
+
     // MARK: - Keyboard Navigation (Task 11.1)
     /// Focus state for individual list rows - enables arrow key navigation
     @FocusState private var focusedListID: UUID?
@@ -357,66 +363,191 @@ private struct MacSidebarView: View {
         }
     }
 
+    // MARK: - Selection Mode Methods
+
+    private func enterSelectionMode() {
+        isInSelectionMode = true
+        selectedLists.removeAll()
+    }
+
+    private func exitSelectionMode() {
+        isInSelectionMode = false
+        selectedLists.removeAll()
+    }
+
+    private func toggleSelection(for listId: UUID) {
+        if selectedLists.contains(listId) {
+            selectedLists.remove(listId)
+        } else {
+            selectedLists.insert(listId)
+        }
+    }
+
+    private func selectAllLists() {
+        selectedLists = Set(displayedLists.map { $0.id })
+    }
+
+    private func deselectAllLists() {
+        selectedLists.removeAll()
+    }
+
+    /// Archives selected lists (moves to archived, can be restored)
+    private func archiveSelectedLists() {
+        // Store selected IDs before modifying
+        let listsToArchive = selectedLists
+
+        for listId in listsToArchive {
+            // deleteList actually archives (sets isArchived = true)
+            dataManager.deleteList(withId: listId)
+        }
+        dataManager.loadData()
+
+        // Clear detail selection if archived list was selected
+        if let currentSelection = selectedList, listsToArchive.contains(currentSelection.id) {
+            selectedList = nil
+        }
+
+        selectedLists.removeAll()
+        isInSelectionMode = false
+    }
+
+    /// Permanently deletes selected lists (irreversible, for archived lists view)
+    private func permanentlyDeleteSelectedLists() {
+        // Store selected IDs before modifying
+        let listsToDelete = selectedLists
+
+        for listId in listsToDelete {
+            dataManager.permanentlyDeleteList(withId: listId)
+        }
+        dataManager.loadData()
+
+        // Clear detail selection if deleted list was selected
+        if let currentSelection = selectedList, listsToDelete.contains(currentSelection.id) {
+            selectedList = nil
+        }
+
+        selectedLists.removeAll()
+        isInSelectionMode = false
+    }
+
+    // MARK: - Bulk Action Button (extracted for type-checker performance)
+
+    /// Builds the appropriate bulk action button based on current view
+    @ViewBuilder
+    private var bulkActionButton: some View {
+        if showingArchivedLists {
+            // Archived lists view: permanent deletion
+            Button(role: .destructive, action: { showingPermanentDeleteConfirmation = true }) {
+                Label("Delete Permanently", systemImage: "trash")
+            }
+            .disabled(selectedLists.isEmpty)
+        } else {
+            // Active lists view: archive (recoverable)
+            Button(role: .destructive, action: { showingArchiveConfirmation = true }) {
+                Label("Archive Lists", systemImage: "archivebox")
+            }
+            .disabled(selectedLists.isEmpty)
+        }
+    }
+
+    // MARK: - List Row Content (extracted for type-checker performance)
+
+    /// Helper to format item count display
+    private func itemCountText(for list: List) -> String {
+        let activeCount = list.items.filter { !$0.isCrossedOut }.count
+        let totalCount = list.items.count
+        if activeCount < totalCount {
+            return "\(activeCount) (\(totalCount))"
+        } else {
+            return "\(totalCount)"
+        }
+    }
+
+    /// Builds a list row for selection mode
+    @ViewBuilder
+    private func selectionModeRow(for list: List) -> some View {
+        Button(action: { toggleSelection(for: list.id) }) {
+            HStack(spacing: 8) {
+                Image(systemName: selectedLists.contains(list.id) ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(selectedLists.contains(list.id) ? .blue : .gray)
+                    .font(.title3)
+                Text(list.name)
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(itemCountText(for: list))
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .focused($focusedListID, equals: list.id)
+        .accessibilityIdentifier("SidebarListCell_\(list.name)")
+        .accessibilityLabel("\(list.name)")
+        .accessibilityValue(selectedLists.contains(list.id) ? "selected" : "not selected")
+        .accessibilityHint("Double-tap to toggle selection")
+    }
+
+    /// Builds a list row for normal navigation mode
+    @ViewBuilder
+    private func normalModeRow(for list: List) -> some View {
+        NavigationLink(value: list) {
+            HStack {
+                Text(list.name)
+                Spacer()
+                Text(itemCountText(for: list))
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+        }
+        .focusable()
+        .focused($focusedListID, equals: list.id)
+        .accessibilityIdentifier("SidebarListCell_\(list.name)")
+        .accessibilityLabel("\(list.name)")
+        .accessibilityValue("\(list.items.filter { !$0.isCrossedOut }.count) active, \(list.items.count) total items")
+        .accessibilityHint("Double-tap to view list items")
+        .draggable(list)
+        .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
+            handleItemDrop(droppedItems, to: list)
+        }
+        .contextMenu {
+            Button("Share...") {
+                shareListFromSidebar(list)
+            }
+            Divider()
+            Button("Delete") {
+                onDeleteList(list)
+            }
+        }
+    }
+
     var body: some View {
-        SwiftUI.List(selection: $selectedList) {
+        SwiftUI.List(selection: isInSelectionMode ? .constant(nil) : $selectedList) {
             Section {
                 ForEach(displayedLists) { list in
-                    NavigationLink(value: list) {
-                        HStack {
-                            Text(list.name)
-                            Spacer()
-                            // Show active count (total) - matching detail view format
-                            let activeCount = list.items.filter { !$0.isCrossedOut }.count
-                            let totalCount = list.items.count
-                            if activeCount < totalCount {
-                                Text("\(activeCount) (\(totalCount))")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                            } else {
-                                Text("\(totalCount)")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    // MARK: Keyboard Navigation (Task 11.1)
-                    .focusable()
-                    .focused($focusedListID, equals: list.id)
-                    .accessibilityIdentifier("SidebarListCell_\(list.name)")
-                    // MARK: VoiceOver Accessibility
-                    .accessibilityLabel("\(list.name)")
-                    .accessibilityValue("\(list.items.filter { !$0.isCrossedOut }.count) active, \(list.items.count) total items")
-                    .accessibilityHint("Double-tap to view list items")
-                    // MARK: Drag-and-Drop Support
-                    .draggable(list) // Enable dragging lists to reorder
-                    .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-                        // Handle items dropped on this list (move item to different list)
-                        handleItemDrop(droppedItems, to: list)
-                    }
-                    .contextMenu {
-                        Button("Share...") {
-                            shareListFromSidebar(list)
-                        }
-                        Divider()
-                        Button("Delete") {
-                            onDeleteList(list)
-                        }
+                    if isInSelectionMode {
+                        selectionModeRow(for: list)
+                    } else {
+                        normalModeRow(for: list)
                     }
                 }
-                .onMove(perform: moveList) // Handle list reordering
+                .onMove(perform: isInSelectionMode ? nil : moveList) // Disable reorder during selection mode
             } header: {
                 HStack {
                     Text(showingArchivedLists ? "Archived Lists" : "Lists")
                     Spacer()
-                    Button(action: {
-                        showingArchivedLists.toggle()
-                    }) {
-                        Image(systemName: showingArchivedLists ? "tray.full" : "archivebox")
-                            .font(.caption)
+                    if !isInSelectionMode {
+                        Button(action: {
+                            showingArchivedLists.toggle()
+                        }) {
+                            Image(systemName: showingArchivedLists ? "tray.full" : "archivebox")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+                        .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
                     }
-                    .buttonStyle(.plain)
-                    .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
-                    .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
                 }
             }
         }
@@ -424,7 +555,8 @@ private struct MacSidebarView: View {
         .accessibilityIdentifier("ListsSidebar")
         // MARK: - Keyboard Navigation Handlers (Task 11.1)
         .onKeyPress(.return) {
-            // Enter key selects the focused list
+            // Enter key selects the focused list (only in normal mode)
+            guard !isInSelectionMode else { return .ignored }
             if let focusedID = focusedListID,
                let list = displayedLists.first(where: { $0.id == focusedID }) {
                 selectedList = list
@@ -433,7 +565,15 @@ private struct MacSidebarView: View {
             return .ignored
         }
         .onKeyPress(.space) {
-            // Space key also selects the focused list (macOS convention)
+            // In selection mode, space toggles selection
+            if isInSelectionMode {
+                if let focusedID = focusedListID {
+                    toggleSelection(for: focusedID)
+                    return .handled
+                }
+                return .ignored
+            }
+            // In normal mode, space selects the focused list (macOS convention)
             if let focusedID = focusedListID,
                let list = displayedLists.first(where: { $0.id == focusedID }) {
                 selectedList = list
@@ -442,7 +582,18 @@ private struct MacSidebarView: View {
             return .ignored
         }
         .onKeyPress(.delete) {
-            // Delete key deletes the focused list
+            // In selection mode, archive or permanently delete selected lists
+            if isInSelectionMode && !selectedLists.isEmpty {
+                if showingArchivedLists {
+                    // Viewing archived lists: permanently delete
+                    showingPermanentDeleteConfirmation = true
+                } else {
+                    // Viewing active lists: archive (recoverable)
+                    showingArchiveConfirmation = true
+                }
+                return .handled
+            }
+            // In normal mode, delete focused list
             if let focusedID = focusedListID,
                let list = displayedLists.first(where: { $0.id == focusedID }) {
                 onDeleteList(list)
@@ -452,6 +603,22 @@ private struct MacSidebarView: View {
             }
             return .ignored
         }
+        .onKeyPress(.escape) {
+            // Escape exits selection mode
+            if isInSelectionMode {
+                exitSelectionMode()
+                return .handled
+            }
+            return .ignored
+        }
+        // Cmd+A to select all in selection mode
+        .onKeyPress(characters: CharacterSet(charactersIn: "a")) { keyPress in
+            guard keyPress.modifiers.contains(.command), isInSelectionMode else {
+                return .ignored
+            }
+            selectAllLists()
+            return .handled
+        }
         // Sync focus with selection (bidirectional - Issue #2 fix from Critical Review)
         .onChange(of: selectedList) { _, newList in
             if let newList = newList {
@@ -459,19 +626,64 @@ private struct MacSidebarView: View {
             }
         }
         .onChange(of: focusedListID) { _, newFocusedID in
-            // When arrow keys change focus, update selection (macOS convention)
+            // When arrow keys change focus, update selection (macOS convention) - only in normal mode
+            guard !isInSelectionMode else { return }
             if let newFocusedID = newFocusedID,
                let list = displayedLists.first(where: { $0.id == newFocusedID }) {
                 selectedList = list
             }
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: onCreateList) {
-                    Label("Add List", systemImage: "plus")
+            // Selection mode toolbar items
+            if isInSelectionMode {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        exitSelectionMode()
+                    }
+                    .accessibilityIdentifier("CancelSelectionButton")
+                    .accessibilityHint("Exits selection mode")
                 }
-                .accessibilityIdentifier("AddListButton")
-                .accessibilityHint("Opens sheet to create new list")
+
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button(action: selectAllLists) {
+                            Label("Select All", systemImage: "checkmark.circle")
+                        }
+                        .disabled(displayedLists.isEmpty)
+
+                        Button(action: deselectAllLists) {
+                            Label("Deselect All", systemImage: "circle")
+                        }
+                        .disabled(selectedLists.isEmpty)
+
+                        Divider()
+
+                        // Use extracted @ViewBuilder for type-checker performance
+                        bulkActionButton
+                    } label: {
+                        Label("Actions", systemImage: "ellipsis.circle")
+                    }
+                    .accessibilityIdentifier("SelectionActionsMenu")
+                    .accessibilityLabel("Selection actions")
+                    .accessibilityHint("Shows selection actions menu")
+                }
+            } else {
+                // Normal mode toolbar items
+                ToolbarItem(placement: .primaryAction) {
+                    HStack(spacing: 4) {
+                        Button(action: enterSelectionMode) {
+                            Label("Select", systemImage: "pencil")
+                        }
+                        .accessibilityIdentifier("SelectListsButton")
+                        .accessibilityHint("Enter selection mode to select multiple lists")
+
+                        Button(action: onCreateList) {
+                            Label("Add List", systemImage: "plus")
+                        }
+                        .accessibilityIdentifier("AddListButton")
+                        .accessibilityHint("Opens sheet to create new list")
+                    }
+                }
             }
         }
         .sheet(isPresented: $showingSharePopover) {
@@ -484,6 +696,24 @@ private struct MacSidebarView: View {
                     }
                 )
             }
+        }
+        // Archive confirmation alert (for active lists)
+        .alert("Archive Lists", isPresented: $showingArchiveConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Archive", role: .destructive) {
+                archiveSelectedLists()
+            }
+        } message: {
+            Text("Archive \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? You can restore them later from archived lists.")
+        }
+        // Permanent delete confirmation alert (for archived lists)
+        .alert("Delete Permanently", isPresented: $showingPermanentDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Permanently", role: .destructive) {
+                permanentlyDeleteSelectedLists()
+            }
+        } message: {
+            Text("Permanently delete \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? This action cannot be undone. All items and images will be permanently deleted.")
         }
     }
 
@@ -586,6 +816,14 @@ private struct MacListDetailView: View {
     // State for share popover
     @State private var showingSharePopover = false
 
+    // State for multi-select mode
+    @State private var showingMoveItemsPicker = false
+    @State private var showingCopyItemsPicker = false
+    @State private var showingDeleteConfirmation = false
+    @State private var selectedDestinationList: List?
+    @State private var showingMoveConfirmation = false
+    @State private var showingCopyConfirmation = false
+
     // State for Quick Look
     @State private var quickLookItem: Item?
 
@@ -643,12 +881,98 @@ private struct MacListDetailView: View {
 
             Spacer()
 
-            searchFieldView
-            filterSortButton
-            shareButton
-            editListButton
+            if viewModel.isInSelectionMode {
+                // Selection mode header controls
+                selectionModeControls
+            } else {
+                // Normal mode header controls
+                searchFieldView
+                filterSortButton
+                shareButton
+                selectionModeButton
+                editListButton
+            }
         }
         .padding()
+    }
+
+    // MARK: - Selection Mode Button
+
+    @ViewBuilder
+    private var selectionModeButton: some View {
+        Button(action: { viewModel.enterSelectionMode() }) {
+            Image(systemName: "checkmark.circle")
+        }
+        .buttonStyle(.plain)
+        .help("Select Items")
+        .accessibilityIdentifier("SelectItemsButton")
+        .accessibilityLabel("Enter selection mode")
+        .accessibilityHint("Enables multi-item selection for bulk operations")
+    }
+
+    // MARK: - Selection Mode Controls
+
+    @ViewBuilder
+    private var selectionModeControls: some View {
+        HStack(spacing: 12) {
+            // Selection count
+            Text("\(viewModel.selectedItems.count) selected")
+                .foregroundColor(.secondary)
+                .font(.subheadline)
+
+            // Ellipsis menu for bulk actions
+            Menu {
+                Section {
+                    Button("Select All") {
+                        viewModel.selectAll()
+                    }
+                    .keyboardShortcut("a", modifiers: .command)
+
+                    Button("Deselect All") {
+                        viewModel.deselectAll()
+                    }
+                }
+
+                Divider()
+
+                Section {
+                    Button("Move Items...") {
+                        showingMoveItemsPicker = true
+                    }
+                    .disabled(viewModel.selectedItems.isEmpty)
+
+                    Button("Copy Items...") {
+                        showingCopyItemsPicker = true
+                    }
+                    .disabled(viewModel.selectedItems.isEmpty)
+                }
+
+                Divider()
+
+                Section {
+                    Button("Delete Items", role: .destructive) {
+                        showingDeleteConfirmation = true
+                    }
+                    .disabled(viewModel.selectedItems.isEmpty)
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("Bulk Actions")
+            .accessibilityIdentifier("SelectionActionsMenu")
+            .accessibilityLabel("Selection actions menu")
+
+            // Cancel button
+            Button("Cancel") {
+                viewModel.exitSelectionMode()
+            }
+            .keyboardShortcut(.escape)
+            .accessibilityIdentifier("CancelSelectionButton")
+            .accessibilityLabel("Exit selection mode")
+        }
     }
 
     @ViewBuilder
@@ -863,7 +1187,15 @@ private struct MacListDetailView: View {
         .accessibilityIdentifier("ItemsList")
         // MARK: - Keyboard Navigation Handlers (Task 11.1)
         .onKeyPress(.space) {
-            // Space toggles completion state of focused item
+            // In selection mode, space toggles selection of focused item
+            if viewModel.isInSelectionMode {
+                guard let focusedID = focusedItemID else {
+                    return .ignored
+                }
+                viewModel.toggleSelection(for: focusedID)
+                return .handled
+            }
+            // Normal mode: Space toggles completion state of focused item
             guard let focusedID = focusedItemID,
                   let item = displayedItems.first(where: { $0.id == focusedID }) else {
                 return .ignored
@@ -877,7 +1209,10 @@ private struct MacListDetailView: View {
             return .handled
         }
         .onKeyPress(.return) {
-            // Enter opens edit sheet for focused item
+            // Enter opens edit sheet for focused item (not in selection mode)
+            guard !viewModel.isInSelectionMode else {
+                return .ignored
+            }
             guard let focusedID = focusedItemID,
                   let item = displayedItems.first(where: { $0.id == focusedID }) else {
                 return .ignored
@@ -886,13 +1221,34 @@ private struct MacListDetailView: View {
             return .handled
         }
         .onKeyPress(.delete) {
-            // Delete removes the focused item
+            // In selection mode, delete shows confirmation for selected items
+            if viewModel.isInSelectionMode && !viewModel.selectedItems.isEmpty {
+                showingDeleteConfirmation = true
+                return .handled
+            }
+            // Normal mode: Delete removes the focused item
             guard let focusedID = focusedItemID,
                   let item = displayedItems.first(where: { $0.id == focusedID }) else {
                 return .ignored
             }
             deleteItem(item)
             moveFocusAfterItemDeletion(deletedId: focusedID)
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            // Escape exits selection mode
+            if viewModel.isInSelectionMode {
+                viewModel.exitSelectionMode()
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(characters: CharacterSet(charactersIn: "a")) { keyPress in
+            // Cmd+A selects all items in selection mode
+            guard keyPress.modifiers.contains(.command) && viewModel.isInSelectionMode else {
+                return .ignored
+            }
+            viewModel.selectAll()
             return .handled
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "c")) { keyPress in
@@ -919,6 +1275,8 @@ private struct MacListDetailView: View {
     private func makeItemRow(item: Item) -> some View {
         MacItemRowView(
             item: item,
+            isInSelectionMode: viewModel.isInSelectionMode,
+            isSelected: viewModel.selectedItems.contains(item.id),
             onToggle: { toggleItem(item) },
             onEdit: {
                 // CRITICAL FIX: Delegate to parent (MacMainView) for sheet presentation
@@ -929,7 +1287,8 @@ private struct MacListDetailView: View {
                 onEditItem(item)
             },
             onDelete: { deleteItem(item) },
-            onQuickLook: { showQuickLook(for: item) }
+            onQuickLook: { showQuickLook(for: item) },
+            onToggleSelection: { viewModel.toggleSelection(for: item.id) }
         )
     }
 
@@ -944,25 +1303,67 @@ private struct MacListDetailView: View {
     // MARK: - Main Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerView
-            activeFiltersBar
-            Divider()
+        ZStack(alignment: .bottom) {
+            // Main content
+            VStack(spacing: 0) {
+                headerView
+                activeFiltersBar
+                Divider()
 
-            if viewModel.filteredItems.isEmpty {
-                Group {
-                    if items.isEmpty {
-                        emptyListView
-                    } else {
-                        noMatchingItemsView
+                if viewModel.filteredItems.isEmpty {
+                    Group {
+                        if items.isEmpty {
+                            emptyListView
+                        } else {
+                            noMatchingItemsView
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
+                        handleItemDrop(droppedItems)
+                    }
+                } else {
+                    itemsListView
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-                    handleItemDrop(droppedItems)
-                }
-            } else {
-                itemsListView
+            }
+
+            // MARK: - Undo Banners Overlay
+            // Undo Complete Banner - shows when item is marked as completed
+            if viewModel.showUndoButton, let item = viewModel.recentlyCompletedItem {
+                MacUndoBanner(
+                    itemName: item.displayTitle,
+                    onUndo: {
+                        viewModel.undoComplete()
+                    },
+                    onDismiss: {
+                        viewModel.hideUndoButton()
+                    }
+                )
+                .frame(maxWidth: 400)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.showUndoButton)
+                .accessibilityIdentifier("UndoCompleteBanner")
+            }
+
+            // Undo Delete Banner - shows when item is deleted
+            if viewModel.showDeleteUndoButton, let item = viewModel.recentlyDeletedItem {
+                MacDeleteUndoBanner(
+                    itemName: item.displayTitle,
+                    onUndo: {
+                        viewModel.undoDeleteItem()
+                    },
+                    onDismiss: {
+                        viewModel.hideDeleteUndoButton()
+                    }
+                )
+                .frame(maxWidth: 400)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.showDeleteUndoButton)
+                .accessibilityIdentifier("UndoDeleteBanner")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1023,6 +1424,93 @@ private struct MacListDetailView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewItem"))) { _ in
             showingAddItemSheet = true
         }
+        // MARK: - Move/Copy Item Sheets
+        .sheet(isPresented: $showingMoveItemsPicker, onDismiss: {
+            // When sheet is dismissed, show confirmation if a destination was selected
+            if selectedDestinationList != nil {
+                showingMoveConfirmation = true
+            }
+        }) {
+            MacDestinationListPickerSheet(
+                action: .move,
+                itemCount: viewModel.selectedItems.count,
+                currentListId: list.id,
+                onSelect: { destinationList in
+                    selectedDestinationList = destinationList
+                    showingMoveItemsPicker = false
+                },
+                onCancel: {
+                    selectedDestinationList = nil
+                    showingMoveItemsPicker = false
+                }
+            )
+        }
+        .sheet(isPresented: $showingCopyItemsPicker, onDismiss: {
+            // When sheet is dismissed, show confirmation if a destination was selected
+            if selectedDestinationList != nil {
+                showingCopyConfirmation = true
+            }
+        }) {
+            MacDestinationListPickerSheet(
+                action: .copy,
+                itemCount: viewModel.selectedItems.count,
+                currentListId: list.id,
+                onSelect: { destinationList in
+                    selectedDestinationList = destinationList
+                    showingCopyItemsPicker = false
+                },
+                onCancel: {
+                    selectedDestinationList = nil
+                    showingCopyItemsPicker = false
+                }
+            )
+        }
+        // MARK: - Move/Copy Confirmation Alerts
+        .alert("Move Items", isPresented: $showingMoveConfirmation) {
+            Button("Cancel", role: .cancel) {
+                selectedDestinationList = nil
+            }
+            Button("Move", role: .destructive) {
+                if let destination = selectedDestinationList {
+                    viewModel.moveSelectedItems(to: destination)
+                    viewModel.exitSelectionMode()
+                    dataManager.loadData()
+                }
+                selectedDestinationList = nil
+            }
+        } message: {
+            if let destination = selectedDestinationList {
+                Text("Move \(viewModel.selectedItems.count) item(s) to \"\(destination.name)\"? Items will be removed from this list.")
+            }
+        }
+        .alert("Copy Items", isPresented: $showingCopyConfirmation) {
+            Button("Cancel", role: .cancel) {
+                selectedDestinationList = nil
+            }
+            Button("Copy") {
+                if let destination = selectedDestinationList {
+                    viewModel.copySelectedItems(to: destination)
+                    viewModel.exitSelectionMode()
+                    dataManager.loadData()
+                }
+                selectedDestinationList = nil
+            }
+        } message: {
+            if let destination = selectedDestinationList {
+                Text("Copy \(viewModel.selectedItems.count) item(s) to \"\(destination.name)\"? Items will remain in this list.")
+            }
+        }
+        // MARK: - Delete Confirmation Alert
+        .alert("Delete Items", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                viewModel.deleteSelectedItems()
+                viewModel.exitSelectionMode()
+                dataManager.loadData()
+            }
+        } message: {
+            Text("Are you sure you want to delete \(viewModel.selectedItems.count) item(s)? This action cannot be undone.")
+        }
         // MARK: - Keyboard Shortcuts (Task 11.1)
         .onKeyPress(characters: CharacterSet(charactersIn: "f")) { keyPress in
             // Cmd+F focuses the search field
@@ -1040,11 +1528,12 @@ private struct MacListDetailView: View {
 
     // MARK: - Item Actions
 
+    /// Toggles item completion state using ViewModel to enable undo functionality.
+    /// When completing an item, a 5-second undo banner appears at the bottom.
     private func toggleItem(_ item: Item) {
-        var updatedItem = item
-        updatedItem.isCrossedOut.toggle()
-        updatedItem.modifiedAt = Date()
-        dataManager.updateItem(updatedItem)
+        // Use ViewModel's toggleItemCrossedOut to enable undo banner
+        // This triggers showUndoForCompletedItem when marking as complete
+        viewModel.toggleItemCrossedOut(item)
     }
 
     private func addItem(title: String, quantity: Int, description: String?) {
@@ -1068,8 +1557,12 @@ private struct MacListDetailView: View {
         dataManager.updateItem(updatedItem)
     }
 
+    /// Deletes item using ViewModel to enable undo functionality.
+    /// A 5-second undo banner appears at the bottom allowing restoration.
     private func deleteItem(_ item: Item) {
-        dataManager.deleteItem(withId: item.id, from: list.id)
+        // Use ViewModel's deleteItem to enable undo banner
+        // This stores the item for potential restoration and shows the delete undo banner
+        viewModel.deleteItem(item)
     }
 
     private func updateListName(_ name: String) {
@@ -1146,16 +1639,22 @@ private struct MacListDetailView: View {
 
 private struct MacItemRowView: View {
     let item: Item
+    let isInSelectionMode: Bool
+    let isSelected: Bool
     let onToggle: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onQuickLook: () -> Void
+    let onToggleSelection: () -> Void
 
     @State private var isHovering = false
 
     /// Combined accessibility label for VoiceOver
     private var itemAccessibilityLabel: String {
         var label = item.title
+        if isInSelectionMode {
+            label = (isSelected ? "Selected, " : "Unselected, ") + label
+        }
         label += ", \(item.isCrossedOut ? "completed" : "active")"
         if item.quantity > 1 {
             label += ", quantity \(item.quantity)"
@@ -1171,15 +1670,29 @@ private struct MacItemRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Checkbox button
-            Button(action: onToggle) {
-                Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundColor(item.isCrossedOut ? .green : .secondary)
+            // Selection checkbox (shown in selection mode)
+            if isInSelectionMode {
+                Button(action: onToggleSelection) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundColor(isSelected ? .accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isSelected ? "Selected" : "Not selected")
+                .accessibilityHint("Double-tap to toggle selection")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
-            .accessibilityHint("Double-tap to toggle completion status")
+
+            // Completion checkbox button (hidden in selection mode)
+            if !isInSelectionMode {
+                Button(action: onToggle) {
+                    Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundColor(item.isCrossedOut ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
+                .accessibilityHint("Double-tap to toggle completion status")
+            }
 
             // Image thumbnail (if item has images)
             if item.hasImages, let firstImage = item.sortedImages.first, let nsImage = firstImage.nsImage {
@@ -1251,8 +1764,8 @@ private struct MacItemRowView: View {
 
             Spacer()
 
-            // Hover actions
-            if isHovering {
+            // Hover actions (hidden in selection mode)
+            if isHovering && !isInSelectionMode {
                 HStack(spacing: 8) {
                     // Quick Look button (only if item has images)
                     if item.hasImages {
@@ -1291,30 +1804,45 @@ private struct MacItemRowView: View {
         // CRITICAL: Use native AppKit double-click handler instead of .onTapGesture(count: 2)
         // SwiftUI's gesture system blocks the run loop on macOS, causing sheets to only
         // appear after app deactivation. This native handler fires immediately.
+        // In selection mode, double-click toggles selection instead of editing
         .onDoubleClick {
-            onEdit()
+            if isInSelectionMode {
+                onToggleSelection()
+            } else {
+                onEdit()
+            }
         }
-        .contentShape(Rectangle())  // Move contentShape AFTER onDoubleClick so it doesn't block events
-        .listRowBackground(Color.clear)  // Disable default selection overlay
+        // In selection mode, single click toggles selection
+        .onTapGesture {
+            if isInSelectionMode {
+                onToggleSelection()
+            }
+        }
+        .contentShape(Rectangle())  // Move contentShape AFTER gestures so it doesn't block events
+        .listRowBackground(isInSelectionMode && isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
         // MARK: - Accessibility (Task 11.2)
         // Combine child elements into a single accessible element for cleaner VoiceOver navigation
         .accessibilityElement(children: .combine)
         .accessibilityLabel(itemAccessibilityLabel)
-        .accessibilityHint("Double-tap to edit. Use actions menu for more options.")
+        .accessibilityHint(isInSelectionMode ? "Tap to toggle selection" : "Double-tap to edit. Use actions menu for more options.")
         .contextMenu {
-            Button("Edit") { onEdit() }
-            Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
+            if isInSelectionMode {
+                Button(isSelected ? "Deselect" : "Select") { onToggleSelection() }
+            } else {
+                Button("Edit") { onEdit() }
+                Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
 
-            if item.hasImages {
-                Divider()
-                Button("Quick Look") {
-                    onQuickLook()
+                if item.hasImages {
+                    Divider()
+                    Button("Quick Look") {
+                        onQuickLook()
+                    }
+                    .keyboardShortcut(.space, modifiers: [])
                 }
-                .keyboardShortcut(.space, modifiers: [])
-            }
 
-            Divider()
-            Button("Delete", role: .destructive) { onDelete() }
+                Divider()
+                Button("Delete", role: .destructive) { onDelete() }
+            }
         }
     }
 }
@@ -1710,6 +2238,140 @@ private struct FilterBadge: View {
         .padding(.vertical, 4)
         .background(Color.accentColor.opacity(0.1))
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Undo Complete Banner (macOS)
+
+/// macOS-styled undo banner for completed items.
+/// Shows a green checkmark, item name, and undo/dismiss buttons.
+/// Uses material background for modern macOS appearance.
+private struct MacUndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Green checkmark icon
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+                .font(.title2)
+                .accessibilityHidden(true)
+
+            // Status text and item name
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Completed")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(itemName)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Undo button (blue)
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Undo completion")
+            .accessibilityHint("Marks item as active again")
+
+            // Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
+            .accessibilityHint("Hides this notification")
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Completed \(itemName)")
+        .accessibilityHint("Use undo button to mark as active")
+    }
+}
+
+// MARK: - Undo Delete Banner (macOS)
+
+/// macOS-styled undo banner for deleted items.
+/// Shows a red trash icon, item name, and undo/dismiss buttons.
+/// Uses material background for modern macOS appearance.
+private struct MacDeleteUndoBanner: View {
+    let itemName: String
+    let onUndo: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Red trash icon
+            Image(systemName: "trash.circle.fill")
+                .foregroundColor(.red)
+                .font(.title2)
+                .accessibilityHidden(true)
+
+            // Status text and item name
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Deleted")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(itemName)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Undo button (red for restore)
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(Color.red)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Undo deletion")
+            .accessibilityHint("Restores the deleted item")
+
+            // Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
+            .accessibilityHint("Hides this notification")
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Deleted \(itemName)")
+        .accessibilityHint("Use undo button to restore item")
     }
 }
 

@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 15/15 | macOS 14/15
+## Status: iOS 15/15 | macOS 15/15
 
 ---
 
@@ -20,7 +20,7 @@
 | Filter: Active Only | ✅ | ✅ | Shared ViewModel |
 | Filter: Completed Only | ✅ | ✅ | Shared ViewModel |
 | Filter: Has Description | ✅ | ✅ | Shared ViewModel |
-| Filter: Has Images | ✅ | ⚠️ | Shared ViewModel |
+| Filter: Has Images | ✅ | ✅ | Shared ViewModel |
 | Search (title + description) | ✅ | ✅ | Shared ViewModel |
 | Persistent Preferences | ✅ | ✅ | Shared Repository |
 | Active Filter Indicator | ✅ | ✅ | Platform UI |
@@ -30,9 +30,7 @@
 
 ## Gaps (macOS)
 
-| Feature | Priority | Status | Notes |
-|---------|:--------:|:------:|-------|
-| Filter: Has Images | MEDIUM | ⚠️ Partial | UI exists, logic incomplete |
+*No gaps - full feature parity achieved.*
 
 ---
 

@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 13/13 | macOS 11/13
+## Status: iOS 13/13 | macOS 13/13
 
 ---
 
@@ -18,8 +18,8 @@
 | Permanently Delete Archived | ✅ | ✅ | Shared ViewModel |
 | Duplicate List | ✅ | ✅ | Shared ViewModel |
 | Reorder Lists (drag-drop) | ✅ | ✅ | Platform UI |
-| Multi-Select Lists | ✅ | ❌ | iOS only |
-| Bulk Archive/Delete | ✅ | ❌ | iOS only |
+| Multi-Select Lists | ✅ | ✅ | Platform UI |
+| Bulk Archive/Delete | ✅ | ✅ | Platform UI |
 | Sample List Templates | ✅ | ✅ | Shared Service |
 | Active/Archived Toggle | ✅ | ✅ | Platform UI |
 | List Item Count Display | ✅ | ✅ | Platform UI |
@@ -28,10 +28,7 @@
 
 ## Gaps (macOS)
 
-| Feature | Priority | iOS Implementation | Notes |
-|---------|:--------:|-------------------|-------|
-| Multi-Select Lists | HIGH | Selection checkboxes, Edit mode | Need MacOS selection mode |
-| Bulk Archive/Delete | HIGH | Bulk operations toolbar | Depends on multi-select |
+*No gaps - full feature parity achieved.*
 
 ---
 
@@ -47,6 +44,8 @@
 - Keyboard navigation (arrow keys, Enter, Delete)
 - Sidebar navigation pattern
 - Menu bar commands (Cmd+Shift+N, Cmd+Delete)
+- Selection mode with pencil button, checkboxes, and ellipsis menu
+- Keyboard shortcuts: Escape (exit selection), Cmd+A (select all), Space (toggle selection)
 
 ---
 

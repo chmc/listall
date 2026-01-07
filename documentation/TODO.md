@@ -3630,12 +3630,48 @@ fastlane/metadata/macos/
 
 ---
 
-### Task 11.7: [IN PROGRESS] Implement macOS Feature Parity with iOS
+### Task 11.7: [COMPLETED] Implement macOS Feature Parity with iOS
 **TDD**: Feature implementation tests
 
 **Purpose**: Implement missing iOS features on macOS for full feature parity.
 
 **Reference Documentation**: `/documentation/FEATURES.md` - Comprehensive feature inventory
+
+**Progress** (January 7, 2026):
+
+**HIGH Priority (ALL DONE):**
+
+1. **Bulk Archive/Delete for Lists** - Implemented proper archive vs permanent delete semantics
+   - Active lists view: "Archive Lists" action (recoverable via restore)
+   - Archived lists view: "Delete Permanently" action (irreversible)
+   - Added `archiveSelectedLists()` and `permanentlyDeleteSelectedLists()` methods
+   - Extracted @ViewBuilder properties to fix SwiftUI type-checker performance issues
+   - Added 21 unit tests in `BulkListOperationsMacTests`
+
+2. **Filter: Has Images** - Verified already working, documentation was outdated
+   - Updated FILTER_SORT.md status from ⚠️ to ✅
+   - Updated count from macOS 14/15 to macOS 15/15
+
+3. **Documentation Updates**:
+   - LIST_MANAGEMENT.md: Updated status to 13/13, marked Bulk Archive/Delete as ✅
+   - FILTER_SORT.md: Updated status to 15/15, marked Filter: Has Images as ✅
+   - SUMMARY.md: Updated category counts and gap tables
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Added bulk archive/delete with proper semantics
+- `ListAllMacTests/ListAllMacTests.swift` - Added BulkListOperationsMacTests class
+- `documentation/features/SUMMARY.md` - Updated status counts
+- `documentation/features/LIST_MANAGEMENT.md` - Updated status
+- `documentation/features/FILTER_SORT.md` - Updated status
+
+**MEDIUM Priority (ALL DONE):**
+
+1. **Feature Tips System** - Implemented macOS tooltip/tips system for feature discovery
+   - Created MacTooltipManager with macOS-specific tips
+   - Created MacAllFeatureTipsView for viewing all tips
+   - Added Help & Tips section to MacSettingsView GeneralSettingsTab
+   - Added 18 unit tests in FeatureTipsMacTests
+   - Status: **IMPLEMENTED**
 
 ---
 
@@ -3643,10 +3679,10 @@ fastlane/metadata/macos/
 
 | # | Feature | iOS Implementation | macOS Status |
 |---|---------|-------------------|--------------|
-| 1 | **Multi-Select Mode for Lists** | Selection checkboxes, bulk archive/delete | **MISSING** |
-| 2 | **Multi-Select Mode for Items** | Selection checkboxes, bulk operations | **MISSING** |
-| 3 | **Move Items Between Lists** | DestinationListPickerView | **MISSING** |
-| 4 | **Copy Items Between Lists** | DestinationListPickerView | **MISSING** |
+| 1 | **Multi-Select Mode for Lists** | Selection checkboxes, bulk archive/delete | **IMPLEMENTED** |
+| 2 | **Multi-Select Mode for Items** | Selection checkboxes, bulk operations | **IMPLEMENTED** |
+| 3 | **Move Items Between Lists** | DestinationListPickerView | **IMPLEMENTED** |
+| 4 | **Copy Items Between Lists** | DestinationListPickerView | **IMPLEMENTED** |
 | 5 | **Undo Complete** | 5-second undo banner | **IMPLEMENTED** |
 | 6 | **Undo Delete** | 5-second undo banner | **IMPLEMENTED** |
 | 7 | **Import Preview Dialog** | ImportPreviewView with summary | **IMPLEMENTED** |
@@ -3662,8 +3698,8 @@ fastlane/metadata/macos/
 |---|---------|-------------------|--------------|
 | 9 | **Language Selection** | Picker in Settings | **IMPLEMENTED** |
 | 10 | **Auth Timeout Options** | 5 timeout durations | **IMPLEMENTED** |
-| 11 | **Feature Tips System** | TooltipOverlay with tracking | **MISSING** |
-| 12 | **Filter: Has Images** | ItemFilterOption.hasImages | **PARTIAL** |
+| 11 | **Feature Tips System** | TooltipOverlay with tracking | **IMPLEMENTED** |
+| 12 | **Filter: Has Images** | ItemFilterOption.hasImages | **IMPLEMENTED** |
 
 ---
 
@@ -3922,9 +3958,9 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 8: Feature Parity | Completed | 4/4 |
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store | Completed | 5/5 |
-| Phase 11: Polish & Launch | In Progress | 7/9 |
+| Phase 11: Polish & Launch | In Progress | 8/9 |
 
-**Total Tasks: 64** (62 completed, 2 remaining)
+**Total Tasks: 64** (63 completed, 1 remaining)
 
 **Phase 11 Status**:
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -3933,7 +3969,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 11.4: [COMPLETED] Performance Optimization
 - Task 11.5: [COMPLETED] Memory Leak Testing
 - Task 11.6: [COMPLETED] Final Integration Testing
-- Task 11.7: [COMPLETED] iOS/macOS Feature Parity Analysis
+- Task 11.7: [COMPLETED] iOS/macOS Feature Parity Implementation
 - Task 11.8: Submit to App Store
 - Task 11.9: [OPTIONAL] Spotlight Integration
 

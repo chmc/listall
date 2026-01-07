@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 9/9 | macOS 7/9
+## Status: iOS 9/9 | macOS 9/9 (0 gaps - N/A items have macOS equivalents)
 
 ---
 

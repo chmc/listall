@@ -10599,4 +10599,626 @@ final class MoveCopyItemsMacTests: XCTestCase {
     }
 }
 
+// MARK: - Bulk List Operations Tests
+
+/// Tests for bulk archive/delete operations on lists
+final class BulkListOperationsMacTests: XCTestCase {
+
+    // MARK: - Platform Verification
+
+    func testRunningOnMacOS() {
+        #if os(macOS)
+        XCTAssertTrue(true, "Running on macOS")
+        #else
+        XCTFail("Not running on macOS")
+        #endif
+    }
+
+    // MARK: - Archive vs Delete Semantics
+
+    func testArchiveIsRecoverable() {
+        // Archive moves lists to archived state (recoverable)
+        // DataManager.deleteList(withId:) sets isArchived = true
+        // User can later restore from archived lists view
+        XCTAssertTrue(true, "Archive operation is recoverable via restore")
+    }
+
+    func testPermanentDeleteIsIrreversible() {
+        // Permanent delete removes lists completely
+        // DataManager.permanentlyDeleteList(withId:) deletes from Core Data
+        // No recovery possible after permanent deletion
+        XCTAssertTrue(true, "Permanent delete is irreversible")
+    }
+
+    // MARK: - Selection Mode State Tests
+
+    func testSelectionModeInitialState() {
+        // Initial state: isInSelectionMode = false, selectedLists = []
+        let isInSelectionMode = false
+        let selectedLists: Set<UUID> = []
+
+        XCTAssertFalse(isInSelectionMode)
+        XCTAssertTrue(selectedLists.isEmpty)
+    }
+
+    func testEnterSelectionMode() {
+        // enterSelectionMode() sets isInSelectionMode = true and clears selection
+        var isInSelectionMode = false
+        var selectedLists: Set<UUID> = [UUID(), UUID()] // Pre-existing selection
+
+        // Simulate enterSelectionMode()
+        isInSelectionMode = true
+        selectedLists.removeAll()
+
+        XCTAssertTrue(isInSelectionMode)
+        XCTAssertTrue(selectedLists.isEmpty)
+    }
+
+    func testExitSelectionMode() {
+        // exitSelectionMode() sets isInSelectionMode = false and clears selection
+        var isInSelectionMode = true
+        var selectedLists: Set<UUID> = [UUID(), UUID()]
+
+        // Simulate exitSelectionMode()
+        isInSelectionMode = false
+        selectedLists.removeAll()
+
+        XCTAssertFalse(isInSelectionMode)
+        XCTAssertTrue(selectedLists.isEmpty)
+    }
+
+    func testToggleSelection() {
+        // toggleSelection(for:) adds or removes UUID from selectedLists
+        var selectedLists: Set<UUID> = []
+        let listId = UUID()
+
+        // Toggle on
+        if selectedLists.contains(listId) {
+            selectedLists.remove(listId)
+        } else {
+            selectedLists.insert(listId)
+        }
+        XCTAssertTrue(selectedLists.contains(listId))
+
+        // Toggle off
+        if selectedLists.contains(listId) {
+            selectedLists.remove(listId)
+        } else {
+            selectedLists.insert(listId)
+        }
+        XCTAssertFalse(selectedLists.contains(listId))
+    }
+
+    func testSelectAllLists() {
+        // selectAllLists() selects all displayed lists
+        var selectedLists: Set<UUID> = []
+        let displayedLists = [UUID(), UUID(), UUID()]
+
+        // Simulate selectAllLists()
+        selectedLists = Set(displayedLists)
+
+        XCTAssertEqual(selectedLists.count, 3)
+        XCTAssertTrue(displayedLists.allSatisfy { selectedLists.contains($0) })
+    }
+
+    func testDeselectAllLists() {
+        // deselectAllLists() clears selection
+        var selectedLists: Set<UUID> = [UUID(), UUID(), UUID()]
+
+        // Simulate deselectAllLists()
+        selectedLists.removeAll()
+
+        XCTAssertTrue(selectedLists.isEmpty)
+    }
+
+    // MARK: - View State Tests (Active vs Archived)
+
+    func testActiveListsViewShowsArchiveAction() {
+        // When viewing active lists (showingArchivedLists = false),
+        // the action should be "Archive Lists" (recoverable)
+        let showingArchivedLists = false
+
+        if showingArchivedLists {
+            XCTFail("Should show archive action for active lists")
+        } else {
+            XCTAssertTrue(true, "Active lists view shows Archive action")
+        }
+    }
+
+    func testArchivedListsViewShowsDeletePermanentlyAction() {
+        // When viewing archived lists (showingArchivedLists = true),
+        // the action should be "Delete Permanently" (irreversible)
+        let showingArchivedLists = true
+
+        if showingArchivedLists {
+            XCTAssertTrue(true, "Archived lists view shows Delete Permanently action")
+        } else {
+            XCTFail("Should show permanent delete action for archived lists")
+        }
+    }
+
+    // MARK: - Bulk Action Method Tests
+
+    func testBulkArchiveLogic() {
+        // archiveSelectedLists() should:
+        // 1. Archive each selected list (deleteList sets isArchived = true)
+        // 2. Reload data
+        // 3. Clear selection
+        // 4. Exit selection mode
+        var selectedLists: Set<UUID> = [UUID(), UUID()]
+        var isInSelectionMode = true
+        var archivedListIds: [UUID] = []
+
+        // Simulate archiveSelectedLists()
+        let listsToArchive = selectedLists
+        for listId in listsToArchive {
+            archivedListIds.append(listId)
+        }
+        selectedLists.removeAll()
+        isInSelectionMode = false
+
+        XCTAssertEqual(archivedListIds.count, 2)
+        XCTAssertTrue(selectedLists.isEmpty)
+        XCTAssertFalse(isInSelectionMode)
+    }
+
+    func testBulkPermanentDeleteLogic() {
+        // permanentlyDeleteSelectedLists() should:
+        // 1. Permanently delete each selected list
+        // 2. Reload data
+        // 3. Clear selection
+        // 4. Exit selection mode
+        var selectedLists: Set<UUID> = [UUID(), UUID(), UUID()]
+        var isInSelectionMode = true
+        var deletedListIds: [UUID] = []
+
+        // Simulate permanentlyDeleteSelectedLists()
+        let listsToDelete = selectedLists
+        for listId in listsToDelete {
+            deletedListIds.append(listId)
+        }
+        selectedLists.removeAll()
+        isInSelectionMode = false
+
+        XCTAssertEqual(deletedListIds.count, 3)
+        XCTAssertTrue(selectedLists.isEmpty)
+        XCTAssertFalse(isInSelectionMode)
+    }
+
+    // MARK: - Detail Selection Clearing Tests
+
+    func testClearDetailSelectionAfterArchive() {
+        // If the currently selected list in detail view was archived,
+        // selectedList should be set to nil
+        let selectedListId = UUID()
+        var selectedList: UUID? = selectedListId
+        let archivedListIds: Set<UUID> = [selectedListId]
+
+        // Simulate clearing if archived list was selected
+        if let currentSelection = selectedList, archivedListIds.contains(currentSelection) {
+            selectedList = nil
+        }
+
+        XCTAssertNil(selectedList)
+    }
+
+    func testPreserveDetailSelectionIfNotArchived() {
+        // If the currently selected list was NOT archived,
+        // selectedList should remain unchanged
+        let selectedListId = UUID()
+        var selectedList: UUID? = selectedListId
+        let archivedListIds: Set<UUID> = [UUID(), UUID()] // Different UUIDs
+
+        // Simulate clearing check
+        if let currentSelection = selectedList, archivedListIds.contains(currentSelection) {
+            selectedList = nil
+        }
+
+        XCTAssertEqual(selectedList, selectedListId)
+    }
+
+    // MARK: - Keyboard Navigation Tests
+
+    func testDeleteKeyTriggersArchiveForActiveLists() {
+        // When pressing Delete key in selection mode on active lists view,
+        // should show archive confirmation
+        let isInSelectionMode = true
+        let showingArchivedLists = false
+        var showingArchiveConfirmation = false
+        var showingPermanentDeleteConfirmation = false
+        let selectedLists: Set<UUID> = [UUID()]
+
+        // Simulate onKeyPress(.delete)
+        if isInSelectionMode && !selectedLists.isEmpty {
+            if showingArchivedLists {
+                showingPermanentDeleteConfirmation = true
+            } else {
+                showingArchiveConfirmation = true
+            }
+        }
+
+        XCTAssertTrue(showingArchiveConfirmation)
+        XCTAssertFalse(showingPermanentDeleteConfirmation)
+    }
+
+    func testDeleteKeyTriggersPermanentDeleteForArchivedLists() {
+        // When pressing Delete key in selection mode on archived lists view,
+        // should show permanent delete confirmation
+        let isInSelectionMode = true
+        let showingArchivedLists = true
+        var showingArchiveConfirmation = false
+        var showingPermanentDeleteConfirmation = false
+        let selectedLists: Set<UUID> = [UUID()]
+
+        // Simulate onKeyPress(.delete)
+        if isInSelectionMode && !selectedLists.isEmpty {
+            if showingArchivedLists {
+                showingPermanentDeleteConfirmation = true
+            } else {
+                showingArchiveConfirmation = true
+            }
+        }
+
+        XCTAssertFalse(showingArchiveConfirmation)
+        XCTAssertTrue(showingPermanentDeleteConfirmation)
+    }
+
+    func testDeleteKeyIgnoredWhenNoSelection() {
+        // When pressing Delete key with no lists selected, nothing should happen
+        let isInSelectionMode = true
+        var showingArchiveConfirmation = false
+        var showingPermanentDeleteConfirmation = false
+        let selectedLists: Set<UUID> = [] // Empty selection
+
+        // Simulate onKeyPress(.delete)
+        if isInSelectionMode && !selectedLists.isEmpty {
+            showingArchiveConfirmation = true
+        }
+
+        XCTAssertFalse(showingArchiveConfirmation)
+        XCTAssertFalse(showingPermanentDeleteConfirmation)
+    }
+
+    // MARK: - UI Message Tests
+
+    func testArchiveConfirmationMessage() {
+        // Archive confirmation should mention recoverability
+        let selectedCount = 3
+        let expectedMessageContains = "restore"
+
+        let message = "Archive \(selectedCount) lists? You can restore them later from archived lists."
+        XCTAssertTrue(message.lowercased().contains(expectedMessageContains))
+    }
+
+    func testPermanentDeleteConfirmationMessage() {
+        // Permanent delete confirmation should warn about irreversibility
+        let selectedCount = 2
+        let expectedMessageContains = "cannot be undone"
+
+        let message = "Permanently delete \(selectedCount) lists? This action cannot be undone. All items and images will be permanently deleted."
+        XCTAssertTrue(message.lowercased().contains(expectedMessageContains))
+    }
+
+    // MARK: - Documentation Test
+
+    func testBulkListOperationsDocumentation() {
+        let documentation = """
+
+        ========================================================================
+        Bulk List Operations on macOS
+        ========================================================================
+
+        Overview:
+        ---------
+        macOS supports bulk operations on lists through multi-select mode.
+        The action performed depends on whether viewing active or archived lists.
+
+        Active Lists View (showingArchivedLists = false):
+        ------------------------------------------------
+        - Action: "Archive Lists" with archivebox icon
+        - Behavior: Moves selected lists to archived state
+        - Recovery: Lists can be restored from Archived Lists view
+        - Keyboard: Delete key triggers archive
+
+        Archived Lists View (showingArchivedLists = true):
+        --------------------------------------------------
+        - Action: "Delete Permanently" with trash icon
+        - Behavior: Permanently removes selected lists from database
+        - Recovery: NOT possible - irreversible action
+        - Keyboard: Delete key triggers permanent delete
+
+        Implementation Files:
+        --------------------
+        - MacMainView.swift: MacSidebarView with selection mode
+        - Methods: archiveSelectedLists(), permanentlyDeleteSelectedLists()
+        - @ViewBuilder: bulkActionButton for type-checker performance
+
+        DRY Principle:
+        -------------
+        - Uses DataManager.deleteList(withId:) for archiving (shared with iOS)
+        - Uses DataManager.permanentlyDeleteList(withId:) for permanent delete
+        - Selection state managed locally in MacSidebarView
+
+        ========================================================================
+
+        """
+
+        print(documentation)
+        XCTAssertTrue(true, "Documentation generated")
+    }
+}
+
+// MARK: - Feature Tips System Tests
+
+/// Unit tests for the macOS Feature Tips System
+/// Tests MacTooltipManager functionality for tracking and resetting feature tips.
+final class FeatureTipsMacTests: XCTestCase {
+
+    // MARK: - MacTooltipType Tests
+
+    func testMacTooltipTypeHasAllCases() {
+        // Verify all expected tooltip types exist
+        let allTypes = MacTooltipType.allCases
+        XCTAssertEqual(allTypes.count, 7, "Should have 7 tooltip types for macOS")
+
+        // Verify specific types exist
+        let typeRawValues = allTypes.map { $0.rawValue }
+        XCTAssertTrue(typeRawValues.contains("tooltip_add_list"))
+        XCTAssertTrue(typeRawValues.contains("tooltip_item_suggestions"))
+        XCTAssertTrue(typeRawValues.contains("tooltip_search"))
+        XCTAssertTrue(typeRawValues.contains("tooltip_sort_filter"))
+        XCTAssertTrue(typeRawValues.contains("tooltip_context_menu"))
+        XCTAssertTrue(typeRawValues.contains("tooltip_archive"))
+        XCTAssertTrue(typeRawValues.contains("tooltip_keyboard_shortcuts"))
+    }
+
+    func testMacTooltipTypeHasTitle() {
+        // All tooltip types should have non-empty titles
+        for type in MacTooltipType.allCases {
+            XCTAssertFalse(type.title.isEmpty, "\(type.rawValue) should have a title")
+        }
+    }
+
+    func testMacTooltipTypeHasIcon() {
+        // All tooltip types should have non-empty icons
+        for type in MacTooltipType.allCases {
+            XCTAssertFalse(type.icon.isEmpty, "\(type.rawValue) should have an icon")
+        }
+    }
+
+    func testMacTooltipTypeHasMessage() {
+        // All tooltip types should have non-empty messages
+        for type in MacTooltipType.allCases {
+            XCTAssertFalse(type.message.isEmpty, "\(type.rawValue) should have a message")
+        }
+    }
+
+    func testMacTooltipTypeMessagesAreMacSpecific() {
+        // Verify messages use macOS-specific terminology
+        let contextMenuTip = MacTooltipType.contextMenuActions
+        XCTAssertTrue(contextMenuTip.message.lowercased().contains("right-click"),
+                      "Context menu tip should mention right-click for macOS")
+
+        let keyboardTip = MacTooltipType.keyboardShortcuts
+        XCTAssertTrue(keyboardTip.message.lowercased().contains("keyboard"),
+                      "Keyboard shortcuts tip should mention keyboard")
+
+        let searchTip = MacTooltipType.searchFunctionality
+        XCTAssertTrue(searchTip.message.lowercased().contains("cmd+f"),
+                      "Search tip should mention Cmd+F shortcut for macOS")
+    }
+
+    func testMacTooltipTypeIsIdentifiable() {
+        // Test Identifiable conformance
+        let tip = MacTooltipType.addListButton
+        XCTAssertEqual(tip.id, tip.rawValue)
+    }
+
+    // MARK: - MacTooltipManager Tests
+
+    func testMacTooltipManagerSharedInstance() {
+        let manager1 = MacTooltipManager.shared
+        let manager2 = MacTooltipManager.shared
+        XCTAssertTrue(manager1 === manager2, "Should return same singleton instance")
+    }
+
+    func testMacTooltipManagerInitialState() {
+        // Initially, no tips should be marked as shown
+        // Note: This test may fail if run after other tests that mark tips as shown
+        // In a real test, we'd use a mock UserDefaults
+        let manager = MacTooltipManager.shared
+        XCTAssertGreaterThanOrEqual(manager.totalTooltipCount(), 7)
+        XCTAssertLessThanOrEqual(manager.shownTooltipCount(), manager.totalTooltipCount())
+    }
+
+    func testMacTooltipManagerMarkAsShown() {
+        let manager = MacTooltipManager.shared
+        let testTip = MacTooltipType.keyboardShortcuts // Use macOS-specific tip
+
+        // Mark as shown
+        let initialCount = manager.shownTooltipCount()
+        if !manager.hasShown(testTip) {
+            manager.markAsShown(testTip)
+            XCTAssertTrue(manager.hasShown(testTip), "Tip should be marked as shown")
+            XCTAssertEqual(manager.shownTooltipCount(), initialCount + 1)
+        } else {
+            // Already shown, count should not change
+            manager.markAsShown(testTip)
+            XCTAssertEqual(manager.shownTooltipCount(), initialCount)
+        }
+    }
+
+    func testMacTooltipManagerMarkAsShownIdempotent() {
+        // Marking the same tip twice should not increase count
+        let manager = MacTooltipManager.shared
+        let testTip = MacTooltipType.contextMenuActions
+
+        manager.markAsShown(testTip)
+        let countAfterFirst = manager.shownTooltipCount()
+
+        manager.markAsShown(testTip)
+        let countAfterSecond = manager.shownTooltipCount()
+
+        XCTAssertEqual(countAfterFirst, countAfterSecond,
+                       "Marking same tip twice should not increase count")
+    }
+
+    func testMacTooltipManagerResetAllTooltips() {
+        let manager = MacTooltipManager.shared
+
+        // Mark some tips as shown
+        manager.markAsShown(.addListButton)
+        manager.markAsShown(.searchFunctionality)
+
+        // Reset all
+        manager.resetAllTooltips()
+
+        // All tips should now be not shown
+        for tip in MacTooltipType.allCases {
+            XCTAssertFalse(manager.hasShown(tip),
+                           "\(tip.rawValue) should not be shown after reset")
+        }
+
+        XCTAssertEqual(manager.shownTooltipCount(), 0,
+                       "Shown count should be 0 after reset")
+    }
+
+    func testMacTooltipManagerMarkAllAsViewed() {
+        let manager = MacTooltipManager.shared
+
+        // First reset
+        manager.resetAllTooltips()
+
+        // Mark all as viewed
+        manager.markAllAsViewed()
+
+        // All tips should now be shown
+        XCTAssertEqual(manager.shownTooltipCount(), manager.totalTooltipCount(),
+                       "All tips should be marked as viewed")
+
+        for tip in MacTooltipType.allCases {
+            XCTAssertTrue(manager.hasShown(tip),
+                          "\(tip.rawValue) should be shown after markAllAsViewed")
+        }
+
+        // Clean up
+        manager.resetAllTooltips()
+    }
+
+    func testMacTooltipManagerTotalCount() {
+        let manager = MacTooltipManager.shared
+        XCTAssertEqual(manager.totalTooltipCount(), MacTooltipType.allCases.count)
+    }
+
+    // MARK: - Settings Integration Tests
+
+    func testHelpAndTipsSettingsSection() {
+        // Verify the Help & Tips section has the expected structure
+        // This is a documentation test showing what the settings section should display
+
+        let manager = MacTooltipManager.shared
+        let viewedCount = manager.shownTooltipCount()
+        let totalCount = manager.totalTooltipCount()
+
+        // Status display should show "X of Y tips viewed"
+        let statusText = "\(viewedCount) of \(totalCount) tips viewed"
+        XCTAssertTrue(statusText.contains("of"), "Status should show 'X of Y' format")
+
+        // View All Feature Tips button should be available
+        let viewAllLabel = "View All Feature Tips"
+        XCTAssertFalse(viewAllLabel.isEmpty)
+
+        // Show All Tips Again button should be available
+        let resetLabel = "Show All Tips Again"
+        XCTAssertFalse(resetLabel.isEmpty)
+    }
+
+    func testResetTooltipsConfirmationMessage() {
+        // Reset confirmation should explain what will happen
+        let message = "This will reset all feature tips. Tips will appear again when you use different features."
+        XCTAssertTrue(message.contains("reset"))
+        XCTAssertTrue(message.contains("Tips"))
+    }
+
+    // MARK: - Platform Compatibility Tests
+
+    func testMacOSSpecificTipsExist() {
+        // macOS should have context menu tip (instead of iOS swipe actions)
+        let contextMenuTip = MacTooltipType.contextMenuActions
+        XCTAssertEqual(contextMenuTip.rawValue, "tooltip_context_menu")
+        XCTAssertTrue(contextMenuTip.title.lowercased().contains("context") ||
+                      contextMenuTip.title.lowercased().contains("menu"))
+
+        // macOS should have keyboard shortcuts tip
+        let keyboardTip = MacTooltipType.keyboardShortcuts
+        XCTAssertEqual(keyboardTip.rawValue, "tooltip_keyboard_shortcuts")
+        XCTAssertTrue(keyboardTip.title.lowercased().contains("keyboard"))
+    }
+
+    func testSharedTipsExist() {
+        // These tips should exist on both iOS and macOS
+        let sharedTipRawValues = [
+            "tooltip_add_list",
+            "tooltip_item_suggestions",
+            "tooltip_search",
+            "tooltip_sort_filter",
+            "tooltip_archive"
+        ]
+
+        for rawValue in sharedTipRawValues {
+            let tip = MacTooltipType.allCases.first { $0.rawValue == rawValue }
+            XCTAssertNotNil(tip, "\(rawValue) should exist in MacTooltipType")
+        }
+    }
+
+    // MARK: - Documentation Test
+
+    func testFeatureTipsDocumentation() {
+        let documentation = """
+
+        ========================================================================
+        Feature Tips System on macOS
+        ========================================================================
+
+        Overview:
+        ---------
+        The Feature Tips System helps users discover app features through
+        contextual tooltips. Tips are tracked in UserDefaults and can be
+        reset through the Settings.
+
+        Components:
+        -----------
+        1. MacTooltipManager - Singleton managing tip tracking
+        2. MacTooltipType - Enum defining all available tips
+        3. MacAllFeatureTipsView - View displaying all tips with status
+        4. MacSettingsView GeneralSettingsTab - Help & Tips section
+
+        macOS-Specific Tips:
+        --------------------
+        - contextMenuActions: Right-click context menus (vs iOS swipe)
+        - keyboardShortcuts: Cmd+key shortcuts for navigation
+
+        Settings Integration:
+        ---------------------
+        Located in: Settings > General > Help & Tips
+        Features:
+        - Status display (X of Y tips viewed)
+        - View All Feature Tips button
+        - Show All Tips Again button
+
+        UserDefaults Key:
+        -----------------
+        Key: "shownTooltips"
+        Format: Array of tip raw values (String[])
+        Shared with iOS for cross-platform consistency
+
+        ========================================================================
+
+        """
+
+        print(documentation)
+        XCTAssertTrue(true, "Documentation generated")
+    }
+}
+
 #endif

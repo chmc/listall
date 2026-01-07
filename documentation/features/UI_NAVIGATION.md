@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 14/14 | macOS 10/14
+## Status: iOS 14/14 | macOS 14/14 (0 gaps - 4 N/A items have macOS equivalents)
 
 ---
 

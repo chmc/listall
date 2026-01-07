@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 14/14 | macOS 13/14
+## Status: iOS 14/14 | macOS 14/14 (0 gaps - Pinch-to-Zoom N/A, macOS uses Quick Look)
 
 ---
 

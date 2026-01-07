@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 8/8 | macOS 7/8
+## Status: iOS 8/8 | macOS 8/8
 
 ---
 
@@ -10,6 +10,7 @@
 
 > iCloud sync is **mandatory and built-in** via NSPersistentCloudKitContainer.
 > There is no toggle to disable sync - all data automatically syncs across devices when signed into iCloud.
+> The macOS Settings "Sync" tab now shows read-only sync status information.
 
 ---
 
@@ -28,16 +29,6 @@
 
 ---
 
-## Bug
-
-| Issue | Location | Fix |
-|-------|----------|-----|
-| Remove iCloud Sync toggle | MacSettingsView.swift:80-98 | Delete SyncSettingsTab |
-
-The toggle is misleading - sync is always on.
-
----
-
 ## Implementation Files
 
 **Shared**:
@@ -47,3 +38,6 @@ The toggle is misleading - sync is always on.
 
 **iOS**:
 - `Services/WatchConnectivityService.swift` - Watch sync
+
+**macOS**:
+- `ListAllMac/Views/MacSettingsView.swift` - Sync status display (read-only)

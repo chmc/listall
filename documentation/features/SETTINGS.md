@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 11/11 | macOS 5/11
+## Status: iOS 11/11 | macOS 11/11
 
 ---
 
@@ -10,14 +10,14 @@
 
 | Feature | iOS | macOS | Implementation |
 |---------|:---:|:-----:|----------------|
-| App Language Selection | ✅ | ❌ | iOS only |
+| App Language Selection | ✅ | ✅ | Picker with restart alert |
 | Default Sort Order | ✅ | ✅ | Shared Repository |
 | Add Button Position | ✅ | N/A | iOS only (mobile pattern) |
 | Haptic Feedback Toggle | ✅ | N/A | iOS only (no haptics on Mac) |
-| Feature Tips Tracking | ✅ | ❌ | iOS only |
-| Reset Tips Button | ✅ | ❌ | iOS only |
-| Biometric Auth Toggle | ✅ | ⚠️ | Platform-Specific |
-| Auth Timeout Duration | ✅ | ❌ | iOS only |
+| Feature Tips Tracking | ✅ | ✅ | Platform-Specific |
+| Reset Tips Button | ✅ | ✅ | Platform-Specific |
+| Biometric Auth Toggle | ✅ | ✅ | Platform-Specific |
+| Auth Timeout Duration | ✅ | ✅ | 5 duration choices |
 | Export Data Button | ✅ | ✅ | Platform UI |
 | Import Data Button | ✅ | ✅ | Platform UI |
 | App Version Display | ✅ | ✅ | Platform UI |
@@ -26,12 +26,7 @@
 
 ## Gaps (macOS)
 
-| Feature | Priority | iOS Implementation | Notes |
-|---------|:--------:|-------------------|-------|
-| Language Selection | MEDIUM | Picker with restart alert | Could add to Preferences |
-| Auth Timeout Options | MEDIUM | 5 duration choices | Could add to Preferences |
-| Feature Tips System | MEDIUM | TooltipOverlay with tracking | Nice to have |
-| Biometric Auth (full) | MEDIUM | Face ID, Touch ID, Passcode | macOS only has Touch ID |
+*No gaps - full feature parity achieved.*
 
 ---
 
@@ -45,19 +40,10 @@
 
 ## macOS-Specific Settings
 - Preferences window (Cmd+,)
-- Tab-based layout (General, Data, About)
-- Touch ID support only
+- Tab-based layout (General, Security, Sync, Data, About)
+- Language picker with restart alert
+- Touch ID support with timeout options
 - Website link
-
----
-
-## Bug
-
-| Issue | Location | Fix |
-|-------|----------|-----|
-| Remove "Sync" tab | MacSettingsView.swift | Delete SyncSettingsTab |
-
-The "Enable iCloud Sync" toggle is misleading - sync is mandatory.
 
 ---
 
