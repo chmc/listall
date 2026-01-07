@@ -546,11 +546,12 @@ platform :ios do
         pkg: pkg_path,
         api_key: api_key,
         distribute_external: false,
-        app_platform: "osx",  # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS uploads
-        skip_waiting_for_build_processing: true
+        app_platform: "osx"  # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS uploads
+        # NOTE: Removed skip_waiting_for_build_processing to ensure we verify upload success
+        # This adds ~5-15 min but catches silent failures where Apple rejects the build
       )
 
-      UI.success("✅ macOS build uploaded to TestFlight!")
+      UI.success("✅ macOS build uploaded and verified in TestFlight!")
     else
       UI.important("⚠️ ASC_* env vars not set. Skipping TestFlight upload. Package built at: #{pkg_path}")
     end
