@@ -257,13 +257,18 @@ struct MacMainView: View {
 
             print("🔄 macOS: Polling for CloudKit changes (timer-based fallback)")
 
-            // Force Core Data to check for remote changes
-            viewContext.perform {
+            // CRITICAL FIX: Use performAndWait (synchronous) to ensure refreshAllObjects()
+            // completes BEFORE loadData() fetches. The previous code used perform + DispatchQueue.main.async
+            // which are independent async mechanisms that race - loadData() could fetch stale data
+            // before refreshAllObjects() ran!
+            //
+            // This is the same pattern used in CoreDataManager's notification handlers.
+            viewContext.performAndWait {
                 viewContext.refreshAllObjects()
             }
 
-            // Reload data to update UI - use async to prevent layout recursion
-            // if timer happens to fire during an ongoing layout pass
+            // Now safe to load data - viewContext has been refreshed
+            // Use async to prevent layout recursion if timer fires during layout pass
             DispatchQueue.main.async {
                 dataManager.loadData()
             }

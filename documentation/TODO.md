@@ -3778,7 +3778,86 @@ These features are macOS-specific and working:
 
 ---
 
-### Task 11.8: Submit to App Store
+### Task 11.8: [COMPLETED] Fix macOS CloudKit Sync Not Receiving iOS Changes
+**TDD**: Write sync verification tests
+
+**Problem**: macOS app doesn't automatically sync when iOS app makes changes. Only when macOS app makes changes does iOS get updated later. This is the inverse of the issue fixed in `cloudkit-ios-realtime-sync.md`.
+
+**Symptoms**:
+- Changes made on iOS are NOT reflected on macOS in real-time
+- Changes made on macOS ARE reflected on iOS (with some delay)
+- macOS requires app restart or manual action to see iOS changes
+
+**Investigation Areas**:
+1. **Push Notifications**: macOS doesn't use UIBackgroundModes - relies on polling and observers
+2. **NSManagedObjectContextDidSave Observer**: Check if properly configured for macOS
+3. **NSPersistentCloudKitContainer Events**: Check if import events trigger UI refresh
+4. **Threading**: Check for main thread violations like iOS had
+5. **Polling Timer**: macOS has 30s sync polling timer - verify it's working
+6. **View Observers**: Check MacMainView/MacListDetailView for `.coreDataRemoteChange` observers
+
+**Key Files to Investigate**:
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Observer setup
+- `ListAllMac/Views/MacMainView.swift` - UI refresh observers
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Data loading
+- `ListAll/ListAll/ViewModels/ListViewModel.swift` - Item refresh
+
+**References**:
+- `documentation/learnings/cloudkit-ios-realtime-sync.md` - Previous iOS fix
+- `documentation/learnings/cloudkit-push-notification-config.md` - Push notification analysis
+
+**Test criteria**:
+```swift
+func testMacOSReceivesCloudKitChangesFromiOS() {
+    // Make change on iOS simulator
+    // Verify macOS UI updates within 30 seconds (polling interval)
+}
+
+func testContextDidSaveObserverFires() {
+    // Verify NSManagedObjectContextDidSave fires on macOS for remote changes
+}
+
+func testUIRefreshOnRemoteChange() {
+    // Post .coreDataRemoteChange notification
+    // Verify MacMainView refreshes list data
+}
+```
+
+**Steps**:
+1. Investigate CoreDataManager observer setup for macOS
+2. Verify MainViewModel handles remote changes correctly on macOS
+3. Check MacMainView for proper notification observers
+4. Fix threading issues if any (similar to iOS fix)
+5. Add missing observers if needed
+6. Create unit tests for the fix
+7. Document learnings
+
+**Root Cause Found**:
+Race condition in sync polling timer at `MacMainView.swift` lines 261-269:
+- `viewContext.perform { refreshAllObjects() }` (async) and `DispatchQueue.main.async { loadData() }` (async)
+- These are independent queue mechanisms that don't guarantee execution order
+- `loadData()` could fetch stale data before `refreshAllObjects()` completed
+
+**Fix Applied**:
+Changed `perform` to `performAndWait` (synchronous) to ensure `refreshAllObjects()` completes before `loadData()`:
+```swift
+viewContext.performAndWait {
+    viewContext.refreshAllObjects()
+}
+DispatchQueue.main.async {
+    dataManager.loadData()
+}
+```
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Fixed sync polling timer
+
+**Learnings Document**:
+- `documentation/learnings/macos-cloudkit-sync-race-condition.md`
+
+---
+
+### Task 11.9: Submit to App Store
 **TDD**: Submission verification
 
 **Steps**:
@@ -3791,7 +3870,7 @@ These features are macOS-specific and working:
 
 ---
 
-### Task 11.9: Implement Spotlight Integration (Optional)
+### Task 11.10: Implement Spotlight Integration (Optional)
 **TDD**: Write Spotlight indexing tests
 
 **Priority**: Low - Optional feature, disabled by default
@@ -3970,8 +4049,9 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 11.5: [COMPLETED] Memory Leak Testing
 - Task 11.6: [COMPLETED] Final Integration Testing
 - Task 11.7: [COMPLETED] iOS/macOS Feature Parity Implementation
-- Task 11.8: Submit to App Store
-- Task 11.9: [OPTIONAL] Spotlight Integration
+- Task 11.8: [COMPLETED] Fix macOS CloudKit Sync Not Receiving iOS Changes
+- Task 11.9: Submit to App Store
+- Task 11.10: [OPTIONAL] Spotlight Integration
 
 **Notes**:
 - Task 6.4 (Spotlight Integration) moved to Phase 11.9 as optional feature (disabled by default)
