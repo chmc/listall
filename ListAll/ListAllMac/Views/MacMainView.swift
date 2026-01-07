@@ -18,6 +18,9 @@ struct MacMainView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.scenePhase) private var scenePhase
 
+    // Access CoreDataManager for sync status (lastSyncDate) and manual refresh
+    @ObservedObject private var coreDataManager = CoreDataManager.shared
+
     @State private var selectedList: List?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
@@ -335,6 +338,9 @@ private struct MacSidebarView: View {
     // Passing [List] by value breaks SwiftUI observation chain on macOS
     @EnvironmentObject var dataManager: DataManager
 
+    // Access CoreDataManager for sync status and manual refresh
+    @ObservedObject private var coreDataManager = CoreDataManager.shared
+
     @Binding var showingArchivedLists: Bool
     @Binding var selectedList: List?
     let onCreateList: () -> Void
@@ -365,6 +371,28 @@ private struct MacSidebarView: View {
         } else {
             return dataManager.lists.filter { !$0.isArchived }
                 .sorted { $0.orderNumber < $1.orderNumber }
+        }
+    }
+
+    /// Tooltip text showing last sync time for refresh button
+    private var lastSyncTooltip: String {
+        if let lastSync = coreDataManager.lastSyncDate {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .abbreviated
+            return "Last synced: \(formatter.localizedString(for: lastSync, relativeTo: Date()))"
+        } else {
+            return "Refresh - Click to sync with iCloud"
+        }
+    }
+
+    /// Formatted last sync time for display in UI
+    private var lastSyncDisplayText: String {
+        if let lastSync = coreDataManager.lastSyncDate {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .short
+            return "Synced \(formatter.localizedString(for: lastSync, relativeTo: Date()))"
+        } else {
+            return "Not synced yet"
         }
     }
 
@@ -540,6 +568,18 @@ private struct MacSidebarView: View {
                 .onMove(perform: isInSelectionMode ? nil : moveList) // Disable reorder during selection mode
             } header: {
                 Text(showingArchivedLists ? "Archived Lists" : "Lists")
+            } footer: {
+                // Show last sync time in sidebar footer
+                HStack {
+                    Image(systemName: "icloud")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(lastSyncDisplayText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
+                .accessibilityLabel("Sync status: \(lastSyncDisplayText)")
             }
         }
         .listStyle(.sidebar)
@@ -662,6 +702,18 @@ private struct MacSidebarView: View {
                 // Normal mode toolbar items
                 ToolbarItem(placement: .primaryAction) {
                     HStack(spacing: 4) {
+                        // Refresh button with last sync time tooltip
+                        Button(action: {
+                            coreDataManager.forceRefresh()
+                            dataManager.loadData()
+                        }) {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                        }
+                        .accessibilityIdentifier("RefreshButton")
+                        .accessibilityLabel("Refresh data from iCloud")
+                        .accessibilityHint("Manually syncs data from CloudKit")
+                        .help(lastSyncTooltip)
+
                         Button(action: {
                             showingArchivedLists.toggle()
                         }) {

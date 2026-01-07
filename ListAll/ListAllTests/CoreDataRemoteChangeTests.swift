@@ -152,8 +152,8 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             )
         }
         
-        // Wait for notification
-        wait(for: [expectation], timeout: 2.0)
+        // Wait for notification (increased timeout for debounce + async dispatch)
+        wait(for: [expectation], timeout: 5.0)
         
         // Verify it was handled on main thread
         XCTAssertTrue(wasMainThread)

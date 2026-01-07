@@ -21,6 +21,14 @@ class CoreDataManager: ObservableObject {
     // CRITICAL: Track local saves to prevent treating them as "remote" changes
     // This prevents drag-drop operations from triggering reload loops
     private var isLocalSave = false
+
+    // MARK: - CloudKit Sync Status Tracking
+    /// Timestamp of last successful CloudKit sync (import or export)
+    @Published private(set) var lastSyncDate: Date?
+
+    /// Track if CloudKit event handler already handled an import to prevent duplicate notifications
+    /// Key: Event start date string, Value: true if already processed
+    private var processedCloudKitImports: [String: Bool] = [:]
     
     // MARK: - Core Data Stack
     lazy var persistentContainer: NSPersistentContainer = {
@@ -240,11 +248,12 @@ class CoreDataManager: ObservableObject {
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
 
-        // macOS-specific: Set query generation to ensure fetches return current data
+        // Set query generation to ensure fetches return current data
         // This helps with real-time sync issues where UI doesn't update when CloudKit syncs
-        #if os(macOS)
+        // CRITICAL: Required for BOTH iOS and macOS to ensure fetch results reflect CloudKit imports
+        #if os(iOS) || os(macOS)
         try? container.viewContext.setQueryGenerationFrom(.current)
-        print("📦 CoreDataManager: macOS query generation set to .current")
+        print("📦 CoreDataManager: Query generation set to .current")
         #endif
 
         return container
@@ -392,20 +401,36 @@ class CoreDataManager: ObservableObject {
     #if os(iOS) || os(macOS)
     /// Handles saves from background contexts (including CloudKit import context)
     /// This ensures UI updates in real-time when CloudKit syncs changes from other devices
-    /// CRITICAL for iOS: NSPersistentStoreRemoteChange notifications may not fire reliably
-    /// when the app is foregrounded. Observing background context saves is more reliable.
+    /// CRITICAL: We deduplicate by checking if this is a CloudKit import context.
+    /// CloudKit imports are better handled by handleCloudKitEvent which has more info about the event.
     @objc private func handleContextDidSave(_ notification: Notification) {
         guard let savedContext = notification.object as? NSManagedObjectContext else { return }
 
-        // Only process saves from OTHER contexts (background CloudKit import)
+        // Only process saves from OTHER contexts (background contexts)
         // Skip our own viewContext saves to avoid loops
         guard savedContext != viewContext else {
             print("💾 CoreDataManager: Ignoring viewContext save (local)")
             return
         }
 
-        // This is a background context save - likely from CloudKit import
-        print("🌐 CoreDataManager: Background context saved (likely CloudKit import) - triggering UI refresh")
+        // CRITICAL: Detect CloudKit import contexts to prevent duplicate notifications
+        // CloudKit import contexts typically have names like:
+        // - "NSCloudKitMirroringDelegate.export" / "NSCloudKitMirroringDelegate.import"
+        // - Or contain "CloudKit" in their name
+        // Let handleCloudKitEvent handle these instead to prevent double-refresh
+        if let contextName = savedContext.name {
+            let isCloudKitContext = contextName.contains("CloudKit") ||
+                                    contextName.contains("NSCloudKitMirroringDelegate") ||
+                                    contextName.contains("import") ||
+                                    contextName.contains("export")
+            if isCloudKitContext {
+                print("☁️ CoreDataManager: Skipping CloudKit context save (handled by eventChangedNotification): \(contextName)")
+                return
+            }
+        }
+
+        // This is a background context save from non-CloudKit source (e.g., watchOS, widget, app extension)
+        print("🌐 CoreDataManager: Background context saved (non-CloudKit) - triggering UI refresh")
 
         // Ensure we're on main thread for UI updates
         DispatchQueue.main.async { [weak self] in
@@ -438,12 +463,29 @@ class CoreDataManager: ObservableObject {
         }
 
         let eventType = cloudEvent.type
+        #if os(iOS)
+        let platform = "iOS"
+        #elseif os(macOS)
+        let platform = "macOS"
+        #else
+        let platform = "unknown"
+        #endif
 
         if cloudEvent.endDate == nil {
-            print("☁️ CloudKit event STARTED: \(eventType)")
+            // Event just started
+            print("☁️ [\(platform)] CloudKit event STARTED: \(eventType)")
         } else {
+            // Event completed (endDate != nil)
             if cloudEvent.succeeded {
-                print("✅ CloudKit event SUCCEEDED: \(eventType)")
+                print("✅ [\(platform)] CloudKit event SUCCEEDED: \(eventType)")
+
+                // Update last sync timestamp for successful imports/exports
+                if eventType == .import || eventType == .export {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.lastSyncDate = Date()
+                    }
+                }
+
                 // Post notification to trigger UI refresh after successful import
                 if eventType == .import {
                     DispatchQueue.main.async { [weak self] in
@@ -453,19 +495,56 @@ class CoreDataManager: ObservableObject {
                         // viewContext.perform re-dispatches to background queue, causing notifications
                         // to fire on background thread, which breaks @Published property updates in SwiftUI.
 
+                        // Reset query generation to ensure fetches see CloudKit-imported data
+                        try? self.viewContext.setQueryGenerationFrom(.current)
+
                         // Refresh view context synchronously on main thread
                         self.viewContext.refreshAllObjects()
+
+                        print("🔄 [\(platform)] CloudKit import complete - refreshed viewContext and posting notification")
 
                         // Post notification ON MAIN THREAD
                         NotificationCenter.default.post(name: .coreDataRemoteChange, object: nil)
                     }
                 }
             } else if let error = cloudEvent.error {
-                print("❌ CloudKit event FAILED: \(eventType) - \(error.localizedDescription)")
+                print("❌ [\(platform)] CloudKit event FAILED: \(eventType) - \(error.localizedDescription)")
             }
         }
     }
     #endif
+
+    // MARK: - Manual Sync Trigger
+
+    /// Force a sync refresh by refreshing the view context and reloading data
+    /// Call this from UI when user taps manual refresh button
+    func forceRefresh() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+
+            #if os(iOS)
+            let platform = "iOS"
+            #elseif os(macOS)
+            let platform = "macOS"
+            #else
+            let platform = "unknown"
+            #endif
+
+            print("🔄 [\(platform)] Manual refresh triggered")
+
+            // Reset query generation to ensure we see latest data
+            try? self.viewContext.setQueryGenerationFrom(.current)
+
+            // Refresh all objects in viewContext
+            self.viewContext.refreshAllObjects()
+
+            // Update last sync timestamp
+            self.lastSyncDate = Date()
+
+            // Post notification for UI to reload
+            NotificationCenter.default.post(name: .coreDataRemoteChange, object: nil)
+        }
+    }
 
     // MARK: - Core Data Operations
     

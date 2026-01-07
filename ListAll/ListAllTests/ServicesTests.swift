@@ -65,7 +65,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify basic suggestion functionality works
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and items
         let testList = List(name: "Grocery List")
@@ -89,7 +89,7 @@ final class ServicesTests: XCTestCase {
         // Simplified fuzzy matching test
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and items
         let testList = List(name: "Shopping List")
@@ -107,7 +107,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionServiceEmptySearch() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and items
         let testList = List(name: "Test List")
@@ -127,7 +127,7 @@ final class ServicesTests: XCTestCase {
         // Simplified multiple matches test
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and items with similar names
         let testList = List(name: "Test List")
@@ -146,7 +146,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionServiceIndividualItems() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create multiple lists with duplicate items
         let groceryList = List(name: "Grocery List")
@@ -165,7 +165,7 @@ final class ServicesTests: XCTestCase {
         XCTAssertEqual(bread1.title, "Bread")
         
         // Test individual item suggestions for "Milk" (should show 2 separate Milk items)
-        suggestionService.getSuggestions(for: "Mi", in: nil)
+        suggestionService.getSuggestions(for: "Mi", in: nil as List?)
         
         let milkSuggestions = suggestionService.suggestions.filter { $0.title == "Milk" }
         XCTAssertEqual(milkSuggestions.count, 2, "Should find 2 separate Milk suggestions when searching for 'Mi'")
@@ -176,7 +176,7 @@ final class ServicesTests: XCTestCase {
         }
         
         // Test individual item suggestions for "Bread" (should show 1 Bread item)
-        suggestionService.getSuggestions(for: "Br", in: nil)
+        suggestionService.getSuggestions(for: "Br", in: nil as List?)
         
         let breadSuggestions = suggestionService.suggestions.filter { $0.title == "Bread" }
         XCTAssertEqual(breadSuggestions.count, 1, "Should find 1 Bread suggestion when searching for 'Br'")
@@ -186,7 +186,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionServiceRecentItems() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and items
         let testList = List(name: "Recent Items Test")
@@ -209,7 +209,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionServiceClearSuggestions() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test data
         let testList = List(name: "Clear Test")
@@ -231,7 +231,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionServiceFuzzyMatchingEdgeCases() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and items
         let testList = List(name: "Edge Cases List")
@@ -258,7 +258,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify advanced scoring features exist and work
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and item
         let testList = List(name: "Test List")
@@ -281,7 +281,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify caching functionality works
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test data
         let testList = List(name: "Cache Test")
@@ -304,7 +304,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify frequency weighting exists
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test lists with same item in multiple lists to test frequency
         let list1 = List(name: "List 1")
@@ -317,7 +317,7 @@ final class ServicesTests: XCTestCase {
         let _ = testRepository.createItem(in: list2, title: "Frequent Item", description: "")
         
         // Test global suggestions to see frequency weighting
-        suggestionService.getSuggestions(for: "Frequent", in: nil)
+        suggestionService.getSuggestions(for: "Frequent", in: nil as List?)
         
         if let suggestion = suggestionService.suggestions.first {
             // Verify frequency properties exist and have reasonable values
@@ -330,7 +330,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify recency scoring exists
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and item
         let testList = List(name: "Recency Test")
@@ -351,7 +351,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify usage gap calculation exists
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and item
         let testList = List(name: "Usage Gap Test")
@@ -371,7 +371,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify combined scoring exists
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test list and item
         let testList = List(name: "Combined Test")
@@ -396,7 +396,7 @@ final class ServicesTests: XCTestCase {
         // Simple test to verify cache invalidation methods exist and work
         let testDataManager = TestHelpers.createTestDataManager()
         let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
+        let suggestionService = SuggestionService()
         
         // Create test data
         let testList = List(name: "Cache Invalidation Test")
@@ -418,7 +418,7 @@ final class ServicesTests: XCTestCase {
     func testGetSuggestionsWithoutLimit() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let repository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: repository)
+        let suggestionService = SuggestionService()
         
         // Create a list with multiple items that would match a search
         let list = List(name: "Test List")
@@ -454,7 +454,7 @@ final class ServicesTests: XCTestCase {
     func testGetSuggestionsWithLimit() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let repository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: repository)
+        let suggestionService = SuggestionService()
         
         // Create a list with multiple items
         let list = List(name: "Test List")
@@ -478,7 +478,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionCachingWithLimits() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let repository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: repository)
+        let suggestionService = SuggestionService()
         
         let list = List(name: "Test List")
         testDataManager.addList(list)
@@ -503,7 +503,7 @@ final class ServicesTests: XCTestCase {
     func testSuggestionDetailsIncluded() throws {
         let testDataManager = TestHelpers.createTestDataManager()
         let repository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: repository)
+        let suggestionService = SuggestionService()
         
         let list = List(name: "Test List")
         testDataManager.addList(list)

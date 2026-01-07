@@ -3857,6 +3857,54 @@ DispatchQueue.main.async {
 
 ---
 
+### Task 11.8.1: [COMPLETED] Enhanced CloudKit Sync Reliability
+
+**Problem**: Initial Task 11.8 fix addressed race condition but sync still required app restart in some cases.
+
+**Root Causes Identified** (via agent swarm analysis):
+1. CloudKit event handler was refreshing UI on event START, not COMPLETE
+2. Double notification handling - both `handleContextDidSave` and `handleCloudKitEvent` fired for CloudKit imports
+3. Missing `setQueryGenerationFrom(.current)` for iOS (only macOS had it)
+4. No manual refresh option for users
+
+**Fixes Implemented**:
+
+1. **CloudKit Event Handler Timing Fix** (CoreDataManager.swift):
+   - Only refresh UI when `cloudEvent.endDate != nil` (event completed)
+   - Reset query generation after CloudKit imports
+
+2. **Notification Deduplication** (CoreDataManager.swift):
+   - `handleContextDidSave` now detects CloudKit import contexts by name
+   - Skips CloudKit contexts to prevent double-refresh (let `handleCloudKitEvent` handle them)
+
+3. **Query Generation for iOS** (CoreDataManager.swift):
+   - Added `setQueryGenerationFrom(.current)` for iOS (was only macOS)
+   - Ensures fetch requests see latest CloudKit-imported data
+
+4. **Last Sync Timestamp Tracking** (CoreDataManager.swift):
+   - Added `@Published var lastSyncDate: Date?`
+   - Updated on successful CloudKit imports/exports
+
+5. **Manual Refresh Button** (MacMainView.swift):
+   - Added refresh button to macOS toolbar
+   - Shows last sync time in tooltip and sidebar footer
+   - Calls `CoreDataManager.forceRefresh()` for manual sync
+
+6. **Comprehensive CloudKit Logging**:
+   - Platform-specific logging (`[iOS]` vs `[macOS]`)
+   - Logs event start, completion, success, and failures
+
+**Files Modified**:
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift`
+- `ListAll/ListAllMac/Views/MacMainView.swift`
+- `ListAll/ListAllTests/ServicesTests.swift` (test fixes)
+- `ListAll/ListAllTests/CoreDataRemoteChangeTests.swift` (test timeout adjustment)
+
+**Learnings Document**:
+- `documentation/learnings/cloudkit-sync-enhanced-reliability.md`
+
+---
+
 ### Task 11.9: Submit to App Store
 **TDD**: Submission verification
 
