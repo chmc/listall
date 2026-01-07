@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// macOS Settings view displayed via Preferences menu (Cmd+,)
 struct MacSettingsView: View {
@@ -14,6 +15,7 @@ struct MacSettingsView: View {
     // Settings tabs
     private enum SettingsTab: Hashable {
         case general
+        case security
         case sync
         case data
         case about
@@ -28,6 +30,12 @@ struct MacSettingsView: View {
                     Label("General", systemImage: "gear")
                 }
                 .tag(SettingsTab.general)
+
+            SecuritySettingsTab()
+                .tabItem {
+                    Label("Security", systemImage: "lock.shield")
+                }
+                .tag(SettingsTab.security)
 
             SyncSettingsTab()
                 .tabItem {
@@ -47,7 +55,7 @@ struct MacSettingsView: View {
                 }
                 .tag(SettingsTab.about)
         }
-        .frame(width: 450, height: 300)
+        .frame(width: 500, height: 350)
         .padding()
     }
 }
@@ -56,9 +64,38 @@ struct MacSettingsView: View {
 
 private struct GeneralSettingsTab: View {
     @AppStorage("defaultListSortOrder") private var defaultSortOrder = "orderNumber"
+    @StateObject private var localizationManager = LocalizationManager.shared
+    @State private var showingLanguageRestartAlert = false
 
     var body: some View {
         Form {
+            Section {
+                Picker("App Language", selection: Binding(
+                    get: { localizationManager.currentLanguage },
+                    set: { newLanguage in
+                        localizationManager.setLanguage(newLanguage)
+                        showingLanguageRestartAlert = true
+                    }
+                )) {
+                    ForEach(LocalizationManager.AppLanguage.allCases) { language in
+                        HStack {
+                            Text(language.flagEmoji)
+                            Text(language.nativeDisplayName)
+                        }
+                        .tag(language)
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityLabel("App language")
+
+                Text("Change the app language. You may need to restart the app for all changes to take effect.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } header: {
+                Text("Language")
+                    .accessibilityAddTraits(.isHeader)
+            }
+
             Section {
                 Picker("Default Sort Order", selection: $defaultSortOrder) {
                     Text("Manual").tag("orderNumber")
@@ -74,21 +111,105 @@ private struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .alert("Language Changed", isPresented: $showingLanguageRestartAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("The language has been changed. Some changes will take effect immediately, but you may need to restart the app for all text to update.")
+        }
+    }
+}
+
+// MARK: - Security Settings Tab
+
+private struct SecuritySettingsTab: View {
+    @StateObject private var biometricService = MacBiometricAuthService.shared
+    @AppStorage(Constants.UserDefaultsKeys.requiresBiometricAuth) private var requiresBiometricAuth = false
+    @AppStorage(Constants.UserDefaultsKeys.authTimeoutDuration) private var authTimeoutDurationRaw: Int = Constants.AuthTimeoutDuration.immediate.rawValue
+
+    private var authTimeoutDuration: Binding<Constants.AuthTimeoutDuration> {
+        Binding(
+            get: { Constants.AuthTimeoutDuration(rawValue: authTimeoutDurationRaw) ?? .immediate },
+            set: { authTimeoutDurationRaw = $0.rawValue }
+        )
+    }
+
+    private var biometricType: MacBiometricType {
+        biometricService.biometricType()
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                if biometricType != .none {
+                    Toggle(isOn: $requiresBiometricAuth) {
+                        HStack {
+                            Image(systemName: biometricType.iconName)
+                                .foregroundColor(.blue)
+                            Text("Require \(biometricType.displayName)")
+                        }
+                    }
+                    .accessibilityHint("When enabled, requires \(biometricType.displayName) to unlock the app")
+
+                    if requiresBiometricAuth {
+                        Picker("Require Authentication", selection: authTimeoutDuration) {
+                            ForEach(Constants.AuthTimeoutDuration.allCases) { duration in
+                                Text(duration.displayName)
+                                    .tag(duration)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .accessibilityLabel("Authentication timeout duration")
+
+                        Text(authTimeoutDuration.wrappedValue.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Touch ID not available")
+                                .font(.body)
+                            Text("Enable Touch ID in System Settings to use app security features.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Touch ID is not available. Enable Touch ID in System Settings to use app security features.")
+                }
+            } header: {
+                Text("Authentication")
+                    .accessibilityAddTraits(.isHeader)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 
 // MARK: - Sync Settings Tab
 
 private struct SyncSettingsTab: View {
-    @AppStorage("iCloudSyncEnabled") private var iCloudSyncEnabled = true
-
     var body: some View {
         Form {
             Section {
-                Toggle("Enable iCloud Sync", isOn: $iCloudSyncEnabled)
-                    .accessibilityHint("When enabled, syncs lists across your devices")
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .accessibilityHidden(true)
+                    Text("iCloud Sync: Enabled")
+                        .fontWeight(.medium)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("iCloud Sync is enabled")
 
-                Text("Sync your lists across all your Apple devices using iCloud.")
+                Text("Your lists automatically sync across all your Apple devices signed into the same iCloud account.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text("Sync is built into the app and works automatically in the background.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             } header: {
@@ -103,11 +224,13 @@ private struct SyncSettingsTab: View {
 // MARK: - Data Settings Tab
 
 private struct DataSettingsTab: View {
+    @StateObject private var importViewModel = ImportViewModel()
+    @State private var showingFilePicker = false
+
     var body: some View {
         Form {
             Section {
                 Button("Export Data...") {
-                    // TODO: Implement export in Task 3.5
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ExportData"),
                         object: nil
@@ -116,19 +239,102 @@ private struct DataSettingsTab: View {
                 .accessibilityHint("Opens export options")
 
                 Button("Import Data...") {
-                    // TODO: Implement import in Task 3.6
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("ImportData"),
-                        object: nil
-                    )
+                    showingFilePicker = true
                 }
                 .accessibilityHint("Opens file picker to import data")
+                .disabled(importViewModel.isImporting)
             } header: {
                 Text("Import / Export")
                     .accessibilityAddTraits(.isHeader)
             }
+
+            // Import Progress Section
+            if importViewModel.isImporting {
+                Section {
+                    if let progress = importViewModel.importProgress {
+                        MacImportProgressView(progress: progress)
+                    } else {
+                        MacImportProgressSimpleView()
+                    }
+                }
+            }
+
+            // Status Messages
+            if let errorMessage = importViewModel.errorMessage {
+                Section {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .accessibilityHidden(true)
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Error: \(errorMessage)")
+                }
+            }
+
+            if let successMessage = importViewModel.successMessage {
+                Section {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .accessibilityHidden(true)
+                        Text(successMessage)
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Success: \(successMessage)")
+                }
+            }
         }
         .formStyle(.grouped)
+        .fileImporter(
+            isPresented: $showingFilePicker,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFileImportResult(result)
+        }
+        .onChange(of: importViewModel.showPreview) { showPreview in
+            if showPreview, let preview = importViewModel.importPreview {
+                presentImportPreview(preview)
+            }
+        }
+    }
+
+    // MARK: - Private Methods
+
+    private func handleFileImportResult(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            if let url = urls.first {
+                importViewModel.showPreviewForFile(url)
+            }
+        case .failure(let error):
+            importViewModel.errorMessage = "Failed to select file: \(error.localizedDescription)"
+        }
+    }
+
+    private func presentImportPreview(_ preview: ImportPreview) {
+        // Use native sheet presenter for reliable presentation
+        let previewSheet = MacImportPreviewSheet(
+            preview: preview,
+            viewModel: importViewModel,
+            onDismiss: {
+                MacNativeSheetPresenter.shared.dismissSheet()
+            }
+        )
+
+        MacNativeSheetPresenter.shared.presentSheet(
+            previewSheet,
+            onCancel: {
+                MacNativeSheetPresenter.shared.dismissSheet()
+                importViewModel.cancelPreview()
+            }
+        )
     }
 }
 

@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 15/15 | macOS 13/15
+## Status: iOS 15/15 | macOS 15/15
 
 ---
 
@@ -17,11 +17,11 @@
 | Export to File | ✅ | ✅ | Platform-Specific |
 | Import from JSON | ✅ | ✅ | Shared Service |
 | Import from Plain Text | ✅ | ✅ | Shared Service |
-| Import Preview | ✅ | ❌ | iOS only |
+| Import Preview | ✅ | ✅ | Platform-Specific UI |
 | Import Strategy: Merge | ✅ | ✅ | Shared Service |
 | Import Strategy: Replace | ✅ | ✅ | Shared Service |
 | Import Strategy: Append | ✅ | ✅ | Shared Service |
-| Import Progress | ✅ | ❌ | iOS only |
+| Import Progress | ✅ | ✅ | Platform-Specific UI |
 | Export Options UI | ✅ | ✅ | Platform UI |
 | Include Archived Lists | ✅ | ✅ | Shared Service |
 | Include Images (base64) | ✅ | ✅ | Shared Service |
@@ -30,10 +30,7 @@
 
 ## Gaps (macOS)
 
-| Feature | Priority | iOS Implementation | Notes |
-|---------|:--------:|-------------------|-------|
-| Import Preview | HIGH | ImportPreviewView with summary | Shows what will be imported before commit |
-| Import Progress | HIGH | Progress bar with details | Shows progress during large imports |
+No gaps - macOS has full feature parity with iOS.
 
 ---
 
@@ -61,3 +58,6 @@ macOS: NSSavePanel + NSSharingServicePicker
 
 **macOS**:
 - `ListAllMac/Views/MacMainView.swift` - Export sheets
+- `ListAllMac/Views/MacSettingsView.swift` - Import integration
+- `ListAllMac/Views/Components/MacImportPreviewSheet.swift` - Import preview UI
+- `ListAllMac/Views/Components/MacImportProgressView.swift` - Import progress UI

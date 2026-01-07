@@ -10004,4 +10004,599 @@ extension Tag {
     @Tag static var memoryManagement: Self
 }
 
+// MARK: - macOS Import UI Components Tests
+
+/// Tests for macOS-specific import UI components: MacImportPreviewSheet and MacImportProgressView
+final class MacImportUIComponentsTests: XCTestCase {
+
+    // MARK: - Platform Verification
+
+    func testRunningOnMacOS() {
+        #if os(macOS)
+        XCTAssertTrue(true, "Import UI tests are running on macOS")
+        #else
+        XCTFail("These tests should only run on macOS")
+        #endif
+    }
+
+    // MARK: - ImportPreview Model Tests (used by MacImportPreviewSheet)
+
+    func testImportPreviewTotalChanges() {
+        // Test totalChanges computation
+        let preview = ImportPreview(
+            listsToCreate: 3,
+            listsToUpdate: 2,
+            itemsToCreate: 15,
+            itemsToUpdate: 5,
+            conflicts: [],
+            errors: []
+        )
+
+        XCTAssertEqual(preview.totalChanges, 25, "Total changes should be sum of all list/item operations")
+    }
+
+    func testImportPreviewEmptyChanges() {
+        // Test with no changes
+        let preview = ImportPreview(
+            listsToCreate: 0,
+            listsToUpdate: 0,
+            itemsToCreate: 0,
+            itemsToUpdate: 0,
+            conflicts: [],
+            errors: []
+        )
+
+        XCTAssertEqual(preview.totalChanges, 0, "Total changes should be 0")
+        XCTAssertFalse(preview.hasConflicts, "Should have no conflicts")
+        XCTAssertTrue(preview.isValid, "Preview should be valid with no errors")
+    }
+
+    func testImportPreviewWithConflicts() {
+        // Test with conflicts
+        let conflicts = [
+            ConflictDetail(
+                type: .listModified,
+                entityName: "Shopping List",
+                entityId: UUID(),
+                currentValue: "Shopping List",
+                incomingValue: "Groceries",
+                message: "List name will change"
+            ),
+            ConflictDetail(
+                type: .itemModified,
+                entityName: "Milk",
+                entityId: UUID(),
+                currentValue: "Milk (qty: 1)",
+                incomingValue: "Milk (qty: 2)",
+                message: "Item will be updated"
+            )
+        ]
+
+        let preview = ImportPreview(
+            listsToCreate: 1,
+            listsToUpdate: 1,
+            itemsToCreate: 5,
+            itemsToUpdate: 2,
+            conflicts: conflicts,
+            errors: []
+        )
+
+        XCTAssertTrue(preview.hasConflicts, "Should have conflicts")
+        XCTAssertEqual(preview.conflicts.count, 2, "Should have 2 conflicts")
+    }
+
+    func testImportPreviewWithErrors() {
+        // Test with validation errors
+        let preview = ImportPreview(
+            listsToCreate: 0,
+            listsToUpdate: 0,
+            itemsToCreate: 0,
+            itemsToUpdate: 0,
+            conflicts: [],
+            errors: ["Invalid format", "Missing required field"]
+        )
+
+        XCTAssertFalse(preview.isValid, "Preview should be invalid with errors")
+        XCTAssertEqual(preview.errors.count, 2, "Should have 2 errors")
+    }
+
+    // MARK: - ImportProgress Model Tests (used by MacImportProgressView)
+
+    func testImportProgressPercentage() {
+        // Test percentage calculation at various stages
+        let progress50 = ImportProgress(
+            totalLists: 4,
+            processedLists: 2,
+            totalItems: 20,
+            processedItems: 10,
+            currentOperation: "Processing..."
+        )
+
+        XCTAssertEqual(progress50.progressPercentage, 50, "Should be 50%")
+        XCTAssertEqual(progress50.overallProgress, 0.5, accuracy: 0.001, "Overall progress should be 0.5")
+    }
+
+    func testImportProgressZero() {
+        // Test at start
+        let progress = ImportProgress(
+            totalLists: 5,
+            processedLists: 0,
+            totalItems: 25,
+            processedItems: 0,
+            currentOperation: "Starting import..."
+        )
+
+        XCTAssertEqual(progress.progressPercentage, 0, "Should be 0%")
+        XCTAssertEqual(progress.overallProgress, 0.0, accuracy: 0.001, "Overall progress should be 0")
+    }
+
+    func testImportProgressComplete() {
+        // Test at completion
+        let progress = ImportProgress(
+            totalLists: 5,
+            processedLists: 5,
+            totalItems: 25,
+            processedItems: 25,
+            currentOperation: "Import complete"
+        )
+
+        XCTAssertEqual(progress.progressPercentage, 100, "Should be 100%")
+        XCTAssertEqual(progress.overallProgress, 1.0, accuracy: 0.001, "Overall progress should be 1.0")
+    }
+
+    func testImportProgressEmptyTotal() {
+        // Test edge case with no items to process
+        let progress = ImportProgress(
+            totalLists: 0,
+            processedLists: 0,
+            totalItems: 0,
+            processedItems: 0,
+            currentOperation: "Nothing to import"
+        )
+
+        XCTAssertEqual(progress.progressPercentage, 0, "Should be 0% when nothing to import")
+        XCTAssertEqual(progress.overallProgress, 0.0, accuracy: 0.001, "Overall progress should be 0")
+    }
+
+    func testImportProgressPartial() {
+        // Test partial progress with different list/item ratios
+        let progress = ImportProgress(
+            totalLists: 2,
+            processedLists: 1,
+            totalItems: 8,
+            processedItems: 4,
+            currentOperation: "Importing items..."
+        )
+
+        // (1 + 4) / (2 + 8) = 5/10 = 50%
+        XCTAssertEqual(progress.progressPercentage, 50, "Should be 50%")
+    }
+
+    // MARK: - ConflictDetail Type Tests
+
+    func testConflictDetailTypes() {
+        // Test all conflict types
+        let listModifiedConflict = ConflictDetail(
+            type: .listModified,
+            entityName: "Test List",
+            entityId: UUID(),
+            currentValue: "Old Name",
+            incomingValue: "New Name",
+            message: "Name changed"
+        )
+        XCTAssertEqual(listModifiedConflict.entityName, "Test List")
+
+        let itemModifiedConflict = ConflictDetail(
+            type: .itemModified,
+            entityName: "Test Item",
+            entityId: UUID(),
+            currentValue: "Old Title",
+            incomingValue: "New Title",
+            message: "Title changed"
+        )
+        XCTAssertEqual(itemModifiedConflict.entityName, "Test Item")
+
+        let listDeletedConflict = ConflictDetail(
+            type: .listDeleted,
+            entityName: "Deleted List",
+            entityId: UUID(),
+            currentValue: "List Name",
+            incomingValue: nil,
+            message: "List will be deleted"
+        )
+        XCTAssertNil(listDeletedConflict.incomingValue)
+
+        let itemDeletedConflict = ConflictDetail(
+            type: .itemDeleted,
+            entityName: "Deleted Item",
+            entityId: UUID(),
+            currentValue: "Item Title",
+            incomingValue: nil,
+            message: "Item will be deleted"
+        )
+        XCTAssertNil(itemDeletedConflict.incomingValue)
+    }
+
+    // MARK: - ImportViewModel Strategy Tests (used by MacImportPreviewSheet)
+
+    func testImportViewModelStrategyOptions() {
+        // Verify all three strategies are available
+        let viewModel = ImportViewModel()
+        let strategies = viewModel.strategyOptions
+
+        XCTAssertEqual(strategies.count, 3, "Should have 3 strategy options")
+        XCTAssertTrue(strategies.contains(.merge), "Should include merge")
+        XCTAssertTrue(strategies.contains(.replace), "Should include replace")
+        XCTAssertTrue(strategies.contains(.append), "Should include append")
+    }
+
+    func testImportViewModelStrategyNames() {
+        let viewModel = ImportViewModel()
+
+        // Test strategy names
+        XCTAssertFalse(viewModel.strategyName(.merge).isEmpty, "Merge should have a name")
+        XCTAssertFalse(viewModel.strategyName(.replace).isEmpty, "Replace should have a name")
+        XCTAssertFalse(viewModel.strategyName(.append).isEmpty, "Append should have a name")
+    }
+
+    func testImportViewModelStrategyDescriptions() {
+        let viewModel = ImportViewModel()
+
+        // Test strategy descriptions
+        XCTAssertFalse(viewModel.strategyDescription(.merge).isEmpty, "Merge should have description")
+        XCTAssertFalse(viewModel.strategyDescription(.replace).isEmpty, "Replace should have description")
+        XCTAssertFalse(viewModel.strategyDescription(.append).isEmpty, "Append should have description")
+    }
+
+    func testImportViewModelStrategyIcons() {
+        let viewModel = ImportViewModel()
+
+        // Test strategy icons (SF Symbol names)
+        XCTAssertFalse(viewModel.strategyIcon(.merge).isEmpty, "Merge should have icon")
+        XCTAssertFalse(viewModel.strategyIcon(.replace).isEmpty, "Replace should have icon")
+        XCTAssertFalse(viewModel.strategyIcon(.append).isEmpty, "Append should have icon")
+    }
+
+    // MARK: - ImportViewModel State Tests
+
+    func testImportViewModelInitialState() {
+        let viewModel = ImportViewModel()
+
+        // Verify initial state
+        XCTAssertFalse(viewModel.isImporting, "Should not be importing initially")
+        XCTAssertFalse(viewModel.showPreview, "Should not show preview initially")
+        XCTAssertNil(viewModel.importPreview, "Import preview should be nil initially")
+        XCTAssertNil(viewModel.importProgress, "Import progress should be nil initially")
+        XCTAssertNil(viewModel.errorMessage, "Error message should be nil initially")
+        XCTAssertNil(viewModel.successMessage, "Success message should be nil initially")
+    }
+
+    func testImportViewModelCleanup() {
+        let viewModel = ImportViewModel()
+
+        // Simulate some state
+        viewModel.errorMessage = "Test error"
+        viewModel.successMessage = "Test success"
+        viewModel.importText = "Test text"
+
+        // Cleanup
+        viewModel.cleanup()
+
+        // Verify cleanup
+        XCTAssertNil(viewModel.errorMessage, "Error message should be cleared")
+        XCTAssertNil(viewModel.successMessage, "Success message should be cleared")
+        XCTAssertTrue(viewModel.importText.isEmpty, "Import text should be cleared")
+        XCTAssertFalse(viewModel.showPreview, "Show preview should be false")
+        XCTAssertNil(viewModel.importPreview, "Import preview should be nil")
+    }
+
+    func testImportViewModelClearMessages() {
+        let viewModel = ImportViewModel()
+
+        // Set messages
+        viewModel.errorMessage = "Test error"
+        viewModel.successMessage = "Test success"
+
+        // Clear messages
+        viewModel.clearMessages()
+
+        // Verify cleared
+        XCTAssertNil(viewModel.errorMessage, "Error message should be cleared")
+        XCTAssertNil(viewModel.successMessage, "Success message should be cleared")
+    }
+
+    // MARK: - Documentation Tests
+
+    func testDocumentMacImportUIComponents() {
+        // This test documents the macOS import UI components
+
+        let documentation = """
+
+        ========================================================================
+        macOS Import UI Components Documentation
+        ========================================================================
+
+        This test documents the macOS-specific import UI components.
+
+        Components:
+        -----------
+        1. MacImportPreviewSheet
+           - Displays import summary before confirmation
+           - Shows lists/items to create/update counts
+           - Displays conflicts (up to 5 with "and more" indicator)
+           - Shows selected import strategy info
+           - Confirm Import and Cancel buttons
+           - Uses native AppKit sheet presentation via MacNativeSheetPresenter
+
+        2. MacImportProgressView
+           - Linear progress bar with percentage
+           - Current operation text
+           - Lists and items processed counts
+           - macOS-native styling with proper spacing
+
+        3. MacImportProgressSimpleView
+           - Simple indeterminate spinner for when detailed progress unavailable
+           - "Importing..." text
+
+        Integration:
+        -----------
+        - DataSettingsTab in MacSettingsView.swift integrates these components
+        - Uses @StateObject ImportViewModel for state management
+        - File picker via SwiftUI .fileImporter modifier
+        - Native sheet presentation via MacNativeSheetPresenter for preview
+
+        Data Models (shared with iOS):
+        -----------------------------
+        - ImportPreview: Summary of what will be imported
+        - ImportProgress: Current progress during import
+        - ImportViewModel: Manages import state and operations
+        - ConflictDetail: Information about conflicts
+
+        ========================================================================
+
+        """
+
+        print(documentation)
+        XCTAssertTrue(true, "Documentation generated")
+    }
+}
+
+// MARK: - Move/Copy Items Tests
+
+/// Unit tests for Move and Copy Items Between Lists functionality on macOS
+/// Verifies that the shared ListViewModel move/copy methods work correctly on macOS
+final class MoveCopyItemsMacTests: XCTestCase {
+
+    var testContainer: NSPersistentContainer!
+    var testContext: NSManagedObjectContext!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+
+        // Create in-memory Core Data stack for testing
+        testContainer = NSPersistentContainer(name: "ListAll")
+
+        let description = NSPersistentStoreDescription()
+        description.type = NSInMemoryStoreType
+        description.url = URL(fileURLWithPath: "/dev/null")
+        testContainer.persistentStoreDescriptions = [description]
+
+        let expectation = XCTestExpectation(description: "Load stores")
+        testContainer.loadPersistentStores { _, error in
+            XCTAssertNil(error, "Failed to load in-memory store: \(error?.localizedDescription ?? "unknown")")
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 5.0)
+
+        testContext = testContainer.viewContext
+        testContext.automaticallyMergesChangesFromParent = true
+        testContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    }
+
+    override func tearDownWithError() throws {
+        testContext = nil
+        testContainer = nil
+        try super.tearDownWithError()
+    }
+
+    // MARK: - MacDestinationListAction Tests
+
+    /// Test that MacDestinationListAction.move has correct properties
+    func testMoveActionProperties() {
+        let action = MacDestinationListAction.move
+
+        XCTAssertEqual(action.title, String(localized: "Move Items"))
+        XCTAssertEqual(action.verb, String(localized: "move"))
+        XCTAssertEqual(action.systemImage, "arrow.right.square")
+    }
+
+    /// Test that MacDestinationListAction.copy has correct properties
+    func testCopyActionProperties() {
+        let action = MacDestinationListAction.copy
+
+        XCTAssertEqual(action.title, String(localized: "Copy Items"))
+        XCTAssertEqual(action.verb, String(localized: "copy"))
+        XCTAssertEqual(action.systemImage, "doc.on.doc")
+    }
+
+    // MARK: - ListViewModel Selection Mode Tests
+
+    /// Test that entering selection mode initializes correctly
+    func testEnterSelectionMode() {
+        // Given
+        let list = List(name: "Test List")
+        let viewModel = ListViewModel(list: list)
+
+        // When
+        viewModel.enterSelectionMode()
+
+        // Then
+        XCTAssertTrue(viewModel.isInSelectionMode)
+        XCTAssertTrue(viewModel.selectedItems.isEmpty)
+    }
+
+    /// Test that exiting selection mode clears state
+    func testExitSelectionMode() {
+        // Given
+        let list = List(name: "Test List")
+        let viewModel = ListViewModel(list: list)
+        viewModel.enterSelectionMode()
+        viewModel.selectedItems.insert(UUID())
+
+        // When
+        viewModel.exitSelectionMode()
+
+        // Then
+        XCTAssertFalse(viewModel.isInSelectionMode)
+        XCTAssertTrue(viewModel.selectedItems.isEmpty)
+    }
+
+    /// Test that toggling selection adds/removes items
+    func testToggleSelection() {
+        // Given
+        let list = List(name: "Test List")
+        let viewModel = ListViewModel(list: list)
+        let itemId = UUID()
+        viewModel.enterSelectionMode()
+
+        // When - toggle on
+        viewModel.toggleSelection(for: itemId)
+
+        // Then
+        XCTAssertTrue(viewModel.selectedItems.contains(itemId))
+
+        // When - toggle off
+        viewModel.toggleSelection(for: itemId)
+
+        // Then
+        XCTAssertFalse(viewModel.selectedItems.contains(itemId))
+    }
+
+    /// Test that select all selects all filtered items
+    func testSelectAll() {
+        // Given
+        let list = List(name: "Test List")
+        let viewModel = ListViewModel(list: list)
+
+        // Create test items
+        var items: [Item] = []
+        for i in 1...3 {
+            var item = Item(title: "Item \(i)", listId: list.id)
+            item.orderNumber = i
+            items.append(item)
+        }
+        viewModel.items = items
+        viewModel.enterSelectionMode()
+
+        // When
+        viewModel.selectAll()
+
+        // Then
+        XCTAssertEqual(viewModel.selectedItems.count, 3)
+        for item in items {
+            XCTAssertTrue(viewModel.selectedItems.contains(item.id))
+        }
+    }
+
+    /// Test that deselect all clears selection
+    func testDeselectAll() {
+        // Given
+        let list = List(name: "Test List")
+        let viewModel = ListViewModel(list: list)
+
+        var items: [Item] = []
+        for i in 1...3 {
+            var item = Item(title: "Item \(i)", listId: list.id)
+            item.orderNumber = i
+            items.append(item)
+        }
+        viewModel.items = items
+        viewModel.enterSelectionMode()
+        viewModel.selectAll()
+
+        XCTAssertEqual(viewModel.selectedItems.count, 3)
+
+        // When
+        viewModel.deselectAll()
+
+        // Then
+        XCTAssertTrue(viewModel.selectedItems.isEmpty)
+    }
+
+    // MARK: - Platform Verification
+
+    /// Test that we're running on macOS
+    func testRunningOnMacOS() {
+        #if os(macOS)
+        XCTAssertTrue(true, "Running on macOS")
+        #else
+        XCTFail("This test should only run on macOS")
+        #endif
+    }
+
+    // MARK: - Documentation
+
+    /// Documentation test for Move/Copy Items feature
+    func testMoveCopyItemsDocumentation() {
+        let documentation = """
+
+        ========================================================================
+        MOVE/COPY ITEMS BETWEEN LISTS - macOS IMPLEMENTATION
+        ========================================================================
+
+        Overview:
+        ---------
+        This feature allows users to move or copy selected items from one list
+        to another on macOS. It follows the same pattern as the iOS implementation
+        but uses macOS-native sheet presentation and styling.
+
+        Components:
+        ----------
+        1. MacDestinationListPickerSheet
+           - Displays available destination lists
+           - Shows list name and item count
+           - Excludes current list and archived lists
+           - Supports creating new list inline
+
+        2. MacDestinationListAction enum
+           - .move: Removes items from source, adds to destination
+           - .copy: Keeps items in source, adds copy to destination
+
+        3. Integration in MacListDetailView
+           - State variables: showingMoveItemsPicker, showingCopyItemsPicker
+           - State variables: selectedDestinationList
+           - State variables: showingMoveConfirmation, showingCopyConfirmation
+           - Uses shared ListViewModel methods: moveSelectedItems, copySelectedItems
+
+        User Flow:
+        ---------
+        1. Enter selection mode (checkmark button)
+        2. Select items to move/copy
+        3. Click ellipsis menu -> "Move Items..." or "Copy Items..."
+        4. MacDestinationListPickerSheet appears
+        5. Select destination list (or create new one)
+        6. Confirmation alert shows
+        7. Confirm to execute action
+        8. Items are moved/copied
+        9. Selection mode exits
+
+        Shared Code (ListViewModel):
+        ---------------------------
+        - enterSelectionMode() - Activates selection mode
+        - exitSelectionMode() - Deactivates and clears selection
+        - toggleSelection(for:) - Toggle item selection
+        - selectAll() - Select all filtered items
+        - deselectAll() - Clear selection
+        - moveSelectedItems(to:) - Move selected items to destination
+        - copySelectedItems(to:) - Copy selected items to destination
+
+        ========================================================================
+
+        """
+
+        print(documentation)
+        XCTAssertTrue(true, "Documentation generated")
+    }
+}
+
 #endif

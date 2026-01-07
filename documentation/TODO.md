@@ -3630,7 +3630,7 @@ fastlane/metadata/macos/
 
 ---
 
-### Task 11.7: Implement macOS Feature Parity with iOS
+### Task 11.7: [IN PROGRESS] Implement macOS Feature Parity with iOS
 **TDD**: Feature implementation tests
 
 **Purpose**: Implement missing iOS features on macOS for full feature parity.
@@ -3647,10 +3647,10 @@ fastlane/metadata/macos/
 | 2 | **Multi-Select Mode for Items** | Selection checkboxes, bulk operations | **MISSING** |
 | 3 | **Move Items Between Lists** | DestinationListPickerView | **MISSING** |
 | 4 | **Copy Items Between Lists** | DestinationListPickerView | **MISSING** |
-| 5 | **Undo Complete** | 5-second undo banner | **MISSING** |
-| 6 | **Undo Delete** | 5-second undo banner | **MISSING** |
-| 7 | **Import Preview Dialog** | ImportPreviewView with summary | **MISSING** |
-| 8 | **Import Progress UI** | Progress bar with details | **MISSING** |
+| 5 | **Undo Complete** | 5-second undo banner | **IMPLEMENTED** |
+| 6 | **Undo Delete** | 5-second undo banner | **IMPLEMENTED** |
+| 7 | **Import Preview Dialog** | ImportPreviewView with summary | **IMPLEMENTED** |
+| 8 | **Import Progress UI** | Progress bar with details | **IMPLEMENTED** |
 
 **Implementation Priority**: These 8 features are HIGH priority for macOS feature parity.
 
@@ -3660,22 +3660,22 @@ fastlane/metadata/macos/
 
 | # | Feature | iOS Implementation | macOS Status |
 |---|---------|-------------------|--------------|
-| 9 | **Language Selection** | Picker in Settings | **MISSING** |
-| 10 | **Auth Timeout Options** | 5 timeout durations | **MISSING** |
+| 9 | **Language Selection** | Picker in Settings | **IMPLEMENTED** |
+| 10 | **Auth Timeout Options** | 5 timeout durations | **IMPLEMENTED** |
 | 11 | **Feature Tips System** | TooltipOverlay with tracking | **MISSING** |
 | 12 | **Filter: Has Images** | ItemFilterOption.hasImages | **PARTIAL** |
 
 ---
 
-#### BUG: Remove iCloud Sync Toggle from macOS Settings
+#### BUG: [FIXED] Remove iCloud Sync Toggle from macOS Settings
 
-**Issue**: MacSettingsView.swift has an "Enable iCloud Sync" toggle (`@AppStorage("iCloudSyncEnabled")`) that is misleading.
+**Issue**: MacSettingsView.swift had an "Enable iCloud Sync" toggle (`@AppStorage("iCloudSyncEnabled")`) that was misleading.
 
-**Reason**: iCloud sync is **mandatory and built-in** - NSPersistentCloudKitContainer automatically syncs all data. The toggle doesn't actually disable sync at the Core Data level.
+**Reason**: iCloud sync is **mandatory and built-in** - NSPersistentCloudKitContainer automatically syncs all data. The toggle didn't actually disable sync at the Core Data level.
 
-**Fix Required**: Remove the `SyncSettingsTab` from MacSettingsView or replace it with read-only sync status information.
+**Resolution**: Replaced the misleading toggle with read-only sync status information showing "iCloud Sync: Enabled" with explanatory text.
 
-**Location**: `/ListAll/ListAllMac/Views/MacSettingsView.swift` lines 80-98
+**Location**: `/ListAll/ListAllMac/Views/MacSettingsView.swift`
 
 ---
 
