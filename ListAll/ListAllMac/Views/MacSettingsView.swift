@@ -437,9 +437,15 @@ private struct AboutSettingsTab: View {
 
             Spacer()
 
-            Link("Visit Website", destination: URL(string: "https://github.com/chmc/listall")!)
-                .font(.caption)
-                .accessibilityHint("Opens GitHub page in browser")
+            HStack(spacing: 16) {
+                Link("Visit Website", destination: URL(string: "https://listall.app/")!)
+                    .font(.caption)
+                    .accessibilityHint("Opens ListAll website in browser")
+
+                Link("View Source Code", destination: URL(string: "https://github.com/chmc/listall")!)
+                    .font(.caption)
+                    .accessibilityHint("Opens GitHub repository in browser")
+            }
         }
         .padding()
     }

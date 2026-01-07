@@ -539,21 +539,7 @@ private struct MacSidebarView: View {
                 }
                 .onMove(perform: isInSelectionMode ? nil : moveList) // Disable reorder during selection mode
             } header: {
-                HStack {
-                    Text(showingArchivedLists ? "Archived Lists" : "Lists")
-                    Spacer()
-                    if !isInSelectionMode {
-                        Button(action: {
-                            showingArchivedLists.toggle()
-                        }) {
-                            Image(systemName: showingArchivedLists ? "tray.full" : "archivebox")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.plain)
-                        .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
-                        .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
-                    }
-                }
+                Text(showingArchivedLists ? "Archived Lists" : "Lists")
             }
         }
         .listStyle(.sidebar)
@@ -676,6 +662,18 @@ private struct MacSidebarView: View {
                 // Normal mode toolbar items
                 ToolbarItem(placement: .primaryAction) {
                     HStack(spacing: 4) {
+                        Button(action: {
+                            showingArchivedLists.toggle()
+                        }) {
+                            Label(
+                                showingArchivedLists ? "Show Active Lists" : "Show Archived Lists",
+                                systemImage: showingArchivedLists ? "tray.full" : "archivebox"
+                            )
+                        }
+                        .accessibilityIdentifier("ArchivedListsButton")
+                        .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
+                        .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+
                         Button(action: enterSelectionMode) {
                             Label("Select", systemImage: "pencil")
                         }
