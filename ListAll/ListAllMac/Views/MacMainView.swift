@@ -1251,6 +1251,12 @@ private struct MacListDetailView: View {
             .onMove(perform: handleMoveItem)
         }
         .listStyle(.inset)
+        // MARK: - Drop Destination for Cross-List Item Moves
+        // Enable dropping items from other lists onto this list
+        // (Restored: this was accidentally removed, breaking item drag between lists)
+        .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
+            handleItemDrop(droppedItems)
+        }
         .accessibilityIdentifier("ItemsList")
         // MARK: - Keyboard Navigation Handlers (Task 11.1)
         .onKeyPress(.space) {
