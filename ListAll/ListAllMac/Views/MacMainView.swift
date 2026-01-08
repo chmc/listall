@@ -788,15 +788,30 @@ private struct MacSidebarView: View {
 
     /// Handle item drop on a list in the sidebar (moves item to that list)
     private func handleItemDrop(_ droppedItems: [ItemTransferData], to targetList: List) -> Bool {
+        print("📦 Sidebar handleItemDrop called with \(droppedItems.count) items to list '\(targetList.name)'")
         var didMoveAny = false
 
         for itemData in droppedItems {
+            print("📦 Processing dropped item: \(itemData.itemId), sourceListId: \(String(describing: itemData.sourceListId))")
+
             // Skip if item is already in the target list
-            guard itemData.sourceListId != targetList.id else { continue }
+            guard itemData.sourceListId != targetList.id else {
+                print("📦 Drop skipped: item already in target list")
+                continue
+            }
+
+            // Validate sourceListId exists
+            guard let sourceListId = itemData.sourceListId else {
+                print("❌ Sidebar drop failed: sourceListId is nil for item \(itemData.itemId)")
+                continue
+            }
 
             // Find the item in DataManager
-            let items = dataManager.getItems(forListId: itemData.sourceListId ?? UUID())
-            guard let item = items.first(where: { $0.id == itemData.itemId }) else { continue }
+            let items = dataManager.getItems(forListId: sourceListId)
+            guard let item = items.first(where: { $0.id == itemData.itemId }) else {
+                print("❌ Sidebar drop failed: could not find item \(itemData.itemId) in source list \(sourceListId)")
+                continue
+            }
 
             // Move item to the target list
             dataRepository.moveItem(item, to: targetList)
@@ -1682,16 +1697,34 @@ private struct MacListDetailView: View {
 
     /// Handle item drop on this list's detail view (moves item from another list)
     private func handleItemDrop(_ droppedItems: [ItemTransferData]) -> Bool {
+        print("📦 handleItemDrop called with \(droppedItems.count) items")
         var didMoveAny = false
 
         for itemData in droppedItems {
+            print("📦 Processing dropped item: \(itemData.itemId), sourceListId: \(String(describing: itemData.sourceListId))")
+
             // Skip if item is already in this list
-            guard itemData.sourceListId != list.id else { continue }
+            guard itemData.sourceListId != list.id else {
+                print("📦 Drop skipped: item already in this list")
+                continue
+            }
+
+            // Validate sourceListId exists
+            guard let sourceListId = itemData.sourceListId else {
+                print("❌ Drop failed: sourceListId is nil for item \(itemData.itemId)")
+                continue
+            }
 
             // Find the item in DataManager
-            let sourceItems = dataManager.getItems(forListId: itemData.sourceListId ?? UUID())
-            guard let item = sourceItems.first(where: { $0.id == itemData.itemId }) else { continue }
-            guard let targetList = currentList else { continue }
+            let sourceItems = dataManager.getItems(forListId: sourceListId)
+            guard let item = sourceItems.first(where: { $0.id == itemData.itemId }) else {
+                print("❌ Drop failed: could not find item \(itemData.itemId) in source list \(sourceListId)")
+                continue
+            }
+            guard let targetList = currentList else {
+                print("❌ Drop failed: currentList is nil")
+                continue
+            }
 
             // Move item to this list
             dataRepository.moveItem(item, to: targetList)
@@ -1885,13 +1918,19 @@ private struct MacItemRowView: View {
                 onEdit()
             }
         }
-        // In selection mode, single click toggles selection
-        .onTapGesture {
-            if isInSelectionMode {
-                onToggleSelection()
-            }
-        }
-        .contentShape(Rectangle())  // Move contentShape AFTER gestures so it doesn't block events
+        // CRITICAL FIX: Use .simultaneousGesture instead of .onTapGesture
+        // .onTapGesture blocks drag initiation because it captures the initial touch.
+        // .simultaneousGesture allows tap and drag to coexist.
+        .contentShape(Rectangle())  // Required for hit testing on entire row area
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded {
+                    // In selection mode, single click toggles selection
+                    if isInSelectionMode {
+                        onToggleSelection()
+                    }
+                }
+        )
         .listRowBackground(isInSelectionMode && isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
         // MARK: - Accessibility (Task 11.2)
         // Combine child elements into a single accessible element for cleaner VoiceOver navigation
