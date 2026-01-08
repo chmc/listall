@@ -4053,6 +4053,185 @@ func testSpotlightIndexingSkippedWhenDisabled() {
 
 ---
 
+### Task 11.11: Implement Proper Test Isolation with Dependency Injection
+**TDD**: Tests should run without any system permission dialogs
+
+**Problem**:
+macOS unit tests trigger permission dialogs for App Groups ("ListAll would like to access data from other apps") and Keychain access. Tests should be completely isolated and use fakes/mocks instead of real system services.
+
+**Current Workarounds** (incomplete):
+- `CoreDataManager` uses `/dev/null` SQLite store in test mode
+- Lazy initialization to defer singleton access
+- Test detection guards for App Groups access
+- Separate Debug entitlements without App Groups
+
+**Why Current Approach is Insufficient**:
+1. Production singletons still INITIALIZE during test runs (even if not fully accessed)
+2. Test classes inherit from production classes, risking production code execution
+3. Test detection logic scattered throughout production code (`ListAllMacApp.swift`)
+4. Inconsistent singleton access patterns across codebase
+5. Any accidental touch of a lazy property triggers App Groups access
+
+**Root Cause**:
+The codebase uses singletons (`DataManager.shared`, `CoreDataManager.shared`) accessed throughout production code. Tests try to work around singletons rather than using proper dependency injection.
+
+**Solution: Protocol-Based Dependency Injection**
+
+**Phase 1: Define Protocols** (non-breaking changes)
+```swift
+// CoreDataManaging protocol
+protocol CoreDataManaging {
+    var viewContext: NSManagedObjectContext { get }
+    var backgroundContext: NSManagedObjectContext { get }
+    func save()
+    func loadStores()
+}
+
+// DataManaging protocol
+protocol DataManaging: ObservableObject {
+    var lists: [List] { get }
+    func loadData()
+    func addList(_ list: List)
+    func updateList(_ list: List)
+    func deleteList(withId id: UUID)
+    // ... other methods
+}
+
+// CloudSyncProviding protocol
+protocol CloudSyncProviding: ObservableObject {
+    var isSyncing: Bool { get }
+    var syncStatus: SyncStatus { get }
+    func sync() async
+}
+```
+
+**Phase 2: Conform Production Classes**
+```swift
+extension CoreDataManager: CoreDataManaging { }
+extension DataManager: DataManaging { }
+extension CloudKitService: CloudSyncProviding { }
+```
+
+**Phase 3: Create Test Mocks** (composition, not inheritance)
+```swift
+class MockCoreDataManager: CoreDataManaging {
+    // In-memory Core Data stack - no App Groups access
+    private let container: NSPersistentContainer
+
+    init() {
+        container = NSPersistentContainer(name: "ListAll")
+        let description = NSPersistentStoreDescription()
+        description.url = URL(fileURLWithPath: "/dev/null")
+        description.type = NSSQLiteStoreType
+        container.persistentStoreDescriptions = [description]
+        container.loadPersistentStores { _, _ in }
+    }
+
+    var viewContext: NSManagedObjectContext { container.viewContext }
+    // ... implement protocol methods
+}
+
+class MockDataManager: DataManaging {
+    @Published var lists: [List] = []
+    // Pure in-memory implementation - no Core Data
+}
+```
+
+**Phase 4: Update ViewModels for Constructor Injection**
+```swift
+class MainViewModel: ObservableObject {
+    private let dataManager: DataManaging
+
+    // Production: Uses default, Tests: Inject mock
+    init(dataManager: DataManaging = DataManager.shared) {
+        self.dataManager = dataManager
+    }
+}
+```
+
+**Phase 5: Remove Test Detection from Production Code**
+- Remove `isUnitTesting` checks from `ListAllMacApp.swift`
+- Remove `DataManagerWrapper` pattern
+- Use compile-time `#if TESTING` flags only where absolutely necessary
+
+**Services Requiring Protocol Abstraction**:
+
+| Service | Priority | Reason |
+|---------|----------|--------|
+| `CoreDataManager` | P0 - Critical | App Groups access triggers dialogs |
+| `DataManager` | P0 - Critical | Uses CoreDataManager internally |
+| `DataRepository` | P0 - Critical | Uses both managers |
+| `CloudKitService` | P1 - High | Network and CloudKit access |
+| `LocalizationManager` | P1 - High | Uses App Groups for shared preferences |
+| `ImageService` | P2 - Medium | Shared thumbnail cache |
+| `BiometricAuthService` | P2 - Medium | System authentication |
+| `WatchConnectivityService` | P3 - Low | iOS only, already guarded |
+| `HandoffService` | P3 - Low | NSUserActivity management |
+
+**Test Criteria**:
+```swift
+func testNoPermissionDialogsTriggered() {
+    // All tests should pass without any UI interruption
+    // This is verified by CI running tests non-interactively
+}
+
+func testMockDataManagerDoesNotAccessAppGroups() {
+    let mock = MockDataManager()
+    mock.loadData()
+    mock.addList(List(name: "Test"))
+    // No App Groups access - verified by no permission prompts
+}
+
+func testViewModelWorksWithMock() {
+    let mock = MockDataManager()
+    let viewModel = MainViewModel(dataManager: mock)
+    viewModel.createList(name: "Test")
+    XCTAssertTrue(mock.lists.contains { $0.name == "Test" })
+}
+```
+
+**Estimated Effort**:
+- Phase 1 (Protocols): 2-3 hours
+- Phase 2 (Conformance): 1 hour
+- Phase 3 (Mocks): 3-4 hours
+- Phase 4 (Constructor injection): 4-6 hours
+- Phase 5 (Cleanup): 2-3 hours
+- Test updates: 4-6 hours
+- **Total**: 16-23 hours (2-3 days)
+
+**Benefits**:
+- Tests run without ANY system permission dialogs
+- Tests are faster (no system service initialization)
+- Better test isolation (no shared state between tests)
+- Cleaner architecture (follows SOLID principles)
+- Easier to test edge cases (mock can simulate errors)
+- CI stability (no flaky tests due to system prompts)
+
+**References**:
+- WWDC21: Build apps that share data through CloudKit and Core Data
+- Apple Documentation: Testing Core Data with NSPersistentCloudKitContainer
+- objc.io: Dependency Injection in Swift
+
+**Files to Create**:
+- `ListAll/ListAll/Protocols/CoreDataManaging.swift`
+- `ListAll/ListAll/Protocols/DataManaging.swift`
+- `ListAll/ListAll/Protocols/CloudSyncProviding.swift`
+- `ListAll/ListAllMacTests/Mocks/MockCoreDataManager.swift`
+- `ListAll/ListAllMacTests/Mocks/MockDataManager.swift`
+- `ListAll/ListAllMacTests/Mocks/MockCloudKitService.swift`
+
+**Files to Modify**:
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift` - Conform to protocol
+- `ListAll/ListAll/Models/DataManager.swift` - Conform to protocol
+- `ListAll/ListAll/Services/CloudKitService.swift` - Conform to protocol
+- `ListAll/ListAll/ViewModels/MainViewModel.swift` - Constructor injection
+- `ListAll/ListAll/ViewModels/ListViewModel.swift` - Constructor injection
+- `ListAll/ListAll/ViewModels/ItemViewModel.swift` - Constructor injection
+- `ListAll/ListAllMac/ListAllMacApp.swift` - Remove test detection
+- `ListAll/ListAllMacTests/TestHelpers.swift` - Use new mocks
+
+---
+
 ## Appendix A: File Structure
 
 ```
@@ -4153,9 +4332,9 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 8: Feature Parity | Completed | 4/4 |
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store | Completed | 5/5 |
-| Phase 11: Polish & Launch | In Progress | 8/9 |
+| Phase 11: Polish & Launch | In Progress | 8/11 |
 
-**Total Tasks: 64** (63 completed, 1 remaining)
+**Total Tasks: 65** (63 completed, 2 remaining)
 
 **Phase 11 Status**:
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -4168,8 +4347,10 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 11.8: [COMPLETED] Fix macOS CloudKit Sync Not Receiving iOS Changes
 - Task 11.9: Submit to App Store
 - Task 11.10: [OPTIONAL] Spotlight Integration
+- Task 11.11: Implement Proper Test Isolation with Dependency Injection
 
 **Notes**:
-- Task 6.4 (Spotlight Integration) moved to Phase 11.9 as optional feature (disabled by default)
+- Task 6.4 (Spotlight Integration) moved to Phase 11.10 as optional feature (disabled by default)
+- Task 11.11 added to address test isolation issues (permission dialogs during tests)
 - Phase 9 revised based on swarm analysis: uses parallel jobs architecture (Task 9.0 added as blocking pre-requisite)
 - Task 11.7 added comprehensive feature parity analysis with `/documentation/FEATURES.md`
