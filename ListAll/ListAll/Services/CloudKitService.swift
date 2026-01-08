@@ -135,14 +135,23 @@ class CloudKitService: ObservableObject {
             syncProgress = 0.0
         }
 
-        // Check for remote changes first
-        await checkForRemoteChanges()
-        
-        // Trigger Core Data to sync with CloudKit
-        coreDataManager.persistentContainer.persistentStoreCoordinator.performAndWait {
-            // This triggers the CloudKit sync
+        // Trigger CloudKit sync engine to wake up and check for pending operations
+        // This encourages NSPersistentCloudKitContainer to process any pending imports/exports
+        coreDataManager.triggerCloudKitSync()
+
+        // Give CloudKit a moment to process any pending operations
+        // This is a heuristic - CloudKit sync is controlled by Apple's infrastructure,
+        // so we can't guarantee it will complete in this time
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+        // Now force refresh the view context to pick up any changes CloudKit may have imported
+        await MainActor.run {
+            coreDataManager.forceRefresh()
         }
-        
+
+        // Another brief wait to allow the refresh notification to propagate
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+
         await MainActor.run {
             self.isSyncing = false
             self.lastSyncDate = Date()
@@ -158,10 +167,9 @@ class CloudKitService: ObservableObject {
         await sync()
     }
     
-    private func checkForRemoteChanges() async {
-        // This method can be expanded to check for specific remote changes
-        // For now, we rely on Core Data's automatic CloudKit sync
-    }
+    // Note: checkForRemoteChanges() was removed because it was a no-op stub.
+    // CloudKit sync is now triggered via CoreDataManager.triggerCloudKitSync() which
+    // performs a background context operation to wake up the CloudKit mirroring delegate.
     
     private func handleSyncError(_ error: Error) async {
         let nsError = error as NSError

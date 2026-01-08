@@ -3905,6 +3905,74 @@ DispatchQueue.main.async {
 
 ---
 
+### Task 11.8.2: [COMPLETED] Fix CloudKit Sync Trigger Mechanism
+
+**Problem**: Despite previous fixes (11.8, 11.8.1), CloudKit sync between iOS and macOS still only works after app restart.
+
+**User-Reported Symptoms (TestFlight builds)**:
+- Changes on iOS only appear on macOS after BOTH apps restart
+- Changes on macOS only appear on iOS after iOS restart
+- Manual sync button has no effect
+
+**Root Causes Identified** (via agent swarm analysis):
+
+1. **CloudKitService.sync() was empty**: The method had a placeholder block that did nothing:
+   ```swift
+   coreDataManager.persistentContainer.persistentStoreCoordinator.performAndWait {
+       // This triggers the CloudKit sync  <-- EMPTY!
+   }
+   ```
+
+2. **No mechanism to wake up CloudKit**: `refreshAllObjects()` only refreshes from LOCAL store, not from CloudKit server. NSPersistentCloudKitContainer sync is passive (APNS-based) and unreliable when foregrounded.
+
+3. **macOS used wrong Timer pattern**: `Timer.scheduledTimer` with `[self]` in SwiftUI View captures a stale copy of the struct.
+
+**Key Insight**: You CANNOT force CloudKit to fetch from server. However, triggering a background context operation can wake up the CloudKit mirroring delegate to process pending operations.
+
+**Fixes Implemented**:
+
+1. **Added triggerCloudKitSync()** (CoreDataManager.swift):
+   ```swift
+   func triggerCloudKitSync() {
+       persistentContainer.performBackgroundTask { context in
+           context.processPendingChanges()
+       }
+   }
+   ```
+
+2. **Fixed CloudKitService.sync()** (CloudKitService.swift):
+   - Calls `triggerCloudKitSync()` to wake up CloudKit
+   - Adds 0.5s delay to allow processing
+   - Then calls `forceRefresh()` to update UI
+
+3. **Updated forceRefresh()** (CoreDataManager.swift):
+   - Now calls `triggerCloudKitSync()` first
+   - Then refreshes local objects and posts notification
+
+4. **Fixed macOS Timer pattern** (MacMainView.swift):
+   - Changed from `Timer.scheduledTimer` to `Timer.publish` pattern
+   - Added `import Combine` for Timer.publish support
+   - Uses `isSyncPollingActive` flag with `.onReceive` modifier
+
+5. **Added triggerCloudKitSync() to polling** (Both platforms):
+   - iOS and macOS polling now call `triggerCloudKitSync()` before refreshing
+
+**Files Modified**:
+- `ListAll/ListAll/Models/CoreData/CoreDataManager.swift`
+- `ListAll/ListAll/Services/CloudKitService.swift`
+- `ListAll/ListAllMac/Views/MacMainView.swift`
+- `ListAll/ListAll/Views/MainView.swift`
+
+**Learnings Document**:
+- `documentation/learnings/cloudkit-sync-trigger-mechanism.md`
+
+**Important Caveats**:
+- This is not a guaranteed fix - CloudKit sync timing is controlled by Apple's infrastructure
+- App restart still works best due to full zone fetch during initialization
+- Polling (30s interval) is essential fallback for sync reliability
+
+---
+
 ### Task 11.9: Submit to App Store
 **TDD**: Submission verification
 

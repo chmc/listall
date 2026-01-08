@@ -406,6 +406,9 @@ struct MainView: View {
                 viewContext.refreshAllObjects()
             }
 
+            // Trigger CloudKit sync engine to wake up and check for pending operations
+            CoreDataManager.shared.triggerCloudKitSync()
+
             // Now safe to load data - viewContext has been refreshed
             viewModel.loadLists()
         }

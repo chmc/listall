@@ -9,6 +9,7 @@ import SwiftUI
 import CoreData
 import UniformTypeIdentifiers
 import Quartz
+import Combine
 
 /// Main view for macOS app with sidebar navigation.
 /// This is the macOS equivalent of iOS ContentView, using NavigationSplitView
@@ -41,8 +42,11 @@ struct MacMainView: View {
     // MARK: - CloudKit Sync Polling (macOS fallback)
     // Apple's CloudKit notifications on macOS can be unreliable when the app is frontmost.
     // This timer serves as a safety net to ensure data refreshes even if notifications miss.
-    @State private var syncPollingTimer: Timer?
-    private let syncPollingInterval: TimeInterval = 30.0 // Poll every 30 seconds
+    // Using Timer.publish with .onReceive is the correct SwiftUI pattern (not Timer.scheduledTimer).
+    // LEARNING: Timer.scheduledTimer with [self] capture in SwiftUI Views captures a COPY of the struct,
+    // causing the timer callback to operate on stale state. Timer.publish integrates with SwiftUI lifecycle.
+    @State private var isSyncPollingActive = false
+    private let syncPollingTimer = Timer.publish(every: 30.0, on: .main, in: .common).autoconnect()
 
     // MARK: - Edit State Protection
     // Flag to prevent background sync from interrupting sheet presentation
@@ -225,6 +229,13 @@ struct MacMainView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ExportAllLists"))) { _ in
             showingExportAllSheet = true
         }
+        // MARK: - Sync Polling Timer (Timer.publish pattern)
+        // This is the SwiftUI-native pattern that properly integrates with view lifecycle
+        // See: ios-cloudkit-sync-polling-timer.md learning for why Timer.scheduledTimer fails
+        .onReceive(syncPollingTimer) { _ in
+            guard isSyncPollingActive else { return }
+            performSyncPoll()
+        }
         .sheet(isPresented: $showingSharePopover) {
             if let list = selectedList {
                 MacShareFormatPickerView(
@@ -240,49 +251,47 @@ struct MacMainView: View {
 
     // MARK: - Sync Polling Methods
 
-    /// Starts a timer that periodically refreshes data from Core Data.
-    /// This is a fallback for macOS where CloudKit notifications may not reliably
-    /// trigger when the app is frontmost and active.
+    /// Enables the sync polling timer (when window becomes active)
+    /// Timer.publish runs continuously but we control whether to act via isSyncPollingActive flag
     private func startSyncPolling() {
-        // Don't start if already running
-        guard syncPollingTimer == nil else { return }
-
-        print("🔄 macOS: Starting sync polling timer (every \(Int(syncPollingInterval))s)")
-
-        // Note: [self] is correct for SwiftUI structs - they are value types that get copied,
-        // so no retain cycle is created. The closure captures a copy of the struct state.
-        syncPollingTimer = Timer.scheduledTimer(withTimeInterval: syncPollingInterval, repeats: true) { [self] _ in
-            // Skip polling if user is editing - prevents UI interruption during sheet presentation
-            guard !isEditingAnyItem else {
-                print("🛡️ macOS: Skipping poll - user is editing item")
-                return
-            }
-
-            print("🔄 macOS: Polling for CloudKit changes (timer-based fallback)")
-
-            // CRITICAL FIX: Use performAndWait (synchronous) to ensure refreshAllObjects()
-            // completes BEFORE loadData() fetches. The previous code used perform + DispatchQueue.main.async
-            // which are independent async mechanisms that race - loadData() could fetch stale data
-            // before refreshAllObjects() ran!
-            //
-            // This is the same pattern used in CoreDataManager's notification handlers.
-            viewContext.performAndWait {
-                viewContext.refreshAllObjects()
-            }
-
-            // Now safe to load data - viewContext has been refreshed
-            // Use async to prevent layout recursion if timer fires during layout pass
-            DispatchQueue.main.async {
-                dataManager.loadData()
-            }
-        }
+        guard !isSyncPollingActive else { return }
+        isSyncPollingActive = true
+        print("🔄 macOS: Sync polling enabled (every 30s)")
     }
 
-    /// Stops the sync polling timer (when app goes to background or view disappears)
+    /// Disables the sync polling timer (when app goes to background or view disappears)
+    /// Timer continues publishing but the .onReceive handler will skip processing
     private func stopSyncPolling() {
-        syncPollingTimer?.invalidate()
-        syncPollingTimer = nil
-        print("🔄 macOS: Stopped sync polling timer")
+        isSyncPollingActive = false
+        print("🔄 macOS: Sync polling disabled")
+    }
+
+    /// Performs the actual sync polling work (called from .onReceive modifier)
+    private func performSyncPoll() {
+        // Skip polling if user is editing - prevents UI interruption during sheet presentation
+        guard !isEditingAnyItem else {
+            print("🛡️ macOS: Skipping poll - user is editing item")
+            return
+        }
+
+        print("🔄 macOS: Polling for CloudKit changes (timer-based fallback)")
+
+        // CRITICAL FIX: Use performAndWait (synchronous) to ensure refreshAllObjects()
+        // completes BEFORE loadData() fetches. This prevents race conditions where
+        // loadData() could fetch stale data before refreshAllObjects() completed.
+        viewContext.performAndWait {
+            viewContext.refreshAllObjects()
+        }
+
+        // ENHANCEMENT: Trigger a background context operation to encourage CloudKit
+        // sync engine to wake up and check for pending operations
+        CoreDataManager.shared.triggerCloudKitSync()
+
+        // Now safe to load data - viewContext has been refreshed
+        // Use async to prevent layout recursion if timer fires during layout pass
+        DispatchQueue.main.async {
+            dataManager.loadData()
+        }
     }
 
     // MARK: - Actions

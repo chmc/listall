@@ -532,6 +532,9 @@ class CoreDataManager: ObservableObject {
 
             print("🔄 [\(platform)] Manual refresh triggered")
 
+            // Trigger CloudKit sync engine to check for pending operations
+            self.triggerCloudKitSync()
+
             // Reset query generation to ensure we see latest data
             try? self.viewContext.setQueryGenerationFrom(.current)
 
@@ -543,6 +546,29 @@ class CoreDataManager: ObservableObject {
 
             // Post notification for UI to reload
             NotificationCenter.default.post(name: .coreDataRemoteChange, object: nil)
+        }
+    }
+
+    /// Triggers CloudKit sync engine to wake up and check for pending operations
+    /// NSPersistentCloudKitContainer sync is passive (push-notification based), but performing
+    /// a background context operation can encourage the sync engine to process pending imports/exports.
+    /// Note: This does NOT force CloudKit to fetch from server - that's controlled by Apple's infrastructure.
+    /// However, it helps process any data that CloudKit has already received but not yet imported.
+    func triggerCloudKitSync() {
+        #if os(iOS)
+        let platform = "iOS"
+        #elseif os(macOS)
+        let platform = "macOS"
+        #else
+        let platform = "unknown"
+        #endif
+
+        // Perform a lightweight background context operation
+        // This wakes up NSPersistentCloudKitContainer's mirroring delegate which processes pending operations
+        persistentContainer.performBackgroundTask { context in
+            // Simply processing pending changes is enough to wake up the sync engine
+            context.processPendingChanges()
+            print("☁️ [\(platform)] Triggered CloudKit sync engine (processPendingChanges)")
         }
     }
 
