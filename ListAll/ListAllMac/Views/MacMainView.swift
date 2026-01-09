@@ -523,7 +523,9 @@ private struct MacSidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .focusable()
+        // CRITICAL: Use .activate interactions to allow sidebar drag-drop to work.
+        // Default .focusable() on macOS Sonoma+ captures mouse clicks.
+        .focusable(interactions: .activate)
         .focused($focusedListID, equals: list.id)
         .accessibilityIdentifier("SidebarListCell_\(list.name)")
         .accessibilityLabel("\(list.name)")
@@ -543,7 +545,9 @@ private struct MacSidebarView: View {
                     .font(.caption)
             }
         }
-        .focusable()
+        // CRITICAL: Use .activate interactions to allow list drag-drop to work.
+        // Default .focusable() on macOS Sonoma+ captures mouse clicks, blocking drag.
+        .focusable(interactions: .activate)
         .focused($focusedListID, equals: list.id)
         .accessibilityIdentifier("SidebarListCell_\(list.name)")
         .accessibilityLabel("\(list.name)")
@@ -1259,7 +1263,11 @@ private struct MacListDetailView: View {
                 makeItemRow(item: item)
                     .draggable(item)
                     // MARK: Keyboard Navigation (Task 11.1)
-                    .focusable()
+                    // CRITICAL: Use .activate interactions to prevent focus from capturing
+                    // mouse clicks that should initiate drag gestures. Without this,
+                    // .focusable() on macOS Sonoma+ captures all click interactions,
+                    // blocking drag-and-drop from starting.
+                    .focusable(interactions: .activate)
                     .focused($focusedItemID, equals: item.id)
                     .accessibilityIdentifier("ItemRow_\(item.title)")
             }

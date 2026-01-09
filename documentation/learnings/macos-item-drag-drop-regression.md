@@ -2,45 +2,59 @@
 
 ## Problem
 
-The ability to drag items from one list to another on macOS stopped working when the target list already contained items. Items could only be dropped onto:
-1. Empty lists (empty state view)
-2. Sidebar list cells
+The ability to drag items from one list to another on macOS stopped working. Two separate issues caused this:
+1. Initially, items could only be dropped onto empty lists or sidebar cells (missing `.dropDestination`)
+2. After fixing the drop destination, drag still didn't START at all - clicking down on an item did nothing
 
-## Root Cause
+## Root Causes
 
-The `.dropDestination(for: ItemTransferData.self)` modifier was accidentally removed from `itemsListView` in `MacListDetailView` during subsequent development after the initial implementation in commit d32902d.
+### Root Cause 1: Missing Drop Destination
+The `.dropDestination(for: ItemTransferData.self)` modifier was accidentally removed from `itemsListView` in `MacMainView` during subsequent development.
 
-## Original Implementation (commit d32902d)
+### Root Cause 2: Focus Captures Mouse Clicks (THE REAL ISSUE)
+The `.focusable()` modifier added for keyboard navigation (Task 11.1) was capturing all mouse clicks on macOS Sonoma+, preventing drag gestures from starting.
 
-```swift
-// itemsListView had .dropDestination after .listStyle(.inset)
-.listStyle(.inset)
-.dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-    handleItemDrop(droppedItems)
-}
-```
+**Key Finding**: In macOS Sonoma (14.0+), the default `.focusable()` modifier supports ALL focus interactions (edit + activate). This means it captures the initial mouse-down event to potentially start text editing, which blocks SwiftUI's drag gesture recognizer from detecting the drag intent.
 
-## What Was Missing
+From Apple's WWDC23: "Prior to macOS Sonoma, the focusable modifier only supported activation semantics. In macOS Sonoma+, it defaults to all interactions."
 
-The `itemsListView` (SwiftUI.List containing ForEach of items) was missing the `.dropDestination` modifier, meaning:
-- Dragging items FROM a list worked (`.draggable(item)` was present)
-- Dropping items ONTO a list with items did NOT work (modifier was missing)
-- Dropping onto empty lists worked (empty state view had the modifier)
-- Dropping onto sidebar list cells worked (sidebar had the modifier)
+## Fixes Applied
 
-## Fix Applied
-
-Added back the `.dropDestination(for: ItemTransferData.self)` modifier to `itemsListView`:
-
+### Fix 1: Restore Drop Destination
 ```swift
 .listStyle(.inset)
 // MARK: - Drop Destination for Cross-List Item Moves
-// Enable dropping items from other lists onto this list
 .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
     handleItemDrop(droppedItems)
 }
-.accessibilityIdentifier("ItemsList")
 ```
+
+### Fix 2: Use `.focusable(interactions: .activate)`
+Changed from:
+```swift
+.draggable(item)
+.focusable()  // ❌ Captures mouse clicks, blocks drag
+.focused($focusedItemID, equals: item.id)
+```
+
+To:
+```swift
+.draggable(item)
+// CRITICAL: Use .activate interactions to prevent focus from capturing
+// mouse clicks that should initiate drag gestures. Without this,
+// .focusable() on macOS Sonoma+ captures all click interactions,
+// blocking drag-and-drop from starting.
+.focusable(interactions: .activate)  // ✅ Only activate focus, don't capture clicks
+.focused($focusedItemID, equals: item.id)
+```
+
+## Why `.focusable(interactions: .activate)` Works
+
+- `interactions: .activate` - Focus is used as alternative to direct pointer activation (clicking). The view becomes focusable for keyboard navigation but doesn't capture mouse events.
+- `interactions: .edit` - Focus is used for text editing. The view captures mouse clicks to enter edit mode.
+- Default (no argument) - Both behaviors, which captures mouse clicks.
+
+By specifying `.activate`, we tell SwiftUI that this view should be focusable for keyboard navigation purposes only, not for text editing. This allows mouse events to pass through to the drag gesture recognizer.
 
 ## Three Drop Destinations Required
 
@@ -48,22 +62,44 @@ MacMainView.swift requires THREE `.dropDestination` modifiers for complete drag-
 
 1. **Sidebar list cells** (~line 553) - Drop items onto a list in sidebar
 2. **Empty list state view** (~line 1395) - Drop items onto empty lists
-3. **itemsListView** (~line 1257) - Drop items onto lists with items
+3. **itemsListView** (~line 1272) - Drop items onto lists with items
 
-## Prevention
+## Additional Factors That Can Block Drag (Research)
 
-When modifying MacMainView.swift, ensure all three dropDestination locations remain:
-- Search for `dropDestination` and verify there are 3 occurrences
-- Test drag-drop manually between lists with items
+If drag still doesn't work after these fixes, check for:
+
+1. **Buttons inside draggable rows** - In macOS 15+, Button views can capture mouse events before drag starts. Consider using tap gestures on the parent instead.
+2. **Custom NSEvent monitors** - Local event monitors for `.leftMouseDown` can intercept drag events.
+3. **Multiple tap gestures** - Even `.simultaneousGesture(TapGesture())` can delay drag recognition.
+4. **Order of modifiers** - `.contentShape(Rectangle())` should come before gesture modifiers.
+
+## Prevention Checklist
+
+When modifying MacMainView.swift:
+- [ ] Verify 3 `.dropDestination` occurrences exist (search for `dropDestination`)
+- [ ] Ensure `.focusable(interactions: .activate)` is used, NOT `.focusable()`
+- [ ] Test drag-drop manually between lists with items
+- [ ] Test both starting a drag AND completing a drop
 
 ## Files Changed
 
-- `ListAll/ListAllMac/Views/MacMainView.swift` - Restored `.dropDestination` to itemsListView
+- `ListAll/ListAllMac/Views/MacMainView.swift`
+  - Restored `.dropDestination` to itemsListView (~line 1276)
+  - Changed `.focusable()` to `.focusable(interactions: .activate)` in THREE places:
+    1. **itemsListView** (line 1266) - For item rows in detail view
+    2. **selectionModeRow** (line 528) - For sidebar rows in selection mode
+    3. **normalModeRow** (line 550) - For sidebar rows in normal mode (has `.draggable(list)`)
 
 ## Related Files
 
 - `ListAll/ListAll/Models/Item+Transferable.swift` - ItemTransferData type
 - `ListAll/ListAll/Models/List+Transferable.swift` - ListTransferData type
+
+## References
+
+- [WWDC23: The SwiftUI cookbook for focus](https://developer.apple.com/videos/play/wwdc2023/10162/)
+- [Apple: focusable(_:interactions:)](https://developer.apple.com/documentation/swiftui/view/focusable(_:interactions:))
+- [Hacking with Swift: SwiftUI draggable and onTapGesture](https://www.hackingwithswift.com/forums/swiftui/how-to-use-both-draggable-and-ontapgesture/26285)
 
 ## Test Coverage Gap
 
