@@ -3973,87 +3973,7 @@ DispatchQueue.main.async {
 
 ---
 
-### Task 11.9: Submit to App Store
-**TDD**: Submission verification
-
-**Steps**:
-1. Run full test suite
-2. Build release version
-3. Submit for review via:
-   ```bash
-   bundle exec fastlane release_mac version:1.0.0
-   ```
-
----
-
-### Task 11.10: Implement Spotlight Integration (Optional)
-**TDD**: Write Spotlight indexing tests
-
-**Priority**: Low - Optional feature, disabled by default
-
-**User Setting**:
-- Add "Enable Spotlight Indexing" toggle in Settings → General
-- Default value: `false` (disabled)
-- When enabled, indexes lists and items for Spotlight search
-- When disabled, no Spotlight indexing occurs (saves battery/resources)
-
-**Steps**:
-1. Add `enableSpotlightIndexing` UserDefaults key (default: false)
-2. Add toggle in MacSettingsView General tab
-3. Create SpotlightService with conditional indexing:
-   ```swift
-   class SpotlightService {
-       static let shared = SpotlightService()
-
-       var isEnabled: Bool {
-           UserDefaults.standard.bool(forKey: "enableSpotlightIndexing")
-       }
-
-       func indexItem(_ item: Item) {
-           guard isEnabled else { return }
-           // Index with Core Spotlight
-       }
-
-       func removeItem(_ item: Item) {
-           guard isEnabled else { return }
-           // Remove from index
-       }
-
-       func reindexAll() {
-           guard isEnabled else { return }
-           // Full reindex
-       }
-
-       func clearIndex() {
-           // Always allow clearing
-       }
-   }
-   ```
-4. Index lists and items with Core Spotlight when enabled
-5. Support Spotlight search results
-6. Handle Spotlight result activation (deep link to item)
-7. Clear index when setting is disabled
-
-**Test criteria**:
-```swift
-func testSpotlightIndexingDisabledByDefault() {
-    XCTAssertFalse(UserDefaults.standard.bool(forKey: "enableSpotlightIndexing"))
-}
-
-func testSpotlightIndexingWhenEnabled() {
-    UserDefaults.standard.set(true, forKey: "enableSpotlightIndexing")
-    // Test items appear in Spotlight
-}
-
-func testSpotlightIndexingSkippedWhenDisabled() {
-    UserDefaults.standard.set(false, forKey: "enableSpotlightIndexing")
-    // Verify no indexing occurs
-}
-```
-
----
-
-### Task 11.11: Implement Proper Test Isolation with Dependency Injection
+### Task 11.9: Implement Proper Test Isolation with Dependency Injection
 **TDD**: Tests should run without any system permission dialogs
 
 **Problem**:
@@ -4231,6 +4151,84 @@ func testViewModelWorksWithMock() {
 - `ListAll/ListAllMacTests/TestHelpers.swift` - Use new mocks
 
 ---
+
+### Task 11.10: Submit to App Store
+**TDD**: Submission verification
+
+**Steps**:
+1. Run full test suite
+2. Build release version
+3. Submit for review via:
+   ```bash
+   bundle exec fastlane release_mac version:1.0.0
+   ```
+
+---
+
+### Task 11.11: Implement Spotlight Integration (Optional)
+**TDD**: Write Spotlight indexing tests
+
+**Priority**: Low - Optional feature, disabled by default
+
+**User Setting**:
+- Add "Enable Spotlight Indexing" toggle in Settings → General
+- Default value: `false` (disabled)
+- When enabled, indexes lists and items for Spotlight search
+- When disabled, no Spotlight indexing occurs (saves battery/resources)
+
+**Steps**:
+1. Add `enableSpotlightIndexing` UserDefaults key (default: false)
+2. Add toggle in MacSettingsView General tab
+3. Create SpotlightService with conditional indexing:
+   ```swift
+   class SpotlightService {
+       static let shared = SpotlightService()
+
+       var isEnabled: Bool {
+           UserDefaults.standard.bool(forKey: "enableSpotlightIndexing")
+       }
+
+       func indexItem(_ item: Item) {
+           guard isEnabled else { return }
+           // Index with Core Spotlight
+       }
+
+       func removeItem(_ item: Item) {
+           guard isEnabled else { return }
+           // Remove from index
+       }
+
+       func reindexAll() {
+           guard isEnabled else { return }
+           // Full reindex
+       }
+
+       func clearIndex() {
+           // Always allow clearing
+       }
+   }
+   ```
+4. Index lists and items with Core Spotlight when enabled
+5. Support Spotlight search results
+6. Handle Spotlight result activation (deep link to item)
+7. Clear index when setting is disabled
+
+**Test criteria**:
+```swift
+func testSpotlightIndexingDisabledByDefault() {
+    XCTAssertFalse(UserDefaults.standard.bool(forKey: "enableSpotlightIndexing"))
+}
+
+func testSpotlightIndexingWhenEnabled() {
+    UserDefaults.standard.set(true, forKey: "enableSpotlightIndexing")
+    // Test items appear in Spotlight
+}
+
+func testSpotlightIndexingSkippedWhenDisabled() {
+    UserDefaults.standard.set(false, forKey: "enableSpotlightIndexing")
+    // Verify no indexing occurs
+}
+```
 
 ## Appendix A: File Structure
 
