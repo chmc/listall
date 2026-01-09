@@ -1926,19 +1926,10 @@ private struct MacItemRowView: View {
                 onEdit()
             }
         }
-        // CRITICAL FIX: Use .simultaneousGesture instead of .onTapGesture
-        // .onTapGesture blocks drag initiation because it captures the initial touch.
-        // .simultaneousGesture allows tap and drag to coexist.
+        // NOTE: Do NOT add .onTapGesture or .simultaneousGesture(TapGesture()) here!
+        // Any tap gesture handler captures mouse-down events and blocks drag initiation.
+        // Selection mode uses the checkbox button, double-click, or context menu instead.
         .contentShape(Rectangle())  // Required for hit testing on entire row area
-        .simultaneousGesture(
-            TapGesture()
-                .onEnded {
-                    // In selection mode, single click toggles selection
-                    if isInSelectionMode {
-                        onToggleSelection()
-                    }
-                }
-        )
         .listRowBackground(isInSelectionMode && isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
         // MARK: - Accessibility (Task 11.2)
         // Combine child elements into a single accessible element for cleaner VoiceOver navigation

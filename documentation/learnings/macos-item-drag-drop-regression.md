@@ -11,12 +11,19 @@ The ability to drag items from one list to another on macOS stopped working. Two
 ### Root Cause 1: Missing Drop Destination
 The `.dropDestination(for: ItemTransferData.self)` modifier was accidentally removed from `itemsListView` in `MacMainView` during subsequent development.
 
-### Root Cause 2: Focus Captures Mouse Clicks (THE REAL ISSUE)
+### Root Cause 2: Focus Captures Mouse Clicks
 The `.focusable()` modifier added for keyboard navigation (Task 11.1) was capturing all mouse clicks on macOS Sonoma+, preventing drag gestures from starting.
 
 **Key Finding**: In macOS Sonoma (14.0+), the default `.focusable()` modifier supports ALL focus interactions (edit + activate). This means it captures the initial mouse-down event to potentially start text editing, which blocks SwiftUI's drag gesture recognizer from detecting the drag intent.
 
 From Apple's WWDC23: "Prior to macOS Sonoma, the focusable modifier only supported activation semantics. In macOS Sonoma+, it defaults to all interactions."
+
+### Root Cause 3: TapGesture Blocks Drag (THE REAL ISSUE)
+The `.simultaneousGesture(TapGesture())` modifier was added to handle selection mode single-click behavior. However, **ANY tap gesture handler captures mouse-down events**, blocking drag initiation entirely.
+
+**Key Finding**: The original working implementation (commit d32902d) only had `.onTapGesture(count: 2)` for double-click, which does NOT capture single clicks or drag initiation. The `.simultaneousGesture(TapGesture())` added later for selection mode was the root cause.
+
+**Comparison with sidebar lists**: Sidebar list rows work because they use `NavigationLink` with only `Text` children - no tap gestures anywhere. Item rows had tap gestures that were blocking drag.
 
 ## Fixes Applied
 
@@ -48,6 +55,35 @@ To:
 .focused($focusedItemID, equals: item.id)
 ```
 
+### Fix 3: Remove TapGesture From Item Rows
+Removed the `.simultaneousGesture(TapGesture())` from `MacItemRowView`:
+
+**Before (broken):**
+```swift
+.contentShape(Rectangle())
+.simultaneousGesture(
+    TapGesture()
+        .onEnded {
+            if isInSelectionMode {
+                onToggleSelection()
+            }
+        }
+)
+```
+
+**After (working):**
+```swift
+// NOTE: Do NOT add .onTapGesture or .simultaneousGesture(TapGesture()) here!
+// Any tap gesture handler captures mouse-down events and blocks drag initiation.
+// Selection mode uses the checkbox button, double-click, or context menu instead.
+.contentShape(Rectangle())
+```
+
+**Selection mode still works via:**
+- Checkbox button (click to toggle selection)
+- Double-click (triggers `onToggleSelection()` in selection mode)
+- Context menu (Select/Deselect option)
+
 ## Why `.focusable(interactions: .activate)` Works
 
 - `interactions: .activate` - Focus is used as alternative to direct pointer activation (clicking). The view becomes focusable for keyboard navigation but doesn't capture mouse events.
@@ -78,17 +114,20 @@ If drag still doesn't work after these fixes, check for:
 When modifying MacMainView.swift:
 - [ ] Verify 3 `.dropDestination` occurrences exist (search for `dropDestination`)
 - [ ] Ensure `.focusable(interactions: .activate)` is used, NOT `.focusable()`
+- [ ] **NEVER add `.onTapGesture` or `.simultaneousGesture(TapGesture())` to item rows**
+- [ ] Only use `.onTapGesture(count: 2)` or `.onDoubleClick` (double-click doesn't block drag)
 - [ ] Test drag-drop manually between lists with items
 - [ ] Test both starting a drag AND completing a drop
 
 ## Files Changed
 
 - `ListAll/ListAllMac/Views/MacMainView.swift`
-  - Restored `.dropDestination` to itemsListView (~line 1276)
-  - Changed `.focusable()` to `.focusable(interactions: .activate)` in THREE places:
+  - **Fix 1:** Restored `.dropDestination` to itemsListView (~line 1276)
+  - **Fix 2:** Changed `.focusable()` to `.focusable(interactions: .activate)` in THREE places:
     1. **itemsListView** (line 1266) - For item rows in detail view
     2. **selectionModeRow** (line 528) - For sidebar rows in selection mode
-    3. **normalModeRow** (line 550) - For sidebar rows in normal mode (has `.draggable(list)`)
+    3. **normalModeRow** (line 550) - For sidebar rows in normal mode
+  - **Fix 3:** Removed `.simultaneousGesture(TapGesture())` from `MacItemRowView` (~line 1929)
 
 ## Related Files
 
