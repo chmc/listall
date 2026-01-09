@@ -9,6 +9,7 @@ import Foundation
 import CoreData
 import Combine
 import SwiftUI
+import CloudKit
 #if os(macOS)
 import AppKit
 #endif
@@ -146,8 +147,12 @@ class TestHelpers {
 }
 
 /// Test-specific Core Data Manager that uses in-memory storage
-class TestCoreDataManager: ObservableObject {
+/// Conforms to CoreDataManaging protocol for dependency injection
+class TestCoreDataManager: ObservableObject, CoreDataManaging {
     let persistentContainer: NSPersistentContainer
+
+    /// Timestamp of the last sync (always nil for test implementations)
+    var lastSyncDate: Date? = nil
 
     init(container: NSPersistentContainer) {
         self.persistentContainer = container
@@ -172,12 +177,49 @@ class TestCoreDataManager: ObservableObject {
             }
         }
     }
+
+    func saveContext(_ context: NSManagedObjectContext) {
+        if context.hasChanges {
+            do {
+                try context.save()
+            } catch {
+                print("Failed to save test context: \(error)")
+            }
+        }
+    }
+
+    func forceRefresh() {
+        // No-op for tests - no CloudKit to refresh from
+    }
+
+    func triggerCloudKitSync() {
+        // No-op for tests - no CloudKit
+    }
+
+    func checkCloudKitStatus() async -> CKAccountStatus {
+        // Always return available for tests
+        return .available
+    }
+
+    func setupRemoteChangeNotifications() {
+        // No-op for tests
+    }
+
+    func migrateDataIfNeeded() {
+        // No-op for tests
+    }
 }
 
 /// Test-specific Data Manager that uses isolated Core Data
-class TestDataManager: ObservableObject {
+/// Conforms to DataManaging protocol for dependency injection
+class TestDataManager: ObservableObject, DataManaging {
     @Published var lists: [ListModel] = []
     let coreDataManager: TestCoreDataManager  // Made internal for archive test access
+
+    /// Publisher for observing list changes
+    var listsPublisher: AnyPublisher<[ListModel], Never> {
+        $lists.eraseToAnyPublisher()
+    }
 
     init(coreDataManager: TestCoreDataManager) {
         self.coreDataManager = coreDataManager
@@ -185,8 +227,9 @@ class TestDataManager: ObservableObject {
     }
 
     func loadData() {
-        // Load from Core Data
+        // Load from Core Data, excluding archived lists
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
 
         do {
@@ -196,6 +239,20 @@ class TestDataManager: ObservableObject {
             print("Failed to fetch lists: \(error)")
             // Start with empty lists for tests
             lists = []
+        }
+    }
+
+    func getLists() -> [ListModel] {
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == NO OR isArchived == nil")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.orderNumber, ascending: true)]
+
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            return listEntities.map { $0.toList() }
+        } catch {
+            print("Failed to fetch lists: \(error)")
+            return []
         }
     }
 
@@ -405,6 +462,110 @@ class TestDataManager: ObservableObject {
             print("Failed to fetch items: \(error)")
             return []
         }
+    }
+
+    // MARK: - DataManaging Protocol Methods
+
+    func updateListsOrder(_ newOrder: [ListModel]) {
+        let context = coreDataManager.viewContext
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        let listIds = newOrder.map { $0.id }
+        request.predicate = NSPredicate(format: "id IN %@", listIds)
+
+        do {
+            let allEntities = try context.fetch(request)
+            var entityById: [UUID: ListEntity] = [:]
+            for entity in allEntities {
+                if let id = entity.id {
+                    entityById[id] = entity
+                }
+            }
+
+            for list in newOrder {
+                if let entity = entityById[list.id] {
+                    entity.orderNumber = Int32(list.orderNumber)
+                    entity.modifiedAt = list.modifiedAt
+                }
+            }
+        } catch {
+            print("Failed to batch update list order: \(error)")
+        }
+
+        saveData()
+    }
+
+    func synchronizeLists(_ newOrder: [ListModel]) {
+        lists = newOrder
+    }
+
+    func loadArchivedLists() -> [ListModel] {
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == YES")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.modifiedAt, ascending: false)]
+
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            return listEntities.map { $0.toList() }
+        } catch {
+            print("Failed to fetch archived lists: \(error)")
+            return []
+        }
+    }
+
+    func restoreList(withId id: UUID) {
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        do {
+            let results = try coreDataManager.viewContext.fetch(request)
+            if let listEntity = results.first {
+                listEntity.isArchived = false
+                listEntity.modifiedAt = Date()
+                saveData()
+                loadData()
+            }
+        } catch {
+            print("Failed to restore list: \(error)")
+        }
+    }
+
+    func permanentlyDeleteList(withId id: UUID) {
+        let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        listRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        do {
+            let results = try coreDataManager.viewContext.fetch(listRequest)
+            if let listEntity = results.first {
+                // Delete all items in the list first
+                if let items = listEntity.items as? Set<ItemEntity> {
+                    for itemEntity in items {
+                        if let images = itemEntity.images as? Set<ItemImageEntity> {
+                            for imageEntity in images {
+                                coreDataManager.viewContext.delete(imageEntity)
+                            }
+                        }
+                        coreDataManager.viewContext.delete(itemEntity)
+                    }
+                }
+                coreDataManager.viewContext.delete(listEntity)
+                saveData()
+            }
+        } catch {
+            print("Failed to permanently delete list: \(error)")
+        }
+    }
+
+    func checkCloudKitStatus() async -> CKAccountStatus {
+        // Always return available for tests
+        return .available
+    }
+
+    func removeDuplicateLists() {
+        // No-op for tests - no CloudKit sync duplicates
+    }
+
+    func removeDuplicateItems() {
+        // No-op for tests - no CloudKit sync duplicates
     }
 }
 

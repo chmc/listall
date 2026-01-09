@@ -35,9 +35,10 @@ class ListViewModel: ObservableObject {
     
     // Watch sync properties
     @Published var isSyncingFromWatch = false
-    
-    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
-    private lazy var dataManager = DataManager.shared
+
+    /// Data manager instance - uses dependency injection for testability
+    /// Production code uses default (DataManager.shared), tests can inject mock
+    private let dataManager: any DataManaging
     private lazy var dataRepository = DataRepository()
     // private let viewContext: NSManagedObjectContext // Removed viewContext
     private let list: List
@@ -45,9 +46,14 @@ class ListViewModel: ObservableObject {
     private var deleteUndoTimer: Timer?
     private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
     private lazy var hapticManager = HapticManager.shared
-    
-    init(list: List) {
+
+    /// Initialize with list and optional data manager injection for testing
+    /// - Parameters:
+    ///   - list: The list to display items for
+    ///   - dataManager: DataManaging instance (defaults to DataManager.shared)
+    init(list: List, dataManager: any DataManaging = DataManager.shared) {
         self.list = list
+        self.dataManager = dataManager
         // self.viewContext = coreDataManager.container.viewContext // Removed CoreData initialization
         loadUserPreferences()
         loadItems()

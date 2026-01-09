@@ -1411,4 +1411,21 @@ class DataManager: ObservableObject {
             print("❌ Failed to check for duplicate items: \(error)")
         }
     }
+
+    // MARK: - DataManaging Publisher Support
+
+    /// Publisher for observing list changes (required for DataManaging protocol)
+    var listsPublisher: AnyPublisher<[List], Never> {
+        $lists.eraseToAnyPublisher()
+    }
 }
+
+// MARK: - Protocol Conformance
+
+/// CoreDataManager conforms to CoreDataManaging protocol
+/// All required methods are already implemented in the class
+extension CoreDataManager: CoreDataManaging { }
+
+/// DataManager conforms to DataManaging protocol
+/// All required methods are already implemented in the class
+extension DataManager: DataManaging { }

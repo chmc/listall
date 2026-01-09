@@ -7,14 +7,18 @@ class ItemViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    // Lazy initialization to avoid accessing Core Data during unit tests
-    // On unsigned macOS builds, eager DataManager/DataRepository access crashes
-    // because App Groups require sandbox permissions
-    private lazy var dataManager: DataManager = DataManager.shared
+    /// Data manager instance - uses dependency injection for testability
+    /// Production code uses default (DataManager.shared), tests can inject mock
+    private let dataManager: any DataManaging
     private lazy var dataRepository: DataRepository = DataRepository()
 
-    init(item: Item) {
+    /// Initialize with item and optional data manager injection for testing
+    /// - Parameters:
+    ///   - item: The item to manage
+    ///   - dataManager: DataManaging instance (defaults to DataManager.shared)
+    init(item: Item, dataManager: any DataManaging = DataManager.shared) {
         self.item = item
+        self.dataManager = dataManager
     }
     
     func save() {

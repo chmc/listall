@@ -40,8 +40,9 @@ class MainViewModel: ObservableObject {
     // Force ForEach refresh on reorder - increment this to break SwiftUI animation identity
     @Published var listsReorderTrigger: Int = 0
 
-    /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
-    private lazy var dataManager = DataManager.shared
+    /// Data manager instance - uses dependency injection for testability
+    /// Production code uses default (DataManager.shared), tests can inject mock
+    private let dataManager: any DataManaging
     private lazy var dataRepository = DataRepository()
     private var archiveNotificationTimer: Timer?
     private let archiveNotificationTimeout: TimeInterval = 5.0 // 5 seconds
@@ -57,7 +58,10 @@ class MainViewModel: ObservableObject {
     private var isDragging = false
     private var isEditModeActive = false
 
-    init() {
+    /// Initialize with optional data manager injection for testing
+    /// - Parameter dataManager: DataManaging instance (defaults to DataManager.shared)
+    init(dataManager: any DataManaging = DataManager.shared) {
+        self.dataManager = dataManager
         #if os(iOS)
         setupWatchConnectivityObserver()
         #endif

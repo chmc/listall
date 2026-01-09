@@ -144,7 +144,7 @@ class SampleDataService {
     ///   - template: The template to save
     ///   - dataManager: The data manager to use for saving
     /// - Returns: The created list with items
-    static func saveTemplateList(_ template: SampleListTemplate, using dataManager: DataManager = DataManager.shared) -> List {
+    static func saveTemplateList(_ template: SampleListTemplate, using dataManager: any DataManaging = DataManager.shared) -> List {
         // Create the list
         let list = List(name: template.name)
         
