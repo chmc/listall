@@ -8,7 +8,7 @@ MANDATORY RULES:
 - YOU ARE NEVER ALLOWED TO DELETE INITIAL FILES AND FOLDERS: /CLAUDE.md, /.claude/, /docs/
 - You are not allowed to remove features from app UI or change UI without request to do that
 - Read /documentation/TODO.md file content and follow rules in there
-- Always before working read /documentation/ARCHITECTURE.md
+- Always before working read /documentation/architecture.md
 - Before working, read /documentation/learnings .md files to prevent earlier problems
 - Always include .claude/agents/critic.md to make sure that there is second opinion in place
 - Choose relevant subagents .claude/agents to implement task, you can use swarm of subagents
