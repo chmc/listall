@@ -7,7 +7,7 @@ alwaysApply: true
   ## Documentation and Context Files in /docs folder. Use for using, creating, updating documentation.
   Reference these files for understanding the project and architecture.
     - `description.md`: App description, use cases, features.
-    - `architecture.md`: Tech stack, folder structure, testing frameworks.
+    - `ARCHITECTURE.md`: Tech stack, folder structure, testing frameworks.
     - `datamodel.md`: Entities, attributes, relationships.
     - `frontend.md`: Views/screens, UI/UX patterns, styling.
     - `backend.md`: API endpoints, authentication, service architecture.

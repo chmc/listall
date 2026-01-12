@@ -59,7 +59,7 @@ Define high-level tasks. Follow the `## Request Processing Steps` below to execu
   - **Goal:** Implement and run tests, fixing any failures.
   - **Steps:**
     1. **Understand Requirements:**
-        - Read `docs/architecture.md` for testing practices (`read_file`).
+        - Read `documentation/ARCHITECTURE.md` for testing practices (`read_file`).
         - Fetch `implement-unit-tests.mdc` rule (`fetch_rules`).
     2. **Write Unit Tests:**
         - Use `edit_file` to create/update unit test files (e.g., `__tests__/*.test.ts`).

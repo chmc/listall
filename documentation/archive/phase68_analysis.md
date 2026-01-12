@@ -279,7 +279,7 @@ The updated task in `todo.md` now includes:
 ### Project Documentation
 - `documentation/watchos.md`: Detailed watchOS architecture
 - `documentation/watchos_plan_summary.md`: High-level plan
-- `documentation/architecture.md`: Current iOS architecture
+- `documentation/ARCHITECTURE.md`: Current iOS architecture
 - `documentation/datamodel.md`: Data model documentation
 
 ---
