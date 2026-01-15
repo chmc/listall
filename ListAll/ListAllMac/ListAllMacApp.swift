@@ -109,6 +109,20 @@ struct ListAllMacApp: App {
                     .environmentObject(dataManager)
             }
         }
+
+        // Quick Entry Window (Task 12.10)
+        // A floating window for quickly adding items from anywhere
+        Window("Quick Entry", id: "quickEntry") {
+            if Self.isUnitTesting {
+                Text("Quick Entry disabled in unit test mode")
+                    .frame(width: 200, height: 100)
+            } else {
+                QuickEntryView()
+            }
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
         #endif
     }
 

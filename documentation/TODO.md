@@ -826,7 +826,7 @@ func testSettingsWindowCanExpand() {
 
 ---
 
-### Task 12.10: Add Quick Entry Window (MINOR)
+### Task 12.10: [COMPLETED] Add Quick Entry Window (MINOR)
 
 **TDD**: Write tests for Quick Entry functionality
 
@@ -875,6 +875,43 @@ func testQuickEntryDismissesWithEscape() {
 
 **Files to modify**:
 - `ListAllMac/ListAllMacApp.swift` - Add Quick Entry scene
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **QuickEntryView.swift** (new file):
+   - QuickEntryViewModel: ObservableObject with itemTitle, selectedListId, lists
+   - saveItem() method with validation and order number assignment
+   - clear() method for resetting state
+   - canSave computed property for UI state
+   - Default list selection on init
+   - QuickEntryView: Minimal floating window design
+   - Text field for item title with focus on appear
+   - List picker with menu style
+   - Enter to save, Escape to dismiss
+   - Visual effect background for frosted glass appearance
+
+2. **ListAllMacApp.swift**:
+   - Added Quick Entry Window scene with id "quickEntry"
+   - .windowStyle(.hiddenTitleBar) for minimal appearance
+   - .windowResizability(.contentSize) to match frame
+   - .defaultPosition(.center)
+
+3. **AppCommands.swift**:
+   - Added "Quick Entry" menu item in File menu
+   - Keyboard shortcut: Cmd+Option+Space
+   - Opens window via openWindow(id: "quickEntry")
+
+**Files Created**:
+- `ListAllMac/Views/QuickEntryView.swift`
+
+**Files Modified**:
+- `ListAllMac/ListAllMacApp.swift` - Added Quick Entry Window scene
+- `ListAllMac/Commands/AppCommands.swift` - Added Quick Entry menu command
+
+**Test Results**: All 30 QuickEntryWindowTests passed, 1045 total macOS tests passed
+
+**Learning document**: `/documentation/learnings/macos-quick-entry-window.md`
 
 ---
 
@@ -1212,11 +1249,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 8/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 10/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (72 completed, 8 remaining)
+**Total Tasks: 80** (74 completed, 6 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1237,9 +1274,9 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.5: [COMPLETED] Add Proactive Feature Tips (IMPORTANT)
 - Task 12.6: [COMPLETED] Add Sync Status Indicator in Toolbar (IMPORTANT)
 - Task 12.7: [COMPLETED] Consistent Empty State Components (IMPORTANT)
-- Task 12.8: 🟠 Standardize Destructive Action Handling (IMPORTANT)
+- Task 12.8: [COMPLETED] Standardize Destructive Action Handling (IMPORTANT)
 - Task 12.9: [COMPLETED] Make Settings Window Resizable (IMPORTANT)
-- Task 12.10: 🟡 Add Quick Entry Window (MINOR)
+- Task 12.10: [COMPLETED] Add Quick Entry Window (MINOR)
 - Task 12.11: 🟡 Add Keyboard Reordering (MINOR)
 - Task 12.12: 🟡 Add Clear All Filters Shortcut (MINOR)
 - Task 12.13: 🟡 Add Image Gallery Size Presets (MINOR)

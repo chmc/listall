@@ -9,6 +9,10 @@ import SwiftUI
 
 /// macOS-specific menu commands for ListAll
 struct AppCommands: Commands {
+
+    /// Environment to open windows by ID
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Commands {
         // Replace the default New Item command group
         CommandGroup(replacing: .newItem) {
@@ -27,6 +31,17 @@ struct AppCommands: Commands {
                 )
             }
             .keyboardShortcut("n", modifiers: .command)
+
+            // Quick Entry (Task 12.10)
+            // Opens a floating window for rapid item entry
+            Button("Quick Entry") {
+                openWindow(id: "quickEntry")
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("OpenQuickEntry"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut(.space, modifiers: [.command, .option])
 
             Divider()
         }

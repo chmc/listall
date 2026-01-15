@@ -52,8 +52,12 @@
 |----------|--------|
 | Cmd+N | New Item |
 | Cmd+Shift+N | New List |
+| Cmd+Option+Space | Quick Entry |
 | Cmd+R | Refresh |
 | Cmd+F | Search |
+| Cmd+1 | Filter: All Items |
+| Cmd+2 | Filter: Active Only |
+| Cmd+3 | Filter: Completed Only |
 | Cmd+Delete | Archive List |
 | Cmd+D | Duplicate |
 | Space | Quick Look |
