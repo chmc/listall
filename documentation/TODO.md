@@ -915,7 +915,7 @@ func testQuickEntryDismissesWithEscape() {
 
 ---
 
-### Task 12.11: Add Keyboard Reordering (MINOR)
+### Task 12.11: [IN PROGRESS] Add Keyboard Reordering (MINOR)
 
 **TDD**: Write tests for keyboard-based item reordering
 
@@ -994,7 +994,7 @@ func testCmdShiftBackspaceClearsFilters() {
 
 ---
 
-### Task 12.13: Add Image Gallery Size Presets (MINOR)
+### Task 12.13: [COMPLETED] Add Image Gallery Size Presets (MINOR)
 
 **TDD**: Write tests for thumbnail size presets
 
@@ -1031,6 +1031,39 @@ func testSizeIsPersisted() {
 
 **Files to modify**:
 - `ListAllMac/Views/Components/MacImageGalleryView.swift`
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **ThumbnailSizePreset enum** (new):
+   - `small = 80`, `medium = 120`, `large = 160`
+   - `label` property: "S", "M", "L"
+   - `accessibilityLabel` property for VoiceOver
+   - `tooltip` property showing size in pixels
+   - `fromSize(_:)` static method to detect preset from size
+
+2. **MacImageGalleryToolbar updates**:
+   - Added preset buttons (S, M, L) with `.bordered` style
+   - Active preset highlighted with `.accentColor` tint
+   - Divider between presets and slider for visual separation
+   - Slider reduced to 80px width, step changed to 10px
+   - Tooltip shows current size in pixels
+
+3. **Persistence with @AppStorage**:
+   - Changed `@State private var thumbnailSize: CGFloat = 120` to
+   - `@AppStorage("galleryThumbnailSize") private var thumbnailSize: Double = 120`
+   - Persists globally (not per-list for simplicity)
+   - Default value is Medium preset (120px)
+
+**Files Modified**:
+- `ListAllMac/Views/Components/MacImageGalleryView.swift`
+  - Added `ThumbnailSizePreset` enum
+  - Updated `MacImageGalleryView` to use `@AppStorage`
+  - Updated `MacImageGalleryToolbar` with preset buttons
+
+**Test Results**: All 22 ImageGallerySizePresetsTests passed, all MacImageGalleryViewTests passed
+
+**Learning document**: `/documentation/learnings/macos-image-gallery-size-presets.md`
 
 ---
 
@@ -1249,11 +1282,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 10/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 11/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (74 completed, 6 remaining)
+**Total Tasks: 80** (75 completed, 5 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1277,9 +1310,9 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.8: [COMPLETED] Standardize Destructive Action Handling (IMPORTANT)
 - Task 12.9: [COMPLETED] Make Settings Window Resizable (IMPORTANT)
 - Task 12.10: [COMPLETED] Add Quick Entry Window (MINOR)
-- Task 12.11: 🟡 Add Keyboard Reordering (MINOR)
+- Task 12.11: [IN PROGRESS] Add Keyboard Reordering (MINOR)
 - Task 12.12: 🟡 Add Clear All Filters Shortcut (MINOR)
-- Task 12.13: 🟡 Add Image Gallery Size Presets (MINOR)
+- Task 12.13: [COMPLETED] Add Image Gallery Size Presets (MINOR)
 
 **Phase 13 Status**:
 - Task 13.1: Submit to App Store

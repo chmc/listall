@@ -11,6 +11,54 @@ import AppKit
 import UniformTypeIdentifiers
 import Quartz
 
+// MARK: - Thumbnail Size Presets
+
+/// Preset sizes for image gallery thumbnails
+/// Provides quick access to common thumbnail sizes without manual slider adjustment
+enum ThumbnailSizePreset: Int, CaseIterable, Identifiable {
+    case small = 80
+    case medium = 120
+    case large = 160
+
+    var id: Int { rawValue }
+
+    /// The size value in pixels
+    var size: Int { rawValue }
+
+    /// Short label for preset buttons (S, M, L)
+    var label: String {
+        switch self {
+        case .small: return "S"
+        case .medium: return "M"
+        case .large: return "L"
+        }
+    }
+
+    /// Accessibility label for VoiceOver
+    var accessibilityLabel: String {
+        switch self {
+        case .small: return "Small thumbnail size"
+        case .medium: return "Medium thumbnail size"
+        case .large: return "Large thumbnail size"
+        }
+    }
+
+    /// Tooltip text showing the size in pixels
+    var tooltip: String {
+        switch self {
+        case .small: return "Small (\(size)px)"
+        case .medium: return "Medium (\(size)px)"
+        case .large: return "Large (\(size)px)"
+        }
+    }
+
+    /// Attempts to find a matching preset for a given size
+    /// Returns nil if the size does not match any preset exactly
+    static func fromSize(_ size: CGFloat) -> ThumbnailSizePreset? {
+        allCases.first { CGFloat($0.size) == size }
+    }
+}
+
 // MARK: - Main Gallery View
 
 /// A gallery view for managing images attached to an item.
@@ -36,8 +84,9 @@ struct MacImageGalleryView: View {
     /// Last selected image ID (for shift-click range selection)
     @State private var lastSelectedID: UUID?
 
-    /// Thumbnail size (80-200px)
-    @State private var thumbnailSize: CGFloat = 120
+    /// Thumbnail size (80-200px) - persisted globally via AppStorage
+    /// Default is Medium preset (120px)
+    @AppStorage("galleryThumbnailSize") private var thumbnailSize: Double = 120
 
     /// Whether Quick Look preview is showing
     @State private var isShowingQuickLook = false
@@ -123,7 +172,7 @@ struct MacImageGalleryView: View {
             MacImageGalleryGrid(
                 images: sortedImages,
                 selectedImageIDs: selectedImageIDs,
-                thumbnailSize: thumbnailSize,
+                thumbnailSize: CGFloat(thumbnailSize),
                 draggedImageID: draggedImageID,
                 onSelect: handleImageSelection,
                 onDoubleClick: showQuickLook,
@@ -421,12 +470,17 @@ struct MacImageGalleryView: View {
 private struct MacImageGalleryToolbar: View {
     let imageCount: Int
     let selectedCount: Int
-    @Binding var thumbnailSize: CGFloat
+    @Binding var thumbnailSize: Double
     let onAddImages: () -> Void
     let onDeleteSelected: () -> Void
     let onQuickLook: () -> Void
     let canDelete: Bool
     let canQuickLook: Bool
+
+    /// Currently active preset (if size matches exactly)
+    private var activePreset: ThumbnailSizePreset? {
+        ThumbnailSizePreset.fromSize(CGFloat(thumbnailSize))
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -460,21 +514,49 @@ private struct MacImageGalleryToolbar: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            // Size slider
-            HStack(spacing: 4) {
-                Image(systemName: "square.grid.3x3")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            // Thumbnail size controls with presets
+            HStack(spacing: 8) {
+                // Preset buttons (S, M, L)
+                HStack(spacing: 4) {
+                    ForEach(ThumbnailSizePreset.allCases) { preset in
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                thumbnailSize = Double(preset.size)
+                            }
+                        }) {
+                            Text(preset.label)
+                                .font(.caption.weight(.medium))
+                                .frame(width: 24, height: 20)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(activePreset == preset ? .accentColor : nil)
+                        .accessibilityLabel(preset.accessibilityLabel)
+                        .accessibilityIdentifier("ThumbnailPreset\(preset.label)")
+                        .help(preset.tooltip)
+                    }
+                }
 
-                Slider(value: $thumbnailSize, in: 80...200, step: 20)
-                    .accessibilityLabel("Thumbnail size")
-                    .frame(width: 100)
+                Divider()
+                    .frame(height: 16)
 
-                Image(systemName: "square.grid.2x2")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Fine-tuning slider
+                HStack(spacing: 4) {
+                    Image(systemName: "square.grid.3x3")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Slider(value: $thumbnailSize, in: 80...200, step: 10)
+                        .accessibilityLabel("Thumbnail size slider")
+                        .accessibilityValue("\(Int(thumbnailSize)) pixels")
+                        .accessibilityIdentifier("ThumbnailSizeSlider")
+                        .frame(width: 80)
+
+                    Image(systemName: "square.grid.2x2")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .help("Fine-tune thumbnail size (\(Int(thumbnailSize))px)")
             }
-            .help("Thumbnail size")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
