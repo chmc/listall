@@ -143,6 +143,27 @@ struct MacMainView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 600)
+        // MARK: - Global Cmd+F Handler (Task 12.2)
+        // Handles Cmd+F from ANY focus location (sidebar or detail view)
+        // Posts notification to MacListDetailView to focus search field
+        .onKeyPress(characters: CharacterSet(charactersIn: "f")) { keyPress in
+            guard keyPress.modifiers.contains(.command) else {
+                return .ignored
+            }
+
+            // If no list selected, select the first one (if available)
+            if selectedList == nil, let firstList = dataManager.lists.first {
+                selectedList = firstList
+                // Slight delay to allow detail view to appear before focusing search
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: NSNotification.Name("FocusSearchField"), object: nil)
+                }
+            } else if selectedList != nil {
+                // List already selected, just focus search
+                NotificationCenter.default.post(name: NSNotification.Name("FocusSearchField"), object: nil)
+            }
+            return .handled
+        }
         // NOTE: Edit item sheet now uses native MacNativeSheetPresenter (bypasses SwiftUI RunLoop issues)
         // The SwiftUI .sheet() modifier was removed because it only presents after app deactivation
         .sheet(isPresented: $showingCreateListSheet) {
@@ -1631,6 +1652,12 @@ private struct MacListDetailView: View {
         .onAppear {
             // Advertise Handoff activity for viewing this specific list
             HandoffService.shared.startViewingListActivity(list: list)
+        }
+        // MARK: - Global Cmd+F Notification Receiver (Task 12.2)
+        // Receives notification from MacMainView's global Cmd+F handler
+        // Focuses the search field regardless of where focus was before
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FocusSearchField"))) { _ in
+            isSearchFieldFocused = true
         }
     }
 

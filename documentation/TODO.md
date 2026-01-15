@@ -139,7 +139,7 @@ func testRegularClickClearsSelection() {
 
 ---
 
-### Task 12.2: Fix Cmd+F Global Search Scope (CRITICAL)
+### Task 12.2: [COMPLETED] Fix Cmd+F Global Search Scope (CRITICAL)
 
 **TDD**: Write tests for Cmd+F focus behavior from any view state
 
@@ -183,6 +183,23 @@ func testCmdFWithNoListSelected() {
 
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Move Cmd+F handler to top level
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **MacMainView Changes**:
+   - Added global Cmd+F handler at NavigationSplitView level (line 146-166)
+   - Uses notification pattern to communicate with MacListDetailView
+   - Handles edge case: if no list selected, auto-selects first list
+
+2. **MacListDetailView Changes**:
+   - Added `.onReceive` for "FocusSearchField" notification (line 1656-1661)
+   - Sets `isSearchFieldFocused = true` when notification received
+   - Kept existing `.onKeyPress` for redundancy when focus is already in detail
+
+**Test Results**: 14 tests in `CmdFGlobalSearchTests` all passed
+
+**Learning document**: `/documentation/learnings/macos-global-cmdf-search.md`
 
 ---
 
@@ -999,11 +1016,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | Not Started | 0/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 2/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (64 completed, 16 remaining)
+**Total Tasks: 80** (66 completed, 14 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1017,8 +1034,8 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 11.9: [COMPLETED] Test Isolation with Dependency Injection
 
 **Phase 12 Status** (UX Polish - Agent Swarm Research):
-- Task 12.1: 🔴 Implement Cmd+Click Multi-Select (CRITICAL)
-- Task 12.2: 🔴 Fix Cmd+F Global Search Scope (CRITICAL)
+- Task 12.1: [COMPLETED] Implement Cmd+Click Multi-Select (CRITICAL)
+- Task 12.2: [COMPLETED] Fix Cmd+F Global Search Scope (CRITICAL)
 - Task 12.3: 🔴 Improve Selection Mode Discoverability (CRITICAL)
 - Task 12.4: 🔴 Redesign Filter UI to Native macOS Pattern (CRITICAL)
 - Task 12.5: 🟠 Add Proactive Feature Tips (IMPORTANT)
