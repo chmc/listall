@@ -995,7 +995,7 @@ private struct MacListDetailView: View {
             } else {
                 // Normal mode header controls
                 searchFieldView
-                filterSortButton
+                filterSortControls
                 shareButton
                 selectionModeButton
                 editListButton
@@ -1138,18 +1138,37 @@ private struct MacListDetailView: View {
         .cornerRadius(6)
     }
 
+    // MARK: - Filter & Sort Controls (Task 12.4)
+    // Redesigned from iOS-style popover to native macOS pattern:
+    // - Segmented control for filters (always visible, single click)
+    // - Sort button with popover for less-frequent sort options
+
     @ViewBuilder
-    private var filterSortButton: some View {
-        Button(action: { showingOrganizationPopover.toggle() }) {
-            Image(systemName: "arrow.up.arrow.down")
-        }
-        .buttonStyle(.plain)
-        .help("Filter & Sort")
-        .accessibilityIdentifier("FilterSortButton")
-        .accessibilityLabel("Filter and sort items")
-        .accessibilityHint("Opens filter and sort options")
-        .popover(isPresented: $showingOrganizationPopover) {
-            MacItemOrganizationView(viewModel: viewModel)
+    private var filterSortControls: some View {
+        HStack(spacing: 8) {
+            // Filter segmented control - always visible, single click
+            Picker("Filter", selection: $viewModel.currentFilterOption) {
+                Text("All").tag(ItemFilterOption.all)
+                Text("Active").tag(ItemFilterOption.active)
+                Text("Done").tag(ItemFilterOption.completed)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 180)
+            .help("Filter items by status (Cmd+1/2/3)")
+            .accessibilityIdentifier("FilterSegmentedControl")
+
+            // Sort button - keeps popover for less-frequent sort options
+            Button(action: { showingOrganizationPopover.toggle() }) {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+            .buttonStyle(.plain)
+            .help("Sort Options")
+            .accessibilityIdentifier("SortButton")
+            .accessibilityLabel("Sort items")
+            .accessibilityHint("Opens sort options")
+            .popover(isPresented: $showingOrganizationPopover) {
+                MacSortOnlyView(viewModel: viewModel)
+            }
         }
     }
 
@@ -1659,6 +1678,21 @@ private struct MacListDetailView: View {
         // Focuses the search field regardless of where focus was before
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FocusSearchField"))) { _ in
             isSearchFieldFocused = true
+        }
+        // MARK: - View Menu Filter Shortcuts (Task 12.4)
+        // Receives notifications from View menu filter commands (Cmd+1/2/3)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SetFilterAll"))) { _ in
+            viewModel.updateFilterOption(.all)
+            // Refresh items from DataManager when changing filter
+            viewModel.items = items
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SetFilterActive"))) { _ in
+            viewModel.updateFilterOption(.active)
+            viewModel.items = items
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SetFilterCompleted"))) { _ in
+            viewModel.updateFilterOption(.completed)
+            viewModel.items = items
         }
     }
 

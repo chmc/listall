@@ -89,6 +89,34 @@ struct AppCommands: Commands {
                 )
             }
             .keyboardShortcut("r", modifiers: .command)
+
+            Divider()
+
+            // MARK: - Filter Shortcuts (Task 12.4)
+            // Native macOS pattern: View menu with keyboard shortcuts for filters
+            Button("All Items") {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SetFilterAll"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut("1", modifiers: .command)
+
+            Button("Active Only") {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SetFilterActive"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut("2", modifiers: .command)
+
+            Button("Completed Only") {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SetFilterCompleted"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut("3", modifiers: .command)
         }
 
         // Help menu

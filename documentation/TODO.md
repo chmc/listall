@@ -276,7 +276,7 @@ func testSelectionCountDisplayed() {
 
 ---
 
-### Task 12.4: Redesign Filter UI from iOS Popover to Native macOS Pattern (CRITICAL)
+### Task 12.4: [COMPLETED] Redesign Filter UI from iOS Popover to Native macOS Pattern (CRITICAL)
 
 **TDD**: Write tests for always-visible filter controls and keyboard shortcuts
 
@@ -397,6 +397,36 @@ func testCurrentFilterVisibleInToolbar() {
 - Agent: Apple Development Researcher - macOS filter patterns research
 - Agent: Explore - Current implementation analysis
 - Agent: Critical Reviewer - iOS-ism critique and alternatives ranking
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **MacMainView.swift - filterSortControls** (replaced filterSortButton):
+   - Segmented control for filters (All/Active/Done) - always visible, single click
+   - Separate sort button with popover for less-frequent sort options
+   - Added `.accessibilityIdentifier("FilterSegmentedControl")` for testing
+
+2. **MacSortOnlyView.swift** (new component):
+   - Extracted sort-only view from MacItemOrganizationView
+   - Shows sorting options and drag-to-reorder indicator
+   - Keeps popover pattern for less-frequently-used sort options
+
+3. **AppCommands.swift - View menu filter shortcuts**:
+   - Added "All Items" (Cmd+1), "Active Only" (Cmd+2), "Completed Only" (Cmd+3)
+   - Uses notification pattern consistent with existing menu commands
+
+4. **MacListDetailView - Notification receivers**:
+   - Added receivers for SetFilterAll, SetFilterActive, SetFilterCompleted notifications
+   - Updates viewModel filter and refreshes items from DataManager
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Replaced filterSortButton with filterSortControls
+- `ListAllMac/Commands/AppCommands.swift` - Added View menu filter shortcuts
+- `ListAllMac/Views/Components/MacSortOnlyView.swift` - New sort-only popover view
+
+**Test Results**: 21 tests in `FilterUIRedesignTests` all passed, 166 total macOS tests passed
+
+**Learning document**: `/documentation/learnings/macos-filter-ui-redesign.md`
 
 ---
 
@@ -1037,11 +1067,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 3/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 4/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (67 completed, 13 remaining)
+**Total Tasks: 80** (68 completed, 12 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1058,7 +1088,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.1: [COMPLETED] Implement Cmd+Click Multi-Select (CRITICAL)
 - Task 12.2: [COMPLETED] Fix Cmd+F Global Search Scope (CRITICAL)
 - Task 12.3: [COMPLETED] Improve Selection Mode Discoverability (CRITICAL)
-- Task 12.4: 🔴 Redesign Filter UI to Native macOS Pattern (CRITICAL)
+- Task 12.4: [COMPLETED] Redesign Filter UI to Native macOS Pattern (CRITICAL)
 - Task 12.5: 🟠 Add Proactive Feature Tips (IMPORTANT)
 - Task 12.6: 🟠 Add Sync Status Indicator in Toolbar (IMPORTANT)
 - Task 12.7: 🟠 Consistent Empty State Components (IMPORTANT)
