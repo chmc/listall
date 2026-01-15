@@ -55,7 +55,7 @@ struct MacSettingsView: View {
                 }
                 .tag(SettingsTab.about)
         }
-        .frame(width: 500, height: 350)
+        .frame(minWidth: 500, idealWidth: 550, minHeight: 350, idealHeight: 400)
         .padding()
     }
 }

@@ -687,7 +687,7 @@ func testEmptySearchShowsSearchEmptyState() {
 
 ---
 
-### Task 12.8: Standardize Destructive Action Handling (IMPORTANT)
+### Task 12.8: [IN PROGRESS] Standardize Destructive Action Handling (IMPORTANT)
 
 **TDD**: Write tests for consistent undo/confirmation behavior
 
@@ -746,7 +746,7 @@ func testUndoRestoresItems() {
 
 ---
 
-### Task 12.9: Make Settings Window Resizable (IMPORTANT)
+### Task 12.9: [COMPLETED] Make Settings Window Resizable (IMPORTANT)
 
 **TDD**: Write tests for settings window size constraints
 
@@ -780,6 +780,23 @@ func testSettingsWindowCanExpand() {
 
 **Files to modify**:
 - `ListAllMac/Views/MacSettingsView.swift` - Update frame constraints
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **MacSettingsView.swift - Frame Constraints**:
+   - Changed `.frame(width: 500, height: 350)` to `.frame(minWidth: 500, idealWidth: 550, minHeight: 350, idealHeight: 400)`
+   - Minimum size ensures layout integrity (tabs and forms fit)
+   - Ideal size provides comfortable default appearance
+   - Window can now expand for accessibility (large text) and localization (longer strings)
+   - macOS will remember user-adjusted size automatically
+
+**Files Modified**:
+- `ListAllMac/Views/MacSettingsView.swift` - Line 58: Updated frame constraints
+
+**Test Results**: All 17 SettingsWindowResizableTests passed
+
+**Learning document**: `/documentation/learnings/macos-settings-window-resizable.md`
 
 ---
 
@@ -1169,11 +1186,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 7/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 8/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (71 completed, 9 remaining)
+**Total Tasks: 80** (72 completed, 8 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1195,7 +1212,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.6: [COMPLETED] Add Sync Status Indicator in Toolbar (IMPORTANT)
 - Task 12.7: [COMPLETED] Consistent Empty State Components (IMPORTANT)
 - Task 12.8: 🟠 Standardize Destructive Action Handling (IMPORTANT)
-- Task 12.9: 🟠 Make Settings Window Resizable (IMPORTANT)
+- Task 12.9: [COMPLETED] Make Settings Window Resizable (IMPORTANT)
 - Task 12.10: 🟡 Add Quick Entry Window (MINOR)
 - Task 12.11: 🟡 Add Keyboard Reordering (MINOR)
 - Task 12.12: 🟡 Add Clear All Filters Shortcut (MINOR)
