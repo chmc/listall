@@ -25,7 +25,7 @@
 |----------|:---:|:-----:|:---:|---------|
 | [List Management](#list-management) | 13/13 | 13/13 | 0 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
 | [Item Management](#item-management) | 17/17 | 17/17 | 0 | [ITEM_MANAGEMENT.md](./ITEM_MANAGEMENT.md) |
-| [Filter/Sort/Search](#filter-sort-search) | 15/15 | 15/15 | 0 | [FILTER_SORT.md](./FILTER_SORT.md) |
+| [Filter/Sort/Search](#filter-sort-search) | 15/16 | 16/16 | 0 | [FILTER_SORT.md](./FILTER_SORT.md) |
 | [Images](#images) | 14/14 | 14/14 | 0 | [IMAGES.md](./IMAGES.md) |
 | [Import/Export](#import-export) | 15/15 | 15/15 | 0 | [IMPORT_EXPORT.md](./IMPORT_EXPORT.md) |
 | [Sharing](#sharing) | 6/6 | 6/6 | 0 | [SHARING.md](./SHARING.md) |

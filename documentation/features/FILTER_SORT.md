@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 15/15 | macOS 15/15
+## Status: iOS 15/16 | macOS 16/16
 
 ---
 
@@ -25,6 +25,7 @@
 | Persistent Preferences | ✅ | ✅ | Shared Repository |
 | Active Filter Indicator | ✅ | ✅ | Platform UI |
 | Drag-to-Reorder Indicator | ✅ | ✅ | Platform UI |
+| Clear All Filters (macOS) | - | ✅ | Cmd+Shift+Delete shortcut |
 
 ---
 
