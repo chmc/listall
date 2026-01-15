@@ -687,7 +687,7 @@ func testEmptySearchShowsSearchEmptyState() {
 
 ---
 
-### Task 12.8: [IN PROGRESS] Standardize Destructive Action Handling (IMPORTANT)
+### Task 12.8: [COMPLETED] Standardize Destructive Action Handling (IMPORTANT)
 
 **TDD**: Write tests for consistent undo/confirmation behavior
 
@@ -743,6 +743,32 @@ func testUndoRestoresItems() {
 
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Standardize delete handling
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **ListViewModel.swift - Bulk Delete Undo Support**:
+   - Added `@Published var recentlyDeletedItems: [Item]?` for storing deleted items
+   - Added `@Published var showBulkDeleteUndoBanner = false` for banner visibility
+   - Added `bulkDeleteUndoTimer` with 10-second timeout (per macOS convention)
+   - Added `var deletedItemsCount: Int` computed property for banner display
+   - Added `deleteSelectedItemsWithUndo()` method that deletes items and shows undo banner
+   - Added `undoBulkDelete()` method that restores all deleted items
+   - Added `hideBulkDeleteUndoBanner()` method to clear undo state
+
+2. **MacMainView.swift - UI Changes**:
+   - Removed confirmation dialog (`showingDeleteConfirmation` state and alert)
+   - Added `MacBulkDeleteUndoBanner` component (red trash icon, item count, Undo/Dismiss buttons)
+   - Updated "Delete Items" button to call `viewModel.deleteSelectedItemsWithUndo()`
+   - Updated Delete key handler to use undo banner instead of confirmation
+   - Added bulk delete undo banner in ZStack alongside single-item delete banner
+
+3. **TestListViewModel - Test Support**:
+   - Added matching properties and methods to TestListViewModel for testing
+
+**Test Results**: All 14 DestructiveActionHandlingTests passed, 166 total macOS unit tests passed
+
+**Learning document**: `/documentation/learnings/macos-bulk-delete-undo-standardization.md`
 
 ---
 

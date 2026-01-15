@@ -15616,8 +15616,10 @@ final class DestructiveActionHandlingTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        testDataManager = TestDataManager()
-        testList = testDataManager.createList(name: "Test List")
+        testDataManager = TestHelpers.createTestDataManager()
+        testList = createTestList(name: "Test List")
+        // Add list to data manager and get it back to ensure proper context
+        testDataManager.addList(testList)
         viewModel = TestListViewModel(list: testList, dataManager: testDataManager)
     }
 
@@ -15626,6 +15628,13 @@ final class DestructiveActionHandlingTests: XCTestCase {
         testList = nil
         testDataManager = nil
         try super.tearDownWithError()
+    }
+
+    // Helper to create a test list
+    private func createTestList(name: String = "Test List", orderNumber: Int = 0) -> ListModel {
+        var list = ListModel(name: name)
+        list.orderNumber = orderNumber
+        return list
     }
 
     // MARK: - Individual Delete Undo Tests (Existing Behavior Verification)

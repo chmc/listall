@@ -1048,7 +1048,7 @@ private struct MacListDetailView: View {
     // State for multi-select mode
     @State private var showingMoveItemsPicker = false
     @State private var showingCopyItemsPicker = false
-    @State private var showingDeleteConfirmation = false
+    // showingDeleteConfirmation removed (Task 12.8) - now uses undo banner instead
     @State private var selectedDestinationList: List?
     @State private var showingMoveConfirmation = false
     @State private var showingCopyConfirmation = false
@@ -1180,7 +1180,9 @@ private struct MacListDetailView: View {
 
                 Section {
                     Button("Delete Items", role: .destructive) {
-                        showingDeleteConfirmation = true
+                        // Task 12.8: Use undo banner instead of confirmation dialog
+                        viewModel.deleteSelectedItemsWithUndo()
+                        dataManager.loadData()
                     }
                     .disabled(viewModel.selectedItems.isEmpty)
                 }
@@ -1505,9 +1507,10 @@ private struct MacListDetailView: View {
             return .handled
         }
         .onKeyPress(.delete) {
-            // In selection mode, delete shows confirmation for selected items
+            // In selection mode, delete selected items with undo (Task 12.8)
             if viewModel.isInSelectionMode && !viewModel.selectedItems.isEmpty {
-                showingDeleteConfirmation = true
+                viewModel.deleteSelectedItemsWithUndo()
+                dataManager.loadData()
                 return .handled
             }
             // Normal mode: Delete removes the focused item
@@ -1641,7 +1644,7 @@ private struct MacListDetailView: View {
                 .accessibilityIdentifier("UndoCompleteBanner")
             }
 
-            // Undo Delete Banner - shows when item is deleted
+            // Undo Delete Banner - shows when single item is deleted
             if viewModel.showDeleteUndoButton, let item = viewModel.recentlyDeletedItem {
                 MacDeleteUndoBanner(
                     itemName: item.displayTitle,
@@ -1658,6 +1661,26 @@ private struct MacListDetailView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.showDeleteUndoButton)
                 .accessibilityIdentifier("UndoDeleteBanner")
+            }
+
+            // Bulk Delete Undo Banner - shows when multiple items are deleted (Task 12.8)
+            if viewModel.showBulkDeleteUndoBanner {
+                MacBulkDeleteUndoBanner(
+                    itemCount: viewModel.deletedItemsCount,
+                    onUndo: {
+                        viewModel.undoBulkDelete()
+                        dataManager.loadData()
+                    },
+                    onDismiss: {
+                        viewModel.hideBulkDeleteUndoBanner()
+                    }
+                )
+                .frame(maxWidth: 400)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.showBulkDeleteUndoBanner)
+                .accessibilityIdentifier("BulkDeleteUndoBanner")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1802,17 +1825,9 @@ private struct MacListDetailView: View {
                 Text("Copy \(viewModel.selectedItems.count) item(s) to \"\(destination.name)\"? Items will remain in this list.")
             }
         }
-        // MARK: - Delete Confirmation Alert
-        .alert("Delete Items", isPresented: $showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                viewModel.deleteSelectedItems()
-                viewModel.exitSelectionMode()
-                dataManager.loadData()
-            }
-        } message: {
-            Text("Are you sure you want to delete \(viewModel.selectedItems.count) item(s)? This action cannot be undone.")
-        }
+        // MARK: - Delete Confirmation Alert removed (Task 12.8)
+        // Bulk delete now uses undo banner instead of confirmation dialog
+        // for consistency with individual delete operations
         // MARK: - Keyboard Shortcuts (Task 11.1)
         .onKeyPress(characters: CharacterSet(charactersIn: "f")) { keyPress in
             // Cmd+F focuses the search field
@@ -2744,6 +2759,75 @@ private struct MacDeleteUndoBanner: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Deleted \(itemName)")
         .accessibilityHint("Use undo button to restore item")
+    }
+}
+
+// MARK: - Bulk Delete Undo Banner (macOS) - Task 12.8
+
+/// macOS-styled undo banner for bulk deleted items.
+/// Shows a red trash icon, item count, and undo/dismiss buttons.
+/// Uses material background for modern macOS appearance.
+/// This replaces the confirmation dialog for bulk delete operations.
+private struct MacBulkDeleteUndoBanner: View {
+    let itemCount: Int
+    let onUndo: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Red trash icon
+            Image(systemName: "trash.circle.fill")
+                .foregroundColor(.red)
+                .font(.title2)
+                .accessibilityHidden(true)
+
+            // Status text and item count
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Deleted")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text("\(itemCount) items")
+                    .font(.body)
+                    .fontWeight(.medium)
+            }
+
+            Spacer()
+
+            // Undo button (red for restore)
+            Button(action: onUndo) {
+                Text("Undo")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(Color.red)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Undo deletion")
+            .accessibilityHint("Restores all \(itemCount) deleted items")
+            .accessibilityIdentifier("BulkDeleteUndoButton")
+
+            // Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
+            .accessibilityHint("Hides this notification")
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Deleted \(itemCount) items")
+        .accessibilityHint("Use undo button to restore all items")
+        .accessibilityIdentifier("BulkDeleteUndoBanner")
     }
 }
 

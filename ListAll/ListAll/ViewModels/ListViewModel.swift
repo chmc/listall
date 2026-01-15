@@ -25,10 +25,14 @@ class ListViewModel: ObservableObject {
     @Published var recentlyCompletedItem: Item?
     @Published var showUndoButton = false
     
-    // Undo Delete Properties
+    // Undo Delete Properties (Single Item)
     @Published var recentlyDeletedItem: Item?
     @Published var showDeleteUndoButton = false
-    
+
+    // Undo Bulk Delete Properties (Multiple Items)
+    @Published var recentlyDeletedItems: [Item]?
+    @Published var showBulkDeleteUndoBanner = false
+
     // Multi-Selection Properties
     @Published var isInSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
@@ -45,7 +49,9 @@ class ListViewModel: ObservableObject {
     private let list: List
     private var undoTimer: Timer?
     private var deleteUndoTimer: Timer?
+    private var bulkDeleteUndoTimer: Timer?
     private let undoTimeout: TimeInterval = 5.0 // 5 seconds standard timeout
+    private let bulkDeleteUndoTimeout: TimeInterval = 10.0 // 10 seconds for bulk delete per macOS convention
     private lazy var hapticManager = HapticManager.shared
 
     /// Initialize with list and optional data manager injection for testing
@@ -96,6 +102,7 @@ class ListViewModel: ObservableObject {
         NotificationCenter.default.removeObserver(self)
         undoTimer?.invalidate()
         deleteUndoTimer?.invalidate()
+        bulkDeleteUndoTimer?.invalidate()
     }
     
     #if os(iOS)
@@ -298,7 +305,74 @@ class ListViewModel: ObservableObject {
         showDeleteUndoButton = false
         recentlyDeletedItem = nil
     }
-    
+
+    // MARK: - Undo Bulk Delete Functionality (Task 12.8)
+
+    /// Computed property to get the count of recently deleted items for display
+    var deletedItemsCount: Int {
+        return recentlyDeletedItems?.count ?? 0
+    }
+
+    /// Deletes selected items with undo support.
+    /// Instead of showing a confirmation dialog, this method stores items for undo
+    /// and shows an undo banner for 10 seconds (per macOS convention).
+    func deleteSelectedItemsWithUndo() {
+        // Guard against empty selection
+        guard !selectedItems.isEmpty else { return }
+
+        // Cancel any existing bulk delete undo timer
+        bulkDeleteUndoTimer?.invalidate()
+
+        // Store the items before deleting for undo functionality
+        let itemsToDelete = items.filter { selectedItems.contains($0.id) }
+        recentlyDeletedItems = itemsToDelete
+
+        // Delete each selected item
+        for itemId in selectedItems {
+            if let item = items.first(where: { $0.id == itemId }) {
+                dataRepository.deleteItem(item)
+            }
+        }
+
+        // Clear selection and exit selection mode
+        selectedItems.removeAll()
+        exitSelectionMode()
+
+        // Show undo banner
+        showBulkDeleteUndoBanner = true
+
+        // Set up timer to hide undo banner after timeout (10 seconds for bulk delete)
+        bulkDeleteUndoTimer = Timer.scheduledTimer(withTimeInterval: bulkDeleteUndoTimeout, repeats: false) { [weak self] _ in
+            self?.hideBulkDeleteUndoBanner()
+        }
+
+        loadItems() // Refresh the list
+        hapticManager.itemDeleted()
+    }
+
+    /// Restores all items that were bulk deleted
+    func undoBulkDelete() {
+        guard let deletedItems = recentlyDeletedItems else { return }
+
+        // Re-create each item with all its properties
+        for item in deletedItems {
+            dataRepository.addItemForImport(item, to: list.id)
+        }
+
+        // Hide undo banner immediately BEFORE loading items
+        hideBulkDeleteUndoBanner()
+
+        loadItems() // Refresh the list
+    }
+
+    /// Hides the bulk delete undo banner and clears the stored items
+    func hideBulkDeleteUndoBanner() {
+        bulkDeleteUndoTimer?.invalidate()
+        bulkDeleteUndoTimer = nil
+        showBulkDeleteUndoBanner = false
+        recentlyDeletedItems = nil
+    }
+
     func updateItem(_ item: Item, title: String, description: String, quantity: Int) {
         dataRepository.updateItem(item, title: title, description: description, quantity: quantity)
         loadItems() // Refresh the list
