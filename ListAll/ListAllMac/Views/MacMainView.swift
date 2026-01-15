@@ -22,6 +22,9 @@ struct MacMainView: View {
     // Access CoreDataManager for sync status (lastSyncDate) and manual refresh
     @ObservedObject private var coreDataManager = CoreDataManager.shared
 
+    // MARK: - Proactive Feature Tips (Task 12.5)
+    @ObservedObject private var tooltipManager = MacTooltipManager.shared
+
     @State private var selectedList: List?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
@@ -66,7 +69,8 @@ struct MacMainView: View {
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        ZStack(alignment: .topTrailing) {
+            NavigationSplitView(columnVisibility: $columnVisibility) {
             // CRITICAL FIX: Wrap sidebar in NavigationStack with animated path
             // This restores SwiftUI's animation system that NavigationSplitView breaks
             NavigationStack(path: $navigationPath.animation(.linear(duration: 0))) {
@@ -268,6 +272,29 @@ struct MacMainView: View {
         .sheet(isPresented: $showingExportAllSheet) {
             MacExportAllListsSheet(onDismiss: { showingExportAllSheet = false })
         }
+
+            // MARK: - Proactive Feature Tips Overlay (Task 12.5)
+            // Toast-style notification in top-right corner
+            if tooltipManager.isShowingTooltip, let tip = tooltipManager.currentTooltip {
+                MacTooltipNotificationView(tip: tip) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        tooltipManager.dismissCurrentTooltip()
+                    }
+                }
+                .padding(.top, 60) // Below toolbar
+                .padding(.trailing, 20)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .opacity
+                ))
+                .zIndex(100) // Ensure it appears above other content
+            }
+        } // End ZStack
+        // MARK: - Proactive Tip Triggers (Task 12.5)
+        // Show contextual tips based on app state with delays
+        .onAppear {
+            triggerProactiveTips()
+        }
     }
 
     // MARK: - Sync Polling Methods
@@ -358,6 +385,40 @@ struct MacMainView: View {
         }
         updatedItem.modifiedAt = Date()
         dataManager.updateItem(updatedItem)
+    }
+
+    // MARK: - Proactive Feature Tips (Task 12.5)
+
+    /// Triggers proactive feature tips based on current app state
+    /// Tips are shown with delays to avoid overwhelming new users
+    private func triggerProactiveTips() {
+        // Skip if user is editing (don't interrupt workflows)
+        guard !isEditingAnyItem else { return }
+
+        // 0.8s delay: Keyboard shortcuts tip for new users
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeIn(duration: 0.3)) {
+                _ = tooltipManager.showIfNeeded(.keyboardShortcuts)
+            }
+        }
+
+        // 1.2s delay: Add list tip if no lists exist
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            if dataManager.lists.isEmpty {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    _ = tooltipManager.showIfNeeded(.addListButton)
+                }
+            }
+        }
+
+        // 1.5s delay: Archive tip if user has 3+ lists
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            if dataManager.lists.count >= 3 {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    _ = tooltipManager.showIfNeeded(.archiveFunctionality)
+                }
+            }
+        }
     }
 }
 
@@ -910,6 +971,9 @@ private struct MacListDetailView: View {
     let list: List  // Original list from selection (may become stale)
     let onEditItem: (Item) -> Void  // Callback to parent for edit sheet (prevents state loss)
     @EnvironmentObject var dataManager: DataManager
+
+    // MARK: - Proactive Feature Tips (Task 12.5)
+    @ObservedObject private var tooltipManager = MacTooltipManager.shared
 
     // ViewModel for filtering, sorting, and item management
     @StateObject private var viewModel: ListViewModel
@@ -1535,6 +1599,14 @@ private struct MacListDetailView: View {
         .onAppear {
             // Initialize ViewModel with current items
             viewModel.items = items
+            // MARK: - Item-Related Proactive Tips (Task 12.5)
+            triggerItemRelatedTips()
+        }
+        // Trigger tips when items change (e.g., user adds items)
+        .onChange(of: items.count) { oldCount, newCount in
+            if newCount > oldCount {
+                triggerItemRelatedTips()
+            }
         }
         // CRITICAL: Observe DataManager changes directly to keep ViewModel in sync
         // When clearing search/filter, we need fresh data from DataManager
@@ -1821,6 +1893,40 @@ private struct MacListDetailView: View {
         return didMoveAny
     }
 
+    // MARK: - Proactive Feature Tips for Items (Task 12.5)
+
+    /// Triggers item-related feature tips based on item count
+    /// Tips help users discover features as they add more items
+    private func triggerItemRelatedTips() {
+        let itemCount = items.count
+
+        // 5+ items: Show search tip
+        if itemCount >= 5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    _ = tooltipManager.showIfNeeded(.searchFunctionality)
+                }
+            }
+        }
+
+        // 7+ items: Show sort/filter tip
+        if itemCount >= 7 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    _ = tooltipManager.showIfNeeded(.sortFilterOptions)
+                }
+            }
+        }
+
+        // 2+ items: Show context menu tip
+        if itemCount >= 2 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    _ = tooltipManager.showIfNeeded(.contextMenuActions)
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Item Row View

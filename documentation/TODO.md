@@ -430,7 +430,7 @@ func testCurrentFilterVisibleInToolbar() {
 
 ---
 
-### Task 12.5: Add Proactive Feature Tips (IMPORTANT)
+### Task 12.5: [COMPLETED] Add Proactive Feature Tips (IMPORTANT)
 
 **TDD**: Write tests for contextual tip display
 
@@ -483,6 +483,44 @@ func testTipDoesNotRepeat() {
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Add tip popovers
 - `ListAllMac/Utils/MacTooltipManager.swift` - Add `shouldShowTip()` logic
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **MacTooltipManager.swift - Proactive Tip Support**:
+   - Added `@Published var currentTooltip: MacTooltipType?` for current tip
+   - Added `@Published var isShowingTooltip = false` for visibility state
+   - Added `showIfNeeded(_ type: MacTooltipType) -> Bool` method
+   - Added `dismissCurrentTooltip()` method
+
+2. **MacTooltipNotificationView.swift** (new component):
+   - Toast-style notification view in top-right corner
+   - Displays tip icon, title, and message
+   - Dismiss button with smooth animation
+   - Accessibility support
+
+3. **MacMainView.swift - Tooltip Overlay and Triggers**:
+   - Added ZStack around NavigationSplitView with tooltip overlay
+   - Proactive triggers in `triggerProactiveTips()`:
+     - 0.8s: Keyboard shortcuts tip for new users
+     - 1.2s: Add list tip if no lists
+     - 1.5s: Archive tip if 3+ lists
+
+4. **MacListDetailView - Item-Related Triggers**:
+   - Added `triggerItemRelatedTips()` method:
+     - 5+ items: Search tip
+     - 7+ items: Sort/filter tip
+     - 2+ items: Context menu tip
+   - Triggers on appear and when items count increases
+
+**Files Modified**:
+- `ListAllMac/Utils/MacTooltipManager.swift` - Added proactive tip methods
+- `ListAllMac/Views/MacMainView.swift` - Added tooltip overlay and triggers
+- `ListAllMac/Views/Components/MacTooltipNotificationView.swift` - New file
+
+**Test Results**: All 21 ProactiveFeatureTipsTests passed, 166 total macOS tests passed
+
+**Learning document**: `/documentation/learnings/macos-proactive-feature-tips.md`
 
 ---
 
@@ -1067,11 +1105,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 4/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 5/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (68 completed, 12 remaining)
+**Total Tasks: 80** (69 completed, 11 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1089,7 +1127,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.2: [COMPLETED] Fix Cmd+F Global Search Scope (CRITICAL)
 - Task 12.3: [COMPLETED] Improve Selection Mode Discoverability (CRITICAL)
 - Task 12.4: [COMPLETED] Redesign Filter UI to Native macOS Pattern (CRITICAL)
-- Task 12.5: 🟠 Add Proactive Feature Tips (IMPORTANT)
+- Task 12.5: [COMPLETED] Add Proactive Feature Tips (IMPORTANT)
 - Task 12.6: 🟠 Add Sync Status Indicator in Toolbar (IMPORTANT)
 - Task 12.7: 🟠 Consistent Empty State Components (IMPORTANT)
 - Task 12.8: 🟠 Standardize Destructive Action Handling (IMPORTANT)

@@ -86,7 +86,40 @@ class MacTooltipManager: ObservableObject {
     // Uses same key as iOS for cross-platform consistency
     private let shownTooltipsKey = "shownTooltips"
 
+    // MARK: - Proactive Tip Display (Task 12.5)
+    /// Currently displayed tooltip (for toast-style notification)
+    @Published var currentTooltip: MacTooltipType?
+
+    /// Whether a tooltip notification is currently visible
+    @Published var isShowingTooltip = false
+
     private init() {}
+
+    // MARK: - Proactive Tip Methods (Task 12.5)
+
+    /// Shows a tooltip if it hasn't been shown before and no other tooltip is currently visible.
+    /// - Parameter type: The tooltip type to show
+    /// - Returns: True if the tooltip was shown, false if skipped (already shown or another is visible)
+    @discardableResult
+    func showIfNeeded(_ type: MacTooltipType) -> Bool {
+        guard !hasShown(type) else { return false }
+        guard !isShowingTooltip else { return false }
+
+        currentTooltip = type
+        isShowingTooltip = true
+        objectWillChange.send()
+        return true
+    }
+
+    /// Dismisses the currently visible tooltip and marks it as shown
+    func dismissCurrentTooltip() {
+        if let tooltip = currentTooltip {
+            markAsShown(tooltip)
+        }
+        isShowingTooltip = false
+        currentTooltip = nil
+        objectWillChange.send()
+    }
 
     /// Check if a tooltip has been shown before
     func hasShown(_ type: MacTooltipType) -> Bool {
