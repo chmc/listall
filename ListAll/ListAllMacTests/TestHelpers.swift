@@ -1035,6 +1035,26 @@ class TestListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Clear All Filters (Task 12.12)
+
+    /// Whether any filter is active (non-default filter, sort, or search)
+    var hasActiveFilters: Bool {
+        currentFilterOption != .all ||
+        currentSortOption != .orderNumber ||
+        currentSortDirection != .ascending ||
+        !searchText.isEmpty
+    }
+
+    /// Clears all filters, search text, and sort options to default values.
+    /// Called by Cmd+Shift+Backspace keyboard shortcut or "Clear All" button.
+    func clearAllFilters() {
+        searchText = ""
+        currentFilterOption = .all
+        currentSortOption = .orderNumber
+        currentSortDirection = .ascending
+        showCrossedOutItems = true  // Sync with .all filter
+    }
+
     // MARK: - Multi-Selection Methods
 
     /// Toggle selection for a single item (Cmd+Click behavior)
@@ -1143,6 +1163,52 @@ class TestListViewModel: ObservableObject {
         isInSelectionMode = false
         selectedItems.removeAll()
         lastSelectedItemID = nil
+    }
+
+    // MARK: - Keyboard Reordering (Task 12.11)
+
+    /// Indicates whether keyboard-based reordering is available.
+    /// Only true when sorted by orderNumber (manual order).
+    var canReorderWithKeyboard: Bool {
+        return currentSortOption == .orderNumber
+    }
+
+    /// Move an item up one position in the list (Cmd+Option+Up)
+    /// - Parameter id: The UUID of the item to move up
+    func moveItemUp(_ id: UUID) {
+        // Guard: Only allow when sorted by orderNumber
+        guard canReorderWithKeyboard else { return }
+
+        // Find the item index in the current items array
+        guard let currentIndex = items.firstIndex(where: { $0.id == id }) else { return }
+
+        // Guard: Cannot move up if already at top
+        guard currentIndex > 0 else { return }
+
+        // Calculate new destination index (one position up)
+        let destinationIndex = currentIndex - 1
+
+        // Use existing reorderItems method to perform the move
+        reorderItems(from: currentIndex, to: destinationIndex)
+    }
+
+    /// Move an item down one position in the list (Cmd+Option+Down)
+    /// - Parameter id: The UUID of the item to move down
+    func moveItemDown(_ id: UUID) {
+        // Guard: Only allow when sorted by orderNumber
+        guard canReorderWithKeyboard else { return }
+
+        // Find the item index in the current items array
+        guard let currentIndex = items.firstIndex(where: { $0.id == id }) else { return }
+
+        // Guard: Cannot move down if already at bottom
+        guard currentIndex < items.count - 1 else { return }
+
+        // Calculate new destination index (one position down)
+        let destinationIndex = currentIndex + 1
+
+        // Use existing reorderItems method to perform the move
+        reorderItems(from: currentIndex, to: destinationIndex)
     }
 }
 

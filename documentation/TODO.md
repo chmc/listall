@@ -915,7 +915,7 @@ func testQuickEntryDismissesWithEscape() {
 
 ---
 
-### Task 12.11: [IN PROGRESS] Add Keyboard Reordering (MINOR)
+### Task 12.11: [COMPLETED] Add Keyboard Reordering (MINOR)
 
 **TDD**: Write tests for keyboard-based item reordering
 
@@ -928,9 +928,14 @@ func testQuickEntryDismissesWithEscape() {
 
 **Implementation**:
 ```swift
-.onKeyPress(.upArrow, modifiers: [.command, .option]) {
-    guard viewModel.currentSortOption == .orderNumber else { return .ignored }
-    viewModel.moveItemUp(focusedItemID)
+.onKeyPress(keys: [.upArrow]) { keyPress in
+    guard keyPress.modifiers.contains(.command),
+          keyPress.modifiers.contains(.option) else {
+        return .ignored
+    }
+    guard viewModel.canReorderWithKeyboard else { return .ignored }
+    guard let focusedID = focusedItemID else { return .ignored }
+    viewModel.moveItemUp(focusedID)
     return .handled
 }
 ```
@@ -949,13 +954,38 @@ func testReorderOnlyWorksWithOrderSort() {
 }
 ```
 
-**Files to modify**:
-- `ListAllMac/Views/MacMainView.swift` - Add keyboard handlers
-- `ListAll/ViewModels/ListViewModel.swift` - Add `moveItemUp()/moveItemDown()`
+**Files modified**:
+- `ListAllMac/Views/MacMainView.swift` - Added keyboard handlers for Cmd+Option+Up/Down
+- `ListAll/ViewModels/ListViewModel.swift` - Added `moveItemUp()`, `moveItemDown()`, `canReorderWithKeyboard`
+- `ListAllMacTests/TestHelpers.swift` - Added matching methods to TestListViewModel
+- `ListAllMacTests/ListAllMacTests.swift` - Added KeyboardReorderingTests (16 tests)
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **ListViewModel.swift - Keyboard Reordering Methods**:
+   - Added `canReorderWithKeyboard` computed property (true only when sorted by orderNumber)
+   - Added `moveItemUp(_ id: UUID)` method - moves item up one position
+   - Added `moveItemDown(_ id: UUID)` method - moves item down one position
+   - Both methods guard against invalid sort options and boundary conditions
+
+2. **MacMainView.swift - Keyboard Handlers**:
+   - Added `.onKeyPress(keys: [.upArrow])` with modifier checking inside closure
+   - Added `.onKeyPress(keys: [.downArrow])` with modifier checking inside closure
+   - Uses `keyPress.modifiers.contains(.command)` and `.option` for detection
+   - Handlers respect sort option constraint (only works with orderNumber sort)
+
+3. **TestListViewModel - Test Support**:
+   - Added matching `canReorderWithKeyboard`, `moveItemUp()`, `moveItemDown()` methods
+   - Added helper method `createViewModelWithItems(itemCount:)` for proper test setup
+
+**Test Results**: All 16 KeyboardReorderingTests passed
+
+**Learning**: SwiftUI `.onKeyPress` with arrow keys requires checking modifiers inside the closure using `keyPress.modifiers.contains()`, not via a separate `modifiers:` parameter.
 
 ---
 
-### Task 12.12: Add Clear All Filters Shortcut (MINOR)
+### Task 12.12: [COMPLETED] Add Clear All Filters Shortcut (MINOR)
 
 **TDD**: Write tests for filter clearing
 
@@ -1282,11 +1312,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 11/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 12/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (75 completed, 5 remaining)
+**Total Tasks: 80** (76 completed, 4 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1310,8 +1340,8 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.8: [COMPLETED] Standardize Destructive Action Handling (IMPORTANT)
 - Task 12.9: [COMPLETED] Make Settings Window Resizable (IMPORTANT)
 - Task 12.10: [COMPLETED] Add Quick Entry Window (MINOR)
-- Task 12.11: [IN PROGRESS] Add Keyboard Reordering (MINOR)
-- Task 12.12: 🟡 Add Clear All Filters Shortcut (MINOR)
+- Task 12.11: [COMPLETED] Add Keyboard Reordering (MINOR)
+- Task 12.12: [COMPLETED] Add Clear All Filters Shortcut (MINOR)
 - Task 12.13: [COMPLETED] Add Image Gallery Size Presets (MINOR)
 
 **Phase 13 Status**:

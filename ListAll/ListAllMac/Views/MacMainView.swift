@@ -1098,6 +1098,15 @@ private struct MacListDetailView: View {
         !viewModel.searchText.isEmpty
     }
 
+    /// Count of active filters (for showing "Clear All" button when multiple active)
+    private var activeFilterCount: Int {
+        var count = 0
+        if !viewModel.searchText.isEmpty { count += 1 }
+        if viewModel.currentFilterOption != .all { count += 1 }
+        if viewModel.currentSortOption != .orderNumber { count += 1 }
+        return count
+    }
+
     // MARK: - Header View
 
     @ViewBuilder
@@ -1236,9 +1245,16 @@ private struct MacListDetailView: View {
                 .accessibilityIdentifier("ListSearchField")
                 .accessibilityLabel("Search items")
                 .onExitCommand {
-                    // Escape clears search when search field is focused
+                    // Enhanced Escape behavior (Task 12.12):
+                    // 1. First press: clears search text (if not empty)
+                    // 2. Second press: clears all filters (if search was empty but filters active)
                     if !viewModel.searchText.isEmpty {
+                        // First: clear search text
                         viewModel.searchText = ""
+                        viewModel.items = items
+                    } else if viewModel.hasActiveFilters {
+                        // Second: clear all filters when search is already empty
+                        viewModel.clearAllFilters()
                         viewModel.items = items
                     }
                     isSearchFieldFocused = false
@@ -1347,6 +1363,23 @@ private struct MacListDetailView: View {
                             viewModel.items = items
                         }
                     )
+                }
+
+                // Clear All button (Task 12.12)
+                // Shows when multiple filters are active or as a convenience
+                if activeFilterCount > 1 {
+                    Button(action: {
+                        viewModel.clearAllFilters()
+                        // CRITICAL: Refresh items from DataManager when clearing all filters
+                        viewModel.items = items
+                    }) {
+                        Text("Clear All")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                    .help("Clear all filters (Cmd+Shift+Delete)")
+                    .accessibilityIdentifier("ClearAllFiltersButton")
                 }
 
                 Spacer()
@@ -1549,6 +1582,40 @@ private struct MacListDetailView: View {
                 return .ignored
             }
             toggleItem(item)
+            return .handled
+        }
+        // MARK: - Keyboard Reordering (Task 12.11)
+        // Use onKeyPress with key set and check modifiers inside closure
+        .onKeyPress(keys: [.upArrow]) { keyPress in
+            // Cmd+Option+Up moves focused item up one position
+            guard keyPress.modifiers.contains(.command),
+                  keyPress.modifiers.contains(.option) else {
+                return .ignored
+            }
+            guard viewModel.canReorderWithKeyboard else { return .ignored }
+            guard let focusedID = focusedItemID else { return .ignored }
+            viewModel.moveItemUp(focusedID)
+            return .handled
+        }
+        .onKeyPress(keys: [.downArrow]) { keyPress in
+            // Cmd+Option+Down moves focused item down one position
+            guard keyPress.modifiers.contains(.command),
+                  keyPress.modifiers.contains(.option) else {
+                return .ignored
+            }
+            guard viewModel.canReorderWithKeyboard else { return .ignored }
+            guard let focusedID = focusedItemID else { return .ignored }
+            viewModel.moveItemDown(focusedID)
+            return .handled
+        }
+        // MARK: - Clear All Filters Shortcut (Task 12.12)
+        // Cmd+Shift+Backspace (delete) clears all active filters
+        .onKeyPress(keys: [.delete]) { keyPress in
+            guard keyPress.modifiers.contains(.command),
+                  keyPress.modifiers.contains(.shift) else {
+                return .ignored
+            }
+            viewModel.clearAllFilters()
             return .handled
         }
     }
