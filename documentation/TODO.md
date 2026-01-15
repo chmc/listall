@@ -604,7 +604,7 @@ func testSyncErrorShowsRedIndicator() {
 
 ---
 
-### Task 12.7: Consistent Empty State Components (IMPORTANT)
+### Task 12.7: [COMPLETED] Consistent Empty State Components (IMPORTANT)
 
 **TDD**: Write tests for empty state consistency
 
@@ -648,6 +648,42 @@ func testEmptySearchShowsSearchEmptyState() {
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Replace inline empty views
 - `ListAllMac/Views/Components/MacEmptyStateView.swift` - Add `MacSearchEmptyStateView`
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **MacSearchEmptyStateView** (new component in MacEmptyStateView.swift):
+   - Shows search query that returned no results
+   - Clear search button with proper accessibility
+   - Search tips section with helpful guidance
+   - macOS-native styling consistent with other empty states
+
+2. **MacMainView.swift - emptyListView refactored**:
+   - Now uses `MacItemsEmptyStateView(hasItems: false, onAddItem: {...})`
+   - Comprehensive empty state with tips and feature highlights
+   - Accessibility identifier added: "ItemsEmptyStateView"
+
+3. **MacMainView.swift - searchEmptyStateView** (new):
+   - Dedicated search empty state using `MacSearchEmptyStateView`
+   - Shows search text and clear action
+
+4. **MacMainView.swift - noMatchingItemsView updated**:
+   - Changed icon to `line.3.horizontal.decrease.circle` (filter-specific)
+   - Added localized strings
+   - Added accessibility identifiers
+
+5. **Empty State Decision Logic** (three-way):
+   - `items.isEmpty` -> `MacItemsEmptyStateView` (comprehensive)
+   - `!searchText.isEmpty` -> `MacSearchEmptyStateView` (search-specific)
+   - Filter removed all -> `noMatchingItemsView` (filter-specific)
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Replaced inline emptyListView, added searchEmptyStateView
+- `ListAllMac/Views/Components/MacEmptyStateView.swift` - Added MacSearchEmptyStateView
+
+**Test Results**: All 17 ConsistentEmptyStateTests passed, 984 total macOS tests passed
+
+**Learning document**: `/documentation/learnings/macos-consistent-empty-states.md`
 
 ---
 
@@ -1133,11 +1169,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 6/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 7/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (70 completed, 10 remaining)
+**Total Tasks: 80** (71 completed, 9 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1157,7 +1193,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.4: [COMPLETED] Redesign Filter UI to Native macOS Pattern (CRITICAL)
 - Task 12.5: [COMPLETED] Add Proactive Feature Tips (IMPORTANT)
 - Task 12.6: [COMPLETED] Add Sync Status Indicator in Toolbar (IMPORTANT)
-- Task 12.7: 🟠 Consistent Empty State Components (IMPORTANT)
+- Task 12.7: [COMPLETED] Consistent Empty State Components (IMPORTANT)
 - Task 12.8: 🟠 Standardize Destructive Action Handling (IMPORTANT)
 - Task 12.9: 🟠 Make Settings Window Resizable (IMPORTANT)
 - Task 12.10: 🟡 Add Quick Entry Window (MINOR)

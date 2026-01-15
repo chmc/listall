@@ -1358,53 +1358,67 @@ private struct MacListDetailView: View {
         }
     }
 
-    // MARK: - Empty State Views
+    // MARK: - Empty State Views (Task 12.7: Consistent Empty State Components)
+    // Replaced inline emptyListView with comprehensive MacItemsEmptyStateView component
+    // Added dedicated search empty state (MacSearchEmptyStateView) for search-specific messaging
 
+    /// Empty state view for lists with no items
+    /// Uses the comprehensive MacItemsEmptyStateView component for consistency
     @ViewBuilder
     private var emptyListView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "tray")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-
-            Text("No items in this list")
-                .font(.title3)
-                .foregroundColor(.secondary)
-
-            Text("Drag items here or add a new one")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Button("Add First Item") {
+        MacItemsEmptyStateView(
+            hasItems: false,
+            onAddItem: {
                 showingAddItemSheet = true
             }
-            .buttonStyle(.borderedProminent)
-        }
+        )
+        .accessibilityIdentifier("ItemsEmptyStateView")
     }
 
+    /// Empty state view for search with no results
+    /// Dedicated messaging for search context (Task 12.7)
+    @ViewBuilder
+    private var searchEmptyStateView: some View {
+        MacSearchEmptyStateView(
+            searchText: viewModel.searchText,
+            onClear: {
+                viewModel.searchText = ""
+                // Refresh items after clearing search
+                viewModel.items = items
+            }
+        )
+    }
+
+    /// Empty state view when filters return no matching items
+    /// Used when items exist but filter/sort hides all of them
     @ViewBuilder
     private var noMatchingItemsView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
 
-            Text("No matching items")
+            Text(String(localized: "No Matching Items"))
                 .font(.title3)
                 .foregroundColor(.secondary)
+                .accessibilityAddTraits(.isHeader)
 
-            Text("Try adjusting your filter or search criteria")
+            Text(String(localized: "Try adjusting your filter settings"))
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            Button("Clear Filters") {
+            Button(String(localized: "Clear Filters")) {
                 viewModel.searchText = ""
                 viewModel.updateFilterOption(.all)
                 // CRITICAL: Refresh items from DataManager when clearing all filters
                 viewModel.items = items
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityLabel("Clear filters")
+            .accessibilityHint("Clears all active filters to show all items")
         }
+        .accessibilityIdentifier("NoMatchingItemsView")
     }
 
     // MARK: - Items List View
@@ -1580,11 +1594,21 @@ private struct MacListDetailView: View {
                 activeFiltersBar
                 Divider()
 
+                // MARK: - Empty State Logic (Task 12.7)
+                // Three-way decision for empty states:
+                // 1. No items in list at all -> MacItemsEmptyStateView (comprehensive)
+                // 2. Search returned no results -> MacSearchEmptyStateView (search-specific)
+                // 3. Filter removed all items -> noMatchingItemsView (filter-specific)
                 if viewModel.filteredItems.isEmpty {
                     Group {
                         if items.isEmpty {
+                            // No items in list at all - show comprehensive empty state
                             emptyListView
+                        } else if !viewModel.searchText.isEmpty {
+                            // Search returned no results - show search-specific empty state
+                            searchEmptyStateView
                         } else {
+                            // Filter removed all items - show filter-specific empty state
                             noMatchingItemsView
                         }
                     }
