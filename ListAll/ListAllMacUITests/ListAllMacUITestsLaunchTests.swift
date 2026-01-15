@@ -7,13 +7,24 @@
 
 import XCTest
 
-final class ListAllMacUITestsLaunchTests: XCTestCase {
+final class ListAllMacUITestsLaunchTests: MacUITestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
     }
 
+    override class func setUp() {
+        super.setUp()
+        // Note: MacUITestCase.setUp() handles appearance saving
+    }
+
+    override class func tearDown() {
+        // Note: MacUITestCase.tearDown() handles appearance restoration
+        super.tearDown()
+    }
+
     override func setUpWithError() throws {
+        try super.setUpWithError()
         continueAfterFailure = false
     }
 

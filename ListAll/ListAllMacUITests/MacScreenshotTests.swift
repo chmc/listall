@@ -20,7 +20,7 @@ import AppKit
 /// Captures screenshots at 2880x1800 (Retina) resolution for App Store submission
 /// Screenshots are saved to Fastlane cache directory and organized by locale
 @MainActor
-final class MacScreenshotTests: XCTestCase {
+final class MacScreenshotTests: MacUITestCase {
 
     var app: XCUIApplication!
     var orchestrator: ScreenshotOrchestrator!

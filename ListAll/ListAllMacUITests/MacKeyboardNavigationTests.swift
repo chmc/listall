@@ -11,7 +11,7 @@ import XCTest
 /// Tests for macOS keyboard navigation functionality
 /// Verifies arrow key navigation, Enter/Escape keys, Tab navigation, and keyboard shortcuts
 @MainActor
-final class MacKeyboardNavigationTests: XCTestCase {
+final class MacKeyboardNavigationTests: MacUITestCase {
 
     var app: XCUIApplication!
 

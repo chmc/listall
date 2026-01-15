@@ -103,6 +103,9 @@
 				Models/ItemImage.swift,
 				Models/List.swift,
 				Models/UserData.swift,
+				Protocols/CloudSyncProviding.swift,
+				Protocols/CoreDataManaging.swift,
+				Protocols/DataManaging.swift,
 				Services/CloudKitService.swift,
 				Services/DataMigrationService.swift,
 				Services/DataRepository.swift,
@@ -110,9 +113,6 @@
 				"Utils/Extensions/String+Extensions.swift",
 				Utils/Helpers/ValidationHelper.swift,
 				Utils/LocalizationManager.swift,
-				Protocols/CoreDataManaging.swift,
-				Protocols/DataManaging.swift,
-				Protocols/CloudSyncProviding.swift,
 			);
 			target = 451D224E2EA54063004688D4 /* ListAllWatch Watch App */;
 		};
@@ -132,6 +132,9 @@
 				Models/List.swift,
 				"Models/List+Transferable.swift",
 				Models/UserData.swift,
+				Protocols/CloudSyncProviding.swift,
+				Protocols/CoreDataManaging.swift,
+				Protocols/DataManaging.swift,
 				Services/CloudKitService.swift,
 				Services/DataMigrationService.swift,
 				Services/DataRepository.swift,
@@ -154,9 +157,6 @@
 				ViewModels/ItemViewModel.swift,
 				ViewModels/ListViewModel.swift,
 				ViewModels/MainViewModel.swift,
-				Protocols/CoreDataManaging.swift,
-				Protocols/DataManaging.swift,
-				Protocols/CloudSyncProviding.swift,
 			);
 			target = 45C804B92EE2E484006D0E88 /* ListAllMac */;
 		};
@@ -165,43 +165,31 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		451D22502EA54063004688D4 /* ListAllWatch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "ListAllWatch Watch App";
 			sourceTree = "<group>";
 		};
 		451D225E2EA54064004688D4 /* ListAllWatch Watch AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "ListAllWatch Watch AppTests";
 			sourceTree = "<group>";
 		};
 		451D22682EA54064004688D4 /* ListAllWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "ListAllWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
 		45C804BB2EE2E484006D0E88 /* ListAllMac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllMac;
 			sourceTree = "<group>";
 		};
 		45C804CE2EE2E485006D0E88 /* ListAllMacTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllMacTests;
 			sourceTree = "<group>";
 		};
 		45C804D82EE2E485006D0E88 /* ListAllMacUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllMacUITests;
 			sourceTree = "<group>";
 		};
@@ -216,15 +204,11 @@
 		};
 		F1E5F98C2E78695F0007B178 /* ListAllTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllTests;
 			sourceTree = "<group>";
 		};
 		F1E5F9962E78695F0007B178 /* ListAllUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ListAllUITests;
 			sourceTree = "<group>";
 		};

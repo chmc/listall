@@ -8,6 +8,39 @@
 
 import XCTest
 
+// MARK: - Base Test Class with Appearance Management
+
+/// Base class for macOS UI tests that manages system appearance settings.
+/// Saves the user's appearance setting at the START of the test suite and restores it at the END.
+/// Subclass this instead of XCTestCase for automatic appearance management.
+///
+/// **Implementation Note**: The `class func setUp()` and `class func tearDown()` methods run
+/// once per test class (not once per test suite). However, `SystemSettingsManager` uses static
+/// guards (`hasSaved`, `hasRestored`) to ensure save/restore only happens ONCE across all test
+/// classes, effectively providing suite-level semantics.
+///
+/// **Important**: Tests must NOT be parallelized (`parallelizable = false` in test plan) for
+/// this mechanism to work correctly.
+@MainActor
+class MacUITestCase: XCTestCase {
+
+    /// Called once before the first test in the class runs.
+    /// Saves the current system appearance setting.
+    /// Note: Static guards in SystemSettingsManager ensure this only executes once per suite.
+    override class func setUp() {
+        super.setUp()
+        SystemSettingsManager.saveSystemAppearance()
+    }
+
+    /// Called once after the last test in the class finishes.
+    /// Restores the previously saved system appearance setting.
+    /// Note: Static guards in SystemSettingsManager ensure this only executes once per suite.
+    override class func tearDown() {
+        SystemSettingsManager.restoreSystemAppearance()
+        super.tearDown()
+    }
+}
+
 // MARK: - Accessibility Identifiers
 
 /// Centralized accessibility identifiers used in macOS views.

@@ -8,7 +8,7 @@
 import XCTest
 
 @MainActor
-final class ListAllMacUITests: XCTestCase {
+final class ListAllMacUITests: MacUITestCase {
 
     var app: XCUIApplication!
 
