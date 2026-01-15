@@ -32,6 +32,7 @@ class ListViewModel: ObservableObject {
     // Multi-Selection Properties
     @Published var isInSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
+    @Published var lastSelectedItemID: UUID?  // Anchor point for Shift+Click range selection
     
     // Watch sync properties
     @Published var isSyncingFromWatch = false
@@ -559,12 +560,58 @@ class ListViewModel: ObservableObject {
     
     // MARK: - Multi-Selection Methods
     
+    /// Toggle selection for a single item (Cmd+Click behavior)
+    /// Updates lastSelectedItemID to serve as anchor for range selection
     func toggleSelection(for itemId: UUID) {
         if selectedItems.contains(itemId) {
             selectedItems.remove(itemId)
+            // Don't update anchor on deselection
         } else {
             selectedItems.insert(itemId)
+            lastSelectedItemID = itemId  // Update anchor point
             hapticManager.itemSelected()
+        }
+    }
+
+    /// Select a range of items from lastSelectedItemID to targetId (Shift+Click behavior)
+    /// Uses filteredItems order for range calculation
+    func selectRange(to targetId: UUID) {
+        guard let anchorId = lastSelectedItemID,
+              let anchorIndex = filteredItems.firstIndex(where: { $0.id == anchorId }),
+              let targetIndex = filteredItems.firstIndex(where: { $0.id == targetId }) else {
+            // No anchor point - treat as single selection
+            selectedItems = [targetId]
+            lastSelectedItemID = targetId
+            return
+        }
+
+        // Calculate range bounds (handles both upward and downward selection)
+        let startIndex = min(anchorIndex, targetIndex)
+        let endIndex = max(anchorIndex, targetIndex)
+
+        // Select all items in the range
+        selectedItems = Set(filteredItems[startIndex...endIndex].map { $0.id })
+
+        // Keep anchor unchanged for subsequent Shift+Clicks
+        hapticManager.itemSelected()
+    }
+
+    /// Handle click with optional modifiers (for macOS Cmd+Click and Shift+Click)
+    /// - Parameters:
+    ///   - itemId: The clicked item's ID
+    ///   - commandKey: Whether Command key was held
+    ///   - shiftKey: Whether Shift key was held
+    func handleClick(for itemId: UUID, commandKey: Bool, shiftKey: Bool) {
+        if commandKey {
+            // Cmd+Click: Toggle this item's selection without affecting others
+            toggleSelection(for: itemId)
+        } else if shiftKey {
+            // Shift+Click: Select range from anchor to clicked item
+            selectRange(to: itemId)
+        } else {
+            // Regular click: Clear selection, select only this item
+            selectedItems = [itemId]
+            lastSelectedItemID = itemId
         }
     }
     
@@ -622,5 +669,6 @@ class ListViewModel: ObservableObject {
     func exitSelectionMode() {
         isInSelectionMode = false
         selectedItems.removeAll()
+        lastSelectedItemID = nil
     }
 }
