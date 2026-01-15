@@ -764,8 +764,9 @@ private struct MacSidebarView: View {
                         .help(lastSyncTooltip)
 
                         Button(action: enterSelectionMode) {
-                            Label("Select", systemImage: "pencil")
+                            Label("Select", systemImage: "checklist")
                         }
+                        .help("Select Multiple Lists")
                         .accessibilityIdentifier("SelectListsButton")
                         .accessibilityHint("Enter selection mode to select multiple lists")
 
@@ -1008,10 +1009,10 @@ private struct MacListDetailView: View {
     @ViewBuilder
     private var selectionModeButton: some View {
         Button(action: { viewModel.enterSelectionMode() }) {
-            Image(systemName: "checkmark.circle")
+            Image(systemName: "checklist")
         }
         .buttonStyle(.plain)
-        .help("Select Items")
+        .help("Select Multiple Items")
         .accessibilityIdentifier("SelectItemsButton")
         .accessibilityLabel("Enter selection mode")
         .accessibilityHint("Enables multi-item selection for bulk operations")

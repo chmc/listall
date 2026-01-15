@@ -203,7 +203,7 @@ func testCmdFWithNoListSelected() {
 
 ---
 
-### Task 12.3: Improve Selection Mode Discoverability (CRITICAL)
+### Task 12.3: [COMPLETED] Improve Selection Mode Discoverability (CRITICAL)
 
 **TDD**: Write tests for selection mode visual indicators
 
@@ -252,6 +252,27 @@ func testSelectionCountDisplayed() {
 
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Update toolbar buttons and add selection count
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **Sidebar Selection Button** (line ~767):
+   - Changed icon from "pencil" to "checklist" for clear multi-select indication
+   - Added `.help("Select Multiple Lists")` tooltip
+
+2. **Detail View Selection Button** (line ~1012):
+   - Changed icon from "checkmark.circle" to "checklist" for consistency
+   - Updated tooltip from "Select Items" to "Select Multiple Items"
+
+3. **Selection Count Display** (line ~1026):
+   - Already exists and shows "\(count) selected" format
+   - Styled with `.font(.subheadline)` and `.foregroundColor(.secondary)`
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Updated icons and tooltips
+- `ListAllMacTests/ListAllMacTests.swift` - Updated tests to reflect new implementation
+
+**Test Results**: 17 tests in `SelectionModeDiscoverabilityTests` all passed
 
 ---
 
@@ -1016,11 +1037,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 2/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 3/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (66 completed, 14 remaining)
+**Total Tasks: 80** (67 completed, 13 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1036,7 +1057,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 **Phase 12 Status** (UX Polish - Agent Swarm Research):
 - Task 12.1: [COMPLETED] Implement Cmd+Click Multi-Select (CRITICAL)
 - Task 12.2: [COMPLETED] Fix Cmd+F Global Search Scope (CRITICAL)
-- Task 12.3: 🔴 Improve Selection Mode Discoverability (CRITICAL)
+- Task 12.3: [COMPLETED] Improve Selection Mode Discoverability (CRITICAL)
 - Task 12.4: 🔴 Redesign Filter UI to Native macOS Pattern (CRITICAL)
 - Task 12.5: 🟠 Add Proactive Feature Tips (IMPORTANT)
 - Task 12.6: 🟠 Add Sync Status Indicator in Toolbar (IMPORTANT)
