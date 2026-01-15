@@ -4,13 +4,16 @@ import CoreData
 import Combine
 
 class CloudKitService: ObservableObject {
+    /// Shared singleton instance for app-wide sync status observation
+    static let shared = CloudKitService()
+
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
     @Published var syncError: String?
     @Published var syncStatus: SyncStatus = .unknown
     @Published var syncProgress: Double = 0.0
     @Published var pendingOperations: Int = 0
-    
+
     private let container: CKContainer?
     /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
     private lazy var coreDataManager = CoreDataManager.shared

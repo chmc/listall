@@ -25,6 +25,9 @@ struct MacMainView: View {
     // MARK: - Proactive Feature Tips (Task 12.5)
     @ObservedObject private var tooltipManager = MacTooltipManager.shared
 
+    // MARK: - CloudKit Sync Status (Task 12.6)
+    @ObservedObject private var cloudKitService = CloudKitService.shared
+
     @State private var selectedList: List?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
@@ -67,6 +70,43 @@ struct MacMainView: View {
     // This includes .sheet() presentation - sheets queue but never display until app deactivates.
     // See: https://developer.apple.com/forums/thread/728132
     @State private var navigationPath = NavigationPath()
+
+    // MARK: - Sync Status Indicator (Task 12.6)
+
+    /// Sync button image with rotation animation on macOS 15+, fallback for older versions
+    @ViewBuilder
+    private var syncButtonImage: some View {
+        if #available(macOS 15.0, *) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .symbolEffect(.rotate, isActive: cloudKitService.isSyncing)
+        } else {
+            // Fallback for macOS 14: use rotationEffect with animation
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .rotationEffect(.degrees(cloudKitService.isSyncing ? 360 : 0))
+                .animation(
+                    cloudKitService.isSyncing
+                        ? .linear(duration: 1.0).repeatForever(autoreverses: false)
+                        : .default,
+                    value: cloudKitService.isSyncing
+                )
+        }
+    }
+
+    /// Tooltip text for sync status button in toolbar
+    /// Shows syncing state, last sync time, or error message
+    private var syncTooltipText: String {
+        if cloudKitService.isSyncing {
+            return "Syncing with iCloud..."
+        } else if let error = cloudKitService.syncError {
+            return "Sync error: \(error) - Click to retry"
+        } else if let lastSync = coreDataManager.lastSyncDate {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .short
+            return "Last synced \(formatter.localizedString(for: lastSync, relativeTo: Date())) - Click to sync"
+        } else {
+            return "Click to sync with iCloud"
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -147,6 +187,23 @@ struct MacMainView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 600)
+        // MARK: - Sync Status Indicator in Toolbar (Task 12.6)
+        // Prominent toolbar sync button with animation during sync
+        // Placed at NavigationSplitView level so it's always visible in main window toolbar
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button(action: {
+                    Task { await cloudKitService.sync() }
+                }) {
+                    syncButtonImage
+                }
+                .help(syncTooltipText)
+                .foregroundColor(cloudKitService.syncError != nil ? .red : .primary)
+                .disabled(cloudKitService.isSyncing)
+                .accessibilityIdentifier("SyncStatusButton")
+                .accessibilityLabel(cloudKitService.isSyncing ? "Syncing with iCloud" : "Sync with iCloud")
+            }
+        }
         // MARK: - Global Cmd+F Handler (Task 12.2)
         // Handles Cmd+F from ANY focus location (sidebar or detail view)
         // Posts notification to MacListDetailView to focus search field

@@ -524,7 +524,7 @@ func testTipDoesNotRepeat() {
 
 ---
 
-### Task 12.6: Add Sync Status Indicator in Toolbar (IMPORTANT)
+### Task 12.6: [COMPLETED] Add Sync Status Indicator in Toolbar (IMPORTANT)
 
 **TDD**: Write tests for sync status visibility and animation
 
@@ -573,6 +573,34 @@ func testSyncErrorShowsRedIndicator() {
 
 **Files to modify**:
 - `ListAllMac/Views/MacMainView.swift` - Add toolbar sync indicator
+
+**Completed** (January 15, 2026):
+
+**Implementation Summary**:
+1. **CloudKitService.swift - Shared Singleton**:
+   - Added `static let shared = CloudKitService()` for app-wide sync status observation
+
+2. **MacMainView.swift - CloudKitService Observer**:
+   - Added `@ObservedObject private var cloudKitService = CloudKitService.shared`
+   - Added `syncButtonImage` computed property with macOS 15+ availability check:
+     - macOS 15+: Uses `.symbolEffect(.rotate)` for native SF Symbol animation
+     - macOS 14: Uses `.rotationEffect` with `.animation(.repeatForever)` fallback
+   - Added `syncTooltipText` computed property for tooltip with sync state info
+
+3. **Toolbar Sync Button**:
+   - Placed at NavigationSplitView level for main window visibility
+   - Uses `arrow.triangle.2.circlepath` icon (standard sync icon)
+   - Animates during sync with rotating icon
+   - Shows tooltip with last sync time or error message
+   - Turns red when syncError is present
+   - Disabled during sync to prevent double-trigger
+   - Accessibility: identifier `SyncStatusButton`, labels for syncing/not syncing states
+
+**Files Modified**:
+- `ListAll/Services/CloudKitService.swift` - Added shared singleton
+- `ListAllMac/Views/MacMainView.swift` - Added toolbar sync indicator
+
+**Test Results**: All 25 SyncStatusIndicatorTests passed, all macOS tests passed
 
 ---
 
@@ -1105,11 +1133,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | In Progress | 5/13 |
+| Phase 12: UX Polish & Best Practices | In Progress | 6/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (69 completed, 11 remaining)
+**Total Tasks: 80** (70 completed, 10 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1128,7 +1156,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.3: [COMPLETED] Improve Selection Mode Discoverability (CRITICAL)
 - Task 12.4: [COMPLETED] Redesign Filter UI to Native macOS Pattern (CRITICAL)
 - Task 12.5: [COMPLETED] Add Proactive Feature Tips (IMPORTANT)
-- Task 12.6: 🟠 Add Sync Status Indicator in Toolbar (IMPORTANT)
+- Task 12.6: [COMPLETED] Add Sync Status Indicator in Toolbar (IMPORTANT)
 - Task 12.7: 🟠 Consistent Empty State Components (IMPORTANT)
 - Task 12.8: 🟠 Standardize Destructive Action Handling (IMPORTANT)
 - Task 12.9: 🟠 Make Settings Window Resizable (IMPORTANT)
