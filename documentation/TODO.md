@@ -1004,7 +1004,131 @@ func testSelectionCountDisplayed() {
 
 ---
 
-### Task 12.4: Add Proactive Feature Tips (IMPORTANT)
+### Task 12.4: Redesign Filter UI from iOS Popover to Native macOS Pattern (CRITICAL)
+
+**TDD**: Write tests for always-visible filter controls and keyboard shortcuts
+
+**Problem**: Current filter UI uses iOS-style popover pattern (click button → popover opens → select filter → popover closes). This violates macOS conventions and feels clumsy to users.
+
+**Agent Swarm Research Findings** (January 2026):
+- **None of 7 best-in-class macOS apps** (Finder, Mail, Notes, Reminders, Things 3, Bear, OmniFocus) use popovers for primary filtering
+- All use **always-visible controls**: sidebar sections, toolbar buttons, or segmented controls
+- Apple HIG explicitly discourages popovers for "frequently used filters"
+
+**Current implementation** (MacMainView.swift ~lines 1120-1132):
+```swift
+// iOS-ism: Button → Popover → Select → Dismiss
+Button(action: { showingOrganizationPopover.toggle() }) {
+    Image(systemName: "arrow.up.arrow.down")
+}
+.popover(isPresented: $showingOrganizationPopover) {
+    MacItemOrganizationView(viewModel: viewModel)
+}
+```
+
+**Problems**:
+1. Filter state hidden until clicked (no discoverability)
+2. Requires 2 clicks + animation wait to change filter
+3. No keyboard shortcuts for filters
+4. No View menu integration (macOS convention)
+5. Badge dismissal pattern is iOS-native, not macOS-native
+
+**Recommended Solution: Segmented Control + View Menu + Keyboard Shortcuts**
+
+**Phase 1: Toolbar Segmented Control**
+```swift
+// Replace popover button with segmented control
+Picker("Filter", selection: $viewModel.currentFilterOption) {
+    Text("All").tag(ItemFilterOption.all)
+    Text("Active").tag(ItemFilterOption.active)
+    Text("Done").tag(ItemFilterOption.completed)
+}
+.pickerStyle(.segmented)
+.frame(width: 200)
+```
+
+**Phase 2: View Menu Integration**
+```swift
+// In AppCommands.swift
+CommandMenu("View") {
+    Button("All Items") { viewModel.updateFilterOption(.all) }
+        .keyboardShortcut("1", modifiers: .command)
+    Button("Active Only") { viewModel.updateFilterOption(.active) }
+        .keyboardShortcut("2", modifiers: .command)
+    Button("Completed Only") { viewModel.updateFilterOption(.completed) }
+        .keyboardShortcut("3", modifiers: .command)
+    Divider()
+    // Sort options submenu
+}
+```
+
+**Phase 3 (Optional): Sidebar Smart Lists**
+```
+┌─────────────────┐
+│ MY LISTS        │
+│ • Shopping      │
+│ • Work Tasks    │
+│                 │
+│ SMART FILTERS   │
+│ ⚙ All Active    │
+│ ⚙ Completed     │
+│ ⚙ Has Images    │
+└─────────────────┘
+```
+
+**Best-in-class app patterns analyzed**:
+| App | Filter Pattern |
+|-----|----------------|
+| Finder | Sidebar Smart Folders + Search tokens |
+| Mail | Toolbar Focus button (changes color when active) |
+| Reminders | Sidebar Smart Lists |
+| Things 3 | Sidebar + Type-anywhere Quick Find |
+| Bear | Sidebar tag hierarchy with pinning |
+| OmniFocus | Sidebar Perspectives (saved filters) |
+
+**Implementation priority**:
+1. ⭐ Segmented control in toolbar (simplest, high impact)
+2. ⭐ View menu with Cmd+1/2/3 shortcuts (macOS convention)
+3. 🔄 Keep sort options in popover (less frequent)
+4. 🔮 Sidebar Smart Lists (future enhancement)
+
+**Test criteria**:
+```swift
+func testSegmentedControlChangesFilter() {
+    // Click "Active" segment
+    // Verify filter changes immediately (no popover)
+}
+
+func testKeyboardShortcutChangesFilter() {
+    // Press Cmd+2
+    // Verify filter changes to Active
+}
+
+func testViewMenuShowsFilterOptions() {
+    // Open View menu
+    // Verify All Items, Active Only, Completed Only present
+    // Verify keyboard shortcuts shown
+}
+
+func testCurrentFilterVisibleInToolbar() {
+    // Set filter to Active
+    // Verify "Active" segment is selected (visible without clicking)
+}
+```
+
+**Files to modify**:
+- `ListAllMac/Views/MacMainView.swift` - Replace popover with segmented control
+- `ListAllMac/Commands/AppCommands.swift` - Add View menu with filter options
+- `ListAllMac/Views/Components/MacItemOrganizationView.swift` - Keep for sort options only
+
+**Research documents**:
+- Agent: Apple Development Researcher - macOS filter patterns research
+- Agent: Explore - Current implementation analysis
+- Agent: Critical Reviewer - iOS-ism critique and alternatives ranking
+
+---
+
+### Task 12.5: Add Proactive Feature Tips (IMPORTANT)
 
 **TDD**: Write tests for contextual tip display
 
@@ -1060,7 +1184,7 @@ func testTipDoesNotRepeat() {
 
 ---
 
-### Task 12.5: Add Sync Status Indicator in Toolbar (IMPORTANT)
+### Task 12.6: Add Sync Status Indicator in Toolbar (IMPORTANT)
 
 **TDD**: Write tests for sync status visibility and animation
 
@@ -1112,7 +1236,7 @@ func testSyncErrorShowsRedIndicator() {
 
 ---
 
-### Task 12.6: Consistent Empty State Components (IMPORTANT)
+### Task 12.7: Consistent Empty State Components (IMPORTANT)
 
 **TDD**: Write tests for empty state consistency
 
@@ -1159,7 +1283,7 @@ func testEmptySearchShowsSearchEmptyState() {
 
 ---
 
-### Task 12.7: Standardize Destructive Action Handling (IMPORTANT)
+### Task 12.8: Standardize Destructive Action Handling (IMPORTANT)
 
 **TDD**: Write tests for consistent undo/confirmation behavior
 
@@ -1218,7 +1342,7 @@ func testUndoRestoresItems() {
 
 ---
 
-### Task 12.8: Make Settings Window Resizable (IMPORTANT)
+### Task 12.9: Make Settings Window Resizable (IMPORTANT)
 
 **TDD**: Write tests for settings window size constraints
 
@@ -1255,7 +1379,7 @@ func testSettingsWindowCanExpand() {
 
 ---
 
-### Task 12.9: Add Quick Entry Window (MINOR)
+### Task 12.10: Add Quick Entry Window (MINOR)
 
 **TDD**: Write tests for Quick Entry functionality
 
@@ -1307,7 +1431,7 @@ func testQuickEntryDismissesWithEscape() {
 
 ---
 
-### Task 12.10: Add Keyboard Reordering (MINOR)
+### Task 12.11: Add Keyboard Reordering (MINOR)
 
 **TDD**: Write tests for keyboard-based item reordering
 
@@ -1347,7 +1471,7 @@ func testReorderOnlyWorksWithOrderSort() {
 
 ---
 
-### Task 12.11: Add Clear All Filters Shortcut (MINOR)
+### Task 12.12: Add Clear All Filters Shortcut (MINOR)
 
 **TDD**: Write tests for filter clearing
 
@@ -1386,7 +1510,7 @@ func testCmdShiftBackspaceClearsFilters() {
 
 ---
 
-### Task 12.12: Add Image Gallery Size Presets (MINOR)
+### Task 12.13: Add Image Gallery Size Presets (MINOR)
 
 **TDD**: Write tests for thumbnail size presets
 
@@ -1641,11 +1765,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 9: CI/CD | Completed | 7/7 |
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
-| Phase 12: UX Polish & Best Practices | Not Started | 0/12 |
+| Phase 12: UX Polish & Best Practices | Not Started | 0/13 |
 | Phase 13: App Store Submission | Not Started | 0/1 |
 | Phase 14: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 79** (64 completed, 15 remaining)
+**Total Tasks: 80** (64 completed, 16 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -1662,15 +1786,16 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.1: 🔴 Implement Cmd+Click Multi-Select (CRITICAL)
 - Task 12.2: 🔴 Fix Cmd+F Global Search Scope (CRITICAL)
 - Task 12.3: 🔴 Improve Selection Mode Discoverability (CRITICAL)
-- Task 12.4: 🟠 Add Proactive Feature Tips (IMPORTANT)
-- Task 12.5: 🟠 Add Sync Status Indicator in Toolbar (IMPORTANT)
-- Task 12.6: 🟠 Consistent Empty State Components (IMPORTANT)
-- Task 12.7: 🟠 Standardize Destructive Action Handling (IMPORTANT)
-- Task 12.8: 🟠 Make Settings Window Resizable (IMPORTANT)
-- Task 12.9: 🟡 Add Quick Entry Window (MINOR)
-- Task 12.10: 🟡 Add Keyboard Reordering (MINOR)
-- Task 12.11: 🟡 Add Clear All Filters Shortcut (MINOR)
-- Task 12.12: 🟡 Add Image Gallery Size Presets (MINOR)
+- Task 12.4: 🔴 Redesign Filter UI to Native macOS Pattern (CRITICAL)
+- Task 12.5: 🟠 Add Proactive Feature Tips (IMPORTANT)
+- Task 12.6: 🟠 Add Sync Status Indicator in Toolbar (IMPORTANT)
+- Task 12.7: 🟠 Consistent Empty State Components (IMPORTANT)
+- Task 12.8: 🟠 Standardize Destructive Action Handling (IMPORTANT)
+- Task 12.9: 🟠 Make Settings Window Resizable (IMPORTANT)
+- Task 12.10: 🟡 Add Quick Entry Window (MINOR)
+- Task 12.11: 🟡 Add Keyboard Reordering (MINOR)
+- Task 12.12: 🟡 Add Clear All Filters Shortcut (MINOR)
+- Task 12.13: 🟡 Add Image Gallery Size Presets (MINOR)
 
 **Phase 13 Status**:
 - Task 13.1: Submit to App Store
