@@ -1112,11 +1112,6 @@ private struct MacListDetailView: View {
     @ViewBuilder
     private var headerView: some View {
         HStack {
-            Text(displayName)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .accessibilityAddTraits(.isHeader)
-
             Spacer()
 
             if viewModel.isInSelectionMode {
