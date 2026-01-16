@@ -1290,6 +1290,11 @@ private struct MacListDetailView: View {
             .frame(width: 180)
             .help("Filter items by status (Cmd+1/2/3)")
             .accessibilityIdentifier("FilterSegmentedControl")
+            .onChange(of: viewModel.currentFilterOption) { _, newValue in
+                // Sync showCrossedOutItems state when filter changes via Picker
+                // This ensures "All" filter properly shows all items
+                viewModel.updateFilterOption(newValue)
+            }
 
             // Sort button - keeps popover for less-frequent sort options
             Button(action: { showingOrganizationPopover.toggle() }) {
