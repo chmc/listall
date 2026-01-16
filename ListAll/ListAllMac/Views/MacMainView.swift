@@ -1287,6 +1287,7 @@ private struct MacListDetailView: View {
                 Text("Done").tag(ItemFilterOption.completed)
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .frame(width: 180)
             .help("Filter items by status (Cmd+1/2/3)")
             .accessibilityIdentifier("FilterSegmentedControl")
