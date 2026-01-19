@@ -272,6 +272,12 @@ struct MacMainView: View {
                 stopSyncPolling()
             }
         }
+        .onChange(of: showingArchivedLists) { _, newValue in
+            if newValue {
+                // Load archived lists when switching to archived view
+                dataManager.loadArchivedData()
+            }
+        }
         .onAppear {
             startSyncPolling()
             // Start Handoff activity for browsing lists (if no list is selected)
@@ -512,10 +518,12 @@ private struct MacSidebarView: View {
     @FocusState private var focusedListID: UUID?
 
     // Compute lists directly from @Published source for proper reactivity
+    // Uses dataManager.archivedLists (populated via loadArchivedData()) for archived lists
+    // Uses dataManager.lists (populated via loadData()) for active lists
     private var displayedLists: [List] {
         if showingArchivedLists {
-            return dataManager.lists.filter { $0.isArchived }
-                .sorted { $0.orderNumber < $1.orderNumber }
+            // Use cached archivedLists property - sorted by modifiedAt descending (most recent first)
+            return dataManager.archivedLists
         } else {
             return dataManager.lists.filter { !$0.isArchived }
                 .sorted { $0.orderNumber < $1.orderNumber }

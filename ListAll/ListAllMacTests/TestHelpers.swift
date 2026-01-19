@@ -214,6 +214,7 @@ class TestCoreDataManager: ObservableObject, CoreDataManaging {
 /// Conforms to DataManaging protocol for dependency injection
 class TestDataManager: ObservableObject, DataManaging {
     @Published var lists: [ListModel] = []
+    @Published var archivedLists: [ListModel] = []
     let coreDataManager: TestCoreDataManager  // Made internal for archive test access
 
     /// Publisher for observing list changes
@@ -512,6 +513,11 @@ class TestDataManager: ObservableObject, DataManaging {
         }
     }
 
+    /// Loads archived lists into the @Published archivedLists property for SwiftUI observation.
+    func loadArchivedData() {
+        archivedLists = loadArchivedLists()
+    }
+
     func restoreList(withId id: UUID) {
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
@@ -523,6 +529,7 @@ class TestDataManager: ObservableObject, DataManaging {
                 listEntity.modifiedAt = Date()
                 saveData()
                 loadData()
+                loadArchivedData()
             }
         } catch {
             print("Failed to restore list: \(error)")
@@ -549,6 +556,7 @@ class TestDataManager: ObservableObject, DataManaging {
                 }
                 coreDataManager.viewContext.delete(listEntity)
                 saveData()
+                loadArchivedData()
             }
         } catch {
             print("Failed to permanently delete list: \(error)")

@@ -818,6 +818,7 @@ class DataManager: ObservableObject {
     static let shared = DataManager()
 
     @Published var lists: [List] = []
+    @Published var archivedLists: [List] = []
     private let coreDataManager = CoreDataManager.shared
 
     private init() {
@@ -853,6 +854,7 @@ class DataManager: ObservableObject {
 
         // Clear cached data
         shared.lists = []
+        shared.archivedLists = []
 
         // Reset underlying Core Data manager
         CoreDataManager.resetForTesting()
@@ -1055,7 +1057,7 @@ class DataManager: ObservableObject {
         // Archive the list instead of permanently deleting it
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-        
+
         do {
             let results = try coreDataManager.viewContext.fetch(request)
             if let listEntity = results.first {
@@ -1064,6 +1066,8 @@ class DataManager: ObservableObject {
                 saveData()
                 // Remove from local array (archived lists are filtered out)
                 lists.removeAll { $0.id == id }
+                // Refresh archived lists cache to include the newly archived list
+                loadArchivedData()
             }
         } catch {
             print("Failed to archive list: \(error)")
@@ -1075,7 +1079,7 @@ class DataManager: ObservableObject {
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "isArchived == YES")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.modifiedAt, ascending: false)]
-        
+
         do {
             let listEntities = try coreDataManager.viewContext.fetch(request)
             return listEntities.map { $0.toList() }
@@ -1084,20 +1088,42 @@ class DataManager: ObservableObject {
             return []
         }
     }
-    
+
+    /// Loads archived lists into the @Published archivedLists property for SwiftUI observation.
+    /// Call this when toggling to archived lists view or after restore/delete operations.
+    func loadArchivedData() {
+        let fetchedArchived = loadArchivedLists()
+
+        let updateArchivedLists = { [self] in
+            self.objectWillChange.send()
+            self.archivedLists = fetchedArchived
+            print("📦 DataManager: Updated archivedLists array with \(fetchedArchived.count) lists")
+        }
+
+        if Thread.isMainThread {
+            updateArchivedLists()
+        } else {
+            DispatchQueue.main.sync {
+                updateArchivedLists()
+            }
+        }
+    }
+
     func restoreList(withId id: UUID) {
         // Restore an archived list
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-        
+
         do {
             let results = try coreDataManager.viewContext.fetch(request)
             if let listEntity = results.first {
                 listEntity.isArchived = false
                 listEntity.modifiedAt = Date()
                 saveData()
-                // Reload data to include the restored list
+                // Reload data to include the restored list in active lists
                 loadData()
+                // Refresh archived lists cache to remove the restored list
+                loadArchivedData()
             }
         } catch {
             print("Failed to restore list: \(error)")
@@ -1108,7 +1134,7 @@ class DataManager: ObservableObject {
         // Permanently delete a list and all its associated items
         let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         listRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-        
+
         do {
             let results = try coreDataManager.viewContext.fetch(listRequest)
             if let listEntity = results.first {
@@ -1128,6 +1154,8 @@ class DataManager: ObservableObject {
                 // Delete the list itself
                 coreDataManager.viewContext.delete(listEntity)
                 saveData()
+                // Refresh archived lists cache to remove the deleted list
+                loadArchivedData()
             }
         } catch {
             print("Failed to permanently delete list: \(error)")

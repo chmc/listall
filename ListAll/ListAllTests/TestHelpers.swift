@@ -110,13 +110,14 @@ class TestCoreDataManager: ObservableObject {
 /// Test-specific Data Manager that uses isolated Core Data
 class TestDataManager: ObservableObject {
     @Published var lists: [List] = []
+    @Published var archivedLists: [List] = []
     let coreDataManager: TestCoreDataManager  // Made internal for archive test access
-    
+
     init(coreDataManager: TestCoreDataManager) {
         self.coreDataManager = coreDataManager
         loadData()
     }
-    
+
     func loadData() {
         // Load from Core Data
         let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
@@ -135,7 +136,26 @@ class TestDataManager: ObservableObject {
     func saveData() {
         coreDataManager.save()
     }
-    
+
+    func loadArchivedLists() -> [List] {
+        let request: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "isArchived == YES")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \ListEntity.modifiedAt, ascending: false)]
+
+        do {
+            let listEntities = try coreDataManager.viewContext.fetch(request)
+            return listEntities.map { $0.toList() }
+        } catch {
+            print("Failed to fetch archived lists: \(error)")
+            return []
+        }
+    }
+
+    /// Loads archived lists into the @Published archivedLists property for SwiftUI observation.
+    func loadArchivedData() {
+        archivedLists = loadArchivedLists()
+    }
+
     // MARK: - List Operations
     
     func addList(_ list: List) {
