@@ -304,6 +304,11 @@ struct MacMainView: View {
             }
         }
         .onChange(of: showingArchivedLists) { _, newValue in
+            // Clear single-list selection when switching between active/archived views
+            // to prevent showing archived list UI in active lists view (or vice versa)
+            // Note: Multi-select state (selectedLists, isInSelectionMode) is cleared in MacSidebarView
+            selectedList = nil
+
             if newValue {
                 // Load archived lists when switching to archived view
                 dataManager.loadArchivedData()
@@ -1000,6 +1005,9 @@ private struct MacSidebarView: View {
                     // Refresh data to update UI
                     dataManager.loadArchivedData()
                     dataManager.loadData()
+                    // Clear selection - the restored list moves to active lists
+                    // and the stale struct copy has isArchived = true
+                    selectedList = nil
                 }
                 listToRestore = nil
             }
@@ -1020,6 +1028,14 @@ private struct MacSidebarView: View {
             // Trigger restore confirmation
             listToRestore = list
             showingRestoreConfirmation = true
+        }
+        // MARK: - Tab Switch Selection Clearing (Task 13.4)
+        // Clear multi-select state when switching between active/archived views
+        .onChange(of: showingArchivedLists) { _, _ in
+            // Exit selection mode and clear selections when switching tabs
+            // This prevents stale multi-select state from persisting
+            selectedLists.removeAll()
+            isInSelectionMode = false
         }
     }
 
@@ -1194,10 +1210,18 @@ private struct MacListDetailView: View {
 
     /// Check if current list is archived (read-only mode)
     /// When true, all editing functionality is disabled - only viewing is allowed
+    /// IMPORTANT: Must check fresh data from dataManager, not stale `list` parameter
     private var isCurrentListArchived: Bool {
-        // Check the original list's isArchived flag
-        // (archived lists come from dataManager.archivedLists, not dataManager.lists)
-        list.isArchived
+        // Check currentList first (fresh data from dataManager.lists)
+        if let current = currentList {
+            return current.isArchived
+        }
+        // If not in active lists, check archivedLists (for when viewing archived list)
+        if let archived = dataManager.archivedLists.first(where: { $0.id == list.id }) {
+            return archived.isArchived
+        }
+        // Fallback to original list (shouldn't normally reach here)
+        return list.isArchived
     }
 
     /// Whether any filter is active (non-default filter, sort, or search)

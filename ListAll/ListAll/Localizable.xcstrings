@@ -1064,6 +1064,9 @@
         }
       }
     },
+    "All items in this archived list were completed." : {
+
+    },
     "And %lld more..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2544,6 +2547,9 @@
     "Do you want to restore this list to your active lists?" : {
 
     },
+    "Do you want to restore this list?" : {
+
+    },
     "Done" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2774,6 +2780,9 @@
           }
         }
       }
+    },
+    "Empty Archived List" : {
+
     },
     "Enable Face ID or Touch ID in Settings" : {
       "extractionState" : "manual",
@@ -4443,6 +4452,9 @@
     "Move Items..." : {
 
     },
+    "Moves list back to active lists" : {
+
+    },
     "Name" : {
 
     },
@@ -5371,6 +5383,9 @@
           }
         }
       }
+    },
+    "Restore this archived list" : {
+
     },
     "Restores all %lld deleted items" : {
 
@@ -6482,6 +6497,9 @@
         }
       }
     },
+    "This archived list has no items. Restore it to add items." : {
+
+    },
     "This item has been modified on multiple devices. Choose how to resolve the conflict." : {
       "comment" : "A description below the header that explains the purpose of the view.",
       "extractionState" : "manual",
@@ -6500,9 +6518,6 @@
           }
         }
       }
-    },
-    "This list is archived and read-only" : {
-
     },
     "This list was empty when archived" : {
       "extractionState" : "manual",

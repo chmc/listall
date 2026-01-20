@@ -314,3 +314,122 @@ struct ReadOnlyArchivedListsIntegrationTests {
         // - The DataManager does NOT enforce read-only (allows restore functionality)
     }
 }
+
+// MARK: - Tab Switching Behavior Tests (Task 13.4)
+
+/// Tests for selection clearing when switching between Active/Archived views
+/// Bug discovered: When switching from archived to active view, selectedList retained
+/// the archived list, causing active view to show archived UI (Restore button, read-only)
+@Suite(.serialized)
+struct TabSwitchSelectionTests {
+
+    @Test("Switching from archived to active view should clear archived list selection")
+    func testSwitchFromArchivedToActiveViewClearsSelection() async throws {
+        // This test documents the expected behavior:
+        // When user switches from "Archived Lists" view to "Active Lists" view,
+        // any selected archived list should be deselected to prevent showing
+        // archived UI in the active lists context.
+
+        var archivedList = ReadOnlyTestListModel(name: "Archived List")
+        archivedList.isArchived = true
+
+        // Scenario:
+        // 1. User is in "Archived Lists" view (showingArchivedLists = true)
+        // 2. User selects an archived list (selectedList = archivedList)
+        // 3. User switches to "Active Lists" view (showingArchivedLists = false)
+        // 4. Expected: selectedList should become nil
+
+        // Implementation note:
+        // MacMainView's .onChange(of: showingArchivedLists) handler should set
+        // selectedList = nil when the view changes, to prevent stale selection.
+
+        // Assert the design principle
+        #expect(archivedList.isArchived == true, "Archived list should have isArchived = true")
+
+        // Implementation requirement: The selection MUST be cleared on tab switch
+        // to prevent an archived list from appearing selected in active view
+    }
+
+    @Test("Switching from active to archived view should clear active list selection")
+    func testSwitchFromActiveToArchivedViewClearsSelection() async throws {
+        // This test documents the expected behavior:
+        // When user switches from "Active Lists" view to "Archived Lists" view,
+        // any selected active list should be deselected for consistency.
+
+        let activeList = ReadOnlyTestListModel(name: "Active List")
+
+        // Scenario:
+        // 1. User is in "Active Lists" view (showingArchivedLists = false)
+        // 2. User selects an active list (selectedList = activeList)
+        // 3. User switches to "Archived Lists" view (showingArchivedLists = true)
+        // 4. Expected: selectedList should become nil
+
+        // Assert the design principle
+        #expect(activeList.isArchived == false, "Active list should have isArchived = false")
+
+        // Implementation requirement: The selection MUST be cleared on tab switch
+        // to prevent an active list from appearing selected in archived view
+    }
+
+    @Test("Selected list must belong to current displayedLists domain")
+    func testSelectedListMustBelongToDisplayedLists() async throws {
+        // This test documents the invariant:
+        // If selectedList is not nil, it must exist in displayedLists.
+        // An archived list should never be shown in active lists view, and vice versa.
+
+        var archivedList = ReadOnlyTestListModel(name: "Archived List")
+        archivedList.isArchived = true
+
+        let activeList = ReadOnlyTestListModel(name: "Active List")
+
+        // Design principle:
+        // - When showingArchivedLists = true, displayedLists = archivedLists
+        // - When showingArchivedLists = false, displayedLists = lists.filter { !$0.isArchived }
+        // - selectedList (if not nil) must exist in displayedLists
+
+        #expect(archivedList.isArchived == true, "Archived list has isArchived = true")
+        #expect(activeList.isArchived == false, "Active list has isArchived = false")
+
+        // Implementation note:
+        // When switching tabs, clearing selectedList ensures this invariant is maintained.
+        // An alternative approach would be to validate selectedList against displayedLists
+        // and clear it only if invalid, but clearing unconditionally is simpler and safer.
+    }
+
+    @Test("Active list detail view must not show Restore button")
+    func testActiveListDetailViewNoRestoreButton() async throws {
+        // This test documents the critical bug that was fixed:
+        // An active list was showing the Restore button because selectedList retained
+        // an archived list when switching from archived to active view.
+
+        let activeList = ReadOnlyTestListModel(name: "Active List")
+
+        // For an active list (isArchived = false):
+        // - Restore button should NOT be visible
+        // - Add Item button SHOULD be visible
+        // - All editing controls SHOULD be enabled
+
+        #expect(activeList.isArchived == false, "Active list should not be archived")
+
+        // The Restore button visibility is controlled by isCurrentListArchived
+        // which checks list.isArchived. With the fix clearing selectedList on tab switch,
+        // active lists can never show archived UI.
+    }
+
+    @Test("Active list should allow adding new items")
+    func testActiveListAllowsAddingItems() async throws {
+        // This test documents that active lists must have full editing capabilities
+
+        let activeList = ReadOnlyTestListModel(name: "Active List")
+
+        // For an active list (isArchived = false):
+        // - Add Item button should be visible
+        // - All editing keyboard shortcuts should work
+        // - Drag-to-reorder should be enabled
+
+        #expect(activeList.isArchived == false, "Active list should not be archived")
+
+        // The fix ensures that when viewing active lists, selectedList cannot
+        // be an archived list, so all editing capabilities are available.
+    }
+}

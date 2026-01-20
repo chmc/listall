@@ -19,7 +19,9 @@ typealias RestoreTestListModel = ListAll.List
 
 /// Tests for macOS restore archived lists functionality
 /// Verifies that archived lists can be properly restored to active lists
+/// @MainActor required because TestMainViewModel accesses Core Data viewContext (main-thread only)
 @Suite(.serialized)
+@MainActor
 struct RestoreArchivedListsTests {
 
     // MARK: - Test 1: MainViewModel.restoreList() moves list from archived to active
@@ -250,7 +252,9 @@ struct RestoreArchivedListsTests {
 
 // MARK: - DataManager Level Tests
 
+/// @MainActor required because tests access Core Data viewContext (main-thread only)
 @Suite(.serialized)
+@MainActor
 struct RestoreArchivedListsDataManagerTests {
 
     @Test("TestDataManager.restoreList(withId:) sets isArchived to false in Core Data")
@@ -349,7 +353,9 @@ struct RestoreArchivedListsDataManagerTests {
 
 // MARK: - Core Data Manager Level Tests (Direct Protocol Tests)
 
+/// @MainActor required because tests access Core Data viewContext (main-thread only)
 @Suite(.serialized)
+@MainActor
 struct RestoreArchivedListsCoreDataTests {
 
     @Test("Archived list is excluded from getLists() predicate")
@@ -445,7 +451,9 @@ struct RestoreArchivedListsCoreDataTests {
 /// Tests for Task 13.2: Make Archived Lists Read-Only
 /// Verifies that archived lists behave as read-only in macOS UI
 /// These tests verify the LOGIC that will drive UI state, not the UI rendering itself
+/// @MainActor required because tests access Core Data viewContext (main-thread only)
 @Suite(.serialized)
+@MainActor
 struct ArchivedListsReadOnlyTests {
 
     // MARK: - Test 1: isArchived Property Detection

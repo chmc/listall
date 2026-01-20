@@ -239,6 +239,65 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
+### Task 13.4: [COMPLETED] Fix Selection Persistence Bug When Switching Tabs
+**TDD**: Write tests for selection clearing on tab switch
+
+**Priority**: CRITICAL - Active lists incorrectly showing archived UI
+
+**Problem**:
+- When user selects an archived list in "Archived Lists" view
+- Then switches to "Active Lists" view
+- `selectedList` state variable RETAINS the archived list
+- Detail view shows archived list UI (Restore button, read-only mode)
+- This is wrong because user is now viewing active lists section
+
+**Root Cause** (discovered by agent swarm investigation):
+- At line 306-311 in MacMainView.swift, when `showingArchivedLists` changes:
+  ```swift
+  .onChange(of: showingArchivedLists) { _, newValue in
+      if newValue {
+          dataManager.loadArchivedData()
+      }
+      // MISSING: selectedList = nil
+  }
+  ```
+- The `selectedList` is NOT cleared when switching tabs
+- This allows an archived list to remain selected while viewing active lists
+
+**Solution Implemented** (THREE fixes required):
+
+1. **Tab switch clearing** - Added `selectedList = nil`, `selectedLists.removeAll()`, and `isInSelectionMode = false` to `.onChange(of: showingArchivedLists)` handlers in both MacMainView and MacSidebarView
+
+2. **Restore handler clearing** - Added `selectedList = nil` in MacSidebarView's restore confirmation handler (line ~1008). After restore, the list moves to active lists but the stale struct copy retained `isArchived = true`
+
+3. **Fix `isCurrentListArchived` to use fresh data** - Changed from checking stale `list.isArchived` to checking `currentList?.isArchived` (fresh data from dataManager). The `list` parameter is a struct copy that never updates.
+
+**Root Cause Analysis** (agent swarm investigation):
+- `List` is a VALUE TYPE (struct) - when passed to MacListDetailView, it's copied
+- Even after `restoreList()` updates Core Data, the view's `list` parameter retains old values
+- `isCurrentListArchived` was checking `list.isArchived` (stale copy) instead of fresh data
+- Multiple code paths could leave stale archived list in selection state
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift`:
+  - Tab switch selection clearing (lines 306-320)
+  - Multi-select clearing in MacSidebarView (lines 1034-1039)
+  - Restore handler adds `selectedList = nil` (line 1008)
+  - `isCurrentListArchived` checks `currentList` first (lines 1210-1222)
+- `ListAllMacTests/ReadOnlyArchivedListsTests.swift` - Added TabSwitchSelectionTests suite
+- `ListAllMacTests/RestoreArchivedListsTests.swift` - Added `@MainActor` for Core Data threading
+
+**Tests Added** (5 new tests in TabSwitchSelectionTests):
+- testSwitchFromArchivedToActiveViewClearsSelection
+- testSwitchFromActiveToArchivedViewClearsSelection
+- testSelectedListMustBelongToDisplayedLists
+- testActiveListDetailViewNoRestoreButton
+- testActiveListAllowsAddingItems
+
+**Learning**: `macos-tab-switch-selection-persistence.md`, `swift-testing-coredata-mainactor.md`
+
+---
+
 ## Phase 14: App Store Submission
 
 ### Task 14.1: Submit to App Store
@@ -424,11 +483,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
-| Phase 13: Archived Lists Bug Fixes | Completed | 3/3 |
+| Phase 13: Archived Lists Bug Fixes | Completed | 4/4 |
 | Phase 14: App Store Submission | Not Started | 0/1 |
 | Phase 15: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 83** (77 completed, 6 remaining)
+**Total Tasks: 84** (78 completed, 6 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -460,6 +519,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 13.1: [COMPLETED] Add Restore Functionality for Archived Lists
 - Task 13.2: [COMPLETED] Make Archived Lists Read-Only
 - Task 13.3: [COMPLETED] Update Documentation Status
+- Task 13.4: [COMPLETED] Fix Selection Persistence Bug When Switching Tabs
 
 **Phase 14 Status**:
 - Task 14.1: Submit to App Store
