@@ -47,8 +47,8 @@ Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.
 
 | Agent | Use For | Skills |
 |-------|---------|--------|
-| `apple-dev` | iOS/watchOS implementation | swift-swiftui, fastlane, xctest |
-| `apple-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync |
+| `apple-dev-expert` | iOS/watchOS implementation, UX | swift-swiftui, fastlane, xctest, apple-hig, apple-ux-patterns |
+| `apple-dev-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync |
 | `critic` | Review before implementation | code-review |
 | `integration-specialist` | Sync/data flow issues | coredata-sync, watch-connectivity |
 | `pipeline-specialist` | CI/CD failures | github-actions, fastlane |

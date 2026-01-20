@@ -30,6 +30,8 @@ Quick reference for skill selection. Scan triggers to find relevant skills, then
 | `github-actions` | CI failures | always() artifacts, timeout-minutes | no timeout, success-only artifacts |
 | `bash-scripting` | Shell scripts | set -euo pipefail, quoted vars | unquoted vars, missing error handling |
 | `test-isolation` | Permission dialogs | TestHelpers factory methods | direct ViewModel() instantiation |
+| `apple-hig` | UI design, platform patterns | semantic colors, SF Symbols, 44pt targets | hamburger menus, hard-coded colors |
+| `apple-ux-patterns` | Interactions, state, feedback | loading states, haptics, undo | no loading feedback, modal for success |
 
 ---
 
@@ -437,3 +439,85 @@ CODE_SIGNING_REQUIRED=NO
 - Direct ViewModel instantiation
 - Use of `.shared` singletons
 - Missing XCTSkipIf for system resources
+
+---
+
+## apple-hig
+
+**Path**: `.claude/skills/apple-hig/SKILL.md`
+
+**Triggers**:
+- Designing or reviewing UI
+- Implementing navigation patterns
+- Choosing controls and widgets
+- Accessibility compliance
+
+**Symptoms Addressed**:
+- Non-native feeling UI
+- Platform-inappropriate controls
+- Accessibility failures
+- Dark Mode issues
+
+**Patterns**:
+- Tab bars for iOS top-level navigation
+- Sidebars for iPadOS/macOS
+- Semantic colors (adapt to Dark Mode)
+- SF Symbols with weight matching
+- 44×44pt minimum touch targets
+- Dynamic Type support
+
+**Platform Controls**:
+| Platform | Use | Avoid |
+|----------|-----|-------|
+| iOS | Switches, Steppers | Checkboxes, Radio buttons |
+| macOS | Checkboxes, Radio buttons | iOS Switches |
+
+**Antipatterns**:
+- Hamburger menus on iOS
+- Hard-coded RGB colors
+- Fixed font sizes
+- Touch targets <44pt
+- Platform-inappropriate controls
+
+---
+
+## apple-ux-patterns
+
+**Path**: `.claude/skills/apple-ux-patterns/SKILL.md`
+
+**Triggers**:
+- Implementing loading states
+- Handling errors and empty states
+- Adding haptic feedback
+- Designing confirmation flows
+- Form and input design
+
+**Symptoms Addressed**:
+- No feedback during operations
+- Confusing error messages
+- Missing undo/confirmation
+- Jarring animations
+
+**Patterns**:
+- Loading indicator for >0.5s operations
+- Skeleton views with `.redacted()`
+- Inline validation ("reward early, punish late")
+- Haptics: impact/selection/notification
+- Undo over confirmation when possible
+- Animations <500ms, respect Reduce Motion
+
+**State Timing**:
+| Duration | Feedback |
+|----------|----------|
+| <0.5s | None |
+| 0.5-2s | Activity indicator |
+| 2-10s | Indicator + text |
+| >10s | Progress view |
+
+**Antipatterns**:
+- Blank screens during loading
+- Modal alerts for routine success
+- Haptics on every tap
+- Animations >500ms
+- Ignoring Reduce Motion
+- Permissions on first launch
