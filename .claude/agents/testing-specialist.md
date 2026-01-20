@@ -400,6 +400,40 @@ func testAddToDatabase() {
 }
 ```
 
+### Test Isolation (macOS)
+
+Direct instantiation of production classes that access system resources:
+```swift
+// BAD: Triggers App Groups permission dialog
+func testExportViewModel() {
+    let vm = ExportViewModel()  // TRIGGERS SYSTEM ACCESS
+    XCTAssertFalse(vm.isExporting)
+}
+
+// GOOD: Use TestHelpers for isolated instantiation
+func testExportViewModel() {
+    let vm = TestHelpers.createTestExportViewModel()  // No system access
+    XCTAssertFalse(vm.isExporting)
+}
+```
+
+Missing skip conditions for integration tests:
+```swift
+// BAD: Will trigger permission dialogs on unsigned builds
+func testCloudKitService() {
+    let service = CloudKitService()
+    XCTAssertNotNil(service)
+}
+
+// GOOD: Skip when App Groups unavailable
+func testCloudKitService() throws {
+    try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
+                  "Requires signed build with App Groups")
+    let service = CloudKitService()
+    XCTAssertNotNil(service)
+}
+```
+
 ### UI Testing
 
 Using sleep() for synchronization:
@@ -544,6 +578,63 @@ Common causes and solutions:
 - Symptom: UI tests fail to find elements
 - Cause: Animations not completed
 - Fix: Disable animations in test mode, increase timeouts
+
+## macOS Test Isolation (CRITICAL)
+
+**Tests MUST be isolated from system APIs to prevent permission dialogs.**
+
+### Problem
+Direct instantiation of production classes triggers system resource access:
+```swift
+// BAD - triggers permission dialogs
+let vm = ExportViewModel()
+// Chain: ExportViewModel → ExportService → DataRepository → CoreDataManager.shared
+//        → App Groups access → PERMISSION DIALOG
+```
+
+### Solution: Use TestHelpers
+
+Always use `TestHelpers` factory methods instead of direct instantiation:
+
+```swift
+// GOOD - uses isolated dependencies
+let vm = TestHelpers.createTestExportViewModel()
+let dataManager = TestHelpers.createTestDataManager()
+let mainViewModel = TestHelpers.createTestMainViewModel()
+```
+
+### Classes That Trigger System Access
+
+| Production Class | Test Alternative |
+|-----------------|------------------|
+| `ExportViewModel()` | `TestHelpers.createTestExportViewModel()` |
+| `DataManager.shared` | `TestHelpers.createTestDataManager()` |
+| `DataRepository()` | `TestDataRepository(dataManager:)` |
+| `CoreDataManager.shared` | `TestCoreDataManager()` (in-memory) |
+| `CloudKitService()` | `MockCloudKitService` or skip test |
+| `AppleScriptExecutor` | `MockAppleScriptExecutor` |
+
+### Skip Integration Tests on Unsigned Builds
+
+For tests that MUST use real system services:
+```swift
+override func setUpWithError() throws {
+    try super.setUpWithError()
+    try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
+                  "Skipping: unsigned build would trigger permission dialogs")
+    cloudKitService = CloudKitService()
+}
+```
+
+### Red Flags to Watch For
+
+When reviewing tests, flag these patterns:
+- Direct `ViewModel()` instantiation without TestHelpers
+- Use of `.shared` singletons that access system resources
+- Missing skip conditions for integration tests
+- Tests that work locally but show permission dialogs
+
+See: `documentation/learnings/macos-test-isolation-permission-dialogs.md`
 
 ## Project-Specific Context
 
