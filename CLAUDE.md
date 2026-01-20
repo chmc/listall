@@ -35,6 +35,7 @@ Investigate why the screenshot job is timing out...
 - Read before working: `/documentation/TODO.md`, `/documentation/ARCHITECTURE.md`
 - Search `/documentation/learnings/*.md` when encountering issues (use tags/symptoms to find relevant files)
 - Mark TODO.md tasks: `in-progress` → `completed`
+- Always include .claude/agents/critic-reviewer.md to make sure that there is second opinion in place
 - Update `documentation/features/SUMMARY.md` and category files after implementation
 - Follow: TDD, DRY, SOLID, YAGNI
 - All tests must pass before commit
