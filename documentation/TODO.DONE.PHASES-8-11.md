@@ -1,6 +1,6 @@
 # ListAll macOS App - Completed Phases 8-11 (Completion)
 
-> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phase 12](./TODO.DONE.PHASE-12.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 12-13](./TODO.DONE.PHASES-12-13.md) | [Active Tasks](./TODO.md)
 
 This document contains the completed feature parity, CI/CD, App Store, and polish phases (8-11) of the macOS app implementation with all TDD criteria, code examples, file locations, and implementation details preserved for LLM reference.
 
@@ -698,4 +698,4 @@ macOS unit tests trigger permission dialogs for App Groups and Keychain access.
 
 ---
 
-> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phase 12](./TODO.DONE.PHASE-12.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 12-13](./TODO.DONE.PHASES-12-13.md) | [Active Tasks](./TODO.md)

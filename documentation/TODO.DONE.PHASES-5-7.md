@@ -1,6 +1,6 @@
 # ListAll macOS App - Completed Phases 5-7 (UI & Testing)
 
-> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phase 12](./TODO.DONE.PHASE-12.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phases 12-13](./TODO.DONE.PHASES-12-13.md) | [Active Tasks](./TODO.md)
 
 This document contains the completed UI and testing phases (5-7) of the macOS app implementation with all TDD criteria, code examples, file locations, and implementation details preserved for LLM reference.
 
@@ -688,4 +688,4 @@ func testImageGalleryDragDrop() {
 
 ---
 
-> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phase 12](./TODO.DONE.PHASE-12.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phases 12-13](./TODO.DONE.PHASES-12-13.md) | [Active Tasks](./TODO.md)

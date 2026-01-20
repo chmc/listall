@@ -1,10 +1,10 @@
-# ListAll macOS App - Completed Phase 12 (UX Polish)
+# ListAll macOS App - Completed Phases 12-13 (UX Polish & Archived Lists)
 
 > **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Active Tasks](./TODO.md)
 
-This document contains the completed UX Polish phase (12) of the macOS app implementation with implementation details preserved for LLM reference.
+This document contains the completed UX Polish (Phase 12) and Archived Lists Bug Fixes (Phase 13) of the macOS app implementation with implementation details preserved for LLM reference.
 
-**Tags**: macOS, SwiftUI, UX, Apple HIG, Accessibility, Keyboard Shortcuts
+**Tags**: macOS, SwiftUI, UX, Apple HIG, Accessibility, Keyboard Shortcuts, archived lists, restore, read-only, selection state, bug fix, feature parity
 
 **Research basis**: Agent swarm analysis (January 2026) including Apple HIG review, industry best practices research (Things 3, Fantastical, Bear, OmniFocus), critical UX audit, and code analysis.
 
@@ -12,7 +12,8 @@ This document contains the completed UX Polish phase (12) of the macOS app imple
 
 ## Table of Contents
 
-1. [Phase Overview](#phase-overview)
+### Phase 12: UX Polish
+1. [Phase 12 Overview](#phase-12-overview)
 2. [Task 12.1: Cmd+Click Multi-Select](#task-121-cmdclick-multi-select-critical) (CRITICAL)
 3. [Task 12.2: Cmd+F Global Search](#task-122-cmdf-global-search-critical) (CRITICAL)
 4. [Task 12.3: Selection Mode Discoverability](#task-123-selection-mode-discoverability-critical) (CRITICAL)
@@ -27,14 +28,23 @@ This document contains the completed UX Polish phase (12) of the macOS app imple
 13. [Task 12.12: Clear All Filters Shortcut](#task-1212-clear-all-filters-shortcut-minor) (MINOR)
 14. [Task 12.13: Image Gallery Size Presets](#task-1213-image-gallery-size-presets-minor) (MINOR)
 
+### Phase 13: Archived Lists Bug Fixes
+15. [Phase 13 Overview](#phase-13-overview)
+16. [Task 13.1: Add Restore Functionality](#task-131-add-restore-functionality-critical) (CRITICAL)
+17. [Task 13.2: Make Archived Lists Read-Only](#task-132-make-archived-lists-read-only-critical) (CRITICAL)
+18. [Task 13.3: Update Documentation Status](#task-133-update-documentation-status-important) (IMPORTANT)
+19. [Task 13.4: Fix Selection Persistence Bug](#task-134-fix-selection-persistence-bug-critical) (CRITICAL)
+
 ---
 
-## Phase Overview
+# Phase 12: UX Polish
+
+## Phase 12 Overview
 
 **Priority Levels**:
-- 🔴 **CRITICAL**: Platform convention violations that break user expectations
-- 🟠 **IMPORTANT**: Significant UX friction or inconsistencies
-- 🟡 **MINOR**: Polish items and power user conveniences
+- CRITICAL: Platform convention violations that break user expectations
+- IMPORTANT: Significant UX friction or inconsistencies
+- MINOR: Polish items and power user conveniences
 
 **Completion Date**: January 15, 2026
 **Total Tasks**: 13/13 completed
@@ -169,9 +179,9 @@ This document contains the completed UX Polish phase (12) of the macOS app imple
 1. **MacSearchEmptyStateView** (NEW) - Search-specific empty state with tips
 2. **emptyListView** - Now uses `MacItemsEmptyStateView`
 3. **Three-way decision logic**:
-   - `items.isEmpty` → `MacItemsEmptyStateView`
-   - `!searchText.isEmpty` → `MacSearchEmptyStateView`
-   - Filter removed all → `noMatchingItemsView`
+   - `items.isEmpty` -> `MacItemsEmptyStateView`
+   - `!searchText.isEmpty` -> `MacSearchEmptyStateView`
+   - Filter removed all -> `noMatchingItemsView`
 
 **Files Modified**:
 - `ListAllMac/Views/MacMainView.swift`
@@ -294,9 +304,153 @@ Changed `.frame(width: 500, height: 350)` to `.frame(minWidth: 500, idealWidth: 
 
 ---
 
+# Phase 13: Archived Lists Bug Fixes
+
+## Phase 13 Overview
+
+**Priority Levels**:
+- CRITICAL: Feature parity violations that break user expectations
+- IMPORTANT: Documentation accuracy
+
+**Issue Discovery**: Agent swarm investigation (January 2026) revealed:
+1. macOS had NO "Restore" option for archived lists (iOS has it)
+2. macOS allowed full editing of archived lists (iOS is read-only)
+3. Selection state persisted incorrectly when switching between Active/Archived views
+
+**Completion Date**: January 20, 2026
+**Total Tasks**: 4/4 completed
+**Total Tests Added**: ~28 tests
+
+---
+
+## Task 13.1: Add Restore Functionality (CRITICAL)
+
+**Problem**: macOS had no UI to restore archived lists. iOS has restore buttons in `ListRowView` (inline) and `ArchivedListView` (toolbar). Backend `restoreList(withId:)` existed but macOS UI didn't expose it.
+
+**Solution**:
+1. Added `showingRestoreConfirmation` and `listToRestore` state variables to MacSidebarView
+2. Updated context menu in `normalModeRow()` to show different options based on `showingArchivedLists`:
+   - Archived: "Restore" (arrow.uturn.backward icon) and "Delete Permanently" (destructive)
+   - Active: "Share..." and "Delete" (existing behavior)
+3. Added keyboard shortcut Cmd+Shift+R in AppCommands.swift
+4. Added notification handler for "RestoreSelectedList" in MacSidebarView
+5. Added restore confirmation alert following iOS pattern (includes list name in message)
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Added restore state, context menu, alert, notification handler
+- `ListAllMac/Commands/AppCommands.swift` - Added Cmd+Shift+R shortcut
+
+**Tests**: 4 tests in `ArchivedListsTests`
+- testRestoreConfirmationStateManagement
+- testRestoreContextMenuAvailability
+- testMainViewModelRestoreList
+- testRestoreConfirmationMessageIncludesListName
+
+**Learning**: `/documentation/learnings/macos-restore-archived-lists.md`
+
+---
+
+## Task 13.2: Make Archived Lists Read-Only (CRITICAL)
+
+**Problem**: macOS allowed full editing of archived lists (add items, edit items, edit list name, reorder). iOS uses dedicated `ArchivedListView` that is completely read-only. This defeated the purpose of archiving (preserving list state).
+
+**Solution**:
+1. Added `isCurrentListArchived` computed property to MacListDetailView
+2. Conditionally hidden editing controls in header (Edit List, Selection Mode)
+3. Hidden Add Item button in toolbar for archived lists
+4. Updated MacItemRowView with `isArchivedList` parameter:
+   - Read-only completion indicator (no button)
+   - Hidden edit/delete hover buttons
+   - Only Quick Look button visible (if images exist)
+   - Read-only context menu (only Quick Look)
+   - Disabled double-click editing
+5. Disabled drag-to-reorder via `ConditionalDraggable` modifier
+6. Disabled keyboard shortcuts: Space (toggle), Enter (edit), Delete, Cmd+Opt+Up/Down (reorder)
+7. Added visual "Archived" badge in header
+8. Blocked CreateNewItem notification for archived lists
+9. Disabled Cmd+Click/Shift+Click multi-select for archived lists
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift`
+
+**Tests**: 19 tests in `ReadOnlyArchivedListsTests`
+- testIsCurrentListArchivedReturnsTrue
+- testIsCurrentListArchivedReturnsFalse
+- testAddItemButtonHiddenForArchivedList
+- testEditListButtonHiddenForArchivedList
+- testSelectionModeButtonHiddenForArchivedList
+- testItemRowReadOnlyForArchivedList
+- testItemEditButtonHiddenForArchivedList
+- testItemDeleteButtonHiddenForArchivedList
+- testQuickLookButtonVisibleForArchivedList
+- testDragReorderDisabledForArchivedList
+- testContextMenuReadOnlyForArchivedList
+- testSpaceKeyBehaviorForArchivedList
+- testEnterKeyBehaviorForArchivedList
+- testDeleteKeyBehaviorForArchivedList
+- testKeyboardReorderingDisabledForArchivedList
+- testShareButtonVisibleForArchivedList
+- testFilterSortVisibleForArchivedList
+- testArchivedBadgeDisplayed
+- testArchivedListItemsNotModifiableViaUI
+
+**Learning**: `/documentation/learnings/macos-archived-lists-read-only.md`
+
+---
+
+## Task 13.3: Update Documentation Status (IMPORTANT)
+
+**Problem**: `LIST_MANAGEMENT.md` claimed full feature parity for "Restore Archived List" on macOS. `SUMMARY.md` claimed "No gaps". This was inaccurate until Tasks 13.1 and 13.2 were completed.
+
+**Solution**:
+1. Verified all functionality works after completing Tasks 13.1 and 13.2
+2. Ran full test suite to confirm no regressions
+3. Updated `documentation/features/LIST_MANAGEMENT.md`
+4. Updated `documentation/features/SUMMARY.md`
+5. Wrote learning document about archive/restore parity
+
+**Files Modified**:
+- `documentation/features/LIST_MANAGEMENT.md`
+- `documentation/features/SUMMARY.md`
+
+**Learning**: `/documentation/learnings/macos-archive-restore-feature-parity.md`
+
+---
+
+## Task 13.4: Fix Selection Persistence Bug (CRITICAL)
+
+**Problem**: When user selected an archived list in "Archived Lists" view, then switched to "Active Lists" view, `selectedList` state retained the archived list. Detail view incorrectly showed archived list UI (Restore button, read-only mode) for active lists.
+
+**Root Cause** (discovered by agent swarm investigation):
+- `List` is a VALUE TYPE (struct) - when passed to MacListDetailView, it's copied
+- Even after `restoreList()` updates Core Data, the view's `list` parameter retains old values
+- `isCurrentListArchived` was checking `list.isArchived` (stale copy) instead of fresh data
+- Multiple code paths could leave stale archived list in selection state
+
+**Solution** (THREE fixes required):
+1. **Tab switch clearing** - Added `selectedList = nil`, `selectedLists.removeAll()`, and `isInSelectionMode = false` to `.onChange(of: showingArchivedLists)` handlers in both MacMainView and MacSidebarView
+2. **Restore handler clearing** - Added `selectedList = nil` in MacSidebarView's restore confirmation handler. After restore, the list moves to active lists but the stale struct copy retained `isArchived = true`
+3. **Fix `isCurrentListArchived` to use fresh data** - Changed from checking stale `list.isArchived` to checking `currentList?.isArchived` (fresh data from dataManager)
+
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift` - Tab switch selection clearing, multi-select clearing, restore handler, `isCurrentListArchived` fix
+- `ListAllMacTests/ReadOnlyArchivedListsTests.swift` - Added TabSwitchSelectionTests suite
+- `ListAllMacTests/RestoreArchivedListsTests.swift` - Added `@MainActor` for Core Data threading
+
+**Tests**: 5 tests in `TabSwitchSelectionTests`
+- testSwitchFromArchivedToActiveViewClearsSelection
+- testSwitchFromActiveToArchivedViewClearsSelection
+- testSelectedListMustBelongToDisplayedLists
+- testActiveListDetailViewNoRestoreButton
+- testActiveListAllowsAddingItems
+
+**Learning**: `/documentation/learnings/macos-tab-switch-selection-persistence.md`, `/documentation/learnings/swift-testing-coredata-mainactor.md`
+
+---
+
 ## Research Documents
 
-This phase was based on comprehensive agent swarm research:
+Phase 12 was based on comprehensive agent swarm research:
 
 1. **Apple HIG Research** - macOS navigation, toolbar design, menu structure, anti-patterns
 2. **Industry Best Practices** - Liquid Glass design, Quick Entry patterns, accessibility
