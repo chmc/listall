@@ -1,5 +1,5 @@
 ---
-name: Integration Specialist
+name: integration-specialist
 description: System integration expert ensuring all components work together. Use for diagnosing integration issues, verifying data flow between iOS/watchOS/CloudKit, troubleshooting sync problems, and validating component interactions.
 author: ListAll Team
 version: 2.0.0

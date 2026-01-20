@@ -1,5 +1,5 @@
 ---
-name: Apple Development Researcher
+name: apple-dev-researcher
 description: Research-focused agent for iOS/Swift architecture problems, SwiftUI bugs, Core Data issues, and finding solutions via web search and pattern analysis. Use when you need to find root causes of Apple platform bugs or research best practices.
 author: ListAll Team
 version: 2.0.0

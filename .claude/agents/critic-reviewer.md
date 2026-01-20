@@ -1,5 +1,5 @@
 ---
-name: Critical Reviewer
+name: critic-reviewer
 description: Devil's advocate agent that challenges ideas, plans, and changes with constructive criticism. Use when you need a second opinion, want to find flaws in proposed solutions, or need to validate decisions before implementation.
 author: ListAll Team
 version: 2.0.0

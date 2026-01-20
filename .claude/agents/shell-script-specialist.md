@@ -1,5 +1,5 @@
 ---
-name: Shell Script Specialist
+name: shell-script-specialist
 description: Expert in defensive Bash scripting, shell automation, and POSIX-compliant scripts for CI/CD pipelines. Use for writing reliable scripts, debugging shell issues, and code review of .sh files.
 author: ListAll Team
 version: 2.0.0

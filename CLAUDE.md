@@ -1,5 +1,33 @@
 # Project Instructions
 
+## Subagent Skill Injection
+
+MANDATORY: When spawning subagents via Task tool, you MUST instruct agents to use skills.
+
+**Always include this instruction block in Task prompts (replace `{agent-name}` with actual agent):**
+```
+SKILL USAGE INSTRUCTION:
+1. Read your agent definition at `.claude/agents/{agent-name}.md`
+2. For each skill in your `skills:` frontmatter, read `.claude/skills/{skill-name}/SKILL.md`
+3. ONLY if task requires skills outside your domain, read `.claude/skills/SKILLS-SUMMARY.md`
+4. Apply patterns from loaded skills; reference which skills you used
+```
+
+**Example Task prompt:**
+```
+Task: Investigate CI pipeline failure
+
+SKILL USAGE INSTRUCTION:
+1. Read your agent definition at `.claude/agents/pipeline-specialist.md`
+2. For each skill in your `skills:` frontmatter, read `.claude/skills/{skill-name}/SKILL.md`
+3. ONLY if task requires skills outside your domain, read `.claude/skills/SKILLS-SUMMARY.md`
+4. Apply patterns from loaded skills; reference which skills you used
+
+Investigate why the screenshot job is timing out...
+```
+
+**Verification**: If your Task prompt does NOT contain the SKILL USAGE INSTRUCTION block, you are violating this rule.
+
 ## Mandatory Rules
 
 - Never delete: `/CLAUDE.md`, `/.claude/`, `/docs/`

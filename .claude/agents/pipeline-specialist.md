@@ -1,5 +1,5 @@
 ---
-name: Pipeline Specialist
+name: pipeline-specialist
 description: CI/CD pipeline reliability expert for GitHub Actions, Fastlane, and iOS screenshot automation. Use for diagnosing failures, optimizing performance, and hardening pipelines.
 author: ListAll Team
 version: 2.0.0
