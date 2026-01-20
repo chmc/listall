@@ -1,39 +1,32 @@
-# Global Instructions
+# Project Instructions
 
-These rules apply to all interactions in this repository.
+## Mandatory Rules
 
-## General Behavior
+- Never delete: `/CLAUDE.md`, `/.claude/`, `/docs/`
+- Never remove UI features without explicit request
+- Read before working: `/documentation/TODO.md`, `/documentation/ARCHITECTURE.md`, `/documentation/learnings/*.md`
+- Mark TODO.md tasks: `in-progress` → `completed`
+- Update `documentation/features/SUMMARY.md` and category files after implementation
+- Follow: TDD, DRY, SOLID, YAGNI
+- All tests must pass before commit
+- One task at a time
 
-MANDATORY RULES:
-- YOU ARE NEVER ALLOWED TO DELETE INITIAL FILES AND FOLDERS: /CLAUDE.md, /.claude/, /docs/
-- You are not allowed to remove features from app UI or change UI without request to do that
-- Read /documentation/TODO.md file content and follow rules in there
-- Always before working read /documentation/ARCHITECTURE.md
-- Before working, read /documentation/learnings .md files to prevent earlier problems
-- Always include .claude/agents/critic.md to make sure that there is second opinion in place
-- Choose relevant subagents .claude/agents to implement task, you can use swarm of subagents
-- When you start task in /documentation/TODO.md, mark task title header as in-progress
-- When you finish task in /documentation/TODO.md, mark task title header as completed
-- When you finish implementation:
-    - Update `documentation/features/SUMMARY.md`:
-      - Change status symbols (❌ → ✅ or ⚠️ → ✅)
-      - Update category counts (e.g., "macOS 11/17" → "macOS 12/17")
-      - Remove completed items from HIGH/MEDIUM Priority Gaps tables
-    - Update relevant `documentation/features/*.md` category file:
-      - Update feature matrix status
-      - Remove from Gaps section if fully implemented
-    - If NEW feature: add to both SUMMARY.md and category file
-- Always follow TDD
-- Follow DRY pricciple
-- Follow SOLID principles
-- Follow YAGNI principles
-- Commit code after /documentation/TODO.md task is completed 
-- Only work on one task at a time
-- All test must pass when task is done
-- You are allowed to proceed to next task when previous task is completed and committed
-- Always make sure that README.md file is up to date
+## Agents & Skills
 
-## Problem solving instructions
+Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.md` for skill reference.
 
-INSTRUCTIONS
-- When you finish completing successfully problem, write a learning .md file of it to /documentation/learnings folder
+| Agent | Use For | Skills |
+|-------|---------|--------|
+| `apple-dev` | iOS/watchOS implementation | swift-swiftui, fastlane, xctest |
+| `apple-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync |
+| `critic` | Review before implementation | code-review |
+| `integration-specialist` | Sync/data flow issues | coredata-sync, watch-connectivity |
+| `pipeline-specialist` | CI/CD failures | github-actions, fastlane |
+| `shell-specialist` | Shell scripts | bash-scripting |
+| `testing-specialist` | Tests, verification | xctest, test-isolation |
+
+**Always run `critic` before major implementations.**
+
+## After Solving Problems
+
+Write learnings to `/documentation/learnings/`
