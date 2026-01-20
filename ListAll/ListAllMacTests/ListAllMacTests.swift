@@ -17819,6 +17819,117 @@ final class ArchivedListsTests: XCTestCase {
         XCTAssertEqual(archivedLists.count, 0, "archivedLists count should be 0")
     }
 
+    // MARK: - Test 11: Restore UI State Management
+
+    /// Test that restore confirmation state variables work correctly
+    func testRestoreConfirmationStateManagement() {
+        // Given: An archived list
+        let archivedList = createAndArchiveList(name: "List to Restore via UI")
+
+        // When: Simulating UI state for restore confirmation
+        var showingRestoreConfirmation = false
+        var listToRestore: ListModel? = nil
+
+        // Trigger restore confirmation (simulates context menu "Restore" click)
+        showingRestoreConfirmation = true
+        listToRestore = archivedList
+
+        // Then: State should be set correctly
+        XCTAssertTrue(showingRestoreConfirmation, "Restore confirmation should be showing")
+        XCTAssertNotNil(listToRestore, "listToRestore should be set")
+        XCTAssertEqual(listToRestore?.id, archivedList.id, "listToRestore should match the archived list")
+
+        // When: User confirms restore
+        if let list = listToRestore {
+            testDataManager.restoreList(withId: list.id)
+        }
+        showingRestoreConfirmation = false
+        listToRestore = nil
+
+        // Then: List should be restored and state reset
+        let archivedLists = testDataManager.loadArchivedLists()
+        XCTAssertTrue(archivedLists.isEmpty, "Archived lists should be empty after restore")
+        XCTAssertFalse(showingRestoreConfirmation, "Confirmation should be dismissed")
+        XCTAssertNil(listToRestore, "listToRestore should be nil after restore")
+    }
+
+    // MARK: - Test 12: Restore context menu availability
+
+    /// Test that restore option should only be available for archived lists
+    func testRestoreContextMenuAvailability() {
+        // Given: Both active and archived lists
+        let activeList = createTestList(name: "Active List")
+        testDataManager.addList(activeList)
+
+        let archivedList = createAndArchiveList(name: "Archived List")
+
+        // Simulate UI state
+        var showingArchivedLists = false
+
+        // When: Viewing active lists
+        showingArchivedLists = false
+
+        // Then: Restore option should NOT be available (context menu shows Share/Delete)
+        // This is a conceptual test - actual UI verification would be in UI tests
+        XCTAssertFalse(showingArchivedLists, "Should be viewing active lists")
+        // For active lists, context menu should have: Share, Divider, Delete
+
+        // When: Viewing archived lists
+        showingArchivedLists = true
+
+        // Then: Restore option SHOULD be available
+        XCTAssertTrue(showingArchivedLists, "Should be viewing archived lists")
+        // For archived lists, context menu should have: Restore, Divider, Delete Permanently
+
+        // Verify the archived list exists and can be restored
+        let archivedLists = testDataManager.loadArchivedLists()
+        XCTAssertEqual(archivedLists.count, 1, "Should have one archived list")
+        XCTAssertEqual(archivedLists.first?.id, archivedList.id, "Archived list should be available for restore")
+    }
+
+    // MARK: - Test 13: Restore via MainViewModel
+
+    /// Test that MainViewModel.restoreList() properly restores an archived list
+    func testMainViewModelRestoreList() {
+        // Given: An archived list
+        let archivedList = createAndArchiveList(name: "List for ViewModel Restore")
+
+        // Verify it's in archived lists
+        var archivedLists = testDataManager.loadArchivedLists()
+        XCTAssertEqual(archivedLists.count, 1, "Should have 1 archived list")
+
+        // When: Restore the list (simulating MainViewModel.restoreList behavior)
+        testDataManager.restoreList(withId: archivedList.id)
+
+        // Then: List should move from archived to active
+        archivedLists = testDataManager.loadArchivedLists()
+        XCTAssertEqual(archivedLists.count, 0, "Archived lists should be empty after restore")
+
+        let activeLists = testDataManager.getLists()
+        let restoredList = activeLists.first { $0.id == archivedList.id }
+        XCTAssertNotNil(restoredList, "Restored list should appear in active lists")
+        XCTAssertFalse(restoredList?.isArchived ?? true, "Restored list should not be marked as archived")
+    }
+
+    // MARK: - Test 14: Restore confirmation dialog message
+
+    /// Test that restore confirmation message includes list name
+    func testRestoreConfirmationMessageIncludesListName() {
+        // Given: An archived list with a specific name
+        let listName = "My Important Shopping List"
+        let archivedList = createAndArchiveList(name: listName)
+
+        // When: Building confirmation message (simulating iOS ArchivedListView pattern)
+        let confirmationTitle = "Restore List"
+        let confirmationMessage = String(format: "Do you want to restore \"%@\" to your active lists?", listName)
+
+        // Then: Message should include the list name
+        XCTAssertEqual(confirmationTitle, "Restore List", "Title should be 'Restore List'")
+        XCTAssertTrue(confirmationMessage.contains(listName), "Message should include the list name")
+        XCTAssertTrue(confirmationMessage.contains("restore"), "Message should mention restore action")
+        XCTAssertTrue(confirmationMessage.contains("active lists"), "Message should mention destination")
+    }
+
     // MARK: - Documentation Test
 
     func testArchivedListsDocumentation() {

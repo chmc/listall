@@ -513,6 +513,10 @@ private struct MacSidebarView: View {
     @State private var showingArchiveConfirmation = false
     @State private var showingPermanentDeleteConfirmation = false
 
+    // MARK: - Restore Confirmation State (Task 13.1)
+    @State private var showingRestoreConfirmation = false
+    @State private var listToRestore: List? = nil
+
     // MARK: - Keyboard Navigation (Task 11.1)
     /// Focus state for individual list rows - enables arrow key navigation
     @FocusState private var focusedListID: UUID?
@@ -705,12 +709,31 @@ private struct MacSidebarView: View {
             handleItemDrop(droppedItems, to: list)
         }
         .contextMenu {
-            Button("Share...") {
-                shareListFromSidebar(list)
-            }
-            Divider()
-            Button("Delete") {
-                onDeleteList(list)
+            if showingArchivedLists {
+                // Archived list context menu: Restore and Delete Permanently
+                Button {
+                    listToRestore = list
+                    showingRestoreConfirmation = true
+                } label: {
+                    Label("Restore", systemImage: "arrow.uturn.backward")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    onDeleteList(list)
+                } label: {
+                    Label("Delete Permanently", systemImage: "trash")
+                }
+            } else {
+                // Active list context menu: Share and Delete (archive)
+                Button("Share...") {
+                    shareListFromSidebar(list)
+                }
+                Divider()
+                Button("Delete") {
+                    onDeleteList(list)
+                }
             }
         }
     }
@@ -933,6 +956,39 @@ private struct MacSidebarView: View {
             }
         } message: {
             Text("Permanently delete \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? This action cannot be undone. All items and images will be permanently deleted.")
+        }
+        // MARK: - Restore Confirmation Alert (Task 13.1)
+        .alert("Restore List", isPresented: $showingRestoreConfirmation) {
+            Button("Cancel", role: .cancel) {
+                listToRestore = nil
+            }
+            Button("Restore") {
+                if let list = listToRestore {
+                    // Use MainViewModel pattern for restore
+                    dataManager.restoreList(withId: list.id)
+                    // Refresh data to update UI
+                    dataManager.loadArchivedData()
+                    dataManager.loadData()
+                }
+                listToRestore = nil
+            }
+        } message: {
+            if let list = listToRestore {
+                Text("Do you want to restore \"\(list.name)\" to your active lists?")
+            } else {
+                Text("Do you want to restore this list to your active lists?")
+            }
+        }
+        // MARK: - Restore Keyboard Shortcut Handler (Task 13.1)
+        // Responds to Cmd+Shift+R from AppCommands menu
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RestoreSelectedList"))) { _ in
+            // Only process if viewing archived lists and a list is selected
+            guard showingArchivedLists, let list = selectedList else { return }
+            // Verify the selected list is actually archived
+            guard list.isArchived else { return }
+            // Trigger restore confirmation
+            listToRestore = list
+            showingRestoreConfirmation = true
         }
     }
 

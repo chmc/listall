@@ -56,6 +56,15 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut(.delete, modifiers: [.command])
 
+            // MARK: - Restore Archived List (Task 13.1)
+            Button("Restore List") {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("RestoreSelectedList"),
+                    object: nil
+                )
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+
             Button("Duplicate List") {
                 NotificationCenter.default.post(
                     name: NSNotification.Name("DuplicateSelectedList"),
