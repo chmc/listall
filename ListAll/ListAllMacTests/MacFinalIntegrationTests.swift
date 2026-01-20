@@ -348,13 +348,18 @@ final class CloudKitSyncIntegrationTests: XCTestCase {
 
     // MARK: - CloudKit Service Tests
 
-    func testCloudKitServiceCanBeInstantiated() {
-        // CloudKitService doesn't have a shared singleton, verify it can be instantiated
+    func testCloudKitServiceCanBeInstantiated() throws {
+        // Skip if unsigned build (would trigger iCloud permission dialogs)
+        try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
+                      "Skipping: unsigned build would trigger permission dialogs")
         let service = CloudKitService()
         XCTAssertNotNil(service)
     }
 
-    func testCloudKitServiceIsObservableObject() {
+    func testCloudKitServiceIsObservableObject() throws {
+        // Skip if unsigned build (would trigger iCloud permission dialogs)
+        try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
+                      "Skipping: unsigned build would trigger permission dialogs")
         let service = CloudKitService()
         XCTAssertTrue(service is ObservableObject)
     }

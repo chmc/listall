@@ -2213,6 +2213,9 @@ final class CloudKitServiceMacTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
+        // Skip if unsigned build (would trigger iCloud permission dialogs)
+        try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
+                      "Skipping CloudKit tests: unsigned build would trigger permission dialogs")
         cloudKitService = CloudKitService()
     }
 
@@ -5918,55 +5921,55 @@ final class ExportViewModelMacTests: XCTestCase {
 
     func testExportViewModelClassExists() {
         // Verify ExportViewModel class exists and can be instantiated
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNotNil(vm, "ExportViewModel should be instantiable on macOS")
     }
 
     func testExportViewModelIsObservableObject() {
         // Verify ExportViewModel conforms to ObservableObject
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertTrue(vm is ObservableObject, "ExportViewModel should conform to ObservableObject")
     }
 
     // MARK: - Published Properties Tests
 
     func testIsExportingDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertFalse(vm.isExporting, "isExporting should default to false")
     }
 
     func testExportProgressDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertTrue(vm.exportProgress.isEmpty, "exportProgress should default to empty")
     }
 
     func testShowShareSheetDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertFalse(vm.showShareSheet, "showShareSheet should default to false")
     }
 
     func testExportedFileURLDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNil(vm.exportedFileURL, "exportedFileURL should default to nil")
     }
 
     func testErrorMessageDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNil(vm.errorMessage, "errorMessage should default to nil")
     }
 
     func testSuccessMessageDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNil(vm.successMessage, "successMessage should default to nil")
     }
 
     func testExportOptionsDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNotNil(vm.exportOptions, "exportOptions should have default value")
     }
 
     func testShowOptionsSheetDefault() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertFalse(vm.showOptionsSheet, "showOptionsSheet should default to false")
     }
 
@@ -6002,21 +6005,21 @@ final class ExportViewModelMacTests: XCTestCase {
     // MARK: - Cancel Export Tests
 
     func testCancelExportResetsIsExporting() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         vm.isExporting = true
         vm.cancelExport()
         XCTAssertFalse(vm.isExporting, "cancelExport should reset isExporting")
     }
 
     func testCancelExportResetsProgress() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         vm.exportProgress = "Exporting..."
         vm.cancelExport()
         XCTAssertTrue(vm.exportProgress.isEmpty, "cancelExport should reset exportProgress")
     }
 
     func testCancelExportSetsErrorMessage() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         vm.cancelExport()
         XCTAssertEqual(vm.errorMessage, "Export cancelled", "cancelExport should set error message")
     }
@@ -6024,7 +6027,7 @@ final class ExportViewModelMacTests: XCTestCase {
     // MARK: - Cleanup Tests
 
     func testCleanupResetsExportedFileURL() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test.json")
         try? "test".write(to: tempURL, atomically: true, encoding: .utf8)
         vm.exportedFileURL = tempURL
@@ -6040,7 +6043,7 @@ final class ExportViewModelMacTests: XCTestCase {
     // MARK: - Export Options Tests
 
     func testExportOptionsCanBeChanged() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         let defaultOptions = vm.exportOptions
 
         // Modify options
@@ -6053,7 +6056,7 @@ final class ExportViewModelMacTests: XCTestCase {
     }
 
     func testShowOptionsSheetCanBeToggled() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertFalse(vm.showOptionsSheet, "Initial value should be false")
 
         vm.showOptionsSheet = true
@@ -6066,7 +6069,7 @@ final class ExportViewModelMacTests: XCTestCase {
     // MARK: - macOS Clipboard Tests
 
     func testCopyToClipboardMethodExists() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
 
         // Verify the method exists and can be called
         // We don't test actual clipboard operations as they require DataRepository
@@ -6081,21 +6084,21 @@ final class ExportViewModelMacTests: XCTestCase {
     // MARK: - Export Methods Existence Tests
 
     func testExportToJSONMethodExists() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNoThrow({
             _ = vm.exportToJSON
         }, "exportToJSON method should exist")
     }
 
     func testExportToCSVMethodExists() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNoThrow({
             _ = vm.exportToCSV
         }, "exportToCSV method should exist")
     }
 
     func testExportToPlainTextMethodExists() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
         XCTAssertNoThrow({
             _ = vm.exportToPlainText
         }, "exportToPlainText method should exist")
@@ -6105,7 +6108,7 @@ final class ExportViewModelMacTests: XCTestCase {
 
     func testExportViewModelWorksOnMacOS() {
         // Verify no iOS-specific dependencies
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
 
         // All properties should be accessible on macOS
         _ = vm.isExporting
@@ -6132,7 +6135,7 @@ final class ExportViewModelMacTests: XCTestCase {
     // MARK: - State Transitions Tests
 
     func testExportStateTransitionStartsCorrectly() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
 
         // Initial state
         XCTAssertFalse(vm.isExporting)
@@ -6142,7 +6145,7 @@ final class ExportViewModelMacTests: XCTestCase {
     }
 
     func testShowShareSheetCanBeSet() {
-        let vm = ExportViewModel()
+        let vm = TestHelpers.createTestExportViewModel()
 
         vm.showShareSheet = true
         XCTAssertTrue(vm.showShareSheet, "showShareSheet should be settable to true")
