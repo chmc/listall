@@ -1155,6 +1155,16 @@ private struct MacListDetailView: View {
         currentList?.name ?? list.name
     }
 
+    // MARK: - Archived List Read-Only Mode (Task 13.2)
+
+    /// Check if current list is archived (read-only mode)
+    /// When true, all editing functionality is disabled - only viewing is allowed
+    private var isCurrentListArchived: Bool {
+        // Check the original list's isArchived flag
+        // (archived lists come from dataManager.archivedLists, not dataManager.lists)
+        list.isArchived
+    }
+
     /// Whether any filter is active (non-default filter, sort, or search)
     private var hasActiveFilters: Bool {
         viewModel.currentFilterOption != .all ||
@@ -1176,21 +1186,51 @@ private struct MacListDetailView: View {
     @ViewBuilder
     private var headerView: some View {
         HStack {
+            // MARK: - Archived Badge (Task 13.2)
+            // Show archived indicator for read-only lists
+            if isCurrentListArchived {
+                archivedBadge
+            }
+
             Spacer()
 
-            if viewModel.isInSelectionMode {
-                // Selection mode header controls
+            if viewModel.isInSelectionMode && !isCurrentListArchived {
+                // Selection mode header controls (disabled for archived lists)
                 selectionModeControls
-            } else {
-                // Normal mode header controls
+            } else if !isCurrentListArchived {
+                // Normal mode header controls (all editing disabled for archived lists)
                 searchFieldView
                 filterSortControls
                 shareButton
                 selectionModeButton
                 editListButton
+            } else {
+                // Archived list: only show view-only controls
+                searchFieldView
+                filterSortControls
+                shareButton
+                // No selection mode or edit buttons for archived lists
             }
         }
         .padding()
+    }
+
+    // MARK: - Archived Badge (Task 13.2)
+
+    @ViewBuilder
+    private var archivedBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "archivebox")
+                .font(.caption)
+            Text(String(localized: "Archived"))
+                .font(.caption)
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.15))
+        .cornerRadius(4)
+        .accessibilityLabel("This list is archived and read-only")
     }
 
     // MARK: - Selection Mode Button
@@ -1537,7 +1577,9 @@ private struct MacListDetailView: View {
         SwiftUI.List {
             ForEach(displayedItems) { item in
                 makeItemRow(item: item)
-                    .draggable(item)
+                    // Task 13.2: Disable dragging for archived lists
+                    // Conditional draggable using @ViewBuilder pattern
+                    .modifier(ConditionalDraggable(item: item, isEnabled: !isCurrentListArchived))
                     // MARK: Keyboard Navigation (Task 11.1)
                     // CRITICAL: Use .activate interactions to prevent focus from capturing
                     // mouse clicks that should initiate drag gestures. Without this,
@@ -1547,32 +1589,40 @@ private struct MacListDetailView: View {
                     .focused($focusedItemID, equals: item.id)
                     // MARK: Cmd+Click and Shift+Click Multi-Select (Task 12.1)
                     // Uses NSEvent monitoring to detect modifier keys without blocking drag-and-drop
+                    // Task 13.2: Disabled for archived lists
                     .onModifierClick(
                         command: {
+                            guard !isCurrentListArchived else { return }
                             // Cmd+Click: Toggle selection of this item
                             viewModel.toggleSelection(for: item.id)
                         },
                         shift: {
+                            guard !isCurrentListArchived else { return }
                             // Shift+Click: Select range from anchor to this item
                             viewModel.selectRange(to: item.id)
                         }
                     )
                     .accessibilityIdentifier("ItemRow_\(item.title)")
             }
-            .onMove(perform: handleMoveItem)
+            // Task 13.2: Disable drag-to-reorder for archived lists
+            .onMove(perform: isCurrentListArchived ? nil : handleMoveItem)
         }
         .listStyle(.inset)
         // MARK: - Drop Destination for Cross-List Item Moves
         // Enable dropping items from other lists onto this list
         // (Restored: this was accidentally removed, breaking item drag between lists)
+        // Task 13.2: Disable drop destination for archived lists
         .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-            handleItemDrop(droppedItems)
+            guard !isCurrentListArchived else { return false }  // No drops on archived lists
+            return handleItemDrop(droppedItems)
         }
         .accessibilityIdentifier("ItemsList")
         // MARK: - Keyboard Navigation Handlers (Task 11.1)
+        // Task 13.2: Keyboard shortcuts for editing are disabled for archived lists
         .onKeyPress(.space) {
             // In selection mode, space toggles selection of focused item
-            if viewModel.isInSelectionMode {
+            // Task 13.2: Selection mode is disabled for archived lists
+            if viewModel.isInSelectionMode && !isCurrentListArchived {
                 guard let focusedID = focusedItemID else {
                     return .ignored
                 }
@@ -1580,22 +1630,31 @@ private struct MacListDetailView: View {
                 return .handled
             }
             // Normal mode: Space toggles completion state of focused item
+            // Task 13.2: For archived lists, Space only shows Quick Look (no toggle)
             guard let focusedID = focusedItemID,
                   let item = displayedItems.first(where: { $0.id == focusedID }) else {
                 return .ignored
             }
-            // Check if item has images - if so, show Quick Look instead
+            // Check if item has images - if so, show Quick Look (allowed for archived lists)
             if item.hasImages {
                 showQuickLook(for: item)
+                return .handled
+            } else if isCurrentListArchived {
+                // Archived list without images: Space does nothing
+                return .ignored
             } else {
                 toggleItem(item)
+                return .handled
             }
-            return .handled
         }
         .onKeyPress(.return) {
             // Enter opens edit sheet for focused item (not in selection mode)
+            // Task 13.2: Disabled for archived lists
             guard !viewModel.isInSelectionMode else {
                 return .ignored
+            }
+            guard !isCurrentListArchived else {
+                return .ignored  // No editing for archived lists
             }
             guard let focusedID = focusedItemID,
                   let item = displayedItems.first(where: { $0.id == focusedID }) else {
@@ -1605,6 +1664,10 @@ private struct MacListDetailView: View {
             return .handled
         }
         .onKeyPress(.delete) {
+            // Task 13.2: Delete is disabled for archived lists
+            guard !isCurrentListArchived else {
+                return .ignored  // No deletion for archived lists
+            }
             // In selection mode, delete selected items with undo (Task 12.8)
             if viewModel.isInSelectionMode && !viewModel.selectedItems.isEmpty {
                 viewModel.deleteSelectedItemsWithUndo()
@@ -1630,7 +1693,8 @@ private struct MacListDetailView: View {
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "a")) { keyPress in
             // Cmd+A selects all items in selection mode
-            guard keyPress.modifiers.contains(.command) && viewModel.isInSelectionMode else {
+            // Task 13.2: Selection mode is disabled for archived lists
+            guard keyPress.modifiers.contains(.command) && viewModel.isInSelectionMode && !isCurrentListArchived else {
                 return .ignored
             }
             viewModel.selectAll()
@@ -1639,8 +1703,12 @@ private struct MacListDetailView: View {
         .onKeyPress(characters: CharacterSet(charactersIn: "c")) { keyPress in
             // 'C' key toggles completion (alternative to Space for items with images)
             // Issue #9 fix: Ignore if modifier keys are pressed (don't capture Cmd+C)
+            // Task 13.2: Disabled for archived lists
             guard keyPress.modifiers.isEmpty else {
                 return .ignored
+            }
+            guard !isCurrentListArchived else {
+                return .ignored  // No completion toggle for archived lists
             }
             guard let focusedID = focusedItemID,
                   let item = displayedItems.first(where: { $0.id == focusedID }) else {
@@ -1651,12 +1719,14 @@ private struct MacListDetailView: View {
         }
         // MARK: - Keyboard Reordering (Task 12.11)
         // Use onKeyPress with key set and check modifiers inside closure
+        // Task 13.2: Keyboard reordering is disabled for archived lists
         .onKeyPress(keys: [.upArrow]) { keyPress in
             // Cmd+Option+Up moves focused item up one position
             guard keyPress.modifiers.contains(.command),
                   keyPress.modifiers.contains(.option) else {
                 return .ignored
             }
+            guard !isCurrentListArchived else { return .ignored }  // No reordering for archived lists
             guard viewModel.canReorderWithKeyboard else { return .ignored }
             guard let focusedID = focusedItemID else { return .ignored }
             viewModel.moveItemUp(focusedID)
@@ -1668,6 +1738,7 @@ private struct MacListDetailView: View {
                   keyPress.modifiers.contains(.option) else {
                 return .ignored
             }
+            guard !isCurrentListArchived else { return .ignored }  // No reordering for archived lists
             guard viewModel.canReorderWithKeyboard else { return .ignored }
             guard let focusedID = focusedItemID else { return .ignored }
             viewModel.moveItemDown(focusedID)
@@ -1696,6 +1767,7 @@ private struct MacListDetailView: View {
             item: item,
             isInSelectionMode: viewModel.isInSelectionMode,
             isSelected: viewModel.selectedItems.contains(item.id),
+            isArchivedList: isCurrentListArchived,  // Task 13.2: Pass archived state for read-only mode
             onToggle: { toggleItem(item) },
             onEdit: {
                 // CRITICAL FIX: Delegate to parent (MacMainView) for sheet presentation
@@ -1818,12 +1890,15 @@ private struct MacListDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(displayName)
         .toolbar {
+            // MARK: - Add Item Button (Task 13.2: Hidden for archived lists)
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingAddItemSheet = true }) {
-                    Label("Add Item", systemImage: "plus")
+                if !isCurrentListArchived {
+                    Button(action: { showingAddItemSheet = true }) {
+                        Label("Add Item", systemImage: "plus")
+                    }
+                    .accessibilityIdentifier("AddItemButton")
+                    .accessibilityHint("Opens sheet to add new item")
                 }
-                .accessibilityIdentifier("AddItemButton")
-                .accessibilityHint("Opens sheet to add new item")
             }
         }
         // Sync ViewModel items with DataManager for proper reactivity
@@ -1879,6 +1954,8 @@ private struct MacListDetailView: View {
             )
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewItem"))) { _ in
+            // Task 13.2: Block add item for archived lists
+            guard !isCurrentListArchived else { return }
             showingAddItemSheet = true
         }
         // MARK: - Move/Copy Item Sheets
@@ -2163,6 +2240,7 @@ private struct MacItemRowView: View {
     let item: Item
     let isInSelectionMode: Bool
     let isSelected: Bool
+    let isArchivedList: Bool  // Task 13.2: Read-only mode for archived lists
     let onToggle: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -2176,6 +2254,9 @@ private struct MacItemRowView: View {
         var label = item.title
         if isInSelectionMode {
             label = (isSelected ? "Selected, " : "Unselected, ") + label
+        }
+        if isArchivedList {
+            label += ", archived"
         }
         label += ", \(item.isCrossedOut ? "completed" : "active")"
         if item.quantity > 1 {
@@ -2192,8 +2273,8 @@ private struct MacItemRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Selection checkbox (shown in selection mode)
-            if isInSelectionMode {
+            // Selection checkbox (shown in selection mode, but NOT for archived lists)
+            if isInSelectionMode && !isArchivedList {
                 Button(action: onToggleSelection) {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
@@ -2204,16 +2285,26 @@ private struct MacItemRowView: View {
                 .accessibilityHint("Double-tap to toggle selection")
             }
 
-            // Completion checkbox button (hidden in selection mode)
+            // Completion checkbox button (hidden in selection mode AND archived lists)
+            // Task 13.2: For archived lists, show read-only completion indicator
             if !isInSelectionMode {
-                Button(action: onToggle) {
+                if isArchivedList {
+                    // Read-only completion indicator (no button, just visual state)
                     Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
-                        .foregroundColor(item.isCrossedOut ? .green : .secondary)
+                        .foregroundColor(item.isCrossedOut ? .green.opacity(0.6) : .secondary.opacity(0.5))
+                        .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active"), read-only")
+                } else {
+                    // Interactive completion toggle for active lists
+                    Button(action: onToggle) {
+                        Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
+                            .font(.title2)
+                            .foregroundColor(item.isCrossedOut ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
+                    .accessibilityHint("Double-tap to toggle completion status")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
-                .accessibilityHint("Double-tap to toggle completion status")
             }
 
             // Image thumbnail (if item has images)
@@ -2287,9 +2378,10 @@ private struct MacItemRowView: View {
             Spacer()
 
             // Hover actions (hidden in selection mode)
+            // Task 13.2: For archived lists, only show Quick Look (no edit/delete)
             if isHovering && !isInSelectionMode {
                 HStack(spacing: 8) {
-                    // Quick Look button (only if item has images)
+                    // Quick Look button (only if item has images) - ALWAYS visible for archived lists
                     if item.hasImages {
                         Button(action: onQuickLook) {
                             Image(systemName: "eye")
@@ -2300,22 +2392,25 @@ private struct MacItemRowView: View {
                         .accessibilityHint("Opens image preview")
                     }
 
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                    }
-                    .buttonStyle(.plain)
-                    .help("Edit Item")
-                    .accessibilityLabel("Edit item")
-                    .accessibilityHint("Opens edit sheet")
+                    // Edit and Delete buttons - hidden for archived lists
+                    if !isArchivedList {
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit Item")
+                        .accessibilityLabel("Edit item")
+                        .accessibilityHint("Opens edit sheet")
 
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
+                        Button(action: onDelete) {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete Item")
+                        .accessibilityLabel("Delete item")
+                        .accessibilityHint("Permanently removes this item")
                     }
-                    .buttonStyle(.plain)
-                    .help("Delete Item")
-                    .accessibilityLabel("Delete item")
-                    .accessibilityHint("Permanently removes this item")
                 }
             }
         }
@@ -2327,7 +2422,9 @@ private struct MacItemRowView: View {
         // SwiftUI's gesture system blocks the run loop on macOS, causing sheets to only
         // appear after app deactivation. This native handler fires immediately.
         // In selection mode, double-click toggles selection instead of editing
+        // Task 13.2: For archived lists, double-click does nothing (read-only)
         .onDoubleClick {
+            guard !isArchivedList else { return }  // No editing for archived lists
             if isInSelectionMode {
                 onToggleSelection()
             } else {
@@ -2343,9 +2440,19 @@ private struct MacItemRowView: View {
         // Combine child elements into a single accessible element for cleaner VoiceOver navigation
         .accessibilityElement(children: .combine)
         .accessibilityLabel(itemAccessibilityLabel)
-        .accessibilityHint(isInSelectionMode ? "Tap to toggle selection" : "Double-tap to edit. Use actions menu for more options.")
+        .accessibilityHint(archivedAccessibilityHint)
         .contextMenu {
-            if isInSelectionMode {
+            // Task 13.2: Archived lists have read-only context menu (only Quick Look if images exist)
+            if isArchivedList {
+                // Archived list item context menu - only Quick Look allowed
+                if item.hasImages {
+                    Button("Quick Look") {
+                        onQuickLook()
+                    }
+                    .keyboardShortcut(.space, modifiers: [])
+                }
+                // No edit, toggle, or delete options for archived items
+            } else if isInSelectionMode {
                 Button(isSelected ? "Deselect" : "Select") { onToggleSelection() }
             } else {
                 Button("Edit") { onEdit() }
@@ -2362,6 +2469,17 @@ private struct MacItemRowView: View {
                 Divider()
                 Button("Delete", role: .destructive) { onDelete() }
             }
+        }
+    }
+
+    /// Accessibility hint based on list state
+    private var archivedAccessibilityHint: String {
+        if isArchivedList {
+            return item.hasImages ? "Use Space to view images. This item is read-only." : "This item is read-only."
+        } else if isInSelectionMode {
+            return "Tap to toggle selection"
+        } else {
+            return "Double-tap to edit. Use actions menu for more options."
         }
     }
 }
@@ -3277,6 +3395,23 @@ private class DoubleClickMonitorNSView: NSView {
 extension View {
     func onDoubleClick(perform action: @escaping () -> Void) -> some View {
         modifier(DoubleClickHandler(handler: action))
+    }
+}
+
+// MARK: - Conditional Draggable Modifier (Task 13.2)
+
+/// View modifier that conditionally applies .draggable based on isEnabled flag
+/// Used to disable dragging for archived list items
+private struct ConditionalDraggable: ViewModifier {
+    let item: Item
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.draggable(item)
+        } else {
+            content
+        }
     }
 }
 

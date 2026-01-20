@@ -164,7 +164,7 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 13.2: Make Archived Lists Read-Only
+### Task 13.2: [COMPLETED] Make Archived Lists Read-Only
 **TDD**: Write tests for read-only enforcement
 
 **Priority**: CRITICAL - Archived lists should not be editable
@@ -174,51 +174,47 @@ Detailed implementation records are preserved in split files for LLM reference.
 - iOS uses dedicated `ArchivedListView` that is completely read-only
 - This defeats the purpose of archiving (preserving list state)
 
-**iOS Reference** (`ArchivedListView.swift`):
-- No add item button
-- Items rendered with `ArchivedItemRowView` (no interactive elements)
-- No edit controls, no swipe actions, no context menus for editing
-- Only actions: Restore and Permanent Delete
+**Solution Implemented**:
+1. Added `isCurrentListArchived` computed property to MacListDetailView
+2. Conditionally hidden editing controls in header (Edit List, Selection Mode)
+3. Hidden Add Item button in toolbar for archived lists
+4. Updated MacItemRowView with `isArchivedList` parameter:
+   - Read-only completion indicator (no button)
+   - Hidden edit/delete hover buttons
+   - Only Quick Look button visible (if images exist)
+   - Read-only context menu (only Quick Look)
+   - Disabled double-click editing
+5. Disabled drag-to-reorder via `ConditionalDraggable` modifier
+6. Disabled keyboard shortcuts: Space (toggle), Enter (edit), Delete, Cmd+Opt+Up/Down (reorder)
+7. Added visual "Archived" badge in header
+8. Blocked CreateNewItem notification for archived lists
+9. Disabled Cmd+Click/Shift+Click multi-select for archived lists
 
-**Steps**:
-1. Add `isArchived` property check in `MacListDetailView` to conditionally hide:
-   - Add Item button (+) in toolbar
-   - Edit List button (pencil icon)
-   - Selection mode toggle
-   - Import/Export actions
-2. Disable item editing when list is archived:
-   - Hide toggle completion (checkbox)
-   - Hide edit button on item rows
-   - Disable drag-to-reorder
-   - Remove swipe actions
-3. Update context menu for archived lists:
-   - Show only: "Restore" and "Delete Permanently"
-   - Hide: Share, Duplicate, Edit
-4. Add visual indicator that list is archived (e.g., "Archived" badge in header)
-5. Optionally: Create dedicated `MacArchivedListDetailView` (cleaner separation like iOS)
+**Files Modified**:
+- `ListAllMac/Views/MacMainView.swift`
 
-**Test criteria**:
-```swift
-func testAddItemButtonHiddenForArchivedList() {
-    // + button not visible when viewing archived list
-}
+**Tests Added** (19 tests in ReadOnlyArchivedListsTests):
+- testIsCurrentListArchivedReturnsTrue
+- testIsCurrentListArchivedReturnsFalse
+- testAddItemButtonHiddenForArchivedList
+- testEditListButtonHiddenForArchivedList
+- testSelectionModeButtonHiddenForArchivedList
+- testItemRowReadOnlyForArchivedList
+- testItemEditButtonHiddenForArchivedList
+- testItemDeleteButtonHiddenForArchivedList
+- testQuickLookButtonVisibleForArchivedList
+- testDragReorderDisabledForArchivedList
+- testContextMenuReadOnlyForArchivedList
+- testSpaceKeyBehaviorForArchivedList
+- testEnterKeyBehaviorForArchivedList
+- testDeleteKeyBehaviorForArchivedList
+- testKeyboardReorderingDisabledForArchivedList
+- testShareButtonVisibleForArchivedList
+- testFilterSortVisibleForArchivedList
+- testArchivedBadgeDisplayed
+- testArchivedListItemsNotModifiableViaUI
 
-func testEditListButtonHiddenForArchivedList() {
-    // Pencil button not visible when viewing archived list
-}
-
-func testItemRowReadOnlyForArchivedList() {
-    // Item checkbox and edit button hidden for archived items
-}
-
-func testContextMenuDifferentForArchivedLists() {
-    // Only Restore and Delete options shown
-}
-
-func testDragReorderDisabledForArchivedList() {
-    // Cannot reorder items in archived list
-}
-```
+**Learning**: `macos-archived-lists-read-only.md`
 
 ---
 
@@ -428,7 +424,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
-| Phase 13: Archived Lists Bug Fixes | In Progress | 1/3 |
+| Phase 13: Archived Lists Bug Fixes | In Progress | 2/3 |
 | Phase 14: App Store Submission | Not Started | 0/1 |
 | Phase 15: Spotlight Integration | Optional | 0/1 |
 
@@ -462,7 +458,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 
 **Phase 13 Status** (Archived Lists Bug Fixes - Agent Swarm Investigation):
 - Task 13.1: [COMPLETED] Add Restore Functionality for Archived Lists
-- Task 13.2: Make Archived Lists Read-Only
+- Task 13.2: [COMPLETED] Make Archived Lists Read-Only
 - Task 13.3: Update Documentation Status
 
 **Phase 14 Status**:
