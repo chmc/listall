@@ -45,6 +45,10 @@ struct MacMainView: View {
     @State private var showingSharePopover = false
     @State private var showingExportAllSheet = false
 
+    // MARK: - Restore Confirmation State (Task 13.1 UX improvement)
+    @State private var showingRestoreConfirmation = false
+    @State private var listToRestore: List? = nil
+
     // MARK: - CloudKit Sync Polling (macOS fallback)
     // Apple's CloudKit notifications on macOS can be unreliable when the app is frontmost.
     // This timer serves as a safety net to ensure data refreshes even if notifications miss.
@@ -167,6 +171,11 @@ struct MacMainView: View {
                             dataManager.loadData()
                         }
                         print("✅ MacMainView: Native sheet presenter called")
+                    },
+                    onRestore: {
+                        // Task 13.1 UX improvement: Restore button callback
+                        listToRestore = list
+                        showingRestoreConfirmation = true
                     }
                 )
                 .id(list.id) // Force refresh when selection changes
@@ -235,6 +244,28 @@ struct MacMainView: View {
                 },
                 onCancel: { showingCreateListSheet = false }
             )
+        }
+        // MARK: - Restore List Confirmation Alert (Task 13.1 UX improvement)
+        .alert("Restore List", isPresented: $showingRestoreConfirmation) {
+            Button("Cancel", role: .cancel) {
+                listToRestore = nil
+            }
+            Button("Restore") {
+                if let list = listToRestore {
+                    dataManager.restoreList(withId: list.id)
+                    dataManager.loadArchivedData()
+                    dataManager.loadData()
+                    // Clear selection since list is moving to active lists
+                    selectedList = nil
+                }
+                listToRestore = nil
+            }
+        } message: {
+            if let list = listToRestore {
+                Text("Do you want to restore \"\(list.name)\" to your active lists?")
+            } else {
+                Text("Do you want to restore this list?")
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewList"))) { _ in
             showingCreateListSheet = true
@@ -1129,9 +1160,13 @@ private struct MacListDetailView: View {
     /// Focus state for search field
     @FocusState private var isSearchFieldFocused: Bool
 
-    init(list: List, onEditItem: @escaping (Item) -> Void) {
+    /// Callback to restore the archived list (Task 13.1 UX improvement)
+    let onRestore: () -> Void
+
+    init(list: List, onEditItem: @escaping (Item) -> Void, onRestore: @escaping () -> Void = {}) {
         self.list = list
         self.onEditItem = onEditItem
+        self.onRestore = onRestore
         _viewModel = StateObject(wrappedValue: ListViewModel(list: list))
     }
 
@@ -1186,10 +1221,10 @@ private struct MacListDetailView: View {
     @ViewBuilder
     private var headerView: some View {
         HStack {
-            // MARK: - Archived Badge (Task 13.2)
-            // Show archived indicator for read-only lists
+            // MARK: - Restore Button (Task 13.1 UX improvement)
+            // Show Restore button instead of badge for better discoverability
             if isCurrentListArchived {
-                archivedBadge
+                restoreButton
             }
 
             Spacer()
@@ -1215,22 +1250,22 @@ private struct MacListDetailView: View {
         .padding()
     }
 
-    // MARK: - Archived Badge (Task 13.2)
+    // MARK: - Restore Button (Task 13.1 UX improvement)
 
     @ViewBuilder
-    private var archivedBadge: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "archivebox")
-                .font(.caption)
-            Text(String(localized: "Archived"))
-                .font(.caption)
+    private var restoreButton: some View {
+        Button(action: onRestore) {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.caption)
+                Text(String(localized: "Restore"))
+                    .font(.caption.weight(.medium))
+            }
         }
-        .foregroundColor(.secondary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.15))
-        .cornerRadius(4)
-        .accessibilityLabel("This list is archived and read-only")
+        .buttonStyle(.borderedProminent)
+        .controlSize(.small)
+        .accessibilityLabel("Restore this archived list")
+        .accessibilityHint("Moves list back to active lists")
     }
 
     // MARK: - Selection Mode Button
@@ -1504,10 +1539,12 @@ private struct MacListDetailView: View {
 
     /// Empty state view for lists with no items
     /// Uses the comprehensive MacItemsEmptyStateView component for consistency
+    /// For archived lists, shows read-only state without add button (Task 13.2)
     @ViewBuilder
     private var emptyListView: some View {
         MacItemsEmptyStateView(
             hasItems: false,
+            isArchived: isCurrentListArchived,
             onAddItem: {
                 showingAddItemSheet = true
             }
@@ -1891,6 +1928,8 @@ private struct MacListDetailView: View {
         .navigationTitle(displayName)
         .toolbar {
             // MARK: - Add Item Button (Task 13.2: Hidden for archived lists)
+            // Note: Restore button is in header view for better visibility
+            // Delete Permanently is available via context menu on sidebar
             ToolbarItem(placement: .primaryAction) {
                 if !isCurrentListArchived {
                     Button(action: { showingAddItemSheet = true }) {

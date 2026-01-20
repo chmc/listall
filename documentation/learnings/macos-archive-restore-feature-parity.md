@@ -56,9 +56,39 @@ The macOS app had two critical bugs breaking feature parity with iOS for archive
    - Disabled double-click editing
 5. Disabled drag-to-reorder via `ConditionalDraggable` modifier
 6. Disabled keyboard shortcuts: Space (toggle), Enter (edit), Delete, Cmd+Opt+Up/Down
-7. Added visual "Archived" badge in header
+7. Replaced "Archived" badge with "Restore" button in header (UX improvement)
 8. Blocked CreateNewItem notification for archived lists
 9. Disabled Cmd+Click/Shift+Click multi-select
+10. Updated empty state (`MacItemsEmptyStateView`) with `isArchived` parameter:
+    - Shows "Empty Archived List" message instead of "Add Your First Item" button
+    - Prevents mutation through empty state UI
+
+**UX Improvement - Restore Button in Header**:
+The initial implementation used a passive "Archived" badge. User feedback indicated this was poor UX - Restore functionality was only discoverable via context menu. The solution replaced the badge with an actionable "Restore" button using:
+
+```swift
+// MacListDetailView init with callback
+let onRestore: () -> Void
+
+init(list: List, onEditItem: @escaping (Item) -> Void, onRestore: @escaping () -> Void = {}) {
+    // ...
+}
+
+// Restore button (replaces Archived badge)
+@ViewBuilder
+private var restoreButton: some View {
+    Button(action: onRestore) {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.uturn.backward")
+            Text(String(localized: "Restore"))
+        }
+    }
+    .buttonStyle(.borderedProminent)
+    .controlSize(.small)
+}
+```
+
+The callback pattern is required because `MacListDetailView` is a private nested struct that cannot directly access parent state variables.
 
 **Key Pattern - Conditional Draggable**:
 ```swift
@@ -89,10 +119,13 @@ struct ConditionalDraggable: ViewModifier {
    - Drag-drop handlers
    - Context menus
    - Double-click handlers
+   - **Empty state views** (don't show "Add Item" buttons)
 
-4. **Visual Feedback**: Add clear visual indicator (badge) when viewing archived content
+4. **Visual Feedback vs Actions**: Initially used passive badge for archived status. Better UX is actionable - replace status badge with Restore button. Users can discover restore via button, not just context menu.
 
-5. **iOS Reference**: iOS uses dedicated `ArchivedListView` with `ArchivedItemRowView` - cleaner separation but more code duplication. macOS approach uses same view with conditional rendering - less duplication but more conditionals.
+5. **Nested Struct State Access**: Private structs in same file cannot directly access parent `@State` variables. Use callback closures (`onRestore: () -> Void`) to communicate state changes back to parent.
+
+6. **iOS Reference**: iOS uses dedicated `ArchivedListView` with `ArchivedItemRowView` - cleaner separation but more code duplication. macOS approach uses same view with conditional rendering - less duplication but more conditionals.
 
 ## Tests Added
 

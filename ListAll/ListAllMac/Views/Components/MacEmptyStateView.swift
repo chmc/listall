@@ -269,19 +269,77 @@ struct MacNoListSelectedView: View {
 /// macOS equivalent of iOS ItemsEmptyStateView.
 struct MacItemsEmptyStateView: View {
     let hasItems: Bool
+    let isArchived: Bool
     let onAddItem: () -> Void
+
+    init(hasItems: Bool, isArchived: Bool = false, onAddItem: @escaping () -> Void) {
+        self.hasItems = hasItems
+        self.isArchived = isArchived
+        self.onAddItem = onAddItem
+    }
 
     var body: some View {
         VStack(spacing: 20) {
             if hasItems {
                 // All items crossed out - celebration state
-                celebrationState
+                if isArchived {
+                    archivedCelebrationState
+                } else {
+                    celebrationState
+                }
+            } else if isArchived {
+                // Archived list with no items - read-only state
+                archivedEmptyState
             } else {
                 // No items yet - helpful state
                 helpfulState
             }
         }
         .padding(.horizontal, 32)
+    }
+
+    @ViewBuilder
+    private var archivedEmptyState: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "archivebox")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+                .accessibilityHidden(true)
+
+            Text(String(localized: "Empty Archived List"))
+                .font(.title2)
+
+            Text(String(localized: "This archived list has no items. Restore it to add items."))
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    @ViewBuilder
+    private var archivedCelebrationState: some View {
+        VStack(spacing: 20) {
+            // Celebration icon
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.success.opacity(0.1))
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(Theme.Colors.success)
+            }
+            .accessibilityHidden(true)
+
+            Text(String(localized: "All Done!"))
+                .font(.title)
+                .fontWeight(.bold)
+
+            Text(String(localized: "All items in this archived list were completed."))
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
     }
 
     @ViewBuilder
@@ -486,12 +544,22 @@ struct MacSearchEmptyStateView: View {
 }
 
 #Preview("Items Empty State - No Items") {
-    MacItemsEmptyStateView(hasItems: false, onAddItem: { })
+    MacItemsEmptyStateView(hasItems: false, isArchived: false, onAddItem: { })
         .frame(width: 500, height: 400)
 }
 
 #Preview("Items Empty State - All Complete") {
-    MacItemsEmptyStateView(hasItems: true, onAddItem: { })
+    MacItemsEmptyStateView(hasItems: true, isArchived: false, onAddItem: { })
+        .frame(width: 500, height: 400)
+}
+
+#Preview("Items Empty State - Archived Empty") {
+    MacItemsEmptyStateView(hasItems: false, isArchived: true, onAddItem: { })
+        .frame(width: 500, height: 400)
+}
+
+#Preview("Items Empty State - Archived All Complete") {
+    MacItemsEmptyStateView(hasItems: true, isArchived: true, onAddItem: { })
         .frame(width: 500, height: 400)
 }
 

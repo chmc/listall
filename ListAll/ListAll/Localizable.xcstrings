@@ -34,6 +34,16 @@
         }
       }
     },
+    "%@, %@, read-only" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, read-only"
+          }
+        }
+      }
+    },
     "%@, quantity %lld" : {
       "localizations" : {
         "en" : {
@@ -2530,6 +2540,9 @@
           }
         }
       }
+    },
+    "Do you want to restore this list to your active lists?" : {
+
     },
     "Done" : {
       "extractionState" : "manual",
@@ -6487,6 +6500,9 @@
           }
         }
       }
+    },
+    "This list is archived and read-only" : {
+
     },
     "This list was empty when archived" : {
       "extractionState" : "manual",
