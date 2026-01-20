@@ -1,103 +1,63 @@
-# macOS Archived Lists Read-Only Implementation
-
-**Date**: January 2026
-**Task**: 13.2 - Make Archived Lists Read-Only
-**Platform**: macOS
+---
+title: macOS Archived Lists Read-Only Implementation
+date: 2026-01-20
+severity: HIGH
+category: macos
+tags: [swiftui, read-only, archived-lists, conditional-modifiers, keyboard-shortcuts]
+symptoms: [archived lists fully editable, add/edit/delete/reorder all allowed]
+root_cause: macOS used same view for active and archived lists without disabling edits
+solution: Added isCurrentListArchived property and conditionally disabled all editing controls
+files_affected: [ListAllMac/Views/MacMainView.swift]
+related: [macos-archived-lists-empty-view-fix.md, macos-restore-archived-lists.md]
+---
 
 ## Problem
 
-macOS allowed full editing of archived lists (add items, edit items, edit list name, reorder). This defeated the purpose of archiving, which should preserve list state. iOS uses a dedicated `ArchivedListView` that is completely read-only, but macOS was missing this restriction.
+Archived lists were fully editable (add, edit, delete, reorder), defeating the purpose of archiving. iOS uses dedicated `ArchivedListView` that is completely read-only.
 
 ## Solution
 
-Made archived lists read-only at the UI level in MacListDetailView by:
+UI-level read-only enforcement via `isCurrentListArchived` computed property.
 
-1. Adding `isCurrentListArchived` computed property
-2. Conditionally hiding/disabling all editing controls
-3. Keeping view-only controls (search, filter, share, Quick Look) active
-
-### Key Changes
-
-#### 1. isCurrentListArchived Property
+### Central Property
 
 ```swift
-/// Check if current list is archived (read-only mode)
-/// When true, all editing functionality is disabled - only viewing is allowed
 private var isCurrentListArchived: Bool {
     list.isArchived
 }
 ```
 
-#### 2. Header View Controls
+### What Gets Disabled
 
-Updated `headerView` to show different controls based on archived state:
-- Archived: Only search, filter/sort, share button, and archived badge
-- Active: Full controls including selection mode and edit list button
+| Control | Implementation |
+|---------|----------------|
+| Add Item button | `if !isCurrentListArchived { ... }` |
+| Edit List button | Hidden in header |
+| Selection mode | Hidden in header |
+| Item checkbox | Read-only visual instead of button |
+| Edit/Delete hover buttons | Only Quick Look visible |
+| Double-click edit | Returns early |
+| Drag-to-reorder | `.onMove(perform: nil)` |
+| Keyboard shortcuts | Guard checks property |
+
+### Conditional Draggable Modifier
 
 ```swift
-if !isCurrentListArchived {
-    // Full editing controls
-    selectionModeButton
-    editListButton
-} else {
-    // Read-only: only view controls
-    searchFieldView
-    filterSortControls
-    shareButton
-}
-```
+struct ConditionalDraggable: ViewModifier {
+    let item: Item
+    let isDisabled: Bool
 
-#### 3. Toolbar Add Item Button
-
-Conditionally hidden for archived lists:
-```swift
-.toolbar {
-    ToolbarItem(placement: .primaryAction) {
-        if !isCurrentListArchived {
-            Button(action: { showingAddItemSheet = true }) {
-                Label("Add Item", systemImage: "plus")
-            }
+    func body(content: Content) -> some View {
+        if isDisabled {
+            content
+        } else {
+            content.draggable(item)
         }
     }
 }
 ```
 
-#### 4. MacItemRowView Updates
-
-Added `isArchivedList` parameter to control:
-- Completion checkbox: Shows read-only visual state instead of button
-- Hover actions: Only Quick Look button visible (no edit/delete)
-- Double-click: Disabled (does nothing)
-- Context menu: Only Quick Look option (if item has images)
-
-```swift
-MacItemRowView(
-    item: item,
-    isInSelectionMode: viewModel.isInSelectionMode,
-    isSelected: viewModel.selectedItems.contains(item.id),
-    isArchivedList: isCurrentListArchived,  // New parameter
-    ...
-)
-```
-
-#### 5. Drag-to-Reorder Disabled
-
-```swift
-// onMove disabled for archived lists
-.onMove(perform: isCurrentListArchived ? nil : handleMoveItem)
-
-// Conditional draggable modifier
-.modifier(ConditionalDraggable(item: item, isEnabled: !isCurrentListArchived))
-```
-
-#### 6. Keyboard Shortcuts Disabled
-
-All editing shortcuts check `isCurrentListArchived`:
-- Space: Only triggers Quick Look for items with images
-- Enter: Does not open edit sheet
-- Delete: Does not delete items
-- Cmd+Option+Up/Down: Does not reorder
-- C key: Does not toggle completion
+### Keyboard Shortcuts Guard
 
 ```swift
 .onKeyPress(.return) {
@@ -106,94 +66,57 @@ All editing shortcuts check `isCurrentListArchived`:
 }
 ```
 
-#### 7. Visual Archived Badge
+### MacItemRowView Parameter
 
-Added badge in header for visual indication:
+```swift
+MacItemRowView(
+    item: item,
+    isArchivedList: isCurrentListArchived,  // New parameter
+    ...
+)
+```
+
+Controls:
+- Completion checkbox shows read-only state
+- Hover actions only show Quick Look
+- Context menu only Quick Look option
+- Double-click disabled
+
+### Visual Restore Button (UX Improvement)
+
+Initial passive "Archived" badge was poor UX - replaced with actionable Restore button:
+
 ```swift
 @ViewBuilder
-private var archivedBadge: some View {
-    HStack(spacing: 4) {
-        Image(systemName: "archivebox")
-            .font(.caption)
-        Text(String(localized: "Archived"))
-            .font(.caption)
+private var restoreButton: some View {
+    Button(action: onRestore) {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.uturn.backward")
+            Text(String(localized: "Restore"))
+        }
     }
-    .foregroundColor(.secondary)
-    .padding(.horizontal, 8)
-    .padding(.vertical, 4)
-    .background(Color.secondary.opacity(0.15))
-    .cornerRadius(4)
+    .buttonStyle(.borderedProminent)
+    .controlSize(.small)
 }
 ```
 
-## Design Decisions
+Uses callback closure since nested struct cannot access parent `@State`.
 
-### UI-Level Restriction Only
-
-The read-only restriction is enforced at the UI level, NOT the DataManager level. This is intentional because:
-1. DataManager needs to modify archived lists for restore functionality
-2. UI restriction is sufficient to prevent accidental user modifications
-3. Simpler implementation without backend changes
-
-### What Remains Enabled for Archived Lists
+### What Remains Enabled
 
 - Search field (searching is viewing)
 - Filter/Sort controls (filtering is viewing)
 - Share button (sharing is viewing)
-- Quick Look for images (viewing images is allowed)
+- Quick Look for images
 - Navigation and scrolling
 
-### What Is Disabled for Archived Lists
+## Design Decision
 
-- Add Item button and Cmd+N shortcut
-- Edit List button
-- Selection mode button
-- All item editing (toggle, edit, delete)
-- Drag-and-drop reordering
-- Keyboard shortcuts for editing (Space toggle, Enter edit, Delete)
-- Cmd+Click/Shift+Click multi-select
+Read-only at UI level, not DataManager level:
+- DataManager needs to modify for restore functionality
+- UI restriction sufficient for user protection
+- Simpler implementation
 
-## Files Modified
+## Test Coverage
 
-- `/ListAll/ListAllMac/Views/MacMainView.swift`
-  - Added `isCurrentListArchived` property
-  - Updated `headerView` with conditional controls
-  - Added `archivedBadge` view
-  - Updated `MacItemRowView` with `isArchivedList` parameter
-  - Added `ConditionalDraggable` modifier
-  - Disabled keyboard shortcuts for archived lists
-  - Blocked CreateNewItem notification for archived lists
-
-## Tests Added
-
-19 new tests in `ReadOnlyArchivedListsTests.swift`:
-- `testIsCurrentListArchivedReturnsTrue`
-- `testIsCurrentListArchivedReturnsFalse`
-- `testAddItemButtonHiddenForArchivedList`
-- `testEditListButtonHiddenForArchivedList`
-- `testSelectionModeButtonHiddenForArchivedList`
-- `testItemRowReadOnlyForArchivedList`
-- `testItemEditButtonHiddenForArchivedList`
-- `testItemDeleteButtonHiddenForArchivedList`
-- `testQuickLookButtonVisibleForArchivedList`
-- `testDragReorderDisabledForArchivedList`
-- `testContextMenuReadOnlyForArchivedList`
-- `testSpaceKeyBehaviorForArchivedList`
-- `testEnterKeyBehaviorForArchivedList`
-- `testDeleteKeyBehaviorForArchivedList`
-- `testKeyboardReorderingDisabledForArchivedList`
-- `testShareButtonVisibleForArchivedList`
-- `testFilterSortVisibleForArchivedList`
-- `testArchivedBadgeDisplayed`
-- `testArchivedListItemsNotModifiableViaUI` (integration test)
-
-## Verification
-
-- All 210 ListAllMacTests pass
-- macOS build succeeds without errors
-- Feature parity with iOS ArchivedListView achieved
-
-## Related Tasks
-
-- Task 13.1: Add Restore Functionality (completed) - enables restoring archived lists
-- Task 13.3: Update Documentation Status - next step
+19 tests: isCurrentListArchived property, hidden buttons, read-only rows, disabled drag, context menu, keyboard shortcuts, visible view controls, archived badge/restore button.

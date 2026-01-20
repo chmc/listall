@@ -1,33 +1,38 @@
-# macOS Screenshot Integration with generate-screenshots-local.sh
-
-**Date:** January 2, 2026
-**Phase:** Phase 3 - Integration
+---
+title: macOS Screenshot Integration with generate-screenshots-local.sh
+date: 2026-01-02
+severity: MEDIUM
+category: macos
+tags: [bash, integration, fastlane, mktemp, screenshots]
+symptoms: [need automated post-processing after Fastlane, summary shows wrong paths]
+root_cause: Processing script needed integration with existing screenshot generation pipeline
+solution: Add post-processing call after Fastlane in generate_macos_screenshots(); update summary paths
+files_affected:
+  - .github/scripts/generate-screenshots-local.sh
+  - .github/scripts/lib/macos-screenshot-helper.sh
+related:
+  - macos-batch-screenshot-processing.md
+  - macos-screenshot-helper-implementation.md
+---
 
 ## Problem
 
-The macOS screenshot processing script (`process-macos-screenshots.sh`) needed to be integrated with the existing `generate-screenshots-local.sh` pipeline so that:
-1. Post-processing runs automatically after Fastlane captures raw screenshots
-2. Users don't need to run a separate command
-3. Output paths are displayed correctly in the summary
+The macOS screenshot processing script needed integration with `generate-screenshots-local.sh` so:
+1. Post-processing runs automatically after Fastlane
+2. Users don't need separate command
+3. Output paths display correctly in summary
 
 ## Solution
 
-Modified `generate-screenshots-local.sh` to integrate the post-processing:
-
-### 1. Updated generate_macos_screenshots() Function
-
-Added post-processing call after the Fastlane command:
+### 1. Updated generate_macos_screenshots()
 
 ```bash
 generate_macos_screenshots() {
-    # ... existing code ...
-
     if ! bundle exec fastlane ios screenshots_macos; then
-        log_error "macOS screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    # NEW: Post-process screenshots for App Store format
+    # NEW: Post-process for App Store format
     log_info "Processing screenshots for App Store dimensions..."
     if ! "${SCRIPT_DIR}/process-macos-screenshots.sh"; then
         log_error "macOS screenshot processing failed"
@@ -38,9 +43,7 @@ generate_macos_screenshots() {
 }
 ```
 
-### 2. Updated show_summary() Function
-
-Changed macOS output paths from raw to processed:
+### 2. Updated show_summary()
 
 ```bash
 # Before
@@ -52,66 +55,30 @@ echo "  macOS (processed with gradient background):"
 echo "    fastlane/screenshots/mac/processed/en-US/"
 ```
 
-Updated in two places:
-- Single-platform macOS summary
-- All-platforms summary
-
-### 3. Updated Next Steps Git Command
-
-Updated the git add command in the summary to use the processed path:
+### 3. Updated git add Command
 
 ```bash
-git add fastlane/screenshots_compat/ fastlane/screenshots/watch_normalized/ fastlane/screenshots/mac/processed/
+git add fastlane/screenshots/mac/processed/
 ```
 
-## Key Technical Details
+## macOS mktemp Quirk
 
-### Integration Points
-
-The integration happens at three levels:
-
-1. **Execution Flow**: After Fastlane finishes, the processing script runs immediately
-2. **Error Handling**: If processing fails, the entire macOS generation fails with proper error code
-3. **User Feedback**: Summary shows correct processed paths
-
-### Script Location Reference
-
-The processing script is called using `${SCRIPT_DIR}` which ensures it works regardless of where the user runs from:
+On macOS, `mktemp /tmp/pattern_XXXXXX.png` doesn't work - XXXXXX must be at end:
 
 ```bash
-"${SCRIPT_DIR}/process-macos-screenshots.sh"
+# BAD: Fails on macOS
+temp_file=$(mktemp /tmp/macos_rounded_XXXXXX.png)
+
+# GOOD: Create without extension, then rename
+temp_base=$(mktemp /tmp/macos_rounded_XXXXXX)
+temp_rounded="${temp_base}.png"
+mv "${temp_base}" "${temp_rounded}"
 ```
 
-### Default Paths Used by Processing Script
+## Key Learnings
 
-The processing script uses sensible defaults:
-- Input: `fastlane/screenshots/mac/` (where Fastlane puts raw captures)
-- Output: `fastlane/screenshots/mac/processed/` (where App Store ready images go)
-
-## Test Results
-
-- All 15 unit tests: PASS
-- Shellcheck: No new warnings from changes
-- Manual verification:
-  - Help text shows correct information
-  - Script structure is correct
-
-## Lessons Learned
-
-1. **Keep integration simple**: Just calling the existing script is cleaner than merging functionality
-2. **Use relative paths via script dir**: `${SCRIPT_DIR}` ensures portability
-3. **Update all summary locations**: The same path was shown in multiple places (single-platform vs all-platform summaries)
-4. **Test existing tests first**: Running the existing test suite validates the integration works with all edge cases already covered
-5. **macOS mktemp quirk**: On macOS, `mktemp /tmp/pattern_XXXXXX.png` doesn't work - the XXXXXX must be at the end. Solution: create without extension first, then rename:
-   ```bash
-   temp_base=$(mktemp /tmp/macos_rounded_XXXXXX)
-   temp_rounded="${temp_base}.png"
-   mv "${temp_base}" "${temp_rounded}"
-   ```
-6. **Always run the actual script**: Unit tests may pass but the real script can fail due to environment differences
-
-## Files Modified
-
-- `.github/scripts/generate-screenshots-local.sh` - Added post-processing call and updated summary paths
-- `.github/scripts/lib/macos-screenshot-helper.sh` - Fixed mktemp pattern for macOS compatibility
-- `documentation/TODO_MACOS.md` - Marked Phase 3 complete
+1. **Keep integration simple** - just call existing script
+2. **Use ${SCRIPT_DIR}** for portability
+3. **Update all summary locations** - same path shown in multiple places
+4. **macOS mktemp differs from Linux** - extension must be added separately
+5. **Always run actual script** - unit tests may pass but real script can fail

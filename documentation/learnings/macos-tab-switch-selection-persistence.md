@@ -1,22 +1,26 @@
-# macOS Tab Switch Selection Persistence Bug
+---
+title: macOS Tab Switch Selection Persistence Bug
+date: 2026-01-15
+severity: CRITICAL
+category: macos
+tags: [selection-state, tab-switch, swiftui-state, archived-lists]
+symptoms:
+  - User switches from Archived to Active Lists view
+  - selectedList still holds archived list
+  - Detail view shows archived list UI (Restore button, read-only mode)
+  - User sees Restore button on what appears to be active list
+  - Cannot add items to selected list
+root_cause: Selection state not cleared when switching showingArchivedLists tabs
+solution: Clear selectedList, selectedLists, and isInSelectionMode when showingArchivedLists changes
+files_affected:
+  - ListAll/ListAllMac/Views/MacMainView.swift
+  - ListAll/ListAllMacTests/ReadOnlyArchivedListsTests.swift
+related: [macos-archived-lists-read-only.md, macos-archived-lists-empty-view-fix.md, macos-bulk-list-archive-delete.md]
+---
 
-**Date**: January 2026
-**Task**: 13.4 - Fix Selection Persistence Bug When Switching Tabs
-**Severity**: CRITICAL
+## The Bug
 
-## Problem
-
-When switching between "Active Lists" and "Archived Lists" views in the macOS sidebar, the `selectedList` state variable was NOT cleared. This caused a critical bug:
-
-1. User selects an archived list in "Archived Lists" view
-2. User switches to "Active Lists" view
-3. `selectedList` STILL holds the archived list
-4. Detail view shows archived list UI (Restore button, read-only mode)
-5. User sees "Restore" button and cannot add items to what appears to be an active list
-
-## Root Cause
-
-In `MacMainView.swift`, the `.onChange(of: showingArchivedLists)` handler only loaded archived data but didn't clear the selection:
+When switching between "Active Lists" and "Archived Lists" views, `selectedList` was NOT cleared:
 
 ```swift
 // BUGGY CODE
@@ -28,18 +32,15 @@ In `MacMainView.swift`, the `.onChange(of: showingArchivedLists)` handler only l
 }
 ```
 
-## Solution
+## Solution: Clear ALL Selection State
 
-Clear ALL selection state when `showingArchivedLists` changes. The fix requires changes in TWO places because selection state is distributed across views:
+Fix requires changes in TWO places because selection state is distributed:
 
 ### 1. MacMainView (single-list selection)
 
 ```swift
-// In MacMainView body
 .onChange(of: showingArchivedLists) { _, newValue in
-    // Clear single-list selection when switching between active/archived views
-    selectedList = nil
-
+    selectedList = nil  // Clear single-list selection
     if newValue {
         dataManager.loadArchivedData()
     }
@@ -49,37 +50,67 @@ Clear ALL selection state when `showingArchivedLists` changes. The fix requires 
 ### 2. MacSidebarView (multi-select state)
 
 ```swift
-// In MacSidebarView body
 .onChange(of: showingArchivedLists) { _, _ in
-    // Exit selection mode and clear selections when switching tabs
     selectedLists.removeAll()
     isInSelectionMode = false
 }
 ```
 
-**Why two places?** `selectedList` lives in `MacMainView`, while `selectedLists` and `isInSelectionMode` are `@State` in `MacSidebarView`. Both need to be cleared for complete state cleanup.
+## Additional Bugs Found
 
-## Design Principles Learned
+### Bug 2: Restore Handler Missing Selection Clear
 
-### 1. Selection State Must Match Display Context
+After restoring list via confirmation dialog, `selectedList` wasn't cleared:
 
-When switching between different "domains" of data (active vs archived):
+```swift
+// FIX: Add selectedList = nil after restore
+Button("Restore") {
+    if let list = listToRestore {
+        dataManager.restoreList(withId: list.id)
+        dataManager.loadArchivedData()
+        dataManager.loadData()
+    }
+    listToRestore = nil
+    selectedList = nil  // ADDED
+}
+```
+
+### Bug 3: isCurrentListArchived Used Stale Data
+
+Computed property checked stale `list` parameter instead of fresh data:
+
+```swift
+// FIX: Check fresh data from dataManager
+private var isCurrentListArchived: Bool {
+    if let current = currentList {
+        return current.isArchived  // Fresh from dataManager.lists
+    }
+    if let archived = dataManager.archivedLists.first(where: { $0.id == list.id }) {
+        return archived.isArchived
+    }
+    return list.isArchived  // Fallback
+}
+```
+
+## Design Principles
+
+### Selection State Must Match Display Context
+
+When switching between data domains (active vs archived):
 - Clear selection to prevent stale references
-- A selected item should always exist in the currently displayed list
+- Selected item should always exist in currently displayed list
 
-### 2. UI State vs Data State
+### SwiftUI @State Persistence
 
-This bug arose from confusing two different concepts:
-- `showingArchivedLists`: UI state indicating which section user is viewing
-- `list.isArchived`: Data property indicating if a specific list is archived
-
-The detail view correctly checks `list.isArchived`, but the sidebar state allowed an archived list to remain selected while viewing active lists.
-
-### 3. SwiftUI @State Persistence
-
-SwiftUI `@State` variables persist across view updates unless explicitly cleared. When using `@State` for selection:
-- Consider what should happen when the context changes
+`@State` variables persist across view updates unless explicitly cleared. When using `@State` for selection:
+- Consider what happens when context changes
 - Add clearing logic in `onChange` handlers for related state
+
+## Prevention
+
+- When adding tab/section switching, always consider selection state
+- Write tests for state transitions, not just static property values
+- Ensure invariant: `selectedItem` should always be in `displayedItems`
 
 ## Tests Added
 
@@ -89,63 +120,3 @@ New `TabSwitchSelectionTests` suite verifies:
 - Selected list must belong to current displayedLists domain
 - Active list detail view must not show Restore button
 - Active list should allow adding new items
-
-## Prevention
-
-For future similar features:
-1. When adding tab/section switching, always consider selection state
-2. Write tests for state transitions, not just static property values
-3. Ensure invariant: `selectedItem` should always be in `displayedItems`
-
-## Additional Fixes Required
-
-The initial fix (clearing selection on tab switch) was insufficient. Two more bugs persisted:
-
-### Bug 2: Restore Handler Didn't Clear Selection
-
-After restoring a list via the confirmation dialog, `selectedList` wasn't cleared:
-
-```swift
-// BUGGY CODE - after restore, stale struct remains selected
-Button("Restore") {
-    if let list = listToRestore {
-        dataManager.restoreList(withId: list.id)
-        dataManager.loadArchivedData()
-        dataManager.loadData()
-    }
-    listToRestore = nil
-    // MISSING: selectedList = nil
-}
-```
-
-### Bug 3: `isCurrentListArchived` Used Stale Data
-
-The computed property checked the stale `list` parameter instead of fresh data:
-
-```swift
-// BUGGY CODE
-private var isCurrentListArchived: Bool {
-    list.isArchived  // Stale struct copy, never updates!
-}
-
-// FIXED CODE
-private var isCurrentListArchived: Bool {
-    // Check currentList first (fresh data from dataManager.lists)
-    if let current = currentList {
-        return current.isArchived
-    }
-    // If not in active lists, check archivedLists
-    if let archived = dataManager.archivedLists.first(where: { $0.id == list.id }) {
-        return archived.isArchived
-    }
-    return list.isArchived  // Fallback
-}
-```
-
-## Files Modified
-
-- `ListAll/ListAllMac/Views/MacMainView.swift:306-320` - Tab switch selection clearing
-- `ListAll/ListAllMac/Views/MacMainView.swift:1034-1039` - Multi-select clearing in MacSidebarView
-- `ListAll/ListAllMac/Views/MacMainView.swift:1008` - Restore handler clears selection
-- `ListAll/ListAllMac/Views/MacMainView.swift:1210-1222` - `isCurrentListArchived` uses fresh data
-- `ListAll/ListAllMacTests/ReadOnlyArchivedListsTests.swift` - Added TabSwitchSelectionTests suite (5 tests)

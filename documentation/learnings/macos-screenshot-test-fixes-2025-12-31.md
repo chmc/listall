@@ -1,23 +1,32 @@
-# macOS Screenshot Test Fixes - 2025-12-31
+---
+title: macOS Screenshot Test Main Thread Deadlock Fix
+date: 2025-12-31
+severity: CRITICAL
+category: macos
+tags: [xcuitest, applescript, deadlock, mainactor, nsapplescript, runloop]
+symptoms: [main run loop busy for 30s, run loop nesting count negative, XCTAssertGreaterThan failed for 800]
+root_cause: NSAppleScript with DispatchSemaphore blocks main thread while AppleScript needs main thread callback - classic deadlock
+solution: Use osascript CLI via Process instead of NSAppleScript; use >= instead of > for dimension assertions
+files_affected:
+  - ListAll/ListAllMacUITests/RealAppleScriptExecutor.swift
+  - ListAll/ListAllMacUITests/MacScreenshotTests.swift
+related:
+  - macos-screenshot-visibility-fix.md
+---
 
 ## Problem
 
-macOS screenshot generation was failing with 3 distinct issues:
+macOS screenshot generation failing with 3 issues:
+1. "Unable to perform work on main run loop, process main thread busy for 30.0s"
+2. "Run loop nesting count is negative (-1)"
+3. "XCTAssertGreaterThan failed: (800.0) is not greater than (800.0)"
 
-1. **testScreenshot04_SettingsWindow** - "Unable to perform work on main run loop, process main thread busy for 30.0s"
-2. **testScreenshot02_ListDetailView** (en-US only) - "Run loop nesting count is negative (-1), observer possibly not unregistered"
-3. **testA_P2_WindowCaptureVerification** - "XCTAssertGreaterThan failed: (800.0) is not greater than (800.0)"
+Only 2-3 screenshots per locale generated instead of 4.
 
-Only 2-3 screenshots per locale were generated instead of 4.
-
-## Root Causes
-
-### 1. Main Thread Deadlock (Issues 1 & 2)
-
-The `RealAppleScriptExecutor` used `NSAppleScript` with `DispatchSemaphore.wait()`:
+## Root Cause: Main Thread Deadlock
 
 ```swift
-// OLD CODE - CAUSED DEADLOCK
+// BAD: Causes deadlock from @MainActor context
 DispatchQueue.global(qos: .userInitiated).async {
     let appleScript = NSAppleScript(source: script)
     let result = appleScript?.executeAndReturnError(&errorDict)
@@ -26,57 +35,35 @@ DispatchQueue.global(qos: .userInitiated).async {
 semaphore.wait(timeout: deadline)  // BLOCKS MAIN THREAD
 ```
 
-**Problem**: `NSAppleScript.executeAndReturnError()` often needs to callback to the main thread (especially for System Events AppleScript). Since the test class is `@MainActor`, the main thread was blocked waiting on the semaphore while AppleScript needed it - classic deadlock.
+`NSAppleScript.executeAndReturnError()` needs to callback to main thread (especially for System Events). Since test class is `@MainActor`, main thread is blocked waiting on semaphore while AppleScript needs it.
 
-### 2. Width Assertion Too Strict (Issue 3)
+## Solution
 
-```swift
-// OLD CODE
-XCTAssertGreaterThan(imageSize.width, 800, ...)  // Fails when width == 800
-```
-
-The assertion required `>800` but the screenshot was exactly 800 pixels (400 points × 2x Retina). This is a valid size but failed the strict `>` comparison.
-
-## Fixes Applied
-
-### Fix 1: Use osascript CLI Instead of NSAppleScript
-
-**File**: `ListAll/ListAllMacUITests/RealAppleScriptExecutor.swift`
-
-Replaced NSAppleScript with osascript CLI via Process:
+### Fix 1: Use osascript CLI
 
 ```swift
-// NEW CODE - NO DEADLOCK
+// GOOD: Separate process, no main thread callback issues
 let process = Process()
 process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
 process.arguments = ["-e", script]
 
-// Wait on background thread, doesn't block main thread callbacks
 DispatchQueue.global(qos: .userInitiated).async {
     process.waitUntilExit()
     semaphore.signal()
 }
 ```
 
-**Why this works**: osascript runs as a separate process, so it doesn't need callbacks to the main thread of the test process.
-
-### Fix 2: Change Width Assertion to >=
-
-**File**: `ListAll/ListAllMacUITests/MacScreenshotTests.swift:470-478`
+### Fix 2: Use >= for Dimension Assertions
 
 ```swift
-// NEW CODE
-XCTAssertGreaterThanOrEqual(
-    imageSize.width, 800,
-    "Screenshot width must be >=800"
-)
+// BAD: Fails when width == 800 (valid size)
+XCTAssertGreaterThan(imageSize.width, 800, ...)
+
+// GOOD: Accepts boundary value
+XCTAssertGreaterThanOrEqual(imageSize.width, 800, ...)
 ```
 
-### Fix 3: Add Run Loop Drain Helper
-
-**File**: `ListAll/ListAllMacUITests/MacScreenshotTests.swift:356-365`
-
-Added a helper to drain pending run loop operations:
+### Fix 3: Run Loop Drain Helper
 
 ```swift
 private func drainRunLoop() {
@@ -86,33 +73,16 @@ private func drainRunLoop() {
 }
 ```
 
-Called at:
-- End of `setUpWithError()`
-- End of `prepareWindowForScreenshot()`
-
-This helps prevent "Run loop nesting count is negative" errors by ensuring pending run loop work completes before proceeding.
+Call at end of `setUpWithError()` and `prepareWindowForScreenshot()`.
 
 ## Results
 
-Before fixes:
-- en-US: 2/4 screenshots
-- fi: 3/4 screenshots
-- 3 test failures
-
-After fixes:
-- en-US: 4/4 screenshots
-- fi: 4/4 screenshots
-- 0 test failures
-- "✅ P2 PASSED: Window capture verification successful!"
+Before: en-US 2/4, fi 3/4, 3 failures
+After: en-US 4/4, fi 4/4, 0 failures
 
 ## Key Learnings
 
-1. **Never use NSAppleScript with DispatchSemaphore from @MainActor context** - it can deadlock because NSAppleScript may need the main thread
-2. **osascript CLI is safer** - runs as separate process, no main thread callback issues
-3. **Run loop draining between operations** helps prevent run loop corruption in XCUITest
-4. **Use `>=` instead of `>` for dimension assertions** when the boundary value is valid
-
-## Related Files
-
-- `/Users/aleksi/source/listall/ListAll/ListAllMacUITests/RealAppleScriptExecutor.swift`
-- `/Users/aleksi/source/listall/ListAll/ListAllMacUITests/MacScreenshotTests.swift`
+1. **Never use NSAppleScript with DispatchSemaphore from @MainActor**
+2. **osascript CLI is safer** - runs as separate process
+3. **Run loop draining** prevents corruption in XCUITest
+4. **Use >= not > for dimension assertions** when boundary is valid

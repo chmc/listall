@@ -1,47 +1,57 @@
-# macOS Dark Mode Implementation
+---
+title: macOS Dark Mode Color Implementation
+date: 2026-01-06
+severity: MEDIUM
+category: macos
+tags: [dark-mode, colors, swiftui, nscolor, appearance]
+symptoms:
+  - Image count badges invisible in dark mode
+  - Hardcoded colors not adapting to appearance
+  - Poor contrast in one mode or the other
+root_cause: Using hardcoded Color.black/white with opacity instead of semantic or material colors
+solution: Use material backgrounds with semantic colors; define light/dark variants in AccentColor asset
+files_affected:
+  - ListAllMac/Views/MacMainView.swift
+  - ListAllMac/Views/MacQuickLookView.swift
+  - Assets.xcassets/AccentColor.colorset/Contents.json
+related:
+  - macos-voiceover-accessibility.md
+---
 
-## Date: 2026-01-06
+## Overlay Color Pattern
 
-## Context
-Implemented dark mode support for the ListAll macOS app (Task 11.3).
+**Problem:** `Color.black.opacity(0.7)` becomes invisible in dark mode.
 
-## Key Learnings
-
-### 1. Avoid Hardcoded Colors for Overlays
-**Problem**: Image count badges using `Color.black.opacity(0.7)` become invisible in dark mode.
-
-**Solution**: Use material backgrounds with semantic colors:
+**Solution:** Layer material with semantic color:
 ```swift
-// BAD - invisible in dark mode
+// BAD
 .foregroundColor(.white)
 .background(Color.black.opacity(0.7))
 
-// GOOD - works in both modes
+// GOOD
 .foregroundStyle(.white)
 .background(.ultraThinMaterial.opacity(0.9))
 .background(Color(nsColor: .darkGray))
 ```
 
-The layered approach:
-1. `.ultraThinMaterial` provides vibrancy/blur effect that adapts
-2. `NSColor.darkGray` ensures readable contrast in both modes
+## Appearance-Adaptive NSColor System Colors
 
-### 2. NSColor System Colors
-macOS provides appearance-adaptive system colors:
 - `NSColor.windowBackgroundColor` - main window background
 - `NSColor.controlBackgroundColor` - control/grouped backgrounds
 - `NSColor.textColor` - primary text
 - `NSColor.secondaryLabelColor` - secondary/hint text
-- `NSColor.darkGray` - good for badge backgrounds
+- `NSColor.darkGray` - badge backgrounds (works in both modes)
 
-### 3. SwiftUI Semantic Colors
-SwiftUI colors that automatically adapt:
-- `Color.primary` - adapts to text color
-- `Color.secondary` - adapts to secondary text
-- `Color.accentColor` - uses AccentColor from asset catalog
+## SwiftUI Semantic Colors
 
-### 4. AccentColor Asset Configuration
-AccentColor must define both light and dark variants in `Contents.json`:
+Automatically adapt:
+- `Color.primary` - text color
+- `Color.secondary` - secondary text
+- `Color.accentColor` - from asset catalog
+
+## AccentColor Asset Configuration
+
+Define both variants in `Contents.json`:
 ```json
 {
   "colors": [
@@ -58,46 +68,20 @@ AccentColor must define both light and dark variants in `Contents.json`:
 }
 ```
 
-Dark mode variant should be lighter/more saturated for better visibility.
+Dark variant should be lighter/more saturated for visibility.
 
-### 5. Testing Dark Mode Colors
-Pure unit tests can verify color availability without rendering:
+## Patterns to Avoid
+
+- `Color.black` / `Color.white` with opacity for overlays
+- `Color(.sRGB, red:green:blue:)` hardcoded values
+- Hex color strings without dark variants
+- Text colors assuming light background
+
+## Testing Colors
+
 ```swift
 @Test func accentColorLoads() {
     let color = SwiftUIColor("AccentColor")
     #expect(color != nil)
 }
-
-@Test func nsColorDarkGrayConvertsToSwiftUI() {
-    let nsColor = NSColor.darkGray
-    let swiftUIColor = SwiftUIColor(nsColor: nsColor)
-    #expect(swiftUIColor != nil)
-}
 ```
-
-### 6. Views That Already Work
-Most SwiftUI views with semantic colors work automatically:
-- `Color.secondary.opacity(0.1)` - adapts in both modes
-- `Color.accentColor.opacity(0.1)` - adapts in both modes
-- System colors like `Color.green`, `Color.orange` - adapt appropriately
-
-### 7. Problematic Patterns to Avoid
-- `Color.black` / `Color.white` with opacity for overlays
-- `Color(.sRGB, red:green:blue:)` hardcoded RGB values
-- Hex color strings without dark variants
-- Text colors that assume light background
-
-## Files Modified
-- `MacMainView.swift` - Image badge colors
-- `MacQuickLookView.swift` - Thumbnail badge colors
-- `AccentColor.colorset/Contents.json` - Light/dark variants
-- `ListAllMacTests.swift` - DarkModeColorTests class
-
-## Test Coverage
-- 19 dark mode unit tests
-- All 133 macOS tests pass
-
-## Related Resources
-- [Apple Human Interface Guidelines: Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode)
-- [SwiftUI Color Documentation](https://developer.apple.com/documentation/swiftui/color)
-- [NSColor System Colors](https://developer.apple.com/documentation/appkit/nscolor)

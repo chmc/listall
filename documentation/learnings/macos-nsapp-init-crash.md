@@ -1,59 +1,65 @@
-# macOS NSApp Initialization Crash in SwiftUI App
+---
+title: macOS NSApp Initialization Crash in SwiftUI App
+date: 2026-01-07
+severity: CRITICAL
+category: macos
+tags: [crash, nsapp, swiftui, app-lifecycle, ui-tests, initialization]
+symptoms:
+  - UI tests fail with "Application does not have a process ID"
+  - App crashes immediately on launch during UI tests
+  - Assertion failure in ListAllMacApp.init()
+root_cause: Calling NSApp/NSApplication.shared in SwiftUI @main init() before NSApplication is initialized
+solution: Move NSApp calls to AppDelegate.applicationDidFinishLaunching() where NSApplication is ready
+files_affected:
+  - ListAllMac/ListAllMacApp.swift
+  - ListAllMac/AppDelegate.swift
+related: [macos-native-sheet-presentation.md, macos-uitest-authorization-fix.md, macos-test-isolation-permission-dialogs.md]
+---
 
 ## Problem
 
-macOS UI tests were failing with "Application does not have a process ID" error. The app was crashing immediately on launch during UI tests.
-
-## Root Cause
-
-In `ListAllMacApp.init()`, we were calling:
-```swift
-NSApp.setActivationPolicy(.regular)
-NSApplication.shared.activate(ignoringOtherApps: true)
-```
-
-However, in a SwiftUI `@main` app, the `init()` method runs **before** `NSApplication` is fully initialized. Calling `NSApp` methods at this point causes an assertion failure, crashing the app.
-
-The crash log showed:
+macOS UI tests failing with crash. Crash log showed:
 ```
 "symbol":"_assertionFailure(_:_:file:line:flags:)"
 "symbol":"ListAllMacApp.init()"
 ```
 
+## Root Cause
+
+In SwiftUI `@main` apps, `init()` runs **before** `NSApplication` is fully initialized. Calling `NSApp` methods crashes the app.
+
+**Crashing code:**
+```swift
+// In ListAllMacApp.init()
+NSApp.setActivationPolicy(.regular)  // CRASH: NSApp not ready
+NSApplication.shared.activate(ignoringOtherApps: true)
+```
+
 ## Solution
 
-Remove any `NSApp` / `NSApplication.shared` calls from the SwiftUI app's `init()`. Instead, handle app activation in:
-
-1. **`AppDelegate.applicationDidFinishLaunching()`** - This is the correct place for activation policy and app activation calls, as `NSApplication` is fully initialized at this point.
-
-2. **For UI tests**, ensure `AppDelegate` handles:
-   - `NSApp.setActivationPolicy(.regular)`
-   - `NSApplication.shared.activate(ignoringOtherApps: true)`
-   - Immediate window creation (no delays)
-
-## Code Changes
+Move NSApp calls to `AppDelegate.applicationDidFinishLaunching()`:
 
 **Before (crashing):**
 ```swift
-// In ListAllMacApp.init()
+// ListAllMacApp.init()
 if ProcessInfo.processInfo.arguments.contains("UITEST_MODE") {
-    NSApp.setActivationPolicy(.regular)  // CRASH: NSApp not ready
+    NSApp.setActivationPolicy(.regular)
     NSApplication.shared.activate(ignoringOtherApps: true)
 }
 ```
 
 **After (working):**
 ```swift
-// In ListAllMacApp.init()
+// ListAllMacApp.init()
 if ProcessInfo.processInfo.arguments.contains("UITEST_MODE") {
-    print("UI test mode detected - activation will happen in AppDelegate")
+    print("UI test mode - activation in AppDelegate")
 }
 
-// In AppDelegate.applicationDidFinishLaunching()
+// AppDelegate.applicationDidFinishLaunching()
 NSApp.setActivationPolicy(.regular)  // OK: NSApp is ready
 NSApplication.shared.activate(ignoringOtherApps: true)
 ```
 
-## Key Takeaway
+## Key Rule
 
-In SwiftUI macOS apps using `@main`, the `init()` method runs before `NSApplication` is fully initialized. Any code that requires `NSApp` or `NSApplication.shared` must be deferred to `AppDelegate.applicationDidFinishLaunching()` or later.
+In SwiftUI macOS apps using `@main`, any code requiring `NSApp` or `NSApplication.shared` must be deferred to `AppDelegate.applicationDidFinishLaunching()` or later.

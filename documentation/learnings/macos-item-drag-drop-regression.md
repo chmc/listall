@@ -1,145 +1,80 @@
-# macOS Item Drag-Drop Between Lists Regression (January 2026)
-
-## Problem
-
-The ability to drag items from one list to another on macOS stopped working. Two separate issues caused this:
-1. Initially, items could only be dropped onto empty lists or sidebar cells (missing `.dropDestination`)
-2. After fixing the drop destination, drag still didn't START at all - clicking down on an item did nothing
+---
+title: macOS Item Drag-Drop Between Lists Regression
+date: 2026-01-10
+severity: HIGH
+category: macos
+tags: [drag-drop, focusable, tap-gesture, swiftui, sonoma]
+symptoms:
+  - Items can only be dropped onto empty lists or sidebar cells
+  - Drag doesn't START at all - clicking down on item does nothing
+  - Works on iOS but broken on macOS
+root_cause: Three issues - missing dropDestination, focusable() capturing mouse clicks, TapGesture blocking drag initiation
+solution: Restore dropDestination, use focusable(interactions .activate), remove TapGesture from item rows
+files_affected:
+  - ListAll/ListAllMac/Views/MacMainView.swift
+related: [swiftui-list-drag-drop-ordering.md]
+---
 
 ## Root Causes
 
-### Root Cause 1: Missing Drop Destination
-The `.dropDestination(for: ItemTransferData.self)` modifier was accidentally removed from `itemsListView` in `MacMainView` during subsequent development.
+### 1. Missing Drop Destination
 
-### Root Cause 2: Focus Captures Mouse Clicks
-The `.focusable()` modifier added for keyboard navigation (Task 11.1) was capturing all mouse clicks on macOS Sonoma+, preventing drag gestures from starting.
+`.dropDestination(for: ItemTransferData.self)` was accidentally removed from `itemsListView`.
 
-**Key Finding**: In macOS Sonoma (14.0+), the default `.focusable()` modifier supports ALL focus interactions (edit + activate). This means it captures the initial mouse-down event to potentially start text editing, which blocks SwiftUI's drag gesture recognizer from detecting the drag intent.
+### 2. Focus Captures Mouse Clicks (macOS Sonoma+)
 
-From Apple's WWDC23: "Prior to macOS Sonoma, the focusable modifier only supported activation semantics. In macOS Sonoma+, it defaults to all interactions."
+In macOS Sonoma (14.0+), default `.focusable()` supports ALL focus interactions (edit + activate). It captures mouse-down events to potentially start text editing, blocking drag gesture recognition.
 
-### Root Cause 3: TapGesture Blocks Drag (THE REAL ISSUE)
-The `.simultaneousGesture(TapGesture())` modifier was added to handle selection mode single-click behavior. However, **ANY tap gesture handler captures mouse-down events**, blocking drag initiation entirely.
+**Fix**: Use `.focusable(interactions: .activate)`:
 
-**Key Finding**: The original working implementation (commit d32902d) only had `.onTapGesture(count: 2)` for double-click, which does NOT capture single clicks or drag initiation. The `.simultaneousGesture(TapGesture())` added later for selection mode was the root cause.
-
-**Comparison with sidebar lists**: Sidebar list rows work because they use `NavigationLink` with only `Text` children - no tap gestures anywhere. Item rows had tap gestures that were blocking drag.
-
-## Fixes Applied
-
-### Fix 1: Restore Drop Destination
 ```swift
-.listStyle(.inset)
-// MARK: - Drop Destination for Cross-List Item Moves
-.dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-    handleItemDrop(droppedItems)
-}
-```
-
-### Fix 2: Use `.focusable(interactions: .activate)`
-Changed from:
-```swift
+// BEFORE (broken)
 .draggable(item)
-.focusable()  // ❌ Captures mouse clicks, blocks drag
-.focused($focusedItemID, equals: item.id)
-```
+.focusable()  // Captures mouse clicks, blocks drag
 
-To:
-```swift
+// AFTER (working)
 .draggable(item)
-// CRITICAL: Use .activate interactions to prevent focus from capturing
-// mouse clicks that should initiate drag gestures. Without this,
-// .focusable() on macOS Sonoma+ captures all click interactions,
-// blocking drag-and-drop from starting.
-.focusable(interactions: .activate)  // ✅ Only activate focus, don't capture clicks
-.focused($focusedItemID, equals: item.id)
+.focusable(interactions: .activate)  // Only activate focus, allows drag
 ```
 
-### Fix 3: Remove TapGesture From Item Rows
-Removed the `.simultaneousGesture(TapGesture())` from `MacItemRowView`:
+### 3. TapGesture Blocks Drag (THE REAL ISSUE)
 
-**Before (broken):**
+`.simultaneousGesture(TapGesture())` captures mouse-down events, blocking drag initiation entirely.
+
+**Key Finding**: Only `.onTapGesture(count: 2)` is safe - it does NOT capture single clicks or drag initiation.
+
 ```swift
-.contentShape(Rectangle())
-.simultaneousGesture(
-    TapGesture()
-        .onEnded {
-            if isInSelectionMode {
-                onToggleSelection()
-            }
-        }
-)
+// BROKEN - blocks drag
+.simultaneousGesture(TapGesture().onEnded { ... })
+
+// SAFE - doesn't block drag
+.onTapGesture(count: 2) { ... }
 ```
-
-**After (working):**
-```swift
-// NOTE: Do NOT add .onTapGesture or .simultaneousGesture(TapGesture()) here!
-// Any tap gesture handler captures mouse-down events and blocks drag initiation.
-// Selection mode uses the checkbox button, double-click, or context menu instead.
-.contentShape(Rectangle())
-```
-
-**Selection mode still works via:**
-- Checkbox button (click to toggle selection)
-- Double-click (triggers `onToggleSelection()` in selection mode)
-- Context menu (Select/Deselect option)
-
-## Why `.focusable(interactions: .activate)` Works
-
-- `interactions: .activate` - Focus is used as alternative to direct pointer activation (clicking). The view becomes focusable for keyboard navigation but doesn't capture mouse events.
-- `interactions: .edit` - Focus is used for text editing. The view captures mouse clicks to enter edit mode.
-- Default (no argument) - Both behaviors, which captures mouse clicks.
-
-By specifying `.activate`, we tell SwiftUI that this view should be focusable for keyboard navigation purposes only, not for text editing. This allows mouse events to pass through to the drag gesture recognizer.
 
 ## Three Drop Destinations Required
 
-MacMainView.swift requires THREE `.dropDestination` modifiers for complete drag-drop support:
+MacMainView.swift needs THREE `.dropDestination` modifiers:
 
-1. **Sidebar list cells** (~line 553) - Drop items onto a list in sidebar
-2. **Empty list state view** (~line 1395) - Drop items onto empty lists
-3. **itemsListView** (~line 1272) - Drop items onto lists with items
-
-## Additional Factors That Can Block Drag (Research)
-
-If drag still doesn't work after these fixes, check for:
-
-1. **Buttons inside draggable rows** - In macOS 15+, Button views can capture mouse events before drag starts. Consider using tap gestures on the parent instead.
-2. **Custom NSEvent monitors** - Local event monitors for `.leftMouseDown` can intercept drag events.
-3. **Multiple tap gestures** - Even `.simultaneousGesture(TapGesture())` can delay drag recognition.
-4. **Order of modifiers** - `.contentShape(Rectangle())` should come before gesture modifiers.
+1. **Sidebar list cells** - Drop items onto a list in sidebar
+2. **Empty list state view** - Drop items onto empty lists
+3. **itemsListView** - Drop items onto lists with items
 
 ## Prevention Checklist
 
-When modifying MacMainView.swift:
-- [ ] Verify 3 `.dropDestination` occurrences exist (search for `dropDestination`)
+- [ ] Verify 3 `.dropDestination` occurrences exist
 - [ ] Ensure `.focusable(interactions: .activate)` is used, NOT `.focusable()`
-- [ ] **NEVER add `.onTapGesture` or `.simultaneousGesture(TapGesture())` to item rows**
-- [ ] Only use `.onTapGesture(count: 2)` or `.onDoubleClick` (double-click doesn't block drag)
+- [ ] NEVER add `.onTapGesture` or `.simultaneousGesture(TapGesture())` to item rows
+- [ ] Only use `.onTapGesture(count: 2)` or `.onDoubleClick`
 - [ ] Test drag-drop manually between lists with items
-- [ ] Test both starting a drag AND completing a drop
 
-## Files Changed
+## Selection Mode Alternatives
 
-- `ListAll/ListAllMac/Views/MacMainView.swift`
-  - **Fix 1:** Restored `.dropDestination` to itemsListView (~line 1276)
-  - **Fix 2:** Changed `.focusable()` to `.focusable(interactions: .activate)` in THREE places:
-    1. **itemsListView** (line 1266) - For item rows in detail view
-    2. **selectionModeRow** (line 528) - For sidebar rows in selection mode
-    3. **normalModeRow** (line 550) - For sidebar rows in normal mode
-  - **Fix 3:** Removed `.simultaneousGesture(TapGesture())` from `MacItemRowView` (~line 1929)
-
-## Related Files
-
-- `ListAll/ListAll/Models/Item+Transferable.swift` - ItemTransferData type
-- `ListAll/ListAll/Models/List+Transferable.swift` - ListTransferData type
+Without tap gesture, selection mode still works via:
+- Checkbox button (click to toggle)
+- Double-click (triggers selection toggle)
+- Context menu (Select/Deselect option)
 
 ## References
 
 - [WWDC23: The SwiftUI cookbook for focus](https://developer.apple.com/videos/play/wwdc2023/10162/)
 - [Apple: focusable(_:interactions:)](https://developer.apple.com/documentation/swiftui/view/focusable(_:interactions:))
-- [Hacking with Swift: SwiftUI draggable and onTapGesture](https://www.hackingwithswift.com/forums/swiftui/how-to-use-both-draggable-and-ontapgesture/26285)
-
-## Test Coverage Gap
-
-Note: There are no automated UI tests that verify cross-list drag-drop specifically. Consider adding UI tests to prevent future regressions.

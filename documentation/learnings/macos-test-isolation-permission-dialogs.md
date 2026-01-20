@@ -1,56 +1,49 @@
-# macOS Test Isolation: Preventing Permission Dialogs
+---
+title: macOS Test Isolation - Preventing Permission Dialogs
+date: 2026-01-20
+severity: HIGH
+category: macos
+tags: [testing, permission-dialogs, app-groups, dependency-injection, test-isolation]
+symptoms: ["ListAll would like to access data from other apps dialog", "iCloud/CloudKit access prompts during tests"]
+root_cause: Direct instantiation of production classes triggers App Groups and iCloud access
+solution: Use TestHelpers factory methods that inject test doubles with in-memory stores
+files_affected: [ListAllMacTests/ListAllMacTests.swift, ListAllMacTests/MacFinalIntegrationTests.swift]
+related: [macos-test-permission-fix.md, macos-app-groups-test-dialogs.md]
+---
 
 ## Problem
 
-Tests were triggering macOS permission dialogs:
-- "ListAll would like to access data from other apps"
-- iCloud/CloudKit access prompts
+Tests trigger macOS permission dialogs when directly instantiating production classes that access system resources.
 
-This happened because tests directly instantiated production classes that access system resources.
+## Dependency Chain That Triggers Dialogs
 
-## Root Cause
+```
+ExportViewModel()
+  -> ExportService()
+    -> DataRepository()
+      -> CoreDataManager.shared
+        -> FileManager.containerURL(forSecurityApplicationGroupIdentifier:)
+        -> PERMISSION DIALOG
+```
 
-Direct instantiation of production classes triggers their dependencies:
+## Solution
+
+### 1. Use TestHelpers Factory Methods
 
 ```swift
 // BAD - triggers permission dialogs
 let vm = ExportViewModel()
 
-// Dependency chain:
-// ExportViewModel()
-//   → ExportService()
-//     → DataRepository()
-//       → CoreDataManager.shared
-//         → FileManager.containerURL(forSecurityApplicationGroupIdentifier:)
-//         → PERMISSION DIALOG
-```
-
-## Solution
-
-### 1. Use Test Helpers for Isolated Instantiation
-
-The project has `TestHelpers.swift` with factory methods that inject test doubles:
-
-```swift
 // GOOD - uses isolated dependencies
 let vm = TestHelpers.createTestExportViewModel()
-
-// Creates with:
-// - TestDataManager (in-memory Core Data)
-// - TestDataRepository (no App Groups)
-// - ExportService with test dependencies
 ```
 
 ### 2. Skip Integration Tests on Unsigned Builds
 
-For tests that MUST use real system services (CloudKit, AppleScript):
-
 ```swift
 override func setUpWithError() throws {
-    try super.setUpWithError()
     try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
                   "Skipping: unsigned build would trigger permission dialogs")
-    cloudKitService = CloudKitService()
 }
 ```
 
@@ -60,41 +53,20 @@ override func setUpWithError() throws {
 |-----------------|-------------|
 | `ExportViewModel()` | `TestHelpers.createTestExportViewModel()` |
 | `DataManager.shared` | `TestHelpers.createTestDataManager()` |
-| `DataRepository()` | `TestDataRepository(dataManager:)` |
 | `CoreDataManager.shared` | `TestCoreDataManager()` (in-memory) |
 | `CloudKitService()` | `MockCloudKitService` |
-| `AppleScriptExecutor` | `MockAppleScriptExecutor` |
 
 ## Classes That Trigger System Access
 
-| Class | Triggers | System Resource |
-|-------|----------|-----------------|
-| `CoreDataManager.shared` | App Groups | `containerURL(forSecurityApplicationGroupIdentifier:)` |
-| `DataManager.shared` | App Groups | via CoreDataManager |
-| `DataRepository()` | App Groups | via CoreDataManager |
-| `ExportViewModel()` | App Groups | via ExportService → DataRepository |
-| `CloudKitService()` | iCloud | CloudKit container access |
-| `RealAppleScriptExecutor` | Automation | NSAppleScript execution |
+| Class | System Resource |
+|-------|-----------------|
+| `CoreDataManager.shared` | App Groups container |
+| `CloudKitService()` | iCloud container |
+| `RealAppleScriptExecutor` | Automation permissions |
 
-## Key Learnings
+## Key Points
 
-1. **Lazy initialization doesn't help**: Even with `lazy var`, once the code path is executed during tests, system access is triggered.
-
-2. **Test entitlements are minimal**: `ListAllMacTests.entitlements` deliberately omits App Groups to catch isolation issues early.
-
-3. **Check `TestHelpers.isUnsignedTestBuild`**: Use this to conditionally skip tests that require signed entitlements.
-
-4. **Use dependency injection**: All ViewModels and Services should support constructor injection for testing.
-
-## Files Modified
-
-- `ListAllMacTests/ListAllMacTests.swift`:
-  - Replaced 23 `ExportViewModel()` → `TestHelpers.createTestExportViewModel()`
-  - Added skip condition to `CloudKitServiceMacTests`
-
-- `ListAllMacTests/MacFinalIntegrationTests.swift`:
-  - Added skip conditions to CloudKit instantiation tests
-
-## Date
-
-January 20, 2026
+- Lazy initialization does not help - code path execution still triggers access
+- `ListAllMacTests.entitlements` deliberately omits App Groups to catch issues early
+- Use `TestHelpers.isUnsignedTestBuild` to conditionally skip tests
+- All ViewModels/Services should support constructor injection

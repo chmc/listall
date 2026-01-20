@@ -1,19 +1,25 @@
-# Task 12.12: Clear All Filters Shortcut - Learning
+---
+title: Clear All Filters Shortcut
+date: 2026-01-15
+severity: MEDIUM
+category: macos
+tags: [swiftui, keyboard-shortcuts, filters, search, onkeypress, ux]
+symptoms: [no keyboard shortcut to clear filters, must click X on each badge individually]
+root_cause: Missing clearAllFilters() method and keyboard shortcut for power users
+solution: Added Cmd+Shift+Delete shortcut, Clear All button, and enhanced Escape behavior
+files_affected: [ListAll/ViewModels/ListViewModel.swift, ListAllMac/Views/MacMainView.swift, ListAllMacTests/TestHelpers.swift]
+related: [macos-filter-ui-redesign.md, macos-global-cmdf-search.md, macos-consistent-empty-states.md]
+---
 
-## Problem Solved
+## Problem
 
-Active filter badges could only be cleared by clicking the X on each badge individually. No keyboard shortcut existed to clear all filters quickly, which was a UX friction point for power users.
+Active filter badges required individual clicks to clear. No keyboard shortcut existed for power users.
 
-## Solution Implemented
+## Solution
 
-### 1. Added `clearAllFilters()` Method and `hasActiveFilters` Property
-
-**Files modified**:
-- `/Users/aleksi/source/listall/ListAll/ListAll/ViewModels/ListViewModel.swift`
-- `/Users/aleksi/source/listall/ListAll/ListAllMacTests/TestHelpers.swift`
+### 1. ViewModel Methods
 
 ```swift
-// Whether any filter is active (non-default filter, sort, or search)
 var hasActiveFilters: Bool {
     currentFilterOption != .all ||
     currentSortOption != .orderNumber ||
@@ -21,24 +27,19 @@ var hasActiveFilters: Bool {
     !searchText.isEmpty
 }
 
-// Clears all filters, search text, and sort options to default values
 func clearAllFilters() {
     searchText = ""
     currentFilterOption = .all
     currentSortOption = .orderNumber
     currentSortDirection = .ascending
     showCrossedOutItems = true  // Sync with .all filter
-    saveUserPreferences()  // Persist the cleared state
+    saveUserPreferences()
 }
 ```
 
-### 2. Added Keyboard Handler for Cmd+Shift+Delete
-
-**File**: `/Users/aleksi/source/listall/ListAll/ListAllMac/Views/MacMainView.swift`
+### 2. Keyboard Handler (Cmd+Shift+Delete)
 
 ```swift
-// MARK: - Clear All Filters Shortcut (Task 12.12)
-// Cmd+Shift+Backspace (delete) clears all active filters
 .onKeyPress(keys: [.delete]) { keyPress in
     guard keyPress.modifiers.contains(.command),
           keyPress.modifiers.contains(.shift) else {
@@ -49,108 +50,67 @@ func clearAllFilters() {
 }
 ```
 
-### 3. Added "Clear All" Button in Active Filters Bar
-
-The "Clear All" button appears when multiple filters are active (2 or more), providing visual feedback and mouse-accessible way to clear all at once.
+### 3. Clear All Button (visible when 2+ filters active)
 
 ```swift
 if activeFilterCount > 1 {
-    Button(action: {
-        viewModel.clearAllFilters()
-        viewModel.items = items
-    }) {
+    Button(action: { viewModel.clearAllFilters() }) {
         Text("Clear All")
             .font(.caption)
     }
-    .buttonStyle(.plain)
-    .foregroundColor(.accentColor)
     .help("Clear all filters (Cmd+Shift+Delete)")
-    .accessibilityIdentifier("ClearAllFiltersButton")
 }
 ```
 
-### 4. Enhanced Escape Key Behavior in Search Field
+### 4. Enhanced Escape Key Behavior
 
-Modified `.onExitCommand` to provide two-stage escape behavior:
+Two-stage escape in search field:
 1. First Escape: Clear search text (if not empty)
 2. Second Escape: Clear all filters (if search was already empty but filters active)
 
 ```swift
 .onExitCommand {
-    // Enhanced Escape behavior (Task 12.12):
     if !viewModel.searchText.isEmpty {
-        // First: clear search text
         viewModel.searchText = ""
-        viewModel.items = items
     } else if viewModel.hasActiveFilters {
-        // Second: clear all filters when search is already empty
         viewModel.clearAllFilters()
-        viewModel.items = items
     }
     isSearchFieldFocused = false
 }
 ```
 
-## Key Learnings
+## Key Pattern
 
-### SwiftUI `onKeyPress` API Patterns
+### SwiftUI onKeyPress API
 
-For checking modifiers with arrow keys or other special keys, use:
+For special keys with modifiers:
 ```swift
 .onKeyPress(keys: [.delete]) { keyPress in
-    guard keyPress.modifiers.contains(.command),
-          keyPress.modifiers.contains(.shift) else {
-        return .ignored
-    }
-    // Handle key press
+    guard keyPress.modifiers.contains(.command) else { return .ignored }
     return .handled
 }
 ```
 
-The `.onKeyPress(characters:)` variant works for character keys:
+For character keys:
 ```swift
 .onKeyPress(characters: CharacterSet(charactersIn: "a")) { keyPress in
     guard keyPress.modifiers.contains(.command) else { return .ignored }
-    // Handle Cmd+A
     return .handled
 }
 ```
 
-### Test Data Isolation
+## Test Data Isolation
 
-When writing tests that need pre-populated items in a ViewModel, ensure the test uses the SAME data manager instance for both adding items AND creating the ViewModel:
+When writing tests with pre-populated ViewModel, use SAME data manager instance:
 
 ```swift
-// WRONG - creates a new data manager, items won't be visible
+// WRONG - items won't be visible
 viewModel = TestHelpers.createTestListViewModel(with: testList)
 
-// CORRECT - uses the same data manager that has the items
+// CORRECT - uses same data manager
 viewModel = TestListViewModel(list: testList, dataManager: testDataManager)
 ```
 
 ## Test Coverage
 
-19 tests covering:
-- `clearAllFilters()` method exists and works
-- Clears search text
-- Resets filter option to `.all`
-- Resets sort option to `.orderNumber`
-- Resets sort direction to `.ascending`
-- Clears all at once
-- `hasActiveFilters` computed property
-- Keyboard shortcut configuration
-- Escape key behavior
-- Clear All button visibility
-- Integration with item filtering
-- Integration with searching
-- Integration with sorting
-
-## Files Modified
-
-1. `/Users/aleksi/source/listall/ListAll/ListAll/ViewModels/ListViewModel.swift`
-2. `/Users/aleksi/source/listall/ListAll/ListAllMac/Views/MacMainView.swift`
-3. `/Users/aleksi/source/listall/ListAll/ListAllMacTests/TestHelpers.swift`
-4. `/Users/aleksi/source/listall/ListAll/ListAllMacTests/ListAllMacTests.swift`
-5. `/Users/aleksi/source/listall/documentation/TODO.md`
-6. `/Users/aleksi/source/listall/documentation/features/FILTER_SORT.md`
-7. `/Users/aleksi/source/listall/documentation/features/SUMMARY.md`
+19 tests: clearAllFilters() method, property resets, hasActiveFilters computed property, keyboard shortcut config, escape key behavior, Clear All button visibility, integration tests.

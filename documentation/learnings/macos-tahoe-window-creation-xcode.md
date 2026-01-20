@@ -1,37 +1,44 @@
-# macOS Tahoe (26.x) Window Creation & XCUITest Accessibility Issues
+---
+title: macOS Tahoe Window Creation and XCUITest Issues
+date: 2025-12-22
+severity: HIGH
+category: macos
+tags: [tahoe, macos-26, windowgroup, xcuitest, nshostingcontroller]
+symptoms:
+  - SwiftUI WindowGroup does not create window on app launch
+  - App runs, menus appear, but no window
+  - XCUITest elements have frames but isHittable returns false
+  - click() on non-hittable elements causes test failures
+  - Window screenshots capture full screen instead of window
+root_cause: macOS Tahoe (26.x beta) SwiftUI WindowGroup bug plus XCUITest accessibility changes
+solution: NSWindow fallback in AppDelegate plus coordinate-based tap fallback for non-hittable elements
+files_affected:
+  - ListAll/ListAllMac/ListAllMacApp.swift
+  - ListAll/ListAllMacUITests/MacSnapshotHelper.swift
+  - ListAll/ListAllMacUITests/MacScreenshotTests.swift
+related: [macos-swiftui-window-accessibility-fix.md]
+---
 
-## Date
-2025-12-22
+## Issue 1: No Window Created on Launch
 
-## Problem Summary
-On macOS Tahoe (26.x), macOS screenshot generation via XCUITest failed due to two separate issues:
-1. SwiftUI's `WindowGroup` does not create windows on app launch
-2. XCUITest elements are "not hittable" even when visible and accessible
-
-## Root Causes
-
-### Issue 1: No Window Created on Launch
-SwiftUI's `WindowGroup` scene on macOS Tahoe (26.x beta) does not automatically create the initial window when the app launches. The app runs, menus appear, but no window is created.
+SwiftUI's `WindowGroup` on macOS Tahoe (26.x beta) does not automatically create initial window.
 
 **Detection**:
 ```bash
-# Check NSApp windows count from shell
 osascript -e 'tell application "System Events" to tell process "ListAll" to count windows'
 # Returns 0 even though app is running
 ```
 
-**Solution**: Implement NSWindow fallback in `AppDelegate`:
+**Solution**: NSWindow fallback in AppDelegate:
 
 ```swift
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var fallbackWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Always set activation policy on Tahoe
         NSApp.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
 
-        // Check for missing windows after 1 second
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.ensureMainWindowExists()
         }
@@ -41,10 +48,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let existingWindows = NSApp.windows.filter { window in
             window.isVisible && !window.isSheet && window.styleMask.contains(.titled)
         }
-
         guard existingWindows.isEmpty else { return }
 
-        // Create fallback window manually
         let contentView = MacMainView()
             .environmentObject(DataManager.shared)
             .environment(\.managedObjectContext, CoreDataManager.shared.viewContext)
@@ -56,7 +61,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-
         window.title = "ListAll"
         window.contentViewController = hostingController
         window.center()
@@ -66,15 +70,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 ```
 
-### Issue 2: XCUITest Elements Not Hittable
-On macOS Tahoe, XCUITest can find elements (they have frames), but `isHittable` returns false even though they're visible. Calling `click()` on these elements causes test failures.
+## Issue 2: XCUITest Elements Not Hittable
 
-**Detection**:
-```
-Not hittable: OutlineRow, {{678.0, 317.0}, {140.0, 19.0}}
-```
+Elements have frames, but `isHittable` returns false. Direct `click()` fails.
 
-**Solution**: Use coordinate-based tap as fallback:
+**Solution**: Coordinate-based tap fallback:
 
 ```swift
 let element = app.outlines["ListsSidebar"].outlineRows.firstMatch
@@ -82,47 +82,36 @@ if element.waitForExistence(timeout: 10) {
     if element.isHittable {
         element.click()
     } else {
-        // Fallback: tap at element's center coordinates
         let coordinate = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         coordinate.tap()
     }
 }
 ```
 
-### Issue 3: Window Screenshot vs Full-Screen Fallback
-XCUITest's `app.windows.firstMatch.exists` returns false for NSWindow fallback windows, causing screenshot code to use full-screen capture instead of window-only capture.
+## Issue 3: Window Screenshot vs Full-Screen
 
-**Solution**: Trust content element accessibility as proof of window existence:
+`app.windows.firstMatch.exists` returns false for NSWindow fallback, causing full-screen capture.
+
+**Solution**: Trust content accessibility as proof of window existence:
 
 ```swift
-// In MacSnapshotHelper.swift
 let sidebar = app.outlines.firstMatch
 let contentAccessible = sidebar.waitForExistence(timeout: 10)
-
 let mainWindow = app.windows.firstMatch
-let windowExists = mainWindow.exists
-let windowHittable = mainWindow.isHittable
-// If content is accessible, window MUST exist
-let windowAccessible = windowExists || windowHittable || contentAccessible
+let windowAccessible = mainWindow.exists || mainWindow.isHittable || contentAccessible
 ```
 
-## Files Modified
-- `ListAll/ListAllMac/ListAllMacApp.swift` - Added NSWindow fallback in AppDelegate
-- `ListAll/ListAllMacUITests/MacSnapshotHelper.swift` - Fixed window accessibility detection
-- `ListAll/ListAllMacUITests/MacScreenshotTests.swift` - Added coordinate tap fallback for non-hittable elements
-
 ## Verification
-Before fix:
-- Screenshots: 3840×1600 (full screen with desktop background)
-- Tests: 3 failures ("Not hittable: OutlineRow")
 
-After fix:
-- Screenshots: 1600×1304 (window only, clean)
-- Tests: 5 passed, 0 failures
+| Metric | Before Fix | After Fix |
+|--------|-----------|-----------|
+| Screenshots | 3840x1600 (full screen) | 1600x1304 (window only) |
+| Tests | 3 failures | 5 passed |
 
 ## Key Learnings
-1. macOS beta versions (Tahoe 26.x) may have SwiftUI bugs requiring native fallbacks
-2. XCUITest accessibility on macOS is less reliable than on iOS - always have fallback strategies
-3. `element.exists` returning false doesn't mean the element isn't there - verify via content elements
-4. Coordinate-based tapping is more reliable than direct `click()` on macOS Tahoe
-5. NSWindow + NSHostingController is a reliable fallback for SwiftUI window creation failures
+
+- macOS betas may have SwiftUI bugs requiring native fallbacks
+- XCUITest accessibility on macOS is less reliable than iOS - always have fallbacks
+- `element.exists` returning false doesn't mean element isn't there
+- Coordinate-based tapping is more reliable than direct `click()` on Tahoe
+- NSWindow + NSHostingController is reliable fallback for SwiftUI window failures

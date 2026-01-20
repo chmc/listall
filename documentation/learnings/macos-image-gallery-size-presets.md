@@ -1,18 +1,23 @@
-# macOS Image Gallery Size Presets
-
-## Date
-January 15, 2026
-
-## Task Reference
-Task 12.13: Add Image Gallery Size Presets (MINOR)
+---
+title: macOS Image Gallery Size Presets
+date: 2026-01-15
+severity: LOW
+category: macos
+tags: [swiftui, image-gallery, thumbnails, appstorage, presets, accessibility]
+symptoms: [tedious manual slider adjustment, no quick way to switch thumbnail sizes]
+root_cause: Thumbnail slider (80-200px) had no presets for common sizes
+solution: Added S/M/L preset buttons alongside slider with persistence via @AppStorage
+files_affected: [ListAllMac/Views/Components/MacImageGalleryView.swift]
+related: [macos-voiceover-accessibility.md, macos-settings-window-resizable.md]
+---
 
 ## Problem
-The thumbnail size slider (80-200px) in the image gallery had no presets. Users had to manually drag the slider to find optimal thumbnail sizes, which was tedious especially when wanting to quickly switch between common sizes.
+
+Thumbnail size slider (80-200px) required manual dragging. No way to quickly switch between common sizes.
 
 ## Solution
 
-### 1. ThumbnailSizePreset Enum
-Created a new enum to define preset sizes with associated metadata:
+### ThumbnailSizePreset Enum
 
 ```swift
 enum ThumbnailSizePreset: Int, CaseIterable, Identifiable {
@@ -31,30 +36,13 @@ enum ThumbnailSizePreset: Int, CaseIterable, Identifiable {
         }
     }
 
-    var accessibilityLabel: String {
-        switch self {
-        case .small: return "Small thumbnail size"
-        case .medium: return "Medium thumbnail size"
-        case .large: return "Large thumbnail size"
-        }
-    }
-
-    var tooltip: String {
-        switch self {
-        case .small: return "Small (\(size)px)"
-        case .medium: return "Medium (\(size)px)"
-        case .large: return "Large (\(size)px)"
-        }
-    }
-
     static func fromSize(_ size: CGFloat) -> ThumbnailSizePreset? {
         allCases.first { CGFloat($0.size) == size }
     }
 }
 ```
 
-### 2. Toolbar UI Updates
-Added preset buttons (S, M, L) alongside the slider in MacImageGalleryToolbar:
+### Toolbar UI
 
 ```swift
 HStack(spacing: 8) {
@@ -72,13 +60,10 @@ HStack(spacing: 8) {
             }
             .buttonStyle(.bordered)
             .tint(activePreset == preset ? .accentColor : nil)
-            .accessibilityLabel(preset.accessibilityLabel)
-            .help(preset.tooltip)
         }
     }
 
-    Divider()
-        .frame(height: 16)
+    Divider().frame(height: 16)
 
     // Fine-tuning slider
     Slider(value: $thumbnailSize, in: 80...200, step: 10)
@@ -86,69 +71,29 @@ HStack(spacing: 8) {
 }
 ```
 
-### 3. Persistence with @AppStorage
-Changed the thumbnail size from `@State` to `@AppStorage` for persistence:
+### Persistence with @AppStorage
 
 ```swift
-// Before
-@State private var thumbnailSize: CGFloat = 120
-
-// After
+// Note: Use Double, not CGFloat - @AppStorage works with Double natively
 @AppStorage("galleryThumbnailSize") private var thumbnailSize: Double = 120
 ```
 
-Note: Used `Double` instead of `CGFloat` because `@AppStorage` works with `Double` natively.
+## Design Decisions
 
-## Key Design Decisions
+| Decision | Rationale |
+|----------|-----------|
+| Preset values 80/120/160 | Min slider, default balance, detail with multiple |
+| Global persistence | Users prefer consistent sizes across lists |
+| 0.2s animation | Smooth transition when clicking presets |
+| Slider retained | Fine-tuning between presets (100px, 130px, etc.) |
+| Accent color highlight | Visual feedback for active preset |
 
-1. **Preset Values**: Chose 80, 120, 160 based on:
-   - 80px: Minimum slider value, shows many thumbnails
-   - 120px: Default, good balance of size and count
-   - 160px: Large enough for detail while still seeing multiple
+## Similar Patterns
 
-2. **Global Persistence**: Stored globally rather than per-list for simplicity. Users typically prefer consistent thumbnail sizes across all lists.
-
-3. **Animation**: Added smooth animation (0.2s) when clicking presets for better UX.
-
-4. **Visual Feedback**: Active preset is highlighted with accent color tint.
-
-5. **Slider Retained**: Kept the slider for fine-tuning between preset values (e.g., 100px, 130px).
-
-## Accessibility Features
-
-- VoiceOver labels for each preset button
-- Accessibility identifier for UI testing
-- Tooltips showing size in pixels
-- Slider has accessibility label and value
-
-## Files Modified
-
-- `/Users/aleksi/source/listall/ListAll/ListAllMac/Views/Components/MacImageGalleryView.swift`
-  - Added `ThumbnailSizePreset` enum
-  - Updated `MacImageGalleryView` to use `@AppStorage`
-  - Updated `MacImageGalleryToolbar` with preset buttons
-
-## Tests Added
-
-22 new tests in `ImageGallerySizePresetsTests`:
-- Preset value tests (80, 120, 160)
-- Preset detection from size
-- Custom sizes return nil
-- Preset labels (S, M, L)
-- All presets available in allCases
-- Slider range compatibility
-- Default value is Medium
-- Persistence tests
-- Accessibility tests
-
-## Related Patterns
-
-This implementation follows the pattern used by:
-- Photos app thumbnail size presets
+- Photos app thumbnail presets
 - Finder icon size grid
-- macOS system preferences for icon sizes
+- macOS system preferences icon sizes
 
-## Notes
+## Test Coverage
 
-- The type changed from `CGFloat` to `Double` required updating the toolbar binding and converting to `CGFloat` when passing to the grid.
-- The `fromSize(_:)` method enables the UI to detect when the current size matches a preset for highlighting.
+22 tests: preset values, detection, labels, slider compatibility, default value, persistence, accessibility.

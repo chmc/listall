@@ -1,27 +1,52 @@
-# macOS Move/Copy Items Between Lists Implementation
+---
+title: macOS Move/Copy Items Between Lists
+date: 2026-01-15
+severity: MEDIUM
+category: macos
+tags: [move-items, copy-items, selection-mode, sheet, confirmation-alert]
+symptoms: [macOS missing iOS feature parity for move/copy items]
+root_cause: macOS lacked destination list picker UI
+solution: Create MacDestinationListPickerSheet with action enum for move vs copy
+files_affected: [ListAllMac/Views/MacMainView.swift, ListAllMac/Views/Components/MacDestinationListPickerSheet.swift]
+related: [macos-bulk-delete-undo-standardization.md, macos-cmd-click-multi-select.md, macos-item-drag-drop-regression.md]
+---
 
 ## Problem
-Need to implement Move and Copy Items Between Lists functionality for macOS to achieve feature parity with iOS.
+
+macOS needed move/copy items between lists functionality to match iOS.
 
 ## Solution
 
-### Key Components Created
+### MacDestinationListPickerSheet
 
-1. **MacDestinationListPickerSheet** (`/Users/aleksi/source/listall/ListAll/ListAllMac/Views/Components/MacDestinationListPickerSheet.swift`)
-   - Sheet view for selecting destination list
-   - Shows available lists (excluding current list and archived lists)
-   - Displays list name and item count
-   - Supports creating new list inline
-   - Uses `MacDestinationListAction` enum for move vs copy
+- Sheet view for selecting destination list
+- Excludes current list and archived lists
+- Displays list name and item count
+- Supports creating new list inline
+- Uses `MacDestinationListAction` enum for move vs copy
 
-2. **MacDestinationListAction Enum**
-   - `.move`: Removes items from source, adds to destination
-   - `.copy`: Keeps items in source, adds copies to destination
-   - Provides localized title, verb, and system image
+### Flow
 
-### Integration in MacListDetailView
+1. Enter selection mode (checkmark button)
+2. Select items
+3. Ellipsis menu -> "Move Items..." or "Copy Items..."
+4. MacDestinationListPickerSheet appears
+5. Select destination list
+6. Confirmation alert shows
+7. Confirm -> `viewModel.moveSelectedItems(to:)` or `viewModel.copySelectedItems(to:)`
+8. Exit selection mode
 
-Added state variables:
+### Available Lists Filtering
+
+```swift
+private var availableLists: [List] {
+    dataManager.lists.filter { $0.id != currentListId && !$0.isArchived }
+        .sorted { $0.orderNumber < $1.orderNumber }
+}
+```
+
+### State Variables
+
 ```swift
 @State private var showingMoveItemsPicker = false
 @State private var showingCopyItemsPicker = false
@@ -30,65 +55,8 @@ Added state variables:
 @State private var showingCopyConfirmation = false
 ```
 
-Flow:
-1. User enters selection mode (checkmark button)
-2. Selects items
-3. Opens ellipsis menu -> "Move Items..." or "Copy Items..."
-4. `MacDestinationListPickerSheet` appears
-5. User selects destination list
-6. Sheet dismisses, confirmation alert shows
-7. User confirms -> `viewModel.moveSelectedItems(to:)` or `viewModel.copySelectedItems(to:)`
-8. Selection mode exits
-
-### Shared Code (ListViewModel)
-
-Used existing iOS implementation:
-- `moveSelectedItems(to:)` - Move selected items to destination
-- `copySelectedItems(to:)` - Copy selected items to destination
-- `enterSelectionMode()` - Enable selection mode
-- `exitSelectionMode()` - Disable and clear selection
-- `toggleSelection(for:)` - Toggle item selection
-- `selectAll()` / `deselectAll()` - Bulk selection
-
 ## Key Patterns
 
-### Sheet Presentation
-SwiftUI `.sheet()` modifier works correctly within MacListDetailView because it's inside a NavigationStack with animation fix. No need for native AppKit sheet presenter.
-
-### Confirmation Alerts
-Used SwiftUI `.alert()` with `isPresented` binding and conditional message based on selected destination list.
-
-### Available Lists Filtering
-```swift
-private var availableLists: [List] {
-    dataManager.lists.filter { $0.id != currentListId && !$0.isArchived }
-        .sorted { $0.orderNumber < $1.orderNumber }
-}
-```
-
-## Tests Added
-
-9 unit tests in `MoveCopyItemsMacTests`:
-- `testMoveActionProperties` - Verify move action enum
-- `testCopyActionProperties` - Verify copy action enum
-- `testEnterSelectionMode` - Entering selection mode
-- `testExitSelectionMode` - Exiting clears state
-- `testToggleSelection` - Toggle selection on/off
-- `testSelectAll` - Select all filtered items
-- `testDeselectAll` - Clear selection
-- `testRunningOnMacOS` - Platform verification
-- `testMoveCopyItemsDocumentation` - Documentation test
-
-## Files Modified
-
-- `/Users/aleksi/source/listall/ListAll/ListAllMac/Views/MacMainView.swift` - Added state, sheets, alerts
-- `/Users/aleksi/source/listall/ListAll/ListAllMacTests/ListAllMacTests.swift` - Added test class
-
-## Files Created
-
-- `/Users/aleksi/source/listall/ListAll/ListAllMac/Views/Components/MacDestinationListPickerSheet.swift`
-
-## Documentation Updated
-
-- `documentation/features/SUMMARY.md` - Updated Item Management to 17/17, marked Move/Copy as complete
-- `documentation/features/ITEM_MANAGEMENT.md` - Updated status, added macOS patterns, added implementation file
+- SwiftUI `.sheet()` works correctly within NavigationStack
+- Used `.alert()` with `isPresented` binding for confirmation
+- Reused shared `ListViewModel` methods from iOS implementation

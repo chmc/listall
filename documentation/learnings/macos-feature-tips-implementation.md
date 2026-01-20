@@ -1,17 +1,23 @@
-# macOS Feature Tips System Implementation
+---
+title: macOS Feature Tips System Implementation
+date: 2026-01-15
+severity: MEDIUM
+category: macos
+tags: [tooltips, feature-tips, settings, userdefaults, scrollview-lazyvstack]
+symptoms: [macOS missing iOS Feature Tips System, No way to view/reset tips on macOS]
+root_cause: macOS app lacked tooltip manager and tips UI
+solution: Create MacTooltipManager and MacAllFeatureTipsView with macOS-specific tip types
+files_affected: [ListAllMac/Utils/MacTooltipManager.swift, ListAllMac/Views/Components/MacAllFeatureTipsView.swift, ListAllMac/Views/MacSettingsView.swift]
+related: [macos-proactive-feature-tips.md]
+---
 
 ## Problem
 
-The macOS app was missing the Feature Tips System that iOS had. iOS uses TooltipOverlay to show contextual tips, and users can:
-- View all tips in Settings
-- See which tips they've viewed
-- Reset all tips to see them again
+macOS missing Feature Tips System that iOS had. Users couldn't view/reset tips.
 
 ## Solution
 
-### 1. Created MacTooltipManager
-
-File: `ListAllMac/Utils/MacTooltipManager.swift`
+### MacTooltipManager
 
 ```swift
 enum MacTooltipType: String, CaseIterable, Identifiable {
@@ -37,71 +43,33 @@ class MacTooltipManager: ObservableObject {
 }
 ```
 
-### 2. macOS-Specific Tips
+### macOS-Specific Tips
 
-iOS has swipe actions tip → macOS has **context menu** tip (right-click)
+iOS has swipe actions tip -> macOS has **context menu** tip (right-click)
 macOS adds **keyboard shortcuts** tip (Cmd+N, Cmd+F, etc.)
 
 Message adaptations:
-- "Tap +" → "Click + or press Cmd+Shift+N"
-- "Swipe left" → "Right-click on items"
-- "Press Cmd+F to search"
+- "Tap +" -> "Click + or press Cmd+Shift+N"
+- "Swipe left" -> "Right-click on items"
 
-### 3. Created MacAllFeatureTipsView
-
-File: `ListAllMac/Views/Components/MacAllFeatureTipsView.swift`
+### MacAllFeatureTipsView
 
 - ScrollView with LazyVStack (avoids `List` conflict with ListAll.List model)
 - Shows all tips with viewed status
 - Header with "X/Y viewed" count
 - Done button to dismiss
 
-### 4. Added Help & Tips to MacSettingsView
+### Settings Integration
 
 Added to GeneralSettingsTab:
 - Feature Tips status (X of Y tips viewed)
-- "View All Feature Tips" button → opens sheet
-- "Show All Tips Again" button → reset with confirmation
+- "View All Feature Tips" button
+- "Show All Tips Again" button with confirmation
 
 ## Key Learnings
 
-### 1. SwiftUI `List` Type Conflict
+1. **SwiftUI List Type Conflict**: Codebase has `List` model conflicting with SwiftUI's `List`. Use `ScrollView` + `LazyVStack` instead.
 
-The codebase has a `List` model which conflicts with SwiftUI's `List`.
-**Solution**: Use `ScrollView` + `LazyVStack` instead of `List`.
+2. **UserDefaults Sharing**: Both iOS and macOS use same key `"shownTooltips"` for cross-platform consistency.
 
-### 2. UserDefaults Sharing
-
-Both iOS and macOS use the same UserDefaults key: `"shownTooltips"`.
-This provides cross-platform consistency if the user syncs their device.
-
-### 3. Platform-Specific Tip Messages
-
-iOS-specific patterns like "swipe left" don't make sense on macOS.
-Created macOS-specific tip types with appropriate messages:
-- Context menus instead of swipe actions
-- Keyboard shortcuts (Cmd+key patterns)
-
-### 4. Settings Tab Structure
-
-MacSettingsView uses TabView with 5 tabs. Added Help & Tips section to
-the General tab to keep settings organized.
-
-## Files Created/Modified
-
-**New Files:**
-- `ListAllMac/Utils/MacTooltipManager.swift` - Manager and types
-- `ListAllMac/Views/Components/MacAllFeatureTipsView.swift` - Tips list view
-
-**Modified Files:**
-- `ListAllMac/Views/MacSettingsView.swift` - Added Help & Tips section
-- `ListAllMacTests/ListAllMacTests.swift` - Added 18 tests
-
-## Tests Added
-
-18 unit tests in `FeatureTipsMacTests`:
-- MacTooltipType tests (all cases, titles, icons, messages)
-- MacTooltipManager tests (singleton, marking, reset)
-- Settings integration tests
-- Platform compatibility tests
-- Documentation test
+3. **Platform-Specific Messages**: iOS patterns ("swipe left") don't apply on macOS. Create macOS-specific messages.

@@ -1,126 +1,82 @@
-# macOS VoiceOver Accessibility Implementation
+---
+title: macOS VoiceOver Accessibility Implementation
+date: 2025-01-06
+severity: MEDIUM
+category: macos
+tags: [accessibility, voiceover, swiftui, testing, app-groups]
+symptoms:
+  - VoiceOver reads child elements separately instead of combined
+  - Decorative icons announced unnecessarily
+  - Permission dialogs during test execution on unsigned builds
+root_cause: Missing accessibility modifiers and improper element grouping; tests accessing App Groups trigger permission dialogs
+solution: Apply accessibility modifiers in correct order, group elements with .combine, write pure unit tests avoiding App Groups access
+files_affected:
+  - ListAllMac/Views/MacMainView.swift
+  - ListAllMac/Views/MacSettingsView.swift
+  - ListAllMac/Views/MacImageGalleryView.swift
+  - ListAllMac/Views/MacItemOrganizationView.swift
+related:
+  - macos-dark-mode-support.md
+---
 
-## Date: 2025-01-06
+## Accessibility Modifier Hierarchy
 
-## Context
-Implemented comprehensive VoiceOver accessibility support for the ListAll macOS app (Task 11.2).
-
-## Key Learnings
-
-### 1. Accessibility Modifier Hierarchy
-Apply accessibility modifiers in this order for best VoiceOver experience:
+Apply modifiers in this order:
 ```swift
 .accessibilityLabel("Primary content description")
 .accessibilityValue("Dynamic state or value")
 .accessibilityHint("What happens on activation")
 .accessibilityAddTraits([.isButton, .isSelected])
-.accessibilityIdentifier("TestIdentifier") // For UI tests only
+.accessibilityIdentifier("TestIdentifier")  // UI tests only
 ```
 
-### 2. Element Grouping for Complex Views
-Use `.accessibilityElement(children: .combine)` for rows with multiple child elements:
+## Element Grouping
+
+Use `.accessibilityElement(children: .combine)` for rows with multiple children:
 ```swift
-HStack {
-    // Multiple child views...
-}
-.accessibilityElement(children: .combine)
-.accessibilityLabel(combinedLabel)
-.accessibilityHint("Double-tap to edit")
+HStack { /* children */ }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(combinedLabel)
+    .accessibilityHint("Double-tap to edit")
 ```
 
-This prevents VoiceOver from reading each child separately, creating a cleaner navigation experience.
+## Dynamic Labels
 
-### 3. Dynamic Accessibility Labels
-Create computed properties for complex labels:
+Create computed properties for complex state:
 ```swift
 private var itemAccessibilityLabel: String {
     var label = item.title
     label += ", \(item.isCrossedOut ? "completed" : "active")"
-    if item.quantity > 1 {
-        label += ", quantity \(item.quantity)"
-    }
-    if item.hasImages {
-        label += ", \(item.imageCount) \(item.imageCount == 1 ? "image" : "images")"
-    }
+    if item.quantity > 1 { label += ", quantity \(item.quantity)" }
     return label
 }
 ```
 
-### 4. Hiding Decorative Elements
+## Hiding Decorative Elements
+
 Use `.accessibilityHidden(true)` for:
-- Decorative icons (magnifying glass in search fields)
-- Visual badges that duplicate information already in labels
-- App icons and branding images
+- Decorative icons (magnifying glass in search)
+- Visual badges duplicating label info
+- App icons and branding
 
-### 5. Proper Use of Traits
-- `.isHeader` - Section titles, sheet titles, navigation titles
-- `.isButton` - Automatically applied to Button views
-- `.isImage` - Image thumbnails and photos
-- `.isSelected` - Currently selected items in lists
+## Trait Usage
 
-### 6. Accessibility Values for State
-Use `.accessibilityValue()` for:
-- Selection states: `"Selected"` or `""`
-- Counts: `"3 active, 5 total items"`
-- Toggle states: Current state description
+- `.isHeader` - Section/sheet/navigation titles
+- `.isButton` - Auto-applied to Button views
+- `.isImage` - Thumbnails and photos
+- `.isSelected` - Selected items in lists
 
-### 7. Hints Should Describe Actions
-Good hints:
-- "Opens sheet to create new list"
-- "Double-tap to toggle completion status"
-- "Permanently removes this item"
+## macOS-Specific Notes
 
-Bad hints (avoid these):
-- "Tap here" (too vague)
-- "Button" (redundant with trait)
-
-### 8. Testing Strategy
-Create pure unit tests that verify accessibility attributes without triggering:
-- Core Data access (causes permission dialogs on unsigned builds)
-- App Groups access
-- CloudKit operations
-
-Test patterns:
-```swift
-@Test func itemRowHasAccessibilityLabel() {
-    let item = Item(title: "Test", listId: UUID())
-    #expect(!item.title.isEmpty)
-    #expect(item.displayTitle == "Test")
-}
-```
-
-### 9. SwiftUI Accessibility on macOS
-Some differences from iOS:
-- `.help()` provides tooltip text but is separate from accessibility
+- `.help()` provides tooltip text (separate from accessibility)
 - Context menus need accessible button labels
 - Hover-revealed buttons need explicit accessibility
 
-## Files Modified
-- MacMainView.swift - Main view with sidebar and detail
-- MacSettingsView.swift - Settings tabs
-- MacImageGalleryView.swift - Image gallery
-- MacItemOrganizationView.swift - Filter/sort controls
-- MacShareFormatPickerView.swift - Share options
-- MacSuggestionListView.swift - Item suggestions
-- MacQuickLookView.swift - Quick Look integration
+## Testing Without Permission Dialogs
 
-## Test Coverage
-- 59 new VoiceOver tests
-- Test suites: Labels, Hints, Values, Traits, Containers, Keyboard, Dynamic Content
-- All 108 macOS tests passing
+Unsigned builds trigger "access data from other apps" dialogs when accessing App Groups.
 
-## macOS Test Build Permissions
-
-### Problem
-Unsigned macOS test builds trigger "would like to access data from other apps" dialogs when tests access App Groups (Core Data storage).
-
-### Solution
-1. Write pure unit tests that don't access `DataManager.shared`, `DataRepository()`, or `CoreDataManager.shared`
-2. Use `TestHelpers.createTestDataManager()` for isolated in-memory Core Data
-3. Use `TestHelpers.shouldSkipAppGroupsTest()` to skip tests on unsigned builds
-4. Focus on testing model logic directly (no Core Data access)
-
-### Example
+**Solution:**
 ```swift
 // GOOD - Pure unit test (no dialog)
 func testItemAccessibilityLabel() {
@@ -128,14 +84,10 @@ func testItemAccessibilityLabel() {
     #expect(!item.title.isEmpty)
 }
 
-// BAD - Triggers permission dialog on unsigned builds
+// BAD - Triggers dialog
 func testDataManagerListCount() {
-    let count = DataManager.shared.lists.count  // Triggers App Groups access!
-    XCTAssertGreaterThanOrEqual(count, 0)
+    let count = DataManager.shared.lists.count  // App Groups access!
 }
 ```
 
-## Related Resources
-- [Apple: Accessibility for Developers](https://developer.apple.com/accessibility/)
-- [Apple: SwiftUI Accessibility](https://developer.apple.com/documentation/swiftui/accessibility)
-- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+Use `TestHelpers.createTestDataManager()` for isolated in-memory Core Data when needed.

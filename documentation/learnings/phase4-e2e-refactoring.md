@@ -1,168 +1,63 @@
-# Phase 4: E2E Refactoring Learning
+---
+title: E2E Screenshot Tests Refactoring with Orchestrator
+date: 2025-12-20
+severity: MEDIUM
+category: macos
+tags: [ui-testing, screenshot-orchestrator, e2e-tests, linker-errors, defense-in-depth]
+symptoms: ["symbol(s) not found for architecture arm64", "UI tests cannot import main app types"]
+root_cause: macOS UI tests run as separate process and cannot link to main app types
+solution: Copy screenshot infrastructure files to UI test target; use defense-in-depth approach
+files_affected: [ListAllMacUITests/MacScreenshotTests.swift, ListAllMacUITests/RealWorkspace.swift, ListAllMacUITests/RealScreenshotCapture.swift]
+related: [phase3-integration-tests-tdd.md, phase2-cycle2-screenshot-validation-tdd.md]
+---
 
-**Date:** December 20, 2025
-**Task:** Refactor MacScreenshotTests to use ScreenshotOrchestrator
-**Status:** Successfully Completed
-**Approach:** Integration of orchestrator for app hiding
+## Problem
 
-## Problem Statement
+Refactor MacScreenshotTests to use ScreenshotOrchestrator while maintaining 5 E2E tests.
 
-Need to refactor existing MacScreenshotTests.swift to:
-- Use ScreenshotOrchestrator for app hiding coordination
-- Maintain existing 5 E2E tests (P2 verification + 4 screenshot tests)
-- Achieve 85%+ reliability target
-- Keep defense-in-depth approach (Shell Layer 1 + Swift Layer 2)
+## Key Challenge: UI Test Target Isolation
 
-## Implementation Details
-
-### Key Challenge: UI Test Target Isolation
-
-**Problem:** macOS UI tests run in a separate process from the main app. This means:
+**Problem:** macOS UI tests run in separate process from main app:
 - `@testable import ListAllMac` doesn't work for UI tests
-- Types defined in ListAllMac are not accessible from ListAllMacUITests
+- Types defined in ListAllMac not accessible from ListAllMacUITests
 - Linker error: "symbol(s) not found for architecture arm64"
 
-**Solution:** Copy screenshot infrastructure files directly to ListAllMacUITests directory.
+**Solution:** Copy screenshot infrastructure files (9 total) directly to ListAllMacUITests:
+1. ScreenshotOrchestrator.swift
+2. RealAppleScriptExecutor.swift
+3. WindowCaptureStrategy.swift
+4. ScreenshotValidator.swift
+5. RealWorkspace.swift
+6. AppleScriptProtocols.swift
+7. ScreenshotTypes.swift
+8. AppHidingScriptGenerator.swift
+9. TCCErrorDetector.swift
 
-Files copied (9 total):
-1. `ScreenshotOrchestrator.swift`
-2. `RealAppleScriptExecutor.swift`
-3. `WindowCaptureStrategy.swift`
-4. `ScreenshotValidator.swift`
-5. `RealWorkspace.swift`
-6. `AppleScriptProtocols.swift`
-7. `ScreenshotTypes.swift`
-8. `AppHidingScriptGenerator.swift`
-9. `TCCErrorDetector.swift`
+## Defense in Depth Approach
 
-**Rationale:** This duplication is acceptable because:
-- UI tests are fundamentally separate from the app
-- File synchronization keeps implementations consistent
-- This is a common pattern for macOS UI testing
-
-### Integration Approach
-
-Chose partial integration (hideBackgroundApps only) rather than full captureAndValidate():
+Two-layer app hiding for robustness:
 
 ```swift
-// In setUpWithError()
-orchestrator = ScreenshotOrchestrator(
-    scriptExecutor: RealAppleScriptExecutor(),
-    captureStrategy: WindowCaptureStrategy(),
-    validator: ScreenshotValidator(),
-    workspace: RealWorkspace(),
-    screenshotCapture: RealScreenshotCapture(app: app)
-)
-
-// In prepareWindowForScreenshot()
+// Layer 1: Shell script hides apps before UI tests start
+// Layer 2: Swift orchestrator in prepareWindowForScreenshot()
 do {
     try orchestrator.hideBackgroundApps(excluding: ["ListAll"], timeout: 10.0)
 } catch {
-    print("⚠️ Orchestrator app hiding failed: \(error)")
-    // Fallback to shell-based hiding (defense in depth)
+    print("Orchestrator failed: \(error)")
+    // Fallback to shell-based hiding
 }
 ```
 
-### Defense in Depth
+## Results
 
-Maintained two-layer approach:
-1. **Shell Layer 1:** Pre-test shell script hides apps before UI tests start
-2. **Swift Layer 2:** ScreenshotOrchestrator.hideBackgroundApps() in prepareWindowForScreenshot()
+- 5/5 E2E tests passing
+- 100% reliability
+- Total test time: ~8 minutes
+- Partial integration (hideBackgroundApps only)
 
-This ensures clean screenshots even if one layer fails.
+## Key Learnings
 
-## Files Created
-
-### RealWorkspace.swift
-```swift
-final class RealWorkspace: WorkspaceQuerying {
-    func runningApplications() -> [RunningApp] {
-        NSWorkspace.shared.runningApplications.compactMap { app in
-            guard let name = app.localizedName,
-                  let bundleId = app.bundleIdentifier else {
-                return nil
-            }
-            return RunningApp(name: name, bundleIdentifier: bundleId)
-        }
-    }
-}
-```
-
-### RealScreenshotCapture.swift
-```swift
-final class RealScreenshotCapture: ScreenshotCapturing {
-    private let app: XCUIApplication
-
-    func captureWindow(_ window: ScreenshotWindow) throws -> ScreenshotImage {
-        let screenshot = app.windows.firstMatch.screenshot()
-        return XCUIScreenshotWrapper(screenshot: screenshot)
-    }
-
-    func captureFullScreen() throws -> ScreenshotImage {
-        let screenshot = XCUIScreen.main.screenshot()
-        return XCUIScreenshotWrapper(screenshot: screenshot)
-    }
-}
-```
-
-## Test Results
-
-```
-Test Suite 'MacScreenshotTests' passed
-Executed 5 tests, with 0 failures (0 unexpected) in 473.715 seconds
-
-Individual tests:
-- testA_P2_WindowCaptureVerification: 18.731 seconds
-- testScreenshot01_MainWindow: 108.519 seconds
-- testScreenshot02_ListDetailView: 102.933 seconds
-- testScreenshot03_ItemEditSheet: 153.182 seconds
-- testScreenshot04_SettingsWindow: 90.351 seconds
-```
-
-## What Worked Well
-
-1. **File Duplication Strategy:** Copying files to UI test target resolved linker issues immediately
-
-2. **Fallback Pattern:** Using try/catch with fallback to shell-based hiding ensures robustness
-
-3. **Incremental Integration:** Starting with just hideBackgroundApps() reduced risk
-
-4. **Subagent Collaboration:**
-   - Apple Dev Expert created RealWorkspace implementation
-   - Testing Specialist refactored tests and diagnosed UI test isolation issues
-   - Critical Reviewer validated the approach
-
-## What Could Be Improved
-
-1. **Full Orchestrator Integration:** Currently only using hideBackgroundApps(), not captureAndValidate()
-   - Future work could use orchestrator's capture and validation methods
-   - Would require refactoring XCUITest screenshot flow
-
-2. **File Synchronization:** Duplicated files could drift
-   - Consider a build script to sync files automatically
-   - Or explore other approaches to share code with UI tests
-
-## Lessons Learned
-
-1. **macOS UI Tests Are Isolated:** UI tests run as a separate process and cannot link to the main app's types. This is fundamentally different from unit tests.
-
-2. **Defense in Depth Works:** Having Shell + Swift layers means if orchestrator fails, shell-based hiding still works.
-
-3. **Pragmatic Integration:** Full refactoring isn't always necessary. Using just hideBackgroundApps() achieves the goal of coordinated app hiding while keeping existing, working screenshot capture code.
-
-4. **Linker Errors in UI Tests:** When seeing "symbol(s) not found" for UI tests, the solution is to include source files in the UI test target, not try to import from the main app.
-
-## Metrics
-
-- **Tests:** 5 E2E tests passing
-- **Reliability:** 100% (5/5 passed)
-- **Total Test Time:** ~8 minutes
-- **Files Created:** 2 (RealWorkspace.swift, RealScreenshotCapture.swift)
-- **Files Copied to UI Tests:** 9 infrastructure files
-- **Integration Level:** Partial (hideBackgroundApps only)
-
-## References
-
-- MACOS_PLAN.md Phase 4
-- Phase 3 Integration Tests Learning
-- Apple Developer Documentation: XCUITest
+1. **macOS UI Tests Are Isolated** - UI tests run as separate process, cannot link to app types
+2. **Defense in Depth Works** - Shell + Swift layers provide redundancy
+3. **Pragmatic Integration** - Using just hideBackgroundApps() achieves goal without full refactoring
+4. **Linker Errors** - Solution is including source files in UI test target, not importing from app

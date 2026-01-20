@@ -1,36 +1,40 @@
-# macOS XCUITest List Selection Issues
+---
+title: macOS XCUITest List Selection Fails - Use Keyboard Navigation
+date: 2024-12-30
+severity: MEDIUM
+category: testing
+tags: [xcuitest, macos, swiftui, navigation, sidebar, accessibility]
+symptoms:
+  - OutlineRow elements reported as "not hittable"
+  - Tap and double-tap fail to select list items
+  - Coordinate-based taps don't work
+root_cause: SwiftUI accessibility layer doesn't properly expose isHittable for NavigationSplitView sidebar elements on macOS Tahoe
+solution: Use keyboard navigation (Down Arrow + Return) as fallback when tap/click selection fails
+files_affected:
+  - ListAllMacUITests/MacScreenshotTests.swift
+related:
+  - macos-uitest-authorization-fix.md
+  - macos-uitest-code-signing-sandbox.md
+---
 
-## Problem
-On macOS Tahoe (15.x), SwiftUI `OutlineRow` elements in `NavigationSplitView` sidebars are often reported as "not hittable" by XCUITest even when visible. Coordinate-based taps and even double-taps fail to actually select the list item.
-
-## Root Cause
-1. SwiftUI's accessibility layer doesn't properly expose the `isHittable` property for some elements
-2. NavigationSplitView's sidebar selection model may not respond to programmatic taps the same way as user interaction
-3. The coordinate conversion for tap events may be incorrect in certain window configurations
-
-## Solution: Keyboard Navigation Fallback
-
-When list selection via tap/double-tap fails, use keyboard navigation:
+## Selection Strategy
 
 ```swift
 // Strategy 1: Try double-click first
 if firstRow.isHittable {
     firstRow.doubleClick()
 } else {
-    let coordinate = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-    coordinate.doubleTap()
+    firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).doubleTap()
 }
 sleep(1)
 
-// Strategy 2: If double-click didn't work, use keyboard navigation
+// Strategy 2: Keyboard navigation fallback
 let addButton = app.buttons["AddItemButton"].firstMatch
 if !addButton.waitForExistence(timeout: 2) {
-    // Click sidebar to focus it
-    sidebar.click()
-    usleep(500_000)  // 0.5 seconds
-    // Press Down arrow to select first item, then Enter to confirm
+    sidebar.click()  // Focus sidebar
+    usleep(500_000)
     app.typeKey(.downArrow, modifierFlags: [])
-    usleep(300_000)  // 0.3 seconds
+    usleep(300_000)
     app.typeKey(.return, modifierFlags: [])
     sleep(1)
 }
@@ -38,18 +42,11 @@ if !addButton.waitForExistence(timeout: 2) {
 
 ## Key Learnings
 
-1. **Double-click is more reliable than single tap** for selection in lists
-2. **Keyboard navigation works when mouse events fail** - this is a robust fallback
-3. **Verify selection succeeded** by checking for UI elements that only appear when selected (like AddItemButton)
-4. **Use predicates for truncated text** - sidebar often truncates list names, so use `BEGINSWITH` predicates:
+1. **Double-click more reliable than single tap** for list selection
+2. **Keyboard navigation works when mouse events fail** - robust fallback
+3. **Verify selection succeeded** by checking for UI elements that appear after selection
+4. **Use predicates for truncated text** in sidebar:
    ```swift
    app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Grocery'")).firstMatch
    ```
-5. **usleep() for sub-second delays** - Swift's `sleep()` only takes UInt32 (seconds), use `usleep()` for milliseconds
-
-## Related Files
-- `ListAllMacUITests/MacScreenshotTests.swift` - Screenshot tests with selection strategies
-- `documentation/learnings/macos-tahoe-window-creation-xcode.md` - Related window/hittability issues
-
-## Date
-2024-12-30
+5. **usleep() for sub-second delays** - sleep() only takes seconds

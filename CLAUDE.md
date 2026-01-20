@@ -4,7 +4,8 @@
 
 - Never delete: `/CLAUDE.md`, `/.claude/`, `/docs/`
 - Never remove UI features without explicit request
-- Read before working: `/documentation/TODO.md`, `/documentation/ARCHITECTURE.md`, `/documentation/learnings/*.md`
+- Read before working: `/documentation/TODO.md`, `/documentation/ARCHITECTURE.md`
+- Search `/documentation/learnings/*.md` when encountering issues (use tags/symptoms to find relevant files)
 - Mark TODO.md tasks: `in-progress` → `completed`
 - Update `documentation/features/SUMMARY.md` and category files after implementation
 - Follow: TDD, DRY, SOLID, YAGNI
@@ -27,6 +28,11 @@ Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.
 
 **Always run `critic` before major implementations.**
 
-## After Solving Problems
+## Learnings Format
 
-Write learnings to `/documentation/learnings/`
+Write learnings to `/documentation/learnings/`. See templates for format details:
+
+| Template | Use For |
+|----------|---------|
+| `TEMPLATE.md` | Bug fixes, issues, problems solved |
+| `GUIDE_TEMPLATE.md` | Reference docs, how-tos, analysis |

@@ -1,29 +1,24 @@
-# macOS App Store Signing: Certificate Types Matter
+---
+title: macOS App Store Requires Correct Mac Installer Distribution Certificate
+date: 2026-01-05
+severity: HIGH
+category: fastlane
+tags: [code-signing, certificates, match, testflight, app-store, macos]
+symptoms:
+  - "Provisioning profile doesn't include signing certificate"
+  - "No signing certificate Mac Installer Distribution found"
+  - Two certificates with identical names in keychain
+root_cause: mac_installer_distribution certificate was incorrectly created as "Apple Distribution" instead of "3rd Party Mac Developer Installer"
+solution: Delete incorrect certificate from Match repo and create correct Mac Installer Distribution certificate via Apple Developer Portal
+files_affected:
+  - fastlane/Fastfile
+  - Match repo certs/mac_installer_distribution/
+related:
+  - match-certificate-file-formats.md
+  - match-profile-certificate-mismatch.md
+---
 
-## Problem
-
-macOS TestFlight/App Store submission was failing with:
-```
-Provisioning profile "match AppStore io.github.chmc.ListAllMac macos" doesn't include signing certificate "Apple Distribution: Aleksi Sutela (M9BR5FY93A)"
-```
-
-And later:
-```
-No signing certificate "Mac Installer Distribution" found
-```
-
-## Root Cause
-
-The `mac_installer_distribution` certificate in the Match repo was **incorrectly created as "Apple Distribution"** instead of **"3rd Party Mac Developer Installer"**.
-
-This caused:
-1. Two certificates with identical names ("Apple Distribution: ...") in the keychain
-2. Xcode picking the wrong one during signing
-3. Profile/certificate mismatch errors
-
-## Key Insight: macOS App Store Requires TWO Certificates
-
-For macOS App Store/TestFlight distribution, you need:
+## macOS App Store Requires TWO Certificate Types
 
 | Certificate Type | Common Name | Purpose |
 |-----------------|-------------|---------|
@@ -32,26 +27,14 @@ For macOS App Store/TestFlight distribution, you need:
 
 These are DIFFERENT certificate types with DIFFERENT names. Having two "Apple Distribution" certs is wrong.
 
-## Solution
+## Fix
 
-1. Delete the incorrect certificate from Match repo
-2. Create the correct "Mac Installer Distribution" certificate on Apple Developer Portal:
-   - Go to Certificates, Identifiers & Profiles
-   - Create new certificate → "Mac Installer Distribution"
-   - Download and install locally
-3. Run `bundle exec fastlane match mac_installer_distribution --platform macos` to add it to Match
+1. Delete incorrect certificate from Match repo
+2. Create "Mac Installer Distribution" certificate on Apple Developer Portal (Certificates > Create > Mac Installer Distribution)
+3. Run `bundle exec fastlane match mac_installer_distribution --platform macos`
 
 ## Prevention
 
-When running `match mac_installer_distribution`, verify the generated certificate has the correct name:
-- ✅ `3rd Party Mac Developer Installer: Name (TEAM_ID)`
-- ❌ `Apple Distribution: Name (TEAM_ID)`
-
-## Related Files
-
-- `fastlane/Fastfile` - Uses `additional_cert_types: ["mac_installer_distribution"]` in match calls
-- Match repo: `certs/mac_installer_distribution/` folder should contain installer certs
-
-## Date
-
-2026-01-05
+After running `match mac_installer_distribution`, verify certificate name:
+- Correct: `3rd Party Mac Developer Installer: Name (TEAM_ID)`
+- Wrong: `Apple Distribution: Name (TEAM_ID)`

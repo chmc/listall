@@ -1,45 +1,31 @@
-# macOS Quick Entry Window Implementation
+---
+title: macOS Quick Entry Window Implementation
+date: 2026-01-15
+severity: MEDIUM
+category: macos
+tags: [swiftui, window, quick-entry, keyboard-shortcut, dependency-injection, nsvisualeffect]
+symptoms: [no way to quickly add items without app switching, power users need rapid entry]
+root_cause: Missing Things 3-style Quick Entry feature for rapid item creation
+solution: Created floating Quick Entry window with Cmd+Option+Space shortcut
+files_affected: [ListAllMac/Views/QuickEntryView.swift, ListAllMac/ListAllMacApp.swift, ListAllMac/Commands/AppCommands.swift]
+related: [macos-keyboard-reordering.md, macos-global-cmdf-search.md, macos-native-sheet-presentation.md]
+---
 
-## Task Reference
-Task 12.10: Add Quick Entry Window (MINOR)
+## Problem
 
-## Problem Statement
-No way to quickly add items from anywhere in macOS without switching to the app. Power users expect a Things 3-style Quick Entry feature that allows rapid item creation without context switching.
+No way to quickly add items from anywhere in macOS without switching to the app. Power users expect Things 3-style Quick Entry.
 
-## Solution Implemented
+## Solution
 
 ### Architecture
 
-1. **QuickEntryViewModel** - ObservableObject for state management:
-   - `itemTitle: String` - The item title being entered
-   - `selectedListId: UUID?` - The target list
-   - `lists: [List]` - Available non-archived lists
-   - `canSave: Bool` - Computed property for validation
-   - `saveItem() -> Bool` - Creates and persists the item
-   - `clear()` - Resets for another entry
-   - `refresh()` - Reloads lists from DataManager
+1. **QuickEntryViewModel** - ObservableObject for state
+2. **QuickEntryView** - Minimal floating window
+3. **Window Scene** - Hidden title bar, content-sized
+4. **Menu Command** - Cmd+Option+Space shortcut
 
-2. **QuickEntryView** - Minimal floating window design:
-   - Header with title and close button
-   - Text field for item title (focused on appear)
-   - List picker with menu style
-   - Add Item button with validation
-   - Visual effect background for frosted glass
+### ViewModel with Dependency Injection
 
-3. **Window Scene** in ListAllMacApp.swift:
-   - `Window("Quick Entry", id: "quickEntry")`
-   - `.windowStyle(.hiddenTitleBar)` - No title bar
-   - `.windowResizability(.contentSize)` - Match content size
-   - `.defaultPosition(.center)` - Center on screen
-
-4. **Menu Command** in AppCommands.swift:
-   - "Quick Entry" in File menu
-   - Keyboard shortcut: Cmd+Option+Space
-   - Opens window via `openWindow(id: "quickEntry")`
-
-### Key Implementation Details
-
-#### ViewModel with Dependency Injection
 ```swift
 final class QuickEntryViewModel: ObservableObject {
     private let dataManager: any DataManaging
@@ -52,30 +38,21 @@ final class QuickEntryViewModel: ObservableObject {
 }
 ```
 
-This pattern allows:
-- Production use with default `DataManager.shared`
-- Test use with injected `TestDataManager`
+Enables production use with default and test use with injected mock.
 
-#### Title Validation and Trimming
+### Window Configuration
+
 ```swift
-func saveItem() -> Bool {
-    let trimmedTitle = itemTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedTitle.isEmpty else { return false }
-    guard let listId = selectedListId else { return false }
-    // ... create item
+Window("Quick Entry", id: "quickEntry") {
+    QuickEntryView()
 }
+.windowStyle(.hiddenTitleBar)
+.windowResizability(.contentSize)
+.defaultPosition(.center)
 ```
 
-#### Order Number Assignment
-```swift
-let existingItems = dataManager.getItems(forListId: listId)
-let maxOrderNumber = existingItems.map { $0.orderNumber }.max() ?? -1
-newItem.orderNumber = maxOrderNumber + 1
-```
+### Visual Effect Background (Frosted Glass)
 
-New items always get the next order number, appearing at the end of the list.
-
-#### Visual Effect Background
 ```swift
 struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
@@ -88,47 +65,29 @@ struct VisualEffectBackground: NSViewRepresentable {
 }
 ```
 
-This creates the macOS-native frosted glass appearance.
+### Order Number Assignment
+
+```swift
+let existingItems = dataManager.getItems(forListId: listId)
+let maxOrderNumber = existingItems.map { $0.orderNumber }.max() ?? -1
+newItem.orderNumber = maxOrderNumber + 1
+```
+
+New items always appear at end of list.
 
 ### Keyboard Handling
 
-- **Enter**: Saves item and dismisses (via `.onSubmit` and button shortcut)
-- **Escape**: Dismisses without saving (via `.onExitCommand`)
+- **Enter**: Saves item and dismisses (`.onSubmit` + button shortcut)
+- **Escape**: Dismisses without saving (`.onExitCommand`)
 
-### Note on Global Shortcuts
+## Note on Global Shortcuts
 
-Global keyboard shortcuts outside the app require accessibility permissions. The current implementation uses a menu command with `Cmd+Option+Space` that works when:
-- The app is in the foreground
-- The app is in the dock (can be activated via shortcut)
+Current implementation uses menu command (Cmd+Option+Space) that works when:
+- App is in foreground
+- App is in dock (can be activated via shortcut)
 
-Future enhancement: Register a global hotkey using `CGEvent` API with accessibility permissions.
-
-## Files Created
-- `/Users/aleksi/source/listall/ListAll/ListAllMac/Views/QuickEntryView.swift`
-
-## Files Modified
-- `/Users/aleksi/source/listall/ListAll/ListAllMac/ListAllMacApp.swift` - Added Window scene
-- `/Users/aleksi/source/listall/ListAll/ListAllMac/Commands/AppCommands.swift` - Added menu command
+Future enhancement: Register global hotkey using `CGEvent` API with accessibility permissions.
 
 ## Test Coverage
-30 tests in `QuickEntryWindowTests`:
-- View and ViewModel existence
-- Item creation and validation
-- Empty/whitespace title rejection
-- Title trimming
-- List selection and default selection
-- canSave state tracking
-- clear() reset behavior
-- Window configuration
-- Keyboard shortcuts
-- Rapid item creation
-- Order number assignment
 
-## References
-- Things 3 Quick Entry pattern
-- Apple HIG: Floating windows
-- SwiftUI Window scene documentation
-- NSVisualEffectView documentation
-
-## Date
-January 15, 2026
+30 tests: view/ViewModel existence, item creation, validation, trimming, list selection, canSave state, clear() behavior, window config, keyboard shortcuts, rapid entry, order numbers.

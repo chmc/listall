@@ -1,26 +1,34 @@
-# macOS Settings: iCloud Sync Toggle Bug Fix
-
-## Date: 2026-01-07
+---
+title: macOS Settings iCloud Sync Toggle Bug
+date: 2026-01-07
+severity: HIGH
+category: macos
+tags: [settings, icloud, cloudkit, ui-bug, misleading-ui]
+symptoms:
+  - Toggle claims to control iCloud sync but has no effect
+  - Users believe they can disable sync when they cannot
+  - AppStorage value never read by Core Data stack
+root_cause: NSPersistentCloudKitContainer sync is mandatory/automatic; toggle was cosmetic only
+solution: Replace fake toggle with read-only sync status display
+files_affected:
+  - ListAllMac/Views/MacSettingsView.swift
+related: [macos-toolbar-sync-indicator.md, macos-cloudkit-sync-analysis.md, macos-settings-window-resizable.md]
+---
 
 ## Problem
 
-The `MacSettingsView.swift` had a misleading "Enable iCloud Sync" toggle that:
-1. Stored a value in UserDefaults (`@AppStorage("iCloudSyncEnabled")`)
+`MacSettingsView.swift` had misleading "Enable iCloud Sync" toggle:
+1. Stored value in UserDefaults (`@AppStorage("iCloudSyncEnabled")`)
 2. Never actually controlled sync behavior
 3. Misled users into thinking they could disable iCloud sync
 
 ## Root Cause
 
-iCloud sync via `NSPersistentCloudKitContainer` is **mandatory and automatic**. The toggle value was never read by the Core Data stack, making it purely cosmetic and deceptive.
+iCloud sync via `NSPersistentCloudKitContainer` is **mandatory and automatic**. The toggle value was never read by Core Data stack.
 
 ## Solution
 
-Replaced the toggle with read-only sync status information:
-- Shows "iCloud Sync: Enabled" with green checkmark
-- Explains that sync is automatic across all Apple devices
-- Removed the `@AppStorage("iCloudSyncEnabled")` property
-
-## Code Changes
+Replace toggle with read-only status:
 
 **Before (problematic):**
 ```swift
@@ -29,10 +37,7 @@ private struct SyncSettingsTab: View {
 
     var body: some View {
         Form {
-            Section {
-                Toggle("Enable iCloud Sync", isOn: $iCloudSyncEnabled)
-                // ... misleading toggle
-            }
+            Toggle("Enable iCloud Sync", isOn: $iCloudSyncEnabled)
         }
     }
 }
@@ -43,39 +48,23 @@ private struct SyncSettingsTab: View {
 private struct SyncSettingsTab: View {
     var body: some View {
         Form {
-            Section {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("iCloud Sync: Enabled")
-                        .fontWeight(.medium)
-                }
-                Text("Your lists automatically sync across all your Apple devices...")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("iCloud Sync: Enabled")
+                    .fontWeight(.medium)
             }
+            Text("Your lists automatically sync across all your Apple devices...")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 }
 ```
 
-## Additional Features Added
-
-While fixing the bug, also added missing Settings features:
-
-1. **Language Selection** in General tab
-   - Uses `LocalizationManager.AppLanguage.allCases`
-   - Shows flag emoji + native name
-   - Shows restart alert after change
-
-2. **Security tab** with Auth Timeout Options
-   - Uses `MacBiometricAuthService.shared` for Touch ID detection
-   - Toggle for "Require Touch ID"
-   - Picker with `Constants.AuthTimeoutDuration.allCases`
-
 ## Lesson Learned
 
 When implementing settings UIs:
-1. Verify that toggles actually control the feature they claim to
-2. For mandatory features, use read-only status displays instead of fake toggles
-3. Always check what the underlying service actually supports before adding UI controls
+1. Verify toggles actually control the claimed feature
+2. For mandatory features, use read-only status displays
+3. Check what the underlying service supports before adding UI controls

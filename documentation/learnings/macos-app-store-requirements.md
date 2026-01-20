@@ -1,25 +1,31 @@
-# macOS App Store Submission Requirements
+---
+title: macOS App Store Requires LSApplicationCategoryType in Info.plist
+date: 2026-01-05
+severity: MEDIUM
+category: macos
+tags: [app-store, testflight, info-plist, submission]
+symptoms:
+  - "The product archive is invalid"
+  - "Info.plist must contain a LSApplicationCategoryType key"
+  - Archive succeeds but upload fails
+root_cause: macOS App Store submissions require LSApplicationCategoryType key in Info.plist (iOS uses App Store Connect instead)
+solution: Add LSApplicationCategoryType key with valid category value to macOS Info.plist
+files_affected:
+  - ListAll/ListAllMac/Info.plist
+related: [macos-installer-certificate-type.md, macos-screenshot-generation.md]
+---
 
-## Date: 2026-01-05
+## Fix
 
-## Status: RESOLVED
-
-## Problem
-macOS app archive passed but upload to TestFlight failed with:
-```
-The product archive is invalid. The Info.plist must contain a LSApplicationCategoryType key
-```
-
-## Solution
-Add `LSApplicationCategoryType` to the macOS app's Info.plist:
+Add to macOS Info.plist:
 
 ```xml
 <key>LSApplicationCategoryType</key>
 <string>public.app-category.productivity</string>
 ```
 
-## Valid Category Values
-Common categories include:
+## Valid Categories
+
 - `public.app-category.productivity`
 - `public.app-category.utilities`
 - `public.app-category.developer-tools`
@@ -27,10 +33,8 @@ Common categories include:
 - `public.app-category.finance`
 - `public.app-category.education`
 
-Full list: [Apple Documentation - LSApplicationCategoryType](https://developer.apple.com/documentation/bundleresources/information_property_list/lsapplicationcategorytype)
-
-## Related Files
-- `ListAll/ListAllMac/Info.plist`
+Full list: [Apple LSApplicationCategoryType Documentation](https://developer.apple.com/documentation/bundleresources/information_property_list/lsapplicationcategorytype)
 
 ## Note
-This is required for macOS App Store submissions but not for iOS. iOS apps use the primary category set in App Store Connect instead.
+
+This is macOS-specific. iOS apps use the primary category set in App Store Connect.

@@ -1,75 +1,59 @@
-# macOS XCUITest Code Signing and Sandbox Path Issues
+---
+title: macOS XCUITest Requires Code Signing and Runs in Sandbox Container
+date: 2025-12-30
+severity: HIGH
+category: testing
+tags: [xcuitest, macos, code-signing, sandbox, fastlane, screenshots]
+symptoms:
+  - "Application does not have a process ID"
+  - XCUITest cannot launch the app
+  - Screenshots saved but not found by Fastlane
+root_cause: Disabling code signing prevents XCUITest from launching; sandbox container path differs from user home directory
+solution: Remove code signing disabling flags; use sandbox container path for screenshot files
+files_affected:
+  - fastlane/Fastfile
+related:
+  - macos-uitest-authorization-fix.md
+  - macos-xcuitest-list-selection.md
+---
 
-## Date
-2025-12-30
+## Issue 1: Code Signing Required
 
-## Problem Summary
-macOS screenshot generation via `bundle exec fastlane ios screenshots_macos` was failing with two related issues:
-1. XCUITest could not launch the app ("Application does not have a process ID")
-2. Screenshots were saved but not found by Fastlane
+XCUITest cannot launch ad-hoc signed apps.
 
-## Root Causes
-
-### Issue 1: Code Signing Required for XCUITest
-When the Fastfile used these xcode build arguments:
 ```ruby
-xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ..."
+# WRONG - breaks XCUITest
+xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+
+# CORRECT - proper signing required
+xcargs: "-test-timeouts-enabled YES -default-test-execution-time-allowance 300"
 ```
 
-The app was built with ad-hoc signing, which XCUITest cannot launch. The error message was:
+## Issue 2: Sandbox Container Path
+
+MacSnapshotHelper runs sandboxed. `NSHomeDirectory()` returns:
 ```
-Application 'io.github.chmc.ListAllMac' does not have a process ID
+~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/
 ```
 
-**Solution**: Remove the code signing disabling flags. XCUITest requires properly signed apps:
-```ruby
-xcargs: "-test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600"
+Not:
+```
+~/
 ```
 
-### Issue 2: Sandbox Container Path Mismatch
-MacSnapshotHelper runs inside a sandboxed container, so `NSHomeDirectory()` returns:
-```
-/Users/aleksi/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/
-```
+### Fix in Fastfile
 
-Not the actual user home directory:
-```
-/Users/aleksi/
-```
-
-This caused screenshots to be saved to:
-```
-~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data/Library/Caches/tools.fastlane/screenshots/
-```
-
-But Fastlane was looking in:
-```
-~/Library/Caches/tools.fastlane/screenshots/
-```
-
-**Solution**: Update Fastfile to use the sandboxed container path:
 ```ruby
 container_base = File.expand_path("~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/Data")
 fastlane_cache_dir = File.join(container_base, "Library/Caches/tools.fastlane")
 screenshots_cache_dir = File.join(fastlane_cache_dir, "screenshots")
 ```
 
-Also write `language.txt` and `locale.txt` to the container path so MacSnapshotHelper can read them.
-
-## Files Modified
-- `fastlane/Fastfile` - Fixed code signing flags and sandbox paths in `screenshots_macos` lane
+Write `language.txt` and `locale.txt` to the container path.
 
 ## Key Learnings
-1. **XCUITest requires properly signed apps** - Never disable code signing for UI tests
-2. **macOS UI tests run in sandbox containers** - `NSHomeDirectory()` returns the container path, not the real home
+
+1. **Never disable code signing for UI tests**
+2. **macOS UI tests run in sandbox containers** - NSHomeDirectory() returns container path
 3. **Container bundle ID pattern**: `io.github.chmc.{TestTargetName}.xctrunner`
-4. **Debug sandbox issues** by checking NSLog output for actual paths used
-
-## Verification
-After fix:
-- Tests: 5/5 passed
-- Screenshots: 8 captured (4 per locale)
-- Both en-US and fi locales working
-
-## Related Issues
-- This is related to but different from the macOS Tahoe window creation issues documented in `macos-tahoe-window-creation-xcode.md`
+4. **Debug sandbox issues** by checking NSLog output for actual paths

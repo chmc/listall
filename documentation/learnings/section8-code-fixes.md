@@ -1,49 +1,24 @@
-# Section 8: Code Fixes Learning
+---
+title: macOS Screenshot Automation Reliability Fixes
+date: 2025-12-20
+severity: HIGH
+category: fastlane
+tags: [screenshots, tcc-permissions, applescript, process-termination, shell-scripting]
+symptoms: [TCC errors silently ignored, apps not closing, screenshot automation fails]
+root_cause: Silent stderr suppression hid TCC errors; process termination lacked verification
+solution: Capture stderr with TCC detection; implement verified process termination with SIGTERM/SIGKILL
+files_affected: [.github/scripts/generate-screenshots-local.sh, fastlane/Fastfile]
+related: [xtest-nsapplescript-malloc-error.md, macos-screenshot-generation.md, macos-uitest-authorization-fix.md]
+---
 
-**Date:** December 20, 2025
-**Task:** Apply 4 critical code fixes from MACOS_PLAN.md Section 8
-**Status:** Successfully Completed
+## Fixes Applied
 
-## Problem Statement
+### Fix 8.3: TCC Error Detection
 
-Apply the following code fixes to improve macOS screenshot automation reliability:
-1. **Fix 8.1:** Keep Shell Hiding (Defense in Depth)
-2. **Fix 8.2:** Fix AppleScript Case Comparison
-3. **Fix 8.3:** Fix TCC Error Detection in Shell
-4. **Fix 8.4:** Fix Process Termination in Fastfile
+**Problem**: `2>/dev/null || true` silently discarded TCC permission errors.
 
-## Implementation Details
+**Solution**: Helper function captures and checks stderr:
 
-### Fix 8.1: Shell Hiding (Already in Place)
-
-The `hide_and_quit_background_apps_macos()` function was already correctly implemented in `generate-screenshots-local.sh`. It:
-- Closes non-essential applications using AppleScript
-- Hides remaining visible apps
-- Minimizes Finder windows
-- Is called before `bundle exec fastlane ios screenshots_macos`
-
-**Status:** Already done, verified working.
-
-### Fix 8.2: AppleScript Case Comparison (Already in Place)
-
-The `AppHidingScriptGenerator.swift` was already using native AppleScript case comparison:
-- Uses `if appName is in {...}` for exact matches (case-insensitive)
-- Uses `if appName contains "X" or appName contains "x"` for patterns
-- No `tr '[:upper:]' '[:lower:]'` shell subprocess calls
-
-**Status:** Already done, verified with tests.
-
-### Fix 8.3: TCC Error Detection in Shell
-
-**Problem:** Original code used `2>/dev/null || true` which silently discarded TCC errors.
-
-**Solution:** Implemented `check_tcc_error()` helper function that:
-1. Captures osascript stderr with `$(...) 2>&1`
-2. Checks for TCC error patterns: `"not authorized"`, `"(-1743)"`
-3. Logs actionable fix instructions when TCC errors detected
-4. Continues execution (defense in depth - Swift layer is backup)
-
-**Key Implementation:**
 ```bash
 check_tcc_error() {
     local output="$1"
@@ -52,85 +27,72 @@ check_tcc_error() {
         if [[ "${output}" == *"not authorized"* ]] || [[ "${output}" == *"(-1743)"* ]]; then
             log_warn "TCC Automation permissions may not be granted"
             log_warn "Fix: System Settings > Privacy & Security > Automation > Terminal/Xcode"
-            log_warn "Continuing - Swift layer may still work (defense in depth)"
             return 1
         fi
     fi
     return 0
 }
+
+# Usage
+output=$(osascript -e '...' 2>&1)
+check_tcc_error "$output" $?
 ```
 
-### Fix 8.4: Process Termination in Fastfile
+### Fix 8.4: Verified Process Termination
 
-Added `terminate_macos_app_verified()` helper method to Fastfile:
-- Security: Input validation with regex `/\A[a-zA-Z0-9_-]+\z/`
-- SIGTERM first (graceful), then SIGKILL (force)
-- Polls for up to 10 seconds to confirm termination
-- Filters zombie processes (state 'Z') from the count
-- Returns true only when process confirmed dead
+**Problem**: Apps not reliably terminating before screenshots.
 
-## Issues Encountered
+**Solution**: Ruby helper with SIGTERM/SIGKILL and polling:
 
-### Bash Heredoc Quote Parsing Issue
+```ruby
+def terminate_macos_app_verified(app_name)
+  raise "Invalid app name" unless app_name =~ /\A[a-zA-Z0-9_-]+\z/
 
-**Problem:** Apostrophe inside heredoc within `$()` command substitution caused bash parse error:
+  system("pkill -SIGTERM #{app_name}")
+  10.times do
+    sleep(1)
+    count = `pgrep #{app_name} | xargs ps -o state= 2>/dev/null | grep -v Z | wc -l`.to_i
+    return true if count == 0
+  end
+  system("pkill -SIGKILL #{app_name}")
+  true
+end
 ```
-unexpected EOF while looking for matching `'
-```
 
-**Root Cause:** Bash has trouble parsing single quotes inside `<<'DELIMITER'` heredocs when they're wrapped in `$()` command substitution.
+## Bash Heredoc Gotcha
 
-**Solution:** Changed "doesn't" to "does not" in the AppleScript comment:
+**Problem**: Apostrophe in heredoc inside `$()` causes parse error:
 ```bash
-# Before (causes parse error)
--- (the "name is not in {list}" one-liner syntax doesn't work)
-
-# After (works correctly)
--- (the "name is not in {list}" one-liner syntax does not work)
+# BAD - "doesn't" breaks parsing
+$(cat <<'EOF'
+-- syntax doesn't work
+EOF
+)
 ```
 
-**Lesson:** Avoid contractions with apostrophes inside heredocs within command substitution.
+**Solution**: Avoid contractions in heredocs within command substitution:
+```bash
+# GOOD
+$(cat <<'EOF'
+-- syntax does not work
+EOF
+)
+```
 
-## Test Results
+## Defense in Depth Architecture
 
-**Unit Tests:** 703 tests, 0 failures
-- TCC Permission Detection: 7 tests
-- App Hiding Logic: 15 tests
-- Screenshot Validation: 10 tests
-- Window Capture Strategy: 12 tests
-- Integration Tests: 20 tests
+```
+Layer 1: Shell (hide_and_quit_background_apps_macos)
+    |
+    v fails?
+Layer 2: Swift (AppHidingScriptGenerator)
+    |
+    v fails?
+Layer 3: Fallback (screenshot continues anyway)
+```
 
-**Screenshot Tests:** 4/4 passing with defense-in-depth fallback
+## Verification
 
-## Files Modified
-
-1. `.github/scripts/generate-screenshots-local.sh`
-   - Added `check_tcc_error()` helper function
-   - Changed heredoc pattern from `2>/dev/null || true` to stderr capture
-   - Fixed apostrophe in AppleScript comment
-
-2. `fastlane/Fastfile`
-   - Added `terminate_macos_app_verified()` method
-
-3. `documentation/MACOS_PLAN.md`
-   - Marked all Section 8 fixes as completed
-   - Updated Phase Completion Checklist with verified metrics
-
-## Lessons Learned
-
-1. **Defense in Depth Works:** Having Shell + Swift + Fallback layers means even when one fails, the system continues working.
-
-2. **TCC Errors Need Visibility:** Silent failure (`2>/dev/null`) makes debugging impossible. Always capture and check stderr for system permission errors.
-
-3. **Bash Heredoc Quirks:** Avoid apostrophes/single-quotes inside heredocs within `$()`. Use alternative wording or escape sequences.
-
-4. **Test Infrastructure Investment Pays Off:** 703 unit tests enabled rapid verification that code fixes didn't break anything.
-
-5. **Process Termination is Complex:** Need SIGTERM + SIGKILL + polling + zombie filtering for reliable app termination.
-
-## Metrics
-
-- **Time to Complete:** ~1 hour (including debugging heredoc issue)
-- **Fixes Applied:** 2 new (8.3, 8.4), 2 verified existing (8.1, 8.2)
-- **Tests Passing:** 703 unit tests, 4/4 screenshot tests
-- **Build Verification:** bash -n, shellcheck, ruby -c all passed
+- 703 unit tests passing
+- 4/4 screenshot tests passing
+- `bash -n`, `shellcheck`, `ruby -c` all pass
