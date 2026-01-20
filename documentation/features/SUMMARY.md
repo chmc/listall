@@ -12,10 +12,10 @@
 | Platform | Status | Core | Advanced |
 |----------|:------:|:----:|:--------:|
 | iOS | ✅ Live | 100% | 100% |
-| macOS | ✅ Ready | 100% | 100% |
+| macOS | ⚠️ Near-Ready | 99% | 100% |
 
-> **Note**: macOS has full feature parity with iOS.
-> N/A items in category files are iOS-only patterns with macOS equivalents.
+> **Note**: macOS has 2 gaps in List Management (archived list handling).
+> See HIGH Priority Gaps below. N/A items in category files are iOS-only patterns with macOS equivalents.
 
 ---
 
@@ -23,7 +23,7 @@
 
 | Category | iOS | macOS | Gap* | Details |
 |----------|:---:|:-----:|:---:|---------|
-| [List Management](#list-management) | 13/13 | 13/13 | 0 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
+| [List Management](#list-management) | 14/14 | 12/14 | 2 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
 | [Item Management](#item-management) | 17/17 | 17/17 | 0 | [ITEM_MANAGEMENT.md](./ITEM_MANAGEMENT.md) |
 | [Filter/Sort/Search](#filter-sort-search) | 15/16 | 16/16 | 0 | [FILTER_SORT.md](./FILTER_SORT.md) |
 | [Images](#images) | 14/14 | 14/14 | 0 | [IMAGES.md](./IMAGES.md) |
@@ -40,6 +40,15 @@
 ---
 
 ## HIGH Priority Gaps (macOS)
+
+### Active Gaps
+
+| # | Feature | Category | Status | Issue |
+|---|---------|----------|:------:|-------|
+| 1 | Restore Archived List UI | List Management | ⚠️ | Backend exists, no UI button in context menu or toolbar |
+| 2 | Archived Lists Read-Only | List Management | ❌ | Archived lists are fully editable (should be read-only) |
+
+### Completed Gaps (Historical)
 
 | # | Feature | Category | Status |
 |---|---------|----------|:------:|
@@ -71,7 +80,9 @@
 | Feature | iOS | macOS |
 |---------|:---:|:-----:|
 | Create/Edit/Delete List | ✅ | ✅ |
-| Archive/Restore List | ✅ | ✅ |
+| Archive List | ✅ | ✅ |
+| Restore Archived List | ✅ | ⚠️ |
+| Archived Lists Read-Only | ✅ | ❌ |
 | Duplicate List | ✅ | ✅ |
 | Reorder Lists | ✅ | ✅ |
 | Multi-Select Lists | ✅ | ✅ |
@@ -136,4 +147,4 @@ UserData: userID, lastSyncDate, preferencesJSON
 
 ---
 
-*Last updated: 2026-01-07*
+*Last updated: 2026-01-20*

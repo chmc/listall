@@ -42,9 +42,126 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-## Phase 13: App Store Submission
+## Phase 13: Archived Lists Bug Fixes (CRITICAL)
 
-### Task 13.1: Submit to App Store
+> **Issue Discovery**: Agent swarm investigation (January 2026) revealed two critical bugs in macOS archived lists handling that break feature parity with iOS.
+
+### Task 13.1: Add Restore Functionality for Archived Lists
+**TDD**: Write tests for restore UI actions
+
+**Priority**: CRITICAL - Users cannot restore archived lists on macOS
+
+**Problem**:
+- macOS has NO "Restore" option in the UI for archived lists
+- iOS has restore buttons in `ListRowView` (inline) and `ArchivedListView` (toolbar)
+- Backend `restoreList(withId:)` exists in `CoreDataManager` but macOS UI doesn't expose it
+
+**Steps**:
+1. Add "Restore" option to context menu when `showingArchivedLists` is true
+2. Add "Restore" button to sidebar row for archived lists (similar to iOS inline buttons)
+3. Add keyboard shortcut for restore (e.g., Cmd+Shift+R when archived list selected)
+4. Show confirmation dialog before restoring
+5. Update documentation status after implementation
+
+**Test criteria**:
+```swift
+func testRestoreOptionVisibleForArchivedLists() {
+    // Context menu shows "Restore" when viewing archived lists
+}
+
+func testRestoreActionCallsDataManager() {
+    // Clicking restore calls dataManager.restoreList(withId:)
+}
+
+func testRestoredListAppearsInActiveLists() {
+    // After restore, list moves from archived to active section
+}
+```
+
+---
+
+### Task 13.2: Make Archived Lists Read-Only
+**TDD**: Write tests for read-only enforcement
+
+**Priority**: CRITICAL - Archived lists should not be editable
+
+**Problem**:
+- macOS allows full editing of archived lists (add items, edit items, edit list name, reorder)
+- iOS uses dedicated `ArchivedListView` that is completely read-only
+- This defeats the purpose of archiving (preserving list state)
+
+**iOS Reference** (`ArchivedListView.swift`):
+- No add item button
+- Items rendered with `ArchivedItemRowView` (no interactive elements)
+- No edit controls, no swipe actions, no context menus for editing
+- Only actions: Restore and Permanent Delete
+
+**Steps**:
+1. Add `isArchived` property check in `MacListDetailView` to conditionally hide:
+   - Add Item button (+) in toolbar
+   - Edit List button (pencil icon)
+   - Selection mode toggle
+   - Import/Export actions
+2. Disable item editing when list is archived:
+   - Hide toggle completion (checkbox)
+   - Hide edit button on item rows
+   - Disable drag-to-reorder
+   - Remove swipe actions
+3. Update context menu for archived lists:
+   - Show only: "Restore" and "Delete Permanently"
+   - Hide: Share, Duplicate, Edit
+4. Add visual indicator that list is archived (e.g., "Archived" badge in header)
+5. Optionally: Create dedicated `MacArchivedListDetailView` (cleaner separation like iOS)
+
+**Test criteria**:
+```swift
+func testAddItemButtonHiddenForArchivedList() {
+    // + button not visible when viewing archived list
+}
+
+func testEditListButtonHiddenForArchivedList() {
+    // Pencil button not visible when viewing archived list
+}
+
+func testItemRowReadOnlyForArchivedList() {
+    // Item checkbox and edit button hidden for archived items
+}
+
+func testContextMenuDifferentForArchivedLists() {
+    // Only Restore and Delete options shown
+}
+
+func testDragReorderDisabledForArchivedList() {
+    // Cannot reorder items in archived list
+}
+```
+
+---
+
+### Task 13.3: Update Documentation Status
+**TDD**: Documentation accuracy verification
+
+**Priority**: IMPORTANT - Documentation must reflect actual state
+
+**Problem**:
+- `LIST_MANAGEMENT.md` claims ✅ for "Restore Archived List" on macOS
+- `SUMMARY.md` claims full feature parity with "No gaps"
+- This is inaccurate until Tasks 13.1 and 13.2 are completed
+
+**Steps**:
+1. After completing Tasks 13.1 and 13.2, verify all functionality works
+2. Run full test suite to confirm no regressions
+3. Update `documentation/features/LIST_MANAGEMENT.md` if needed
+4. Update `documentation/features/SUMMARY.md` if needed
+5. Write learning document to `/documentation/learnings/` about archive/restore parity
+
+**Note**: Only update to ✅ after actual implementation is verified working.
+
+---
+
+## Phase 14: App Store Submission
+
+### Task 14.1: Submit to App Store
 **TDD**: Submission verification
 
 **Steps**:
@@ -57,9 +174,9 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-## Phase 14: Spotlight Integration (Optional)
+## Phase 15: Spotlight Integration (Optional)
 
-### Task 14.1: Implement Spotlight Integration
+### Task 15.1: Implement Spotlight Integration
 **TDD**: Write Spotlight indexing tests
 
 **Priority**: Low - Optional feature, disabled by default
@@ -227,10 +344,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 10: App Store Preparation | Completed | 5/5 |
 | Phase 11: Polish & Launch | Completed | 9/9 |
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
-| Phase 13: App Store Submission | Not Started | 0/1 |
-| Phase 14: Spotlight Integration | Optional | 0/1 |
+| Phase 13: Archived Lists Bug Fixes | Not Started | 0/3 |
+| Phase 14: App Store Submission | Not Started | 0/1 |
+| Phase 15: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 80** (77 completed, 3 remaining)
+**Total Tasks: 83** (77 completed, 6 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -258,14 +376,20 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 12.12: [COMPLETED] Add Clear All Filters Shortcut (MINOR)
 - Task 12.13: [COMPLETED] Add Image Gallery Size Presets (MINOR)
 
-**Phase 13 Status**:
-- Task 13.1: Submit to App Store
+**Phase 13 Status** (Archived Lists Bug Fixes - Agent Swarm Investigation):
+- Task 13.1: Add Restore Functionality for Archived Lists
+- Task 13.2: Make Archived Lists Read-Only
+- Task 13.3: Update Documentation Status
 
-**Phase 14 Status** (Optional):
-- Task 14.1: Implement Spotlight Integration
+**Phase 14 Status**:
+- Task 14.1: Submit to App Store
+
+**Phase 15 Status** (Optional):
+- Task 15.1: Implement Spotlight Integration
 
 **Notes**:
 - Phase 12 added based on agent swarm UX research (January 2026)
-- Task 6.4 (Spotlight Integration) moved to Phase 14 as optional feature (disabled by default)
+- Phase 13 added based on agent swarm investigation (January 2026) - discovered missing restore UI and mutable archived lists bugs
+- Task 6.4 (Spotlight Integration) moved to Phase 15 as optional feature (disabled by default)
 - Phase 9 revised based on swarm analysis: uses parallel jobs architecture (Task 9.0 added as blocking pre-requisite)
 - Task 11.7 added comprehensive feature parity analysis with `/documentation/FEATURES.md`
