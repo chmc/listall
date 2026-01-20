@@ -18,6 +18,93 @@ Mark task titles with status indicators:
 
 ---
 
+## Phase Completion & Archival Rules
+
+When an entire phase is completed (all tasks marked `[COMPLETED]`), archive it to preserve context for future LLM reference.
+
+### File Naming Convention
+
+| Scenario | File Name |
+|----------|-----------|
+| Single phase | `TODO.DONE.PHASE-{N}.md` (e.g., `TODO.DONE.PHASE-12.md`) |
+| Multiple related phases | `TODO.DONE.PHASES-{N}-{M}.md` (e.g., `TODO.DONE.PHASES-8-11.md`) |
+
+### Archival Steps
+
+1. **Create/Update Archive File**: Move completed phase content to the appropriate `TODO.DONE.PHASE*.md` file
+2. **Update Navigation Links**: Add cross-references in both files
+3. **Replace Phase in TODO.md**: Convert detailed content to a summary row in the "Completed Phases" table
+4. **Update Progress Tracking**: Mark phase as "Completed" in the Progress Tracking table
+
+### LLM-Optimized Format for Archived Phases
+
+Archive files must follow this structure for efficient LLM processing:
+
+```markdown
+# ListAll macOS App - Completed Phase {N} ({Title})
+
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Active Tasks](./TODO.md)
+
+{Brief description of what this phase accomplished}
+
+**Tags**: {comma-separated keywords for searchability}
+**Completion Date**: {Month Day, Year}
+**Total Tasks**: {X/X} completed
+
+---
+
+## Table of Contents
+
+1. [Phase Overview](#phase-overview)
+2. [Task N.1: {Title}](#task-n1-title)
+...
+
+---
+
+## Phase Overview
+
+{Priority levels if applicable, summary statistics}
+
+---
+
+## Task N.1: {Title}
+
+**Problem**: {1-2 sentences explaining what was wrong}
+
+**Solution**:
+1. {Key change 1}
+2. {Key change 2}
+
+**Files Modified**:
+- `path/to/file.swift`
+
+**Tests**: {X} tests in `{TestClassName}`
+
+**Learning**: `{path if learning doc created}`
+
+---
+```
+
+### Key Formatting Principles
+
+- **Concise Problem/Solution**: Summarize, don't duplicate full task descriptions
+- **File Paths**: List actual files modified for easy navigation
+- **Test References**: Include test class names and counts
+- **Code Snippets**: Only include if they illustrate a non-obvious pattern
+- **Tags**: Enable keyword search across archive files
+- **Cross-Navigation**: Always include navigation links at top
+
+### Current Archive Files
+
+| File | Phases | Tasks |
+|------|--------|-------|
+| [TODO.DONE.PHASES-1-4.md](./TODO.DONE.PHASES-1-4.md) | 1-4 | 20 |
+| [TODO.DONE.PHASES-5-7.md](./TODO.DONE.PHASES-5-7.md) | 5-7 | 22 |
+| [TODO.DONE.PHASES-8-11.md](./TODO.DONE.PHASES-8-11.md) | 8-11 | 25 |
+| [TODO.DONE.PHASE-12.md](./TODO.DONE.PHASE-12.md) | 12 | 13 |
+
+---
+
 ## Completed Phases (1-12)
 
 All phases 1-12 have been completed with full TDD, code examples, and documentation.
