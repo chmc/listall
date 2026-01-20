@@ -1,6 +1,6 @@
 # ListAll macOS App - Completed Phases 1-4 (Foundation)
 
-> **Navigation**: [Main Index](./TODO.DONE.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phase 12](./TODO.DONE.PHASE-12.md) | [Active Tasks](./TODO.md)
 
 This document contains the completed foundation phases (1-4) of the macOS app implementation with all TDD criteria, code examples, file locations, and implementation details preserved for LLM reference.
 
@@ -887,4 +887,4 @@ func testImportViewModelFlow() {
 
 ---
 
-> **Navigation**: [Main Index](./TODO.DONE.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phase 12](./TODO.DONE.PHASE-12.md) | [Active Tasks](./TODO.md)
