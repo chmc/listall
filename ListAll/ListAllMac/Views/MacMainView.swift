@@ -2771,12 +2771,12 @@ private struct MacEditItemSheet: View {
                             itemId: item.id,
                             itemTitle: item.title
                         )
-                        .frame(height: 200)
+                        .frame(height: 300)
                     } else {
                         // Placeholder while gallery loads
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.secondary.opacity(0.1))
-                            .frame(height: 200)
+                            .frame(height: 300)
                             .overlay(
                                 ProgressView()
                                     .scaleEffect(0.8)
