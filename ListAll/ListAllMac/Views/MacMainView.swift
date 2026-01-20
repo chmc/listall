@@ -815,6 +815,7 @@ private struct MacSidebarView: View {
                 .padding(.top, 8)
                 .accessibilityLabel("Sync status: \(lastSyncDisplayText)")
             }
+            .collapsible(false)
         }
         .listStyle(.sidebar)
         .accessibilityIdentifier("ListsSidebar")
