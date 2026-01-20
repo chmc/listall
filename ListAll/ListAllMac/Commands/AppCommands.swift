@@ -91,16 +91,9 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
 
-            Divider()
-
-            Button("Show Archived Lists") {
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("ToggleArchivedLists"),
-                    object: nil
-                )
-            }
-            .keyboardShortcut("a", modifiers: [.command, .shift])
         }
+        // Note: "Show Archived Lists" menu item removed - archived lists now always
+        // visible in their own sidebar section (Apple HIG two-section pattern)
 
         // Custom View menu additions
         CommandGroup(after: .toolbar) {

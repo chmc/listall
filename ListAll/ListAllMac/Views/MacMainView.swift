@@ -118,11 +118,10 @@ struct MacMainView: View {
             // CRITICAL FIX: Wrap sidebar in NavigationStack with animated path
             // This restores SwiftUI's animation system that NavigationSplitView breaks
             NavigationStack(path: $navigationPath.animation(.linear(duration: 0))) {
-                // Sidebar with lists
-                // CRITICAL: Pass showingArchivedLists flag and let sidebar observe dataManager directly
+                // Sidebar with lists - two sections: Lists + Archived (Apple HIG pattern)
+                // CRITICAL: Let sidebar observe dataManager directly
                 // Passing array by value breaks SwiftUI observation chain on macOS
                 MacSidebarView(
-                    showingArchivedLists: $showingArchivedLists,
                     selectedList: $selectedList,
                     onCreateList: { showingCreateListSheet = true },
                     onDeleteList: deleteList
@@ -270,9 +269,8 @@ struct MacMainView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewList"))) { _ in
             showingCreateListSheet = true
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleArchivedLists"))) { _ in
-            showingArchivedLists.toggle()
-        }
+        // Note: ToggleArchivedLists handler removed - archived lists now always visible
+        // in their own sidebar section (Apple HIG two-section pattern)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshData"))) { _ in
             // Defer to next run loop to prevent layout recursion during view updates
             DispatchQueue.main.async {
@@ -303,19 +301,14 @@ struct MacMainView: View {
                 stopSyncPolling()
             }
         }
-        .onChange(of: showingArchivedLists) { _, newValue in
-            // Clear single-list selection when switching between active/archived views
-            // to prevent showing archived list UI in active lists view (or vice versa)
-            // Note: Multi-select state (selectedLists, isInSelectionMode) is cleared in MacSidebarView
-            selectedList = nil
-
-            if newValue {
-                // Load archived lists when switching to archived view
-                dataManager.loadArchivedData()
-            }
+        .onChange(of: showingArchivedLists) { _, _ in
+            // Legacy: showingArchivedLists is now only used for menu command compatibility
+            // Both sections are always visible, so no selection clearing needed
         }
         .onAppear {
             startSyncPolling()
+            // Load archived lists so both sections can display
+            dataManager.loadArchivedData()
             // Start Handoff activity for browsing lists (if no list is selected)
             if selectedList == nil {
                 HandoffService.shared.startBrowsingListsActivity()
@@ -531,7 +524,6 @@ private struct MacSidebarView: View {
     // Access CoreDataManager for sync status and manual refresh
     @ObservedObject private var coreDataManager = CoreDataManager.shared
 
-    @Binding var showingArchivedLists: Bool
     @Binding var selectedList: List?
     let onCreateList: () -> Void
     let onDeleteList: (List) -> Void
@@ -557,17 +549,36 @@ private struct MacSidebarView: View {
     /// Focus state for individual list rows - enables arrow key navigation
     @FocusState private var focusedListID: UUID?
 
-    // Compute lists directly from @Published source for proper reactivity
-    // Uses dataManager.archivedLists (populated via loadArchivedData()) for archived lists
-    // Uses dataManager.lists (populated via loadData()) for active lists
-    private var displayedLists: [List] {
-        if showingArchivedLists {
-            // Use cached archivedLists property - sorted by modifiedAt descending (most recent first)
-            return dataManager.archivedLists
+    // MARK: - Archived Section Expansion State
+    /// Persisted collapsed/expanded state for Archived section (collapsed by default)
+    @AppStorage("archivedSectionExpanded") private var isArchivedSectionExpanded = false
+
+    // MARK: - Computed List Properties
+
+    /// Active (non-archived) lists sorted by order number
+    private var activeLists: [List] {
+        dataManager.lists.filter { !$0.isArchived }
+            .sorted { $0.orderNumber < $1.orderNumber }
+    }
+
+    /// Archived lists sorted by modification date (most recent first)
+    private var archivedLists: [List] {
+        dataManager.archivedLists
+    }
+
+    /// All visible lists for keyboard navigation - only includes archived when section is expanded
+    private var allVisibleLists: [List] {
+        if isArchivedSectionExpanded {
+            return activeLists + archivedLists
         } else {
-            return dataManager.lists.filter { !$0.isArchived }
-                .sorted { $0.orderNumber < $1.orderNumber }
+            return activeLists
         }
+    }
+
+    /// Legacy computed property for backwards compatibility (selection mode actions)
+    /// Now returns only active lists (archived shown in separate section)
+    private var displayedLists: [List] {
+        activeLists
     }
 
     /// Tooltip text showing last sync time for refresh button
@@ -613,7 +624,7 @@ private struct MacSidebarView: View {
     }
 
     private func selectAllLists() {
-        selectedLists = Set(displayedLists.map { $0.id })
+        selectedLists = Set(allVisibleLists.map { $0.id })
     }
 
     private func deselectAllLists() {
@@ -661,17 +672,24 @@ private struct MacSidebarView: View {
 
     // MARK: - Bulk Action Button (extracted for type-checker performance)
 
-    /// Builds the appropriate bulk action button based on current view
+    /// Check if any selected lists are archived
+    private var hasArchivedSelection: Bool {
+        selectedLists.contains { id in
+            allVisibleLists.first(where: { $0.id == id })?.isArchived == true
+        }
+    }
+
+    /// Builds the appropriate bulk action button based on selected lists
     @ViewBuilder
     private var bulkActionButton: some View {
-        if showingArchivedLists {
-            // Archived lists view: permanent deletion
+        if hasArchivedSelection {
+            // Has archived lists selected: permanent deletion
             Button(role: .destructive, action: { showingPermanentDeleteConfirmation = true }) {
                 Label("Delete Permanently", systemImage: "trash")
             }
             .disabled(selectedLists.isEmpty)
         } else {
-            // Active lists view: archive (recoverable)
+            // Active lists only: archive (recoverable)
             Button(role: .destructive, action: { showingArchiveConfirmation = true }) {
                 Label("Archive Lists", systemImage: "archivebox")
             }
@@ -745,7 +763,7 @@ private struct MacSidebarView: View {
             handleItemDrop(droppedItems, to: list)
         }
         .contextMenu {
-            if showingArchivedLists {
+            if list.isArchived {
                 // Archived list context menu: Restore and Delete Permanently
                 Button {
                     listToRestore = list
@@ -774,48 +792,91 @@ private struct MacSidebarView: View {
         }
     }
 
+    /// Sync status footer view for reuse
+    private var syncStatusFooter: some View {
+        HStack {
+            Image(systemName: "icloud")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(lastSyncDisplayText)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 8)
+        .accessibilityLabel("Sync status: \(lastSyncDisplayText)")
+    }
+
     var body: some View {
         SwiftUI.List(selection: isInSelectionMode ? .constant(nil) : $selectedList) {
+            // MARK: - Active Lists Section
             Section {
-                ForEach(displayedLists) { list in
+                ForEach(activeLists) { list in
                     if isInSelectionMode {
                         selectionModeRow(for: list)
                     } else {
                         normalModeRow(for: list)
                     }
                 }
-                .onMove(perform: isInSelectionMode ? nil : moveList) // Disable reorder during selection mode
+                .onMove(perform: isInSelectionMode ? nil : moveList)
             } header: {
-                HStack {
-                    Text(showingArchivedLists ? "Archived Lists" : "Lists")
-                    Spacer()
-                    if !isInSelectionMode {
-                        Button(action: {
-                            showingArchivedLists.toggle()
-                        }) {
-                            Image(systemName: showingArchivedLists ? "tray.full" : "archivebox")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.plain)
-                        .help(showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
-                        .accessibilityLabel(showingArchivedLists ? "Hide archived lists" : "Show archived lists")
-                        .accessibilityIdentifier("ArchivedListsButton")
-                    }
-                }
-            } footer: {
-                // Show last sync time in sidebar footer
-                HStack {
-                    Image(systemName: "icloud")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(lastSyncDisplayText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 8)
-                .accessibilityLabel("Sync status: \(lastSyncDisplayText)")
+                Text("Lists")
             }
             .collapsible(false)
+
+            // MARK: - Archived Lists Section (Collapsible)
+            if !archivedLists.isEmpty {
+                Section {
+                    // Only show content when expanded
+                    if isArchivedSectionExpanded {
+                        ForEach(archivedLists) { list in
+                            if isInSelectionMode {
+                                selectionModeRow(for: list)
+                            } else {
+                                normalModeRow(for: list)
+                            }
+                        }
+                        // No .onMove - archived lists cannot be reordered
+                    }
+                } header: {
+                    // Clickable header with disclosure chevron
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isArchivedSectionExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .rotationEffect(.degrees(isArchivedSectionExpanded ? 90 : 0))
+                            Text("Archived")
+                            Spacer()
+                            Text("\(archivedLists.count)")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Archived lists, \(archivedLists.count) items")
+                    .accessibilityHint(isArchivedSectionExpanded ? "Double-tap to collapse" : "Double-tap to expand")
+                } footer: {
+                    // Only show sync status when expanded, otherwise it looks odd
+                    if isArchivedSectionExpanded {
+                        syncStatusFooter
+                    }
+                }
+                .collapsible(false) // We handle collapsing ourselves
+            }
+
+            // Show sync status at bottom when archived section is collapsed or empty
+            if archivedLists.isEmpty || !isArchivedSectionExpanded {
+                Section {
+                    EmptyView()
+                } footer: {
+                    syncStatusFooter
+                }
+                .collapsible(false)
+            }
         }
         .listStyle(.sidebar)
         .accessibilityIdentifier("ListsSidebar")
@@ -824,7 +885,7 @@ private struct MacSidebarView: View {
             // Enter key selects the focused list (only in normal mode)
             guard !isInSelectionMode else { return .ignored }
             if let focusedID = focusedListID,
-               let list = displayedLists.first(where: { $0.id == focusedID }) {
+               let list = allVisibleLists.first(where: { $0.id == focusedID }) {
                 selectedList = list
                 return .handled
             }
@@ -841,27 +902,31 @@ private struct MacSidebarView: View {
             }
             // In normal mode, space selects the focused list (macOS convention)
             if let focusedID = focusedListID,
-               let list = displayedLists.first(where: { $0.id == focusedID }) {
+               let list = allVisibleLists.first(where: { $0.id == focusedID }) {
                 selectedList = list
                 return .handled
             }
             return .ignored
         }
         .onKeyPress(.delete) {
-            // In selection mode, archive or permanently delete selected lists
+            // In selection mode, determine action based on selected lists
             if isInSelectionMode && !selectedLists.isEmpty {
-                if showingArchivedLists {
-                    // Viewing archived lists: permanently delete
+                // Check if any selected lists are archived
+                let hasArchivedSelection = selectedLists.contains { id in
+                    allVisibleLists.first(where: { $0.id == id })?.isArchived == true
+                }
+                if hasArchivedSelection {
+                    // Has archived lists: permanently delete
                     showingPermanentDeleteConfirmation = true
                 } else {
-                    // Viewing active lists: archive (recoverable)
+                    // All active lists: archive (recoverable)
                     showingArchiveConfirmation = true
                 }
                 return .handled
             }
             // In normal mode, delete focused list
             if let focusedID = focusedListID,
-               let list = displayedLists.first(where: { $0.id == focusedID }) {
+               let list = allVisibleLists.first(where: { $0.id == focusedID }) {
                 onDeleteList(list)
                 // Move focus to next list or nil
                 moveFocusAfterDeletion(deletedId: focusedID)
@@ -895,7 +960,7 @@ private struct MacSidebarView: View {
             // When arrow keys change focus, update selection (macOS convention) - only in normal mode
             guard !isInSelectionMode else { return }
             if let newFocusedID = newFocusedID,
-               let list = displayedLists.first(where: { $0.id == newFocusedID }) {
+               let list = allVisibleLists.first(where: { $0.id == newFocusedID }) {
                 selectedList = list
             }
         }
@@ -915,7 +980,7 @@ private struct MacSidebarView: View {
                         Button(action: selectAllLists) {
                             Label("Select All", systemImage: "checkmark.circle")
                         }
-                        .disabled(displayedLists.isEmpty)
+                        .disabled(allVisibleLists.isEmpty)
 
                         Button(action: deselectAllLists) {
                             Label("Deselect All", systemImage: "circle")
@@ -1022,21 +1087,33 @@ private struct MacSidebarView: View {
         // MARK: - Restore Keyboard Shortcut Handler (Task 13.1)
         // Responds to Cmd+Shift+R from AppCommands menu
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RestoreSelectedList"))) { _ in
-            // Only process if viewing archived lists and a list is selected
-            guard showingArchivedLists, let list = selectedList else { return }
-            // Verify the selected list is actually archived
-            guard list.isArchived else { return }
+            // Only process if selected list is archived
+            guard let list = selectedList, list.isArchived else { return }
             // Trigger restore confirmation
             listToRestore = list
             showingRestoreConfirmation = true
         }
-        // MARK: - Tab Switch Selection Clearing (Task 13.4)
-        // Clear multi-select state when switching between active/archived views
-        .onChange(of: showingArchivedLists) { _, _ in
-            // Exit selection mode and clear selections when switching tabs
-            // This prevents stale multi-select state from persisting
-            selectedLists.removeAll()
-            isInSelectionMode = false
+        // MARK: - Archived Section Collapse Handler
+        // Clear selection when archived section is collapsed to prevent invisible selection
+        .onChange(of: isArchivedSectionExpanded) { _, isExpanded in
+            if !isExpanded {
+                // Clear selection if currently selected list is archived
+                if let current = selectedList, current.isArchived {
+                    selectedList = nil
+                }
+                // Clear focus if on archived list
+                if let focusedID = focusedListID,
+                   archivedLists.contains(where: { $0.id == focusedID }) {
+                    focusedListID = nil
+                }
+                // Exit selection mode and clear multi-select if any archived lists were selected
+                if selectedLists.contains(where: { id in
+                    archivedLists.contains(where: { $0.id == id })
+                }) {
+                    selectedLists.removeAll()
+                    isInSelectionMode = false
+                }
+            }
         }
     }
 
@@ -1082,11 +1159,9 @@ private struct MacSidebarView: View {
         return didMoveAny
     }
 
-    /// Handle list reordering via drag-and-drop
+    /// Handle list reordering via drag-and-drop (only for active lists section)
     private func moveList(from source: IndexSet, to destination: Int) {
-        guard !showingArchivedLists else { return } // Don't reorder archived lists
-
-        // Get current order
+        // Get current order (displayedLists = activeLists only)
         var reorderedLists = displayedLists
 
         // Perform the move
@@ -1117,7 +1192,7 @@ private struct MacSidebarView: View {
 
     /// Moves focus to the next or previous list after deletion
     private func moveFocusAfterDeletion(deletedId: UUID) {
-        let lists = displayedLists
+        let lists = allVisibleLists
         guard let currentIndex = lists.firstIndex(where: { $0.id == deletedId }) else {
             focusedListID = nil
             return

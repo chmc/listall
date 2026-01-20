@@ -1296,6 +1296,9 @@
         }
       }
     },
+    "Archived lists, %lld items" : {
+
+    },
     "Are you sure you want to delete %lld item(s)? This action cannot be undone." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2599,7 +2602,13 @@
     "Double-tap or press Space to preview" : {
 
     },
+    "Double-tap to collapse" : {
+
+    },
     "Double-tap to edit. Use actions menu for more options." : {
+
+    },
+    "Double-tap to expand" : {
 
     },
     "Double-tap to toggle completion status" : {
@@ -3331,9 +3340,6 @@
           }
         }
       }
-    },
-    "Hide archived lists" : {
-
     },
     "Hide crossed out items" : {
       "extractionState" : "manual",
@@ -5844,9 +5850,6 @@
           }
         }
       }
-    },
-    "Show archived lists" : {
-
     },
     "Show Archived Lists" : {
       "extractionState" : "manual",
