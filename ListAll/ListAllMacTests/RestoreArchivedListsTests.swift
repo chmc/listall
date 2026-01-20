@@ -785,7 +785,10 @@ struct ArchivedListsReadOnlyTests {
         viewModel.loadArchivedLists()
 
         // Verify archived list
-        let archivedList = viewModel.archivedLists.first!
+        guard let archivedList = viewModel.archivedLists.first else {
+            Issue.record("No archived list found after archiving")
+            return
+        }
         #expect(archivedList.isArchived == true, "List should be archived")
 
         // Get items after archiving

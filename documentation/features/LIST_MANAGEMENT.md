@@ -2,7 +2,7 @@
 
 [< Back to Summary](./SUMMARY.md)
 
-## Status: iOS 14/14 | macOS 12/14
+## Status: iOS 14/14 | macOS 14/14
 
 ---
 
@@ -14,7 +14,7 @@
 | Edit List Name | ✅ | ✅ | Shared ViewModel |
 | Delete List | ✅ | ✅ | Shared ViewModel |
 | Archive List | ✅ | ✅ | Shared ViewModel |
-| Restore Archived List | ✅ | ⚠️ | Backend exists, macOS UI missing |
+| Restore Archived List | ✅ | ✅ | Shared ViewModel + Platform UI |
 | Permanently Delete Archived | ✅ | ✅ | Shared ViewModel |
 | Duplicate List | ✅ | ✅ | Shared ViewModel |
 | Reorder Lists (drag-drop) | ✅ | ✅ | Platform UI |
@@ -23,20 +23,13 @@
 | Sample List Templates | ✅ | ✅ | Shared Service |
 | Active/Archived Toggle | ✅ | ✅ | Platform UI |
 | List Item Count Display | ✅ | ✅ | Platform UI |
-| Archived Lists Read-Only | ✅ | ❌ | iOS: ArchivedListView, macOS: missing |
+| Archived Lists Read-Only | ✅ | ✅ | Platform UI (read-only enforcement) |
 
 ---
 
 ## Gaps (macOS)
 
-| Gap | Priority | Issue |
-|-----|:--------:|-------|
-| Restore Archived List UI | CRITICAL | No restore button in context menu or toolbar |
-| Archived Lists Read-Only | CRITICAL | Archived lists are fully editable (should be read-only) |
-
-**Details**:
-- **Restore**: Backend `restoreList(withId:)` exists in CoreDataManager but macOS has no UI to invoke it
-- **Read-Only**: iOS uses dedicated `ArchivedListView` with `ArchivedItemRowView` (no editing). macOS uses same view for both active and archived lists, allowing full editing.
+None - Full feature parity achieved.
 
 ---
 

@@ -12,10 +12,9 @@
 | Platform | Status | Core | Advanced |
 |----------|:------:|:----:|:--------:|
 | iOS | ✅ Live | 100% | 100% |
-| macOS | ⚠️ Near-Ready | 99% | 100% |
+| macOS | ✅ Ready | 100% | 100% |
 
-> **Note**: macOS has 2 gaps in List Management (archived list handling).
-> See HIGH Priority Gaps below. N/A items in category files are iOS-only patterns with macOS equivalents.
+> **Note**: Full feature parity achieved. All archived list handling gaps have been resolved.
 
 ---
 
@@ -23,7 +22,7 @@
 
 | Category | iOS | macOS | Gap* | Details |
 |----------|:---:|:-----:|:---:|---------|
-| [List Management](#list-management) | 14/14 | 12/14 | 2 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
+| [List Management](#list-management) | 14/14 | 14/14 | 0 | [LIST_MANAGEMENT.md](./LIST_MANAGEMENT.md) |
 | [Item Management](#item-management) | 17/17 | 17/17 | 0 | [ITEM_MANAGEMENT.md](./ITEM_MANAGEMENT.md) |
 | [Filter/Sort/Search](#filter-sort-search) | 15/16 | 16/16 | 0 | [FILTER_SORT.md](./FILTER_SORT.md) |
 | [Images](#images) | 14/14 | 14/14 | 0 | [IMAGES.md](./IMAGES.md) |
@@ -43,16 +42,15 @@
 
 ### Active Gaps
 
-| # | Feature | Category | Status | Issue |
-|---|---------|----------|:------:|-------|
-| 1 | Restore Archived List UI | List Management | ⚠️ | Backend exists, no UI button in context menu or toolbar |
-| 2 | Archived Lists Read-Only | List Management | ❌ | Archived lists are fully editable (should be read-only) |
+None - Full feature parity achieved.
 
 ### Completed Gaps (Historical)
 
 | # | Feature | Category | Status |
 |---|---------|----------|:------:|
-| 1 | Multi-Select Lists | List Management | ✅ |
+| 1 | Restore Archived List UI | List Management | ✅ |
+| 2 | Archived Lists Read-Only | List Management | ✅ |
+| 3 | Multi-Select Lists | List Management | ✅ |
 | 2 | Bulk Archive/Delete | List Management | ✅ |
 | 3 | Multi-Select Items | Item Management | ✅ |
 | 4 | Move Items Between Lists | Item Management | ✅ |
@@ -81,8 +79,8 @@
 |---------|:---:|:-----:|
 | Create/Edit/Delete List | ✅ | ✅ |
 | Archive List | ✅ | ✅ |
-| Restore Archived List | ✅ | ⚠️ |
-| Archived Lists Read-Only | ✅ | ❌ |
+| Restore Archived List | ✅ | ✅ |
+| Archived Lists Read-Only | ✅ | ✅ |
 | Duplicate List | ✅ | ✅ |
 | Reorder Lists | ✅ | ✅ |
 | Multi-Select Lists | ✅ | ✅ |
