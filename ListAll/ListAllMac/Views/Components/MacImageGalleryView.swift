@@ -486,14 +486,14 @@ private struct MacImageGalleryToolbar: View {
         HStack(spacing: 12) {
             // Add button
             Button(action: onAddImages) {
-                Label("Add", systemImage: "plus")
+                Image(systemName: "plus")
             }
             .accessibilityLabel("Add images")
             .help("Add images (drag & drop or click)")
 
             // Delete button
             Button(action: onDeleteSelected) {
-                Label("Delete", systemImage: "trash")
+                Image(systemName: "trash")
             }
             .accessibilityLabel("Delete selected images")
             .disabled(!canDelete)
@@ -501,7 +501,7 @@ private struct MacImageGalleryToolbar: View {
 
             // Quick Look button
             Button(action: onQuickLook) {
-                Label("Preview", systemImage: "eye")
+                Image(systemName: "eye")
             }
             .accessibilityLabel("Preview images")
             .disabled(!canQuickLook)
@@ -514,48 +514,24 @@ private struct MacImageGalleryToolbar: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            // Thumbnail size controls with presets
-            HStack(spacing: 8) {
-                // Preset buttons (S, M, L)
-                HStack(spacing: 4) {
-                    ForEach(ThumbnailSizePreset.allCases) { preset in
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                thumbnailSize = Double(preset.size)
-                            }
-                        }) {
-                            Text(preset.label)
-                                .font(.caption.weight(.medium))
-                                .frame(width: 24, height: 20)
+            // Thumbnail size preset buttons (S, M, L)
+            HStack(spacing: 4) {
+                ForEach(ThumbnailSizePreset.allCases) { preset in
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            thumbnailSize = Double(preset.size)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(activePreset == preset ? .accentColor : nil)
-                        .accessibilityLabel(preset.accessibilityLabel)
-                        .accessibilityIdentifier("ThumbnailPreset\(preset.label)")
-                        .help(preset.tooltip)
+                    }) {
+                        Text(preset.label)
+                            .font(.caption.weight(.medium))
+                            .frame(width: 24, height: 20)
                     }
+                    .buttonStyle(.bordered)
+                    .tint(activePreset == preset ? .accentColor : nil)
+                    .accessibilityLabel(preset.accessibilityLabel)
+                    .accessibilityIdentifier("ThumbnailPreset\(preset.label)")
+                    .help(preset.tooltip)
                 }
-
-                Divider()
-                    .frame(height: 16)
-
-                // Fine-tuning slider
-                HStack(spacing: 4) {
-                    Image(systemName: "square.grid.3x3")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Slider(value: $thumbnailSize, in: 80...200, step: 10)
-                        .accessibilityLabel("Thumbnail size slider")
-                        .accessibilityValue("\(Int(thumbnailSize)) pixels")
-                        .accessibilityIdentifier("ThumbnailSizeSlider")
-                        .frame(width: 80)
-
-                    Image(systemName: "square.grid.2x2")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .help("Fine-tune thumbnail size (\(Int(thumbnailSize))px)")
             }
         }
         .padding(.horizontal)

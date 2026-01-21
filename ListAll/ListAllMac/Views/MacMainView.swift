@@ -2510,7 +2510,8 @@ private struct MacItemRowView: View {
                     Text(description)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -2768,6 +2769,9 @@ private struct MacEditItemSheet: View {
     // significantly reduces perceived delay when opening the edit sheet
     @State private var isGalleryReady = false
 
+    // Image section expansion state - collapsed by default, expanded when images exist
+    @State private var isImageSectionExpanded = false
+
     // Suggestion state
     @StateObject private var suggestionService = SuggestionService()
     @State private var showingSuggestions = false
@@ -2831,36 +2835,21 @@ private struct MacEditItemSheet: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     TextEditor(text: $description)
-                        .frame(height: 60)
+                        .frame(minHeight: 80, idealHeight: 120, maxHeight: 200)
                         .border(Color.secondary.opacity(0.3))
                 }
 
-                // Image Gallery Section - deferred loading for faster sheet appearance
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Images:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    if isGalleryReady {
-                        MacImageGalleryView(
-                            images: $images,
-                            itemId: item.id,
-                            itemTitle: item.title
-                        )
-                        .frame(height: 300)
-                    } else {
-                        // Placeholder while gallery loads
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.1))
-                            .frame(height: 300)
-                            .overlay(
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            )
-                    }
-                }
+                // Image Gallery Section - custom expandable with larger click target
+                MacEditItemImageSection(
+                    images: $images,
+                    isExpanded: $isImageSectionExpanded,
+                    isGalleryReady: isGalleryReady,
+                    itemId: item.id,
+                    itemTitle: item.title
+                )
+                .padding(.bottom, isImageSectionExpanded ? 12 : 0)
             }
-            .frame(width: 400)
+            .frame(width: 450)
 
             HStack(spacing: 16) {
                 Button("Cancel") {
@@ -2895,9 +2884,11 @@ private struct MacEditItemSheet: View {
                     self.images = item.images
                     // Enable gallery rendering
                     isGalleryReady = true
+                    // Keep image section collapsed by default
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isImageSectionExpanded)
     }
 
     // MARK: - Suggestion Handling
@@ -2988,6 +2979,304 @@ private struct MacEditListSheet: View {
         }
         .padding(30)
         .frame(minWidth: 350)
+    }
+}
+
+// MARK: - Edit Item Image Section
+
+/// Custom expandable image section with larger click target and thumbnail preview
+/// Shows thumbnail strip when collapsed for better UX
+private struct MacEditItemImageSection: View {
+    @Binding var images: [ItemImage]
+    @Binding var isExpanded: Bool
+    let isGalleryReady: Bool
+    let itemId: UUID
+    let itemTitle: String
+
+    @State private var isHovering = false
+    @State private var isAddButtonHovering = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            headerRow
+            expandedContent
+        }
+    }
+
+    private var headerRow: some View {
+        HStack(spacing: 8) {
+            // Toggle button for expand/collapse - main clickable area
+            headerButton
+
+            // Add button - show when collapsed OR when expanded but empty
+            // When expanded with images, the gallery toolbar has its own Add button
+            if !isExpanded || images.isEmpty {
+                addButton
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isExpanded.toggle()
+            }
+        }) {
+            headerContent
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle()) // Ensure entire area is clickable
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Images section")
+        .accessibilityValue(isExpanded ? "expanded, \(images.count) images" : "collapsed, \(images.count) images")
+        .accessibilityHint("Double-tap to \(isExpanded ? "collapse" : "expand")")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var addButton: some View {
+        Button(action: addImagesFromPicker) {
+            Image(systemName: "plus.circle.fill")
+                .font(.title3)
+                .foregroundColor(isAddButtonHovering ? .accentColor : .secondary)
+                .animation(.easeInOut(duration: 0.15), value: isAddButtonHovering)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isAddButtonHovering = hovering
+        }
+        .help("Add images")
+        .accessibilityLabel("Add images")
+        .padding(.trailing, 8)
+    }
+
+    private var headerContent: some View {
+        HStack(spacing: 8) {
+            // Rotating chevron
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                .frame(width: 12)
+
+            // Label with count
+            Text("Images")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            if !images.isEmpty {
+                Text("(\(images.count))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Thumbnail strip when collapsed (shows first 4 images)
+            if !isExpanded && isGalleryReady {
+                thumbnailStrip
+            }
+        }
+        .frame(height: 44)
+        .padding(.horizontal, 8)
+        .background(isHovering ? Color.secondary.opacity(0.1) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    // MARK: - Image Picker
+
+    private func addImagesFromPicker() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [.image, .jpeg, .png, .heic, .tiff, .gif]
+        panel.message = "Select images to add"
+        panel.prompt = "Add"
+
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                if let data = try? Data(contentsOf: url) {
+                    var newImage = ItemImage(imageData: data, itemId: itemId)
+                    newImage.orderNumber = images.count
+                    images.append(newImage)
+                }
+            }
+            // Auto-expand section after adding images
+            if !images.isEmpty && !isExpanded {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded = true
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var thumbnailStrip: some View {
+        HStack(spacing: 4) {
+            if images.isEmpty {
+                Text("No images")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(images.prefix(4)) { image in
+                    CollapsedThumbnailView(image: image)
+                }
+                if images.count > 4 {
+                    overflowBadge
+                }
+            }
+        }
+        .frame(minWidth: 40, alignment: .trailing)
+    }
+
+    private var overflowBadge: some View {
+        Text("+\(images.count - 4)")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .frame(width: 36, height: 36)
+            .background(Color.secondary.opacity(0.2))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
+    @ViewBuilder
+    private var expandedContent: some View {
+        if isExpanded {
+            if isGalleryReady {
+                if images.isEmpty {
+                    // Compact empty state - no large placeholder
+                    compactEmptyState
+                } else {
+                    // Show gallery only when there are images
+                    MacImageGalleryView(
+                        images: $images,
+                        itemId: itemId,
+                        itemTitle: itemTitle
+                    )
+                    .frame(minHeight: 150)
+                    .padding(.top, 16)
+                }
+            } else {
+                // Loading state
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(height: 44)
+                .padding(.leading, 20)
+            }
+        }
+    }
+
+    private var compactEmptyState: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.body)
+                .foregroundStyle(.tertiary)
+            Text("No images - drag files here or click +")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(height: 44)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                .foregroundStyle(.quaternary)
+        )
+        .padding(.top, 8)
+        .contentShape(Rectangle())
+        .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
+            handleImageDrop(providers)
+        }
+    }
+
+    private func handleImageDrop(_ providers: [NSItemProvider]) -> Bool {
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier("public.image") {
+                provider.loadDataRepresentation(forTypeIdentifier: "public.image") { data, _ in
+                    if let data = data {
+                        DispatchQueue.main.async {
+                            var newImage = ItemImage(imageData: data, itemId: itemId)
+                            newImage.orderNumber = images.count
+                            images.append(newImage)
+                        }
+                    }
+                }
+            }
+        }
+        return true
+    }
+}
+
+// MARK: - Collapsed Thumbnail View
+
+/// Small thumbnail view for the collapsed image section header
+/// Shows a 36x36pt preview of an image with async loading
+private struct CollapsedThumbnailView: View {
+    let image: ItemImage
+    @State private var thumbnail: NSImage?
+    @State private var isLoading = true
+
+    private let size: CGFloat = 36
+
+    var body: some View {
+        Group {
+            if let thumbnail = thumbnail {
+                Image(nsImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            } else if isLoading {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(width: size, height: size)
+                    .overlay(
+                        ProgressView()
+                            .scaleEffect(0.5)
+                    )
+            } else {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    )
+            }
+        }
+        .task {
+            await loadThumbnail()
+        }
+    }
+
+    private func loadThumbnail() async {
+        guard let imageData = image.imageData else {
+            await MainActor.run { isLoading = false }
+            return
+        }
+
+        // Generate small thumbnail on background thread
+        let thumbnailSize = CGSize(width: size * 2, height: size * 2) // 2x for retina
+        let loadedThumbnail = await Task.detached(priority: .userInitiated) {
+            await ImageService.shared.createThumbnailAsync(from: imageData, size: thumbnailSize)
+        }.value
+
+        await MainActor.run {
+            withTransaction(Transaction(animation: nil)) {
+                self.thumbnail = loadedThumbnail
+                self.isLoading = false
+            }
+        }
     }
 }
 
