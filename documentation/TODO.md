@@ -130,9 +130,152 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-## Phase 14: App Store Submission
+## Phase 14: Visual Verification MCP Server
 
-### Task 14.1: Submit to App Store
+Build an MCP server enabling Claude to interact with all ListAll apps (macOS, iOS, iPadOS, watchOS) for visual verification during development.
+
+### Architecture
+
+```
+Claude <-> MCP Protocol (stdio) <-> listall-mcp
+                                      |
+                    +-----------------+------------------+
+                    v                 v                  v
+              macOS App         iOS Simulator      Watch Simulator
+           (Accessibility)      (XCUITest)         (XCUITest)
+                    |                 |                  |
+                    +-----------------+------------------+
+                                      v
+                              Screenshots -> Claude
+```
+
+### MCP Tools
+
+**Common Tools (all platforms)**:
+| Tool | Description |
+|------|-------------|
+| `listall_screenshot` | Capture app window/screen as base64 PNG |
+| `listall_click` | Tap/click element by accessibility ID |
+| `listall_type` | Enter text in field |
+| `listall_select_list` | Select a list by name |
+| `listall_query` | List visible UI elements |
+
+**Platform-Specific Tools**:
+| Tool | Platform | Description |
+|------|----------|-------------|
+| `listall_launch_mac` | macOS | Launch macOS app with test data |
+| `listall_launch_ios` | iOS | Boot simulator, install & launch iOS app |
+| `listall_launch_ipad` | iPadOS | Boot iPad simulator, install & launch |
+| `listall_launch_watch` | watchOS | Boot watch simulator, install & launch |
+| `listall_swipe` | iOS/watch | Swipe gesture (not needed on macOS) |
+
+### Task 14.1: Create MCP Server Package
+**TDD**: Unit tests for server initialization
+
+**Steps**:
+1. Create `Tools/listall-mcp/` Swift package
+2. Add modelcontextprotocol/swift-sdk dependency
+3. Implement main.swift with stdio transport
+4. Verify server starts and responds to initialize
+
+**Files to create**:
+- `Tools/listall-mcp/Package.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/main.swift`
+
+### Task 14.2: Implement macOS Accessibility Service
+**TDD**: Tests for element querying and clicking
+
+**Steps**:
+1. Create MacOSService with AXUIElement wrapper
+2. Implement element query by accessibility ID
+3. Implement click action
+4. Implement screenshot capture (ScreenCaptureKit)
+5. Test with ListAll macOS app
+
+**Files to create**:
+- `Tools/listall-mcp/Sources/listall-mcp/Services/MacOSService.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Services/Platform.swift`
+
+### Task 14.3: Implement Simulator Service
+**TDD**: Tests for simulator control
+
+**Steps**:
+1. Create SimulatorService with simctl wrapper
+2. Implement boot/shutdown commands
+3. Implement app install/launch
+4. Test with iOS simulator
+
+**Files to create**:
+- `Tools/listall-mcp/Sources/listall-mcp/Services/SimulatorService.swift`
+
+### Task 14.4: Create XCUITest MCP Runner
+**TDD**: Integration tests for command execution
+
+**Steps**:
+1. Add ListAllMCPTests target to Xcode project
+2. Create MCPCommandRunner that reads commands from file
+3. Implement screenshot, click, type actions
+4. Test command execution flow
+
+**Files to create**:
+- `ListAll/ListAllMCPTests/MCPCommandRunner.swift`
+- `ListAll/ListAllMCPTests/Info.plist`
+- Add target to `ListAll.xcodeproj`
+
+### Task 14.5: Implement MCP Tools
+**TDD**: Tool execution tests
+
+**Steps**:
+1. Implement listall_launch_* tools (mac, ios, ipad, watch)
+2. Implement listall_screenshot tool
+3. Implement listall_click tool
+4. Implement listall_type tool
+5. Implement listall_query tool
+6. Implement listall_swipe tool (iOS/watch only)
+
+**Files to create**:
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/LaunchTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/ScreenshotTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/ClickTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/TypeTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/SelectListTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/QueryTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/SwipeTool.swift`
+
+### Task 14.6: Integration & Configuration
+**TDD**: End-to-end verification
+
+**Steps**:
+1. Build server: `cd Tools/listall-mcp && swift build -c release`
+2. Configure claude.json with MCP server path
+3. Grant permissions: System Settings > Accessibility + Screen Recording
+4. Test full flow: launch -> screenshot -> Claude analyzes
+5. Document usage in guides
+
+**Configuration** (`~/.claude/claude.json`):
+```json
+{
+  "mcpServers": {
+    "listall": {
+      "command": "/path/to/listall/Tools/listall-mcp/.build/release/listall-mcp"
+    }
+  }
+}
+```
+
+### Performance Notes
+
+| Platform | Mechanism | Speed |
+|----------|-----------|-------|
+| macOS | Direct Accessibility API | Fast (~1s) |
+| iOS/iPad | XCUITest via xcodebuild | Slower (~10-30s) |
+| watchOS | XCUITest via xcodebuild | Slower (~10-30s) |
+
+---
+
+## Phase 15: App Store Submission
+
+### Task 15.1: Submit to App Store
 **TDD**: Submission verification
 
 **Steps**:
@@ -145,15 +288,15 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-## Phase 15: Spotlight Integration (Optional)
+## Phase 16: Spotlight Integration (Optional)
 
-### Task 15.1: Implement Spotlight Integration
+### Task 16.1: Implement Spotlight Integration
 **TDD**: Write Spotlight indexing tests
 
 **Priority**: Low - Optional feature, disabled by default
 
 **User Setting**:
-- Add "Enable Spotlight Indexing" toggle in Settings → General
+- Add "Enable Spotlight Indexing" toggle in Settings > General
 - Default value: `false` (disabled)
 - When enabled, indexes lists and items for Spotlight search
 - When disabled, no Spotlight indexing occurs (saves battery/resources)
@@ -316,10 +459,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 11: Polish & Launch | Completed | 9/9 |
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
 | Phase 13: Archived Lists Bug Fixes | Completed | 4/4 |
-| Phase 14: App Store Submission | Not Started | 0/1 |
-| Phase 15: Spotlight Integration | Optional | 0/1 |
+| Phase 14: Visual Verification MCP Server | Not Started | 0/6 |
+| Phase 15: App Store Submission | Not Started | 0/1 |
+| Phase 16: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 83** (81 completed, 2 remaining)
+**Total Tasks: 89** (81 completed, 8 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -353,15 +497,24 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 13.3: [COMPLETED] Update Documentation Status
 - Task 13.4: [COMPLETED] Fix Selection Persistence Bug When Switching Tabs
 
-**Phase 14 Status**:
-- Task 14.1: Submit to App Store
+**Phase 14 Status** (Visual Verification MCP Server):
+- Task 14.1: Create MCP Server Package
+- Task 14.2: Implement macOS Accessibility Service
+- Task 14.3: Implement Simulator Service
+- Task 14.4: Create XCUITest MCP Runner
+- Task 14.5: Implement MCP Tools
+- Task 14.6: Integration & Configuration
 
-**Phase 15 Status** (Optional):
-- Task 15.1: Implement Spotlight Integration
+**Phase 15 Status**:
+- Task 15.1: Submit to App Store
+
+**Phase 16 Status** (Optional):
+- Task 16.1: Implement Spotlight Integration
 
 **Notes**:
 - Phase 12 added based on agent swarm UX research (January 2026)
 - Phase 13 added based on agent swarm investigation (January 2026) - discovered missing restore UI and mutable archived lists bugs
-- Task 6.4 (Spotlight Integration) moved to Phase 15 as optional feature (disabled by default)
+- Phase 14 added (January 2026): Visual Verification MCP Server for Claude-driven UI testing across all platforms
+- Task 6.4 (Spotlight Integration) moved to Phase 16 as optional feature (disabled by default)
 - Phase 9 revised based on swarm analysis: uses parallel jobs architecture (Task 9.0 added as blocking pre-requisite)
 - Task 11.7 added comprehensive feature parity analysis with `/documentation/FEATURES.md`
