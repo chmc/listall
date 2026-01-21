@@ -132,144 +132,248 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ## Phase 14: Visual Verification MCP Server
 
-Build an MCP server enabling Claude to interact with all ListAll apps (macOS, iOS, iPadOS, watchOS) for visual verification during development.
+Build an MCP server enabling Claude to visually verify its own work across all ListAll platforms (macOS, iOS, iPadOS, watchOS) without requiring manual user verification.
+
+**Goal**: Give Claude a feedback loop to 2-3x the quality of UI work by allowing it to see and interact with the apps.
+
+### Feasibility
+
+| Platform | Launch | Screenshot | Interaction | Permissions |
+|----------|--------|------------|-------------|-------------|
+| macOS | `open -a` | ScreenCaptureKit | Accessibility API | Screen Recording + Accessibility |
+| iOS Sim | `simctl launch` | `simctl io screenshot` | XCUITest | **NONE** |
+| iPad Sim | `simctl launch` | `simctl io screenshot` | XCUITest | **NONE** |
+| Watch Sim | `simctl launch` | `simctl io screenshot` | XCUITest | **NONE** |
 
 ### Architecture
 
 ```
-Claude <-> MCP Protocol (stdio) <-> listall-mcp
-                                      |
-                    +-----------------+------------------+
-                    v                 v                  v
-              macOS App         iOS Simulator      Watch Simulator
-           (Accessibility)      (XCUITest)         (XCUITest)
-                    |                 |                  |
-                    +-----------------+------------------+
-                                      v
-                              Screenshots -> Claude
+Claude Code <--> stdio <--> listall-mcp (Swift)
+                                |
+              +-----------------+-----------------+
+              v                 v                 v
+          macOS App         iOS Sim           Watch Sim
+        (Accessibility)    (XCUITest)        (XCUITest)
 ```
 
 ### MCP Tools
 
-**Common Tools (all platforms)**:
-| Tool | Description |
-|------|-------------|
-| `listall_screenshot` | Capture app window/screen as base64 PNG |
-| `listall_click` | Tap/click element by accessibility ID |
-| `listall_type` | Enter text in field |
-| `listall_select_list` | Select a list by name |
-| `listall_query` | List visible UI elements |
+| Tool | Description | macOS | Simulators |
+|------|-------------|-------|------------|
+| `listall_screenshot` | Capture current state | ScreenCaptureKit | simctl io |
+| `listall_launch` | Launch app | open -a | simctl install + launch |
+| `listall_click` | Tap element by ID | AXUIElement | XCUITest |
+| `listall_type` | Enter text | AXUIElement | XCUITest |
+| `listall_swipe` | Swipe gesture | AXUIElement | XCUITest |
+| `listall_query` | List UI elements | AXUIElement | XCUITest |
+| `listall_list_simulators` | List devices | N/A | simctl list |
+| `listall_boot_simulator` | Boot simulator | N/A | simctl boot |
+| `listall_shutdown` | Shutdown | N/A | simctl shutdown |
+| `listall_diagnostics` | Check setup | permissions | simulators |
 
-**Platform-Specific Tools**:
-| Tool | Platform | Description |
-|------|----------|-------------|
-| `listall_launch_mac` | macOS | Launch macOS app with test data |
-| `listall_launch_ios` | iOS | Boot simulator, install & launch iOS app |
-| `listall_launch_ipad` | iPadOS | Boot iPad simulator, install & launch |
-| `listall_launch_watch` | watchOS | Boot watch simulator, install & launch |
-| `listall_swipe` | iOS/watch | Swipe gesture (not needed on macOS) |
-
-### Task 14.1: Create MCP Server Package
-**TDD**: Unit tests for server initialization
+### Task 14.0: Prototype Validation (Spike)
+**Goal**: Validate MCP server + stdio transport work with Claude
 
 **Steps**:
-1. Create `Tools/listall-mcp/` Swift package
-2. Add modelcontextprotocol/swift-sdk dependency
-3. Implement main.swift with stdio transport
-4. Verify server starts and responds to initialize
+1. Create minimal Swift package with single "echo" tool
+2. Configure in `~/.claude/claude.json`
+3. Verify Claude can call the tool and receive response
+4. Validate: snake_case naming, stderr logging, base64 image return
 
-**Files to create**:
+**Files**:
 - `Tools/listall-mcp/Package.swift`
 - `Tools/listall-mcp/Sources/listall-mcp/main.swift`
 
-### Task 14.2: Implement macOS Accessibility Service
-**TDD**: Tests for element querying and clicking
+**Acceptance**: Claude successfully calls tool and receives response
+
+### Task 14.1: Simulator Screenshot & Launch
+**Goal**: Claude can launch and screenshot iOS/iPad/Watch apps
 
 **Steps**:
-1. Create MacOSService with AXUIElement wrapper
-2. Implement element query by accessibility ID
-3. Implement click action
-4. Implement screenshot capture (ScreenCaptureKit)
-5. Test with ListAll macOS app
+1. Implement `listall_list_simulators` (wraps `simctl list devices -j`)
+2. Implement `listall_boot_simulator` (wraps `simctl boot`)
+3. Implement `listall_launch` for simulators (simctl install + launch)
+4. Implement `listall_screenshot` for simulators (simctl io screenshot)
+5. Return screenshot as base64 PNG
 
-**Files to create**:
-- `Tools/listall-mcp/Sources/listall-mcp/Services/MacOSService.swift`
-- `Tools/listall-mcp/Sources/listall-mcp/Services/Platform.swift`
-
-### Task 14.3: Implement Simulator Service
-**TDD**: Tests for simulator control
-
-**Steps**:
-1. Create SimulatorService with simctl wrapper
-2. Implement boot/shutdown commands
-3. Implement app install/launch
-4. Test with iOS simulator
-
-**Files to create**:
-- `Tools/listall-mcp/Sources/listall-mcp/Services/SimulatorService.swift`
-
-### Task 14.4: Create XCUITest MCP Runner
-**TDD**: Integration tests for command execution
-
-**Steps**:
-1. Add ListAllMCPTests target to Xcode project
-2. Create MCPCommandRunner that reads commands from file
-3. Implement screenshot, click, type actions
-4. Test command execution flow
-
-**Files to create**:
-- `ListAll/ListAllMCPTests/MCPCommandRunner.swift`
-- `ListAll/ListAllMCPTests/Info.plist`
-- Add target to `ListAll.xcodeproj`
-
-### Task 14.5: Implement MCP Tools
-**TDD**: Tool execution tests
-
-**Steps**:
-1. Implement listall_launch_* tools (mac, ios, ipad, watch)
-2. Implement listall_screenshot tool
-3. Implement listall_click tool
-4. Implement listall_type tool
-5. Implement listall_query tool
-6. Implement listall_swipe tool (iOS/watch only)
-
-**Files to create**:
-- `Tools/listall-mcp/Sources/listall-mcp/Tools/LaunchTool.swift`
+**Files**:
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/SimulatorTools.swift`
 - `Tools/listall-mcp/Sources/listall-mcp/Tools/ScreenshotTool.swift`
+
+**Acceptance**: Claude can boot iPhone simulator, launch ListAll, take screenshot
+
+### Task 14.2: macOS Screenshot & Launch
+**Goal**: Claude can launch and screenshot macOS app
+
+**Steps**:
+1. Implement `listall_launch` for macOS (`open -a ListAllMac`)
+2. Implement `listall_screenshot` for macOS (ScreenCaptureKit)
+3. Implement permission check with clear error messages
+4. Return screenshot as base64 PNG
+
+**Permissions** (one-time manual grant):
+- Screen Recording: System Settings > Privacy & Security > Screen Recording
+
+**Files**:
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/MacOSTools.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Permissions.swift`
+
+**Acceptance**: Claude can launch ListAllMac and take screenshot (after permission grant)
+
+### Task 14.3: macOS Interaction Tools
+**Goal**: Claude can interact with macOS app via Accessibility API
+
+**Steps**:
+1. Implement `listall_click` for macOS (AXUIElement performAction)
+2. Implement `listall_type` for macOS (AXUIElement setValue)
+3. Implement `listall_swipe` for macOS (AXUIElement scroll/drag)
+4. Implement `listall_query` for macOS (list elements by accessibility ID)
+5. Implement permission check for Accessibility
+
+**Permissions** (one-time manual grant):
+- Accessibility: System Settings > Privacy & Security > Accessibility
+
+**Files**:
+- `Tools/listall-mcp/Sources/listall-mcp/Services/AccessibilityService.swift`
 - `Tools/listall-mcp/Sources/listall-mcp/Tools/ClickTool.swift`
 - `Tools/listall-mcp/Sources/listall-mcp/Tools/TypeTool.swift`
-- `Tools/listall-mcp/Sources/listall-mcp/Tools/SelectListTool.swift`
-- `Tools/listall-mcp/Sources/listall-mcp/Tools/QueryTool.swift`
 - `Tools/listall-mcp/Sources/listall-mcp/Tools/SwipeTool.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/QueryTool.swift`
 
-### Task 14.6: Integration & Configuration
-**TDD**: End-to-end verification
+**Acceptance**: Claude can click buttons, type text, swipe on macOS app
+
+### Task 14.4: Simulator Interaction Tools (XCUITest Bridge)
+**Goal**: Claude can interact with simulator apps via XCUITest
+
+**Architecture**:
+1. MCP server writes command to temp file
+2. MCP server invokes `xcodebuild test-without-building` for specific test
+3. XCUITest reads command, executes, writes result
+4. MCP server reads result and returns to Claude
 
 **Steps**:
-1. Build server: `cd Tools/listall-mcp && swift build -c release`
-2. Configure claude.json with MCP server path
-3. Grant permissions: System Settings > Accessibility + Screen Recording
-4. Test full flow: launch -> screenshot -> Claude analyzes
-5. Document usage in guides
+1. Create `ListAllMCPTests` target in Xcode project
+2. Implement `MCPCommandRunner` XCUITest that reads commands from file
+3. Implement click, type, swipe, query actions in XCUITest
+4. Wire MCP tools to invoke XCUITest via xcodebuild
+5. Pre-build test target for faster execution
+
+**Performance**: ~5-15s per interaction (acceptable for verification loop)
+
+**Files**:
+- `ListAll/ListAllMCPTests/MCPCommandRunner.swift`
+- `ListAll/ListAllMCPTests/Info.plist`
+- `Tools/listall-mcp/Sources/listall-mcp/Services/XCUITestBridge.swift`
+
+**Acceptance**: Claude can click, type, swipe on iOS/iPad/Watch simulator apps
+
+### Task 14.5: Diagnostics & Error Handling
+**Goal**: Clear diagnostics and actionable error messages
+
+**Steps**:
+1. Implement `listall_diagnostics` tool
+2. Check: Accessibility permission, Screen Recording permission
+3. Check: Available simulators, booted simulators
+4. Check: Built app bundles exist
+5. Return actionable guidance for any issues
+
+**Files**:
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/DiagnosticsTool.swift`
+
+**Acceptance**: Claude can diagnose issues and guide user to fix them
+
+### Task 14.6: Integration & Documentation
+**Goal**: Complete integration and create setup guide
+
+**Steps**:
+1. Build release binary: `swift build -c release`
+2. Pre-build XCUITest target: `xcodebuild build-for-testing`
+3. Configure `~/.claude/claude.json`
+4. Test full workflow on all platforms
+5. Create comprehensive setup guide
 
 **Configuration** (`~/.claude/claude.json`):
 ```json
 {
   "mcpServers": {
     "listall": {
-      "command": "/path/to/listall/Tools/listall-mcp/.build/release/listall-mcp"
+      "command": "/Users/aleksi/source/listall/Tools/listall-mcp/.build/release/listall-mcp"
     }
   }
 }
 ```
 
-### Performance Notes
+**Files**:
+- `documentation/guides/MCP_VISUAL_VERIFICATION.md`
 
-| Platform | Mechanism | Speed |
-|----------|-----------|-------|
-| macOS | Direct Accessibility API | Fast (~1s) |
-| iOS/iPad | XCUITest via xcodebuild | Slower (~10-30s) |
-| watchOS | XCUITest via xcodebuild | Slower (~10-30s) |
+**Acceptance**: End-to-end verification loop works for all platforms
+
+### Task 14.7: Visual Verification Skill
+**Goal**: Create skill that teaches Claude when/how to use visual verification
+
+**File**: `.claude/skills/visual-verification/SKILL.md`
+
+**Acceptance**: Claude automatically uses visual verification after UI changes
+
+### Task 14.8: Update CLAUDE.md
+**Goal**: Add mandatory visual verification rule to project instructions
+
+**Acceptance**: CLAUDE.md includes visual verification in mandatory rules
+
+### Task 14.9: Update Agent Definitions
+**Goal**: Add visual-verification skill to relevant agents
+
+**Files**:
+- `.claude/agents/apple-dev-expert.md` - Add skill
+- `.claude/agents/testing-specialist.md` - Add skill
+
+**Acceptance**: Relevant agents include visual-verification skill
+
+### Performance Expectations
+
+| Operation | macOS | Simulators |
+|-----------|-------|------------|
+| Screenshot | ~500ms | ~1s |
+| Click | ~100ms | ~5-10s |
+| Type | ~200ms | ~5-10s |
+| Swipe | ~300ms | ~5-10s |
+| Query | ~200ms | ~5-10s |
+
+### File Structure
+
+```
+Tools/
+└── listall-mcp/
+    ├── Package.swift
+    ├── Sources/
+    │   └── listall-mcp/
+    │       ├── main.swift
+    │       ├── Permissions.swift
+    │       ├── Services/
+    │       │   ├── AccessibilityService.swift
+    │       │   └── XCUITestBridge.swift
+    │       └── Tools/
+    │           ├── ScreenshotTool.swift
+    │           ├── LaunchTool.swift
+    │           ├── ClickTool.swift
+    │           ├── TypeTool.swift
+    │           ├── SwipeTool.swift
+    │           ├── QueryTool.swift
+    │           ├── SimulatorTools.swift
+    │           └── DiagnosticsTool.swift
+    └── Tests/
+
+ListAll/
+└── ListAllMCPTests/
+    ├── MCPCommandRunner.swift
+    └── Info.plist
+```
+
+### Dependencies
+
+- `modelcontextprotocol/swift-sdk` (0.10.2+)
+- macOS 14.0+
+- Xcode 16+
 
 ---
 
@@ -459,11 +563,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 11: Polish & Launch | Completed | 9/9 |
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
 | Phase 13: Archived Lists Bug Fixes | Completed | 4/4 |
-| Phase 14: Visual Verification MCP Server | Not Started | 0/6 |
+| Phase 14: Visual Verification MCP Server | Not Started | 0/10 |
 | Phase 15: App Store Submission | Not Started | 0/1 |
 | Phase 16: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 89** (81 completed, 8 remaining)
+**Total Tasks: 93** (81 completed, 12 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -498,12 +602,16 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 13.4: [COMPLETED] Fix Selection Persistence Bug When Switching Tabs
 
 **Phase 14 Status** (Visual Verification MCP Server):
-- Task 14.1: Create MCP Server Package
-- Task 14.2: Implement macOS Accessibility Service
-- Task 14.3: Implement Simulator Service
-- Task 14.4: Create XCUITest MCP Runner
-- Task 14.5: Implement MCP Tools
-- Task 14.6: Integration & Configuration
+- Task 14.0: Prototype Validation (Spike)
+- Task 14.1: Simulator Screenshot & Launch
+- Task 14.2: macOS Screenshot & Launch
+- Task 14.3: macOS Interaction Tools
+- Task 14.4: Simulator Interaction Tools (XCUITest Bridge)
+- Task 14.5: Diagnostics & Error Handling
+- Task 14.6: Integration & Documentation
+- Task 14.7: Visual Verification Skill
+- Task 14.8: Update CLAUDE.md
+- Task 14.9: Update Agent Definitions
 
 **Phase 15 Status**:
 - Task 15.1: Submit to App Store
@@ -514,7 +622,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 **Notes**:
 - Phase 12 added based on agent swarm UX research (January 2026)
 - Phase 13 added based on agent swarm investigation (January 2026) - discovered missing restore UI and mutable archived lists bugs
-- Phase 14 added (January 2026): Visual Verification MCP Server for Claude-driven UI testing across all platforms
+- Phase 14 revised (January 2026): Visual Verification MCP Server with 10 tasks - includes spike validation, XCUITest bridge for simulators, and Claude self-instruction skills
 - Task 6.4 (Spotlight Integration) moved to Phase 16 as optional feature (disabled by default)
 - Phase 9 revised based on swarm analysis: uses parallel jobs architecture (Task 9.0 added as blocking pre-requisite)
 - Task 11.7 added comprehensive feature parity analysis with `/documentation/FEATURES.md`
