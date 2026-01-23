@@ -15,3 +15,6 @@ Quick reference for skill selection. Skills load automatically via agent `skills
 | `github-actions` | CI failures, workflow optimization | caching, retry, timeout |
 | `bash-scripting` | Shell scripts, .sh files | set -euo pipefail, quoting |
 | `test-isolation` | Permission dialogs, test failures | TestHelpers, mocking |
+| `visual-verification` | Any code change, verify implementation works | MCP tools, feedback loop |
+| `apple-hig` | UI design, navigation, accessibility | HIG compliance, platform patterns |
+| `apple-ux-patterns` | User interactions, feedback, gestures | State communication, haptics, animation |

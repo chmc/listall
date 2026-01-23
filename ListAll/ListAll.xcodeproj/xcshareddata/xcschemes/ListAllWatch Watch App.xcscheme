@@ -21,20 +21,6 @@
                ReferencedContainer = "container:ListAll.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "F1E5F97B2E78695B0007B178"
-               BuildableName = "ListAll.app"
-               BlueprintName = "ListAll"
-               ReferencedContainer = "container:ListAll.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

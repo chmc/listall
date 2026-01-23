@@ -261,6 +261,7 @@ struct ItemEditView: View {
                         }
                     }
                     .disabled(!viewModel.isValid || viewModel.isSaving)
+                    .accessibilityIdentifier(viewModel.isEditing ? "SaveButton" : "CreateButton")
                 }
             }
             .confirmationDialog("Discard Changes?", isPresented: $showingDiscardAlert, titleVisibility: .visible) {
@@ -275,18 +276,6 @@ struct ItemEditView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage ?? "An unknown error occurred.")
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside text fields (both single and multi-line)
-            isTitleFieldFocused = false
-            isDescriptionFieldFocused = false
-            
-            // Hide suggestions when clicking outside item title field (Phase 51)
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showingSuggestions = false
-                showAllSuggestions = false
             }
         }
         .onChange(of: isTitleFieldFocused) { isFocused in

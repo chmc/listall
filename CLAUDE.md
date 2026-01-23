@@ -41,6 +41,81 @@ Investigate why the screenshot job is timing out...
 - All tests must pass before commit
 - One task at a time
 
+## Implementation Visual Verification
+
+**BLOCKING RULE**: MCP tools MUST be connected before visual verification. If `listall_diagnostics` or other `listall_*` tools are not available, you MUST:
+1. Stop and inform the user that MCP tools are not connected
+2. Request Claude Code restart to load the MCP server
+3. **NO WORKAROUNDS ALLOWED** - do not use `screencapture`, `simctl io`, or other alternatives
+
+### Required Platform Coverage
+
+**ALL implementations MUST be verified on ALL applicable platforms:**
+
+| Platform | When Required | Tool |
+|----------|---------------|------|
+| macOS | Always for shared/macOS code | `listall_screenshot_macos` |
+| iPhone | Always for shared/iOS code | `listall_screenshot` (boot iPhone simulator) |
+| iPad | If UI supports iPad | `listall_screenshot` (boot iPad simulator) |
+| watchOS | If change affects watch app | `listall_screenshot` (boot Watch simulator) |
+
+### Verification Workflow
+
+**Default: Screenshot-Only (always works)**
+
+1. **Run `listall_diagnostics`** if tools not working
+2. **macOS**: Launch with `UITEST_MODE`, screenshot
+3. **iPhone**: Boot simulator, launch with `UITEST_MODE`, screenshot
+4. **iPad** (if applicable): Boot iPad simulator, launch, screenshot
+5. **watchOS** (if applicable): Boot Watch simulator, launch, screenshot
+6. **Compare all screenshots** for consistency before considering task complete
+7. **Cleanup (when done)**: Quit macOS app and shutdown simulators
+
+**Advanced: Interactive (when needed for user flow testing)**
+
+- Use `listall_query`, `listall_click`, `listall_type`, `listall_swipe` to test flows
+- **macOS**: Always works (Accessibility API)
+- **iOS/iPad Simulators**: Uses XCUITest (may have issues on some iOS versions)
+- **watchOS**: Uses XCUITest (~10-30s per action, slower than iOS)
+- If interactions fail, fall back to screenshot-only verification
+
+### Launch Commands
+
+```
+# macOS
+listall_launch_macos(app_name: "ListAll", launch_args: ["UITEST_MODE", "DISABLE_TOOLTIPS"])
+listall_screenshot_macos(app_name: "ListAll")
+
+# iPhone/iPad
+listall_boot_simulator(udid: "...")
+listall_launch(udid: "booted", bundle_id: "io.github.chmc.ListAll", launch_args: ["UITEST_MODE", "DISABLE_TOOLTIPS"])
+listall_screenshot(udid: "booted")
+```
+
+### Cleanup Commands
+
+```
+# macOS - quit when done
+listall_quit_macos(app_name: "ListAll")
+
+# macOS - hide (keep running in background)
+listall_hide_macos(app_name: "ListAll")
+
+# Simulators
+listall_shutdown_simulator(udid: "all")
+```
+
+**Background launch**: Add `BACKGROUND` to launch_args to launch without focusing:
+```
+listall_launch_macos(app_name: "ListAll", launch_args: ["UITEST_MODE", "BACKGROUND"])
+```
+Note: BACKGROUND means "not focused" - app windows still visible, just not frontmost. Use `listall_hide_macos` after launch if you want the app completely hidden.
+
+MCP server configuration: `.mcp.json` (project root)
+MCP server binary: `Tools/listall-mcp/.build/debug/listall-mcp`
+
+See `.claude/skills/visual-verification/SKILL.md` for detailed patterns.
+
 ## Agents & Skills
 
 Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.md` for skill reference.
@@ -59,7 +134,7 @@ Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.
 
 ## Learnings Format
 
-Write learnings to `/documentation/learnings/`. See templates for format details:
+Write learnings to `/documentation/learnings/` using LLM optimized format. See templates for format details:
 
 | Template | Use For |
 |----------|---------|

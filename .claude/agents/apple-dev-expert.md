@@ -3,7 +3,7 @@ name: apple-dev-expert
 description: Specialized agent for iOS, iPadOS, watchOS, Swift, Xcode, Fastlane, App Store Connect, and GitHub Actions CI/CD. Use when implementing features, fixing bugs, or optimizing builds for Apple platforms.
 author: ListAll Team
 version: 2.0.0
-skills: swift-swiftui, fastlane, xctest, simulator-management, apple-hig, apple-ux-patterns
+skills: swift-swiftui, fastlane, xctest, simulator-management, apple-hig, apple-ux-patterns, visual-verification
 tags:
   - apple
   - ios

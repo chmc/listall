@@ -171,7 +171,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 | `listall_shutdown` | Shutdown | N/A | simctl shutdown |
 | `listall_diagnostics` | Check setup | permissions | simulators |
 
-### Task 14.0: Prototype Validation (Spike)
+### Task 14.0: [COMPLETED] Prototype Validation (Spike)
 **Goal**: Validate MCP server + stdio transport work with Claude
 
 **Steps**:
@@ -186,7 +186,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 
 **Acceptance**: Claude successfully calls tool and receives response
 
-### Task 14.1: Simulator Screenshot & Launch
+### Task 14.1: [COMPLETED] Simulator Screenshot & Launch
 **Goal**: Claude can launch and screenshot iOS/iPad/Watch apps
 
 **Steps**:
@@ -202,7 +202,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 
 **Acceptance**: Claude can boot iPhone simulator, launch ListAll, take screenshot
 
-### Task 14.2: macOS Screenshot & Launch
+### Task 14.2: [COMPLETED] macOS Screenshot & Launch
 **Goal**: Claude can launch and screenshot macOS app
 
 **Steps**:
@@ -220,7 +220,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 
 **Acceptance**: Claude can launch ListAllMac and take screenshot (after permission grant)
 
-### Task 14.3: macOS Interaction Tools
+### Task 14.3: [COMPLETED] macOS Interaction Tools
 **Goal**: Claude can interact with macOS app via Accessibility API
 
 **Steps**:
@@ -242,7 +242,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 
 **Acceptance**: Claude can click buttons, type text, swipe on macOS app
 
-### Task 14.4: Simulator Interaction Tools (XCUITest Bridge)
+### Task 14.4: [COMPLETED] Simulator Interaction Tools (XCUITest Bridge)
 **Goal**: Claude can interact with simulator apps via XCUITest
 
 **Architecture**:
@@ -252,7 +252,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 4. MCP server reads result and returns to Claude
 
 **Steps**:
-1. Create `ListAllMCPTests` target in Xcode project
+1. Added `MCPCommandRunner.swift` to existing `ListAllUITests` target (uses synchronized file groups)
 2. Implement `MCPCommandRunner` XCUITest that reads commands from file
 3. Implement click, type, swipe, query actions in XCUITest
 4. Wire MCP tools to invoke XCUITest via xcodebuild
@@ -261,13 +261,13 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 **Performance**: ~5-15s per interaction (acceptable for verification loop)
 
 **Files**:
-- `ListAll/ListAllMCPTests/MCPCommandRunner.swift`
-- `ListAll/ListAllMCPTests/Info.plist`
+- `ListAll/ListAllUITests/MCPCommandRunner.swift`
 - `Tools/listall-mcp/Sources/listall-mcp/Services/XCUITestBridge.swift`
+- `Tools/listall-mcp/Sources/listall-mcp/Tools/InteractionTools.swift` (updated)
 
 **Acceptance**: Claude can click, type, swipe on iOS/iPad/Watch simulator apps
 
-### Task 14.5: Diagnostics & Error Handling
+### Task 14.5: [COMPLETED] Diagnostics & Error Handling
 **Goal**: Clear diagnostics and actionable error messages
 
 **Steps**:
@@ -282,7 +282,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 
 **Acceptance**: Claude can diagnose issues and guide user to fix them
 
-### Task 14.6: Integration & Documentation
+### Task 14.6: [COMPLETED] Integration & Documentation
 **Goal**: Complete integration and create setup guide
 
 **Steps**:
@@ -308,19 +308,19 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 
 **Acceptance**: End-to-end verification loop works for all platforms
 
-### Task 14.7: Visual Verification Skill
+### Task 14.7: [COMPLETED] Visual Verification Skill
 **Goal**: Create skill that teaches Claude when/how to use visual verification
 
 **File**: `.claude/skills/visual-verification/SKILL.md`
 
 **Acceptance**: Claude automatically uses visual verification after UI changes
 
-### Task 14.8: Update CLAUDE.md
+### Task 14.8: [COMPLETED] Update CLAUDE.md
 **Goal**: Add mandatory visual verification rule to project instructions
 
 **Acceptance**: CLAUDE.md includes visual verification in mandatory rules
 
-### Task 14.9: Update Agent Definitions
+### Task 14.9: [COMPLETED] Update Agent Definitions
 **Goal**: Add visual-verification skill to relevant agents
 
 **Files**:
@@ -563,11 +563,11 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 11: Polish & Launch | Completed | 9/9 |
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
 | Phase 13: Archived Lists Bug Fixes | Completed | 4/4 |
-| Phase 14: Visual Verification MCP Server | Not Started | 0/10 |
+| Phase 14: Visual Verification MCP Server | Completed | 10/10 |
 | Phase 15: App Store Submission | Not Started | 0/1 |
 | Phase 16: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 93** (81 completed, 12 remaining)
+**Total Tasks: 93** (91 completed, 2 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -602,16 +602,16 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 13.4: [COMPLETED] Fix Selection Persistence Bug When Switching Tabs
 
 **Phase 14 Status** (Visual Verification MCP Server):
-- Task 14.0: Prototype Validation (Spike)
-- Task 14.1: Simulator Screenshot & Launch
-- Task 14.2: macOS Screenshot & Launch
-- Task 14.3: macOS Interaction Tools
-- Task 14.4: Simulator Interaction Tools (XCUITest Bridge)
-- Task 14.5: Diagnostics & Error Handling
-- Task 14.6: Integration & Documentation
-- Task 14.7: Visual Verification Skill
-- Task 14.8: Update CLAUDE.md
-- Task 14.9: Update Agent Definitions
+- Task 14.0: [COMPLETED] Prototype Validation (Spike)
+- Task 14.1: [COMPLETED] Simulator Screenshot & Launch
+- Task 14.2: [COMPLETED] macOS Screenshot & Launch
+- Task 14.3: [COMPLETED] macOS Interaction Tools
+- Task 14.4: [COMPLETED] Simulator Interaction Tools (XCUITest Bridge)
+- Task 14.5: [COMPLETED] Diagnostics & Error Handling
+- Task 14.6: [COMPLETED] Integration & Documentation
+- Task 14.7: [COMPLETED] Visual Verification Skill
+- Task 14.8: [COMPLETED] Update CLAUDE.md
+- Task 14.9: [COMPLETED] Update Agent Definitions
 
 **Phase 15 Status**:
 - Task 15.1: Submit to App Store

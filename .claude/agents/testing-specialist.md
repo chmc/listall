@@ -3,7 +3,7 @@ name: testing-specialist
 description: Expert in iOS/watchOS testing with XCTest, XCUITest, Swift Testing, and test automation. Use for writing tests, debugging test failures, improving test reliability, and ensuring all changes are tested and verified locally before committing.
 author: ListAll Team
 version: 2.0.0
-skills: xctest, test-isolation
+skills: xctest, test-isolation, visual-verification
 tags:
   - testing
   - xctest
