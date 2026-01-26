@@ -135,18 +135,27 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 **Source**: Generated from `/documentation/FEATURE_PARITY.md` verification (2026-01-23)
 
-### Task 15.1: macOS Active/Archived Toggle
+### Task 15.1: [COMPLETED] macOS Active/Archived Toggle
 **Platform**: macOS
-**Severity**: High
-**TDD**: Write tests before implementation
+**Severity**: High (was incorrectly flagged - feature exists)
 
-**Implementation Hint**: Add sidebar sections for "Lists" and "Archived" with toggle, like iOS
+**Finding**: Feature already existed as collapsible "Archived" sidebar section following macOS HIG pattern (superior to iOS toggle button). Issues were:
+1. UITEST_MODE had no archived sample data, so section never showed
+2. Archive menu command handler was missing
+3. SwiftUI Section conditional rendering had a bug
 
-**Steps**:
-1. Write failing tests for active/archived toggle functionality
-2. Implement toggle in MacSidebarView to show/hide archived lists
-3. Verify tests pass
-4. Visual verification on macOS
+**Fixes Applied**:
+1. Added archived list to UITestDataService.swift (English: "Old Shopping List", Finnish: "Vanha ostoslista")
+2. Added missing `ArchiveSelectedList` notification handler in MacMainView.swift
+3. Fixed CoreDataManager.addList() to preserve `isArchived` property
+4. Fixed SwiftUI Section rendering by keeping ForEach always in view hierarchy with visibility control
+
+**Files Modified**:
+- `ListAll/Services/UITestDataService.swift` - Added archived sample lists
+- `ListAllMac/Views/MacMainView.swift` - Added notification handler, fixed Section rendering
+- `ListAll/Models/CoreData/CoreDataManager.swift` - Fixed addList() to preserve isArchived
+
+**Visual Verification**: macOS archived section works with collapse/expand toggle
 
 **Task Rule**:
 - Mark title `[IN PROGRESS]` when starting

@@ -43,17 +43,17 @@ MCP Status: READY - All permissions granted, all app bundles found
 | Create List | ✓ | AddListButton opens dialog, creates list with name |
 | Edit List | ✓ | EditListButton opens dialog with current name pre-filled |
 | Delete List | ~ | Only via Edit > Delete menu, no dedicated Delete List option |
-| Archive List | ~ | Menu item exists but no visual indication in sidebar |
-| Restore Archived List | N/V | Cannot verify - archived lists not visually separated |
+| Archive List | ✓ | Lists > Archive List menu moves selected list to Archived section |
+| Restore Archived List | ✓ | Archived list shows Restore button in toolbar, context menu has Restore option |
 | Duplicate List | ~ | Menu item Cmd+D exists, but duplicate not visible after action |
 | Reorder Lists (drag-drop) | N/V | Requires manual drag testing |
 | Multi-select Lists | ✓ | SelectListsButton enters selection mode with checkboxes |
 | Bulk Archive | ✓ | Available in SelectionActionsMenu |
 | Bulk Delete | ✗ | Missing from SelectionActionsMenu |
 | Sample List Templates | ✗ | Not found in File menu or elsewhere |
-| Active/Archived Toggle | ✗ | No sidebar section toggle - all lists shown together |
+| Active/Archived Toggle | ✓ | Collapsible "Archived" section in sidebar (macOS HIG pattern) |
 | List Item Count Display | ✓ | Shows "completed (total)" format e.g., "4 (6)" |
-| Archived Lists Read-only | N/V | Cannot verify without archived list UI |
+| Archived Lists Read-only | ✓ | Archived lists can be viewed but not edited (Restore or Delete only) |
 
 ### Verification Steps
 1. Launch macOS app with UITEST_MODE
@@ -70,8 +70,11 @@ MCP Status: READY - All permissions granted, all app bundles found
 |-----|----------|---------------------|
 | Bulk Delete Lists | Medium | Add "Delete Lists" option to SelectionActionsMenu in ListsToolbarView |
 | Sample List Templates | Low | Add template picker when creating new list (e.g., Grocery, Travel, Project) |
-| Active/Archived Toggle | High | Add sidebar sections for "Lists" and "Archived" with toggle, like iOS |
 | Duplicate List visibility | Medium | Investigate why Cmd+D duplicate doesn't appear - may be sync/UI refresh issue |
+
+### Corrections Applied (Task 15.1)
+- Active/Archived Toggle: Feature EXISTS as collapsible sidebar section - was not visible due to UITEST_MODE lacking archived sample data
+- Fixed: Added archived test data to UITestDataService, fixed addList() to preserve isArchived flag, fixed Archive menu command handler
 
 **Task Rule**: When starting this task, change "Status: pending" to "Status: in-progress". When completed, change to "Status: completed". If encountering problems, retry up to 3 times before marking as failed and proceeding to next task.
 

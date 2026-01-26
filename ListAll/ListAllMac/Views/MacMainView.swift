@@ -269,6 +269,19 @@ struct MacMainView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateNewList"))) { _ in
             showingCreateListSheet = true
         }
+        // MARK: - Archive List Menu Command Handler (Task 15.1)
+        // Responds to Lists > Archive List menu command
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ArchiveSelectedList"))) { _ in
+            // Only process if a list is selected and it's not already archived
+            guard let list = selectedList, !list.isArchived else { return }
+            // Archive the list using DataManager
+            dataManager.deleteList(withId: list.id)  // deleteList actually archives
+            // Clear selection since list moved to archived section
+            selectedList = nil
+            // Refresh data to show updated lists
+            dataManager.loadData()
+            dataManager.loadArchivedData()
+        }
         // Note: ToggleArchivedLists handler removed - archived lists now always visible
         // in their own sidebar section (Apple HIG two-section pattern)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshData"))) { _ in
@@ -826,17 +839,22 @@ private struct MacSidebarView: View {
             // MARK: - Archived Lists Section (Collapsible)
             if !archivedLists.isEmpty {
                 Section {
-                    // Only show content when expanded
-                    if isArchivedSectionExpanded {
-                        ForEach(archivedLists) { list in
+                    // FIX: Always render ForEach but hide rows when collapsed
+                    // Using conditional `if` breaks SwiftUI's view identity tracking
+                    // when @AppStorage state changes, preventing proper re-render.
+                    ForEach(archivedLists) { list in
+                        Group {
                             if isInSelectionMode {
                                 selectionModeRow(for: list)
                             } else {
                                 normalModeRow(for: list)
                             }
                         }
-                        // No .onMove - archived lists cannot be reordered
+                        .frame(height: isArchivedSectionExpanded ? nil : 0)
+                        .clipped()
+                        .opacity(isArchivedSectionExpanded ? 1 : 0)
                     }
+                    // No .onMove - archived lists cannot be reordered
                 } header: {
                     // Clickable header with disclosure chevron
                     Button {

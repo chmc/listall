@@ -215,10 +215,35 @@ class UITestDataService {
         travelList.items.append(shoes)
         
         lists.append(travelList)
-        
+
+        // List 5: Archived - Old Shopping List (to demonstrate archived section)
+        var archivedList = List(name: "Old Shopping List")
+        archivedList.orderNumber = 4
+        archivedList.createdAt = Date().addingTimeInterval(-86400 * 30) // 30 days ago
+        archivedList.modifiedAt = Date().addingTimeInterval(-86400 * 14) // 14 days ago
+        archivedList.isArchived = true  // Mark as archived
+
+        var archivedItem1 = Item(title: "Bananas", listId: archivedList.id)
+        archivedItem1.quantity = 6
+        archivedItem1.orderNumber = 0
+        archivedItem1.isCrossedOut = true
+        archivedItem1.createdAt = archivedList.createdAt
+        archivedItem1.modifiedAt = archivedList.modifiedAt
+        archivedList.items.append(archivedItem1)
+
+        var archivedItem2 = Item(title: "Orange Juice", listId: archivedList.id)
+        archivedItem2.itemDescription = "No pulp"
+        archivedItem2.orderNumber = 1
+        archivedItem2.isCrossedOut = true
+        archivedItem2.createdAt = archivedList.createdAt
+        archivedItem2.modifiedAt = archivedList.modifiedAt
+        archivedList.items.append(archivedItem2)
+
+        lists.append(archivedList)
+
         return lists
     }
-    
+
     // MARK: - Finnish Test Data
     
     private static func generateFinnishTestData() -> [List] {
@@ -374,7 +399,32 @@ class UITestDataService {
         matkailulista.items.append(kengat)
         
         lists.append(matkailulista)
-        
+
+        // List 5: Arkistoitu - Vanha ostoslista (to demonstrate archived section)
+        var arkistoituLista = List(name: "Vanha ostoslista")
+        arkistoituLista.orderNumber = 4
+        arkistoituLista.createdAt = Date().addingTimeInterval(-86400 * 30) // 30 päivää sitten
+        arkistoituLista.modifiedAt = Date().addingTimeInterval(-86400 * 14) // 14 päivää sitten
+        arkistoituLista.isArchived = true  // Merkitty arkistoiduksi
+
+        var arkistoituTuote1 = Item(title: "Banaanit", listId: arkistoituLista.id)
+        arkistoituTuote1.quantity = 6
+        arkistoituTuote1.orderNumber = 0
+        arkistoituTuote1.isCrossedOut = true
+        arkistoituTuote1.createdAt = arkistoituLista.createdAt
+        arkistoituTuote1.modifiedAt = arkistoituLista.modifiedAt
+        arkistoituLista.items.append(arkistoituTuote1)
+
+        var arkistoituTuote2 = Item(title: "Appelsiinimehu", listId: arkistoituLista.id)
+        arkistoituTuote2.itemDescription = "Ilman hedelmälihaa"
+        arkistoituTuote2.orderNumber = 1
+        arkistoituTuote2.isCrossedOut = true
+        arkistoituTuote2.createdAt = arkistoituLista.createdAt
+        arkistoituTuote2.modifiedAt = arkistoituLista.modifiedAt
+        arkistoituLista.items.append(arkistoituTuote2)
+
+        lists.append(arkistoituLista)
+
         return lists
     }
 }

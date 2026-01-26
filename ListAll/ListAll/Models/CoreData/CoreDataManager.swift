@@ -972,14 +972,20 @@ class DataManager: ObservableObject {
 
         listEntity.createdAt = list.createdAt
         listEntity.modifiedAt = list.modifiedAt
-        listEntity.isArchived = false
+        listEntity.isArchived = list.isArchived
 
         saveData()
 
         // Update the list struct with the assigned orderNumber before appending
         var updatedList = list
         updatedList.orderNumber = nextOrderNumber
-        lists.append(updatedList)
+
+        // Append to the correct array based on archived status
+        if list.isArchived {
+            archivedLists.append(updatedList)
+        } else {
+            lists.append(updatedList)
+        }
         // No need to sort - new list goes to end with highest orderNumber
     }
     
