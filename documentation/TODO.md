@@ -212,49 +212,6 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.3: [DEFERRED] iPad NavigationSplitView Sidebar
-**Platform**: iPad
-**Severity**: High → Deferred
-**TDD**: Write tests before implementation
-
-**Status**: Deferred - requires significant architectural refactor
-
-**Why Deferred**:
-- MainView is 600+ lines with complex navigation state
-- Implementing NavigationSplitView requires restructuring entire view hierarchy
-- Risk of introducing regressions in existing iOS functionality
-- Task 15.2 already provides acceptable iPad UX by conditionalizing navigation style
-- iPad can use split view in landscape via NavigationView's automatic style
-
-**Implementation Hint**: Future implementation should create separate iPad view structure
-
-**Original Steps**:
-1. Write failing tests for sidebar navigation on iPad
-2. Implement NavigationSplitView with sidebar for lists
-3. Verify tests pass
-4. Visual verification on iPad simulator
-
-**Task Rule**:
-- Mark title `[IN PROGRESS]` when starting
-- Follow strict TDD: write tests first, then implement
-- Mark title `[COMPLETED]` only after ALL of the following:
-  1. All tests pass (`xcodebuild test`)
-  2. Visual verification loop (MANDATORY):
-     a. Launch app with UITEST_MODE via MCP tools
-     b. Interact with app (click, type, navigate) while taking screenshots
-     c. Does feature work as expected?
-     d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next step
-  3. Commit code with descriptive message
-  4. Proceed to next task
-  5. Feature verified working on iPad simulator
-- If MCP visual verification tools fail:
-  1. Investigate and fix the MCP tool issue
-  2. Rebuild: `cd Tools/listall-mcp && swift build`
-  3. Restart Claude Code, then resume verification
-
----
-
 ### Task 15.4: [COMPLETED] macOS Bulk Delete Lists
 **Platform**: macOS
 **Severity**: Medium
@@ -1232,7 +1189,6 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 **Phase 15 Status** (Feature Parity - High & Medium Priority):
 - Task 15.1: macOS Active/Archived Toggle
 - Task 15.2: iPad Split View Layout
-- Task 15.3: iPad NavigationSplitView Sidebar
 - Task 15.4: macOS Bulk Delete Lists
 - Task 15.5: macOS Export CSV
 - Task 15.6: macOS Manual Sync Button
