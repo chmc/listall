@@ -159,33 +159,44 @@ struct ItemEditView: View {
                 }
                 
                 // Images Section
+                // Task 16.13: Show explicit 10-image limit with visual feedback
                 Section("Images") {
                     VStack(spacing: Theme.Spacing.md) {
-                        // Add Image Button
+                        // Add Image Button - disabled at 10 image limit
+                        let isAtImageLimit = viewModel.images.count >= 10
                         Button(action: {
                             showingImageSourceSelection = true
                         }) {
                             HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(Theme.Colors.primary)
+                                Image(systemName: isAtImageLimit ? "exclamationmark.circle.fill" : "plus.circle.fill")
+                                    .foregroundColor(isAtImageLimit ? Theme.Colors.secondary : Theme.Colors.primary)
                                     .font(.title2)
-                                
-                                Text("Add Photo")
-                                    .foregroundColor(Theme.Colors.primary)
+
+                                Text(isAtImageLimit ? String(localized: "Image Limit Reached") : String(localized: "Add Photo"))
+                                    .foregroundColor(isAtImageLimit ? Theme.Colors.secondary : Theme.Colors.primary)
                                     .font(.headline)
-                                
+
                                 Spacer()
-                                
-                                Image(systemName: "camera.fill")
-                                    .foregroundColor(Theme.Colors.secondary)
-                                Image(systemName: "photo.fill")
-                                    .foregroundColor(Theme.Colors.secondary)
+
+                                // Show count/limit indicator
+                                Text("\(viewModel.images.count)/10")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(viewModel.images.count >= 8 ? .orange : Theme.Colors.secondary)
+                                    .padding(.horizontal, Theme.Spacing.xs)
+
+                                if !isAtImageLimit {
+                                    Image(systemName: "camera.fill")
+                                        .foregroundColor(Theme.Colors.secondary)
+                                    Image(systemName: "photo.fill")
+                                        .foregroundColor(Theme.Colors.secondary)
+                                }
                             }
                             .padding(Theme.Spacing.md)
                             .background(Theme.Colors.groupedBackground)
                             .cornerRadius(Theme.CornerRadius.md)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .disabled(isAtImageLimit)
                         
                         // Display existing images with reordering arrows
                         if !viewModel.images.isEmpty {
