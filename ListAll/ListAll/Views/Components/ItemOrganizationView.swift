@@ -164,6 +164,20 @@ struct ItemOrganizationView: View {
             .navigationTitle(String(localized: "Organization"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if viewModel.hasActiveFilters {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.clearAllFilters()
+                            }
+                        }) {
+                            Text(String(localized: "Reset"))
+                                .foregroundColor(.red)
+                        }
+                        .accessibilityLabel(String(localized: "Reset all filters and sorting to defaults"))
+                        .accessibilityIdentifier("resetFiltersButton")
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(String(localized: "Done")) {
                         dismiss()

@@ -583,18 +583,23 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 16.12: [IN PROGRESS] iOS Clear All Filters Button
+### Task 16.12: [COMPLETED] iOS Clear All Filters Button
 **Platform**: iOS
 **Severity**: Low
-**TDD**: Write tests before implementation
 
-**Implementation Hint**: Add "Reset" button to ItemOrganizationView to clear all active filters
+**Implementation**:
+- Added "Reset" button to toolbar in ItemOrganizationView.swift (left side of navigation bar)
+- Button only appears when `viewModel.hasActiveFilters` is true (non-default filter, sort, or search)
+- Calls `viewModel.clearAllFilters()` with animation when tapped
+- Button styled in red to indicate destructive action
+- Added accessibility label and identifier for testing
+- Added Finnish localization for accessibility string
 
-**Steps**:
-1. Write failing tests for clear all filters button
-2. Implement reset button in ItemOrganizationView
-3. Verify tests pass
-4. Visual verification on iPhone simulator
+**Files Modified**:
+- `ListAll/ListAll/Views/Components/ItemOrganizationView.swift` - Added Reset button to toolbar
+- `ListAll/ListAll/Localizable.xcstrings` - Added localized accessibility label
+
+**Note**: Core functionality (`hasActiveFilters`, `clearAllFilters()`) was already implemented in ListViewModel (Task 12.12) and is fully tested in ListAllMacTests.
 
 **Task Rule**:
 - Mark title `[IN PROGRESS]` when starting
@@ -940,7 +945,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 13: Archived Lists Bug Fixes | Completed | 4/4 |
 | Phase 14: Visual Verification MCP Server | Completed | 10/10 |
 | Phase 15: Feature Parity - High & Medium | Not Started | 0/8 |
-| Phase 16: Feature Parity - Low Priority | In Progress | 9/17 |
+| Phase 16: Feature Parity - Low Priority | In Progress | 10/17 |
 | Phase 17: App Store Submission | Not Started | 0/1 |
 | Phase 18: Spotlight Integration | Optional | 0/1 |
 
@@ -999,7 +1004,7 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 16.9: macOS Duplicate List Visibility
 - Task 16.10: macOS Sample List Templates
 - Task 16.11: iOS Live Sync Status Indicator
-- Task 16.12: iOS Clear All Filters Button
+- Task 16.12: [COMPLETED] iOS Clear All Filters Button
 - Task 16.13: iOS Explicit 10 Image Limit UI
 - Task 16.14: iOS Left Swipe Actions on Items
 - Task 16.15: [COMPLETED] iPad Multi-Column Layout (already existed)

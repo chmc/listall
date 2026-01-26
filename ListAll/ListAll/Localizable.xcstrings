@@ -5324,6 +5324,24 @@
         }
       }
     },
+    "Reset all filters and sorting to defaults" : {
+      "comment" : "Accessibility label for Reset button in ItemOrganizationView",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset all filters and sorting to defaults"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nollaa kaikki suodattimet ja lajittelu oletuksiin"
+          }
+        }
+      }
+    },
     "Reset to Default" : {
       "comment" : "A button that resets the export options to their default values.",
       "extractionState" : "manual",
