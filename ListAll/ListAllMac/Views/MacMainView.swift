@@ -926,14 +926,10 @@ private struct MacSidebarView: View {
                                 .foregroundStyle(.secondary)
                                 .rotationEffect(.degrees(isArchivedSectionExpanded ? 90 : 0))
                             Text("Archived")
-                            Spacer()
-                            Text("\(archivedLists.count)")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
                         }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Archived lists, \(archivedLists.count) items")
+                    .accessibilityLabel("Archived lists")
                     .accessibilityHint(isArchivedSectionExpanded ? "Double-tap to collapse" : "Double-tap to expand")
                 } footer: {
                     // Only show sync status when expanded, otherwise it looks odd
