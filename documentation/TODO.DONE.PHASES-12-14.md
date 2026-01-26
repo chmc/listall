@@ -1,6 +1,6 @@
 # ListAll macOS App - Completed Phases 12-14 (UX Polish, Archived Lists & Visual Verification)
 
-> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phases 15-16](./TODO.DONE.PHASES-15-16.md) | [Active Tasks](./TODO.md)
 
 This document contains the completed UX Polish (Phase 12), Archived Lists Bug Fixes (Phase 13), and Visual Verification MCP Server (Phase 14) implementations with details preserved for LLM reference.
 
@@ -726,4 +726,4 @@ Phase 12 was based on comprehensive agent swarm research:
 
 ---
 
-> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Active Tasks](./TODO.md)
+> **Navigation**: [Phases 1-4](./TODO.DONE.PHASES-1-4.md) | [Phases 5-7](./TODO.DONE.PHASES-5-7.md) | [Phases 8-11](./TODO.DONE.PHASES-8-11.md) | [Phases 15-16](./TODO.DONE.PHASES-15-16.md) | [Active Tasks](./TODO.md)
