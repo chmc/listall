@@ -553,6 +553,7 @@ private struct MacSidebarView: View {
     @State private var selectedLists: Set<UUID> = []
     @State private var showingArchiveConfirmation = false
     @State private var showingPermanentDeleteConfirmation = false
+    @State private var showingDeleteActiveListsConfirmation = false  // Task 15.4
 
     // MARK: - Restore Confirmation State (Task 13.1)
     @State private var showingRestoreConfirmation = false
@@ -692,19 +693,25 @@ private struct MacSidebarView: View {
         }
     }
 
-    /// Builds the appropriate bulk action button based on selected lists
+    /// Builds the appropriate bulk action buttons based on selected lists
     @ViewBuilder
     private var bulkActionButton: some View {
         if hasArchivedSelection {
-            // Has archived lists selected: permanent deletion
+            // Has archived lists selected: permanent deletion only
             Button(role: .destructive, action: { showingPermanentDeleteConfirmation = true }) {
                 Label("Delete Permanently", systemImage: "trash")
             }
             .disabled(selectedLists.isEmpty)
         } else {
-            // Active lists only: archive (recoverable)
-            Button(role: .destructive, action: { showingArchiveConfirmation = true }) {
+            // Active lists only: archive (recoverable) and delete (permanent)
+            Button(action: { showingArchiveConfirmation = true }) {
                 Label("Archive Lists", systemImage: "archivebox")
+            }
+            .disabled(selectedLists.isEmpty)
+
+            // Task 15.4: Add permanent delete option for active lists
+            Button(role: .destructive, action: { showingDeleteActiveListsConfirmation = true }) {
+                Label("Delete Lists", systemImage: "trash")
             }
             .disabled(selectedLists.isEmpty)
         }
@@ -1076,6 +1083,15 @@ private struct MacSidebarView: View {
             }
         } message: {
             Text("Permanently delete \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? This action cannot be undone. All items and images will be permanently deleted.")
+        }
+        // Task 15.4: Delete active lists confirmation alert
+        .alert("Delete Lists", isPresented: $showingDeleteActiveListsConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                permanentlyDeleteSelectedLists()
+            }
+        } message: {
+            Text("Permanently delete \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? This action cannot be undone and bypasses archiving.")
         }
         // MARK: - Restore Confirmation Alert (Task 13.1)
         .alert("Restore List", isPresented: $showingRestoreConfirmation) {
