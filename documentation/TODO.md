@@ -212,14 +212,23 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.3: iPad NavigationSplitView Sidebar
+### Task 15.3: [DEFERRED] iPad NavigationSplitView Sidebar
 **Platform**: iPad
-**Severity**: High
+**Severity**: High → Deferred
 **TDD**: Write tests before implementation
 
-**Implementation Hint**: Implement NavigationSplitView for iPad with sidebar showing lists
+**Status**: Deferred - requires significant architectural refactor
 
-**Steps**:
+**Why Deferred**:
+- MainView is 600+ lines with complex navigation state
+- Implementing NavigationSplitView requires restructuring entire view hierarchy
+- Risk of introducing regressions in existing iOS functionality
+- Task 15.2 already provides acceptable iPad UX by conditionalizing navigation style
+- iPad can use split view in landscape via NavigationView's automatic style
+
+**Implementation Hint**: Future implementation should create separate iPad view structure
+
+**Original Steps**:
 1. Write failing tests for sidebar navigation on iPad
 2. Implement NavigationSplitView with sidebar for lists
 3. Verify tests pass
