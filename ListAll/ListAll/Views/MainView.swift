@@ -149,6 +149,7 @@ struct MainView: View {
                                 }) {
                                     Image(systemName: viewModel.showingArchivedLists ? "tray" : "archivebox")
                                 }
+                                .keyboardShortcut("a", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+A
                                 .help(viewModel.showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
                                 
                                 // Share all data button (only for active lists)
@@ -175,6 +176,7 @@ struct MainView: View {
                                         Image(systemName: Constants.UI.syncIcon)
                                     }
                                     .disabled(cloudKitService.isSyncing || viewModel.isSyncingFromWatch)
+                                    .keyboardShortcut("r", modifiers: .command)  // Task 15.8: iPad Cmd+R
                                     .help("Sync with iCloud and Apple Watch")
                                 }
                             }
@@ -253,6 +255,7 @@ struct MainView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("AddListButton")
+                            .keyboardShortcut("n", modifiers: .command)  // Task 15.8: iPad Cmd+N
                             .padding(.horizontal, Theme.Spacing.sm)
                         }
                     }

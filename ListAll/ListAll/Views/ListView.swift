@@ -607,6 +607,7 @@ struct ListView: View {
             )
         }
         .accessibilityLabel("Add new item")
+        .keyboardShortcut("n", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+N
     }
 }
 
