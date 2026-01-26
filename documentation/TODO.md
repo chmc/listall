@@ -352,7 +352,7 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.7: iOS Default Sort Order in Settings
+### Task 15.7: [IN PROGRESS] iOS Default Sort Order in Settings
 **Platform**: iOS
 **Severity**: Medium
 **TDD**: Write tests before implementation

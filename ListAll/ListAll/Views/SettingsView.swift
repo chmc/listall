@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
     @AppStorage(Constants.UserDefaultsKeys.requiresBiometricAuth) private var requiresBiometricAuth = false
     @AppStorage(Constants.UserDefaultsKeys.authTimeoutDuration) private var authTimeoutDurationRaw: Int = Constants.AuthTimeoutDuration.immediate.rawValue
+    @AppStorage("defaultListSortOrder") private var defaultSortOrder = "orderNumber"  // Task 15.7
     @StateObject private var biometricService = BiometricAuthService.shared
     @StateObject private var hapticManager = HapticManager.shared
     @StateObject private var tooltipManager = TooltipManager.shared
@@ -64,7 +65,16 @@ struct SettingsView: View {
                             Text(position.displayName).tag(position)
                         }
                     }
-                    
+
+                    // Task 15.7: Default sort order picker
+                    Picker("Default Sort Order", selection: $defaultSortOrder) {
+                        Text("Manual").tag("orderNumber")
+                        Text("Name").tag("name")
+                        Text("Date Created").tag("createdAt")
+                        Text("Date Modified").tag("modifiedAt")
+                    }
+                    .accessibilityLabel("Default sort order for lists")
+
                     Toggle(isOn: $hapticManager.isEnabled) {
                         HStack {
                             Image(systemName: "waveform")
