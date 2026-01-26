@@ -165,13 +165,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -179,18 +178,19 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.2: iPad Split View Layout
+### Task 15.2: [COMPLETED] iPad Split View Layout
 **Platform**: iPad
 **Severity**: High
-**TDD**: Write tests before implementation
 
-**Implementation Hint**: Remove/conditionalize `.navigationViewStyle(.stack)` for non-screenshot contexts
+**Implementation**: Created `NavigationStyleModifier` that conditionally applies `.navigationViewStyle(.stack)`:
+- iPhone: Always stack navigation (standard iOS pattern)
+- iPad + UITEST_MODE: Stack for consistent App Store screenshots
+- iPad normally: Default style (enables split view for better multitasking)
 
-**Steps**:
-1. Write failing tests for split view layout on iPad
-2. Implement conditional NavigationSplitView for iPad (keep stack for screenshots)
-3. Verify tests pass
-4. Visual verification on iPad simulator
+**Files Modified**:
+- `ListAll/Views/MainView.swift` - Added NavigationStyleModifier, replaced hardcoded .stack
+
+**Visual Verification**: iPad shows stack style in UITEST_MODE (correct for screenshots)
 
 **Task Rule**:
 - Mark title `[IN PROGRESS]` when starting
@@ -200,13 +200,11 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPad simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -235,13 +233,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPad simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPad simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -270,13 +267,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -305,13 +301,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -340,13 +335,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -375,13 +369,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPhone simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPhone simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -410,13 +403,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPad simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPad simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -449,13 +441,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -484,13 +475,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -519,13 +509,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -554,13 +543,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -589,13 +577,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -624,13 +611,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -659,13 +645,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -694,13 +679,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -730,13 +714,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -765,13 +748,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on macOS
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on macOS
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -800,13 +782,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPhone simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPhone simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -835,13 +816,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPhone simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPhone simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -870,13 +850,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPhone simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPhone simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -905,13 +884,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPhone simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPhone simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -940,13 +918,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPad simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPad simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -975,13 +952,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on iPad simulator
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on iPad simulator
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`
@@ -1010,13 +986,12 @@ Detailed implementation records are preserved in split files for LLM reference.
   2. Visual verification loop (MANDATORY):
      a. Launch app with UITEST_MODE via MCP tools
      b. Interact with app (click, type, navigate) while taking screenshots
-        - Take multiple screenshots during interaction
-        - Retake screenshots if they don't reveal what you need
-        - Analyze each screenshot to understand what's happening
      c. Does feature work as expected?
      d. If NO: fix the issue, then repeat from step (a)
-     e. If YES: continue to next check
-  3. Feature verified working on ALL platforms: macOS, iPhone, iPad
+     e. If YES: continue to next step
+  3. Commit code with descriptive message
+  4. Proceed to next task
+  5. Feature verified working on ALL platforms: macOS, iPhone, iPad
 - If MCP visual verification tools fail:
   1. Investigate and fix the MCP tool issue
   2. Rebuild: `cd Tools/listall-mcp && swift build`

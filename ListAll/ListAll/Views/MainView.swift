@@ -295,7 +295,9 @@ struct MainView: View {
                     .edgesIgnoringSafeArea(.bottom)
                 }
             }
-            .navigationViewStyle(.stack)  // Force stack style on iPad for screenshots (prevents split-view)
+            // iPad uses split view by default, but stack for screenshots
+            // iPhone always uses stack navigation
+            .modifier(NavigationStyleModifier())
             .overlay(alignment: .top) {
                 // Watch Sync Indicator - as overlay to avoid affecting navigation bar layout
                 if viewModel.isSyncingFromWatch {
@@ -622,6 +624,34 @@ struct CustomBottomToolbar: View {
         }
         .frame(height: 50)
         .padding(.bottom, 8)
+    }
+}
+
+// MARK: - Navigation Style Modifier (Task 15.2)
+/// Controls NavigationView style based on device and context:
+/// - iPhone: Always uses stack navigation
+/// - iPad in UITEST_MODE: Uses stack for consistent App Store screenshots
+/// - iPad normally: Uses default (split view) for better multitasking UX
+private struct NavigationStyleModifier: ViewModifier {
+    private var shouldUseStackNavigation: Bool {
+        #if os(iOS)
+        // iPhone always uses stack navigation
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            return true
+        }
+        // iPad uses stack for screenshots (UITEST_MODE), otherwise split view
+        return UITestDataService.isUITesting
+        #else
+        return true
+        #endif
+    }
+
+    func body(content: Content) -> some View {
+        if shouldUseStackNavigation {
+            content.navigationViewStyle(.stack)
+        } else {
+            content // Use default (automatic) style - enables split view on iPad
+        }
     }
 }
 
