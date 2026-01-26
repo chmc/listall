@@ -289,7 +289,7 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.5: [IN PROGRESS] macOS Export CSV
+### Task 15.5: [COMPLETED] macOS Export CSV
 **Platform**: macOS
 **Severity**: Medium
 **TDD**: Write tests before implementation
@@ -323,22 +323,17 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.6: macOS Manual Sync Button
+### Task 15.6: [COMPLETED] macOS Manual Sync Button
 **Platform**: macOS
 **Severity**: Medium
-**TDD**: Write tests before implementation
 
-**Implementation Hint**: Add refresh button to toolbar with sync animation
+**Status**: Already implemented in Task 12.6 (Sync Status Indicator)
+- SyncStatusButton exists in NavigationSplitView toolbar
+- Uses animated syncButtonImage with rotation effect during sync
+- Calls cloudKitService.sync() when clicked
+- Shows tooltip with sync status
 
-**Steps**:
-1. Write failing tests for manual sync button functionality
-2. Implement sync button in toolbar with animation feedback
-3. Verify tests pass
-4. Visual verification on macOS
-
-**Task Rule**:
-- Mark title `[IN PROGRESS]` when starting
-- Follow strict TDD: write tests first, then implement
+**Visual Verification**: Confirmed sync button visible in toolbar with animation on click.
 - Mark title `[COMPLETED]` only after ALL of the following:
   1. All tests pass (`xcodebuild test`)
   2. Visual verification loop (MANDATORY):
