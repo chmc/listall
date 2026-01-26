@@ -30,7 +30,38 @@ struct MainView: View {
     @State private var selectedShareFormat: ShareFormat = .plainText
     @State private var shareFileURL: URL?
     @State private var shareItems: [Any] = []
-    
+
+    // MARK: - Task 16.11: Sync Status UI
+    /// Sync button image with rotation animation on iOS 18+, fallback for older versions
+    @ViewBuilder
+    private var syncButtonImage: some View {
+        if #available(iOS 18.0, *) {
+            Image(systemName: Constants.UI.syncIcon)
+                .symbolEffect(.rotate, isActive: cloudKitService.isSyncing)
+        } else {
+            // Fallback for iOS 17: use rotationEffect with animation
+            Image(systemName: Constants.UI.syncIcon)
+                .rotationEffect(.degrees(cloudKitService.isSyncing ? 360 : 0))
+                .animation(
+                    cloudKitService.isSyncing
+                        ? .linear(duration: 1.0).repeatForever(autoreverses: false)
+                        : .default,
+                    value: cloudKitService.isSyncing
+                )
+        }
+    }
+
+    /// Dynamic accessibility label for sync button showing current sync state
+    private var syncAccessibilityLabel: String {
+        if cloudKitService.isSyncing {
+            return String(localized: "Syncing with iCloud")
+        } else if cloudKitService.syncError != nil {
+            return String(localized: "Sync error. Tap to retry")
+        } else {
+            return String(localized: "Sync with iCloud")
+        }
+    }
+
     var body: some View {
         ZStack {
             // Main Content - Lists View with Navigation
@@ -166,6 +197,7 @@ struct MainView: View {
                                 
                                 // Sync button (only for active lists)
                                 // Syncs with both CloudKit and Apple Watch
+                                // Task 16.11: Enhanced with animation and status feedback
                                 if !viewModel.showingArchivedLists {
                                     Button(action: {
                                         // Sync with CloudKit
@@ -175,11 +207,13 @@ struct MainView: View {
                                         // Sync with Apple Watch
                                         viewModel.manualSync()
                                     }) {
-                                        Image(systemName: Constants.UI.syncIcon)
+                                        syncButtonImage
                                     }
                                     .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+                                    .foregroundColor(cloudKitService.syncError != nil ? .red : nil)  // Red if error
                                     .disabled(cloudKitService.isSyncing || viewModel.isSyncingFromWatch)
                                     .keyboardShortcut("r", modifiers: .command)  // Task 15.8: iPad Cmd+R
+                                    .accessibilityLabel(syncAccessibilityLabel)
                                     .help("Sync with iCloud and Apple Watch")
                                 }
                             }
