@@ -1,5 +1,10 @@
 import Foundation
 import CoreData
+#if canImport(UIKit) && !os(watchOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 /// Service for providing deterministic test data for UI tests
 /// This ensures consistent screenshots and predictable test behavior
@@ -93,6 +98,7 @@ class UITestDataService {
         eggs.isCrossedOut = true
         eggs.createdAt = groceryList.createdAt
         eggs.modifiedAt = Date().addingTimeInterval(-7200) // 2 hours ago
+        eggs.images = generateTestImages() // Add sample images for visual verification
         groceryList.items.append(eggs)
         
         var apples = Item(title: "Apples", listId: groceryList.id)
@@ -277,6 +283,7 @@ class UITestDataService {
         munat.isCrossedOut = true
         munat.createdAt = ostoslista.createdAt
         munat.modifiedAt = Date().addingTimeInterval(-7200) // 2 tuntia sitten
+        munat.images = generateTestImages() // Add sample images for visual verification
         ostoslista.items.append(munat)
         
         var omenat = Item(title: "Omenat", listId: ostoslista.id)
@@ -427,4 +434,93 @@ class UITestDataService {
 
         return lists
     }
+
+    // MARK: - Test Image Generation
+
+    /// Generates sample images for test data items
+    /// Creates simple colored rectangles to keep data size small
+    #if canImport(UIKit) && !os(watchOS)
+    static func generateTestImages() -> [ItemImage] {
+        var images: [ItemImage] = []
+
+        // Image 1: Orange rectangle (represents an egg)
+        if let imageData = createColoredImage(color: .systemOrange, size: CGSize(width: 100, height: 100)) {
+            var image = ItemImage(imageData: imageData)
+            image.orderNumber = 0
+            images.append(image)
+        }
+
+        // Image 2: Yellow rectangle
+        if let imageData = createColoredImage(color: .systemYellow, size: CGSize(width: 100, height: 100)) {
+            var image = ItemImage(imageData: imageData)
+            image.orderNumber = 1
+            images.append(image)
+        }
+
+        // Image 3: Brown rectangle (carton)
+        if let imageData = createColoredImage(color: .brown, size: CGSize(width: 100, height: 100)) {
+            var image = ItemImage(imageData: imageData)
+            image.orderNumber = 2
+            images.append(image)
+        }
+
+        return images
+    }
+
+    private static func createColoredImage(color: UIColor, size: CGSize) -> Data? {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            color.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        // Use JPEG with moderate compression to keep size small
+        return image.jpegData(compressionQuality: 0.7)
+    }
+    #elseif os(macOS)
+    static func generateTestImages() -> [ItemImage] {
+        var images: [ItemImage] = []
+
+        // Image 1: Orange rectangle (represents an egg)
+        if let imageData = createColoredImage(color: .systemOrange, size: CGSize(width: 100, height: 100)) {
+            var image = ItemImage(imageData: imageData)
+            image.orderNumber = 0
+            images.append(image)
+        }
+
+        // Image 2: Yellow rectangle
+        if let imageData = createColoredImage(color: .systemYellow, size: CGSize(width: 100, height: 100)) {
+            var image = ItemImage(imageData: imageData)
+            image.orderNumber = 1
+            images.append(image)
+        }
+
+        // Image 3: Brown rectangle (carton)
+        if let imageData = createColoredImage(color: .brown, size: CGSize(width: 100, height: 100)) {
+            var image = ItemImage(imageData: imageData)
+            image.orderNumber = 2
+            images.append(image)
+        }
+
+        return images
+    }
+
+    private static func createColoredImage(color: NSColor, size: CGSize) -> Data? {
+        let image = NSImage(size: size)
+        image.lockFocus()
+        color.drawSwatch(in: NSRect(origin: .zero, size: size))
+        image.unlockFocus()
+
+        // Convert to JPEG data
+        guard let tiffData = image.tiffRepresentation,
+              let bitmapRep = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+        return bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
+    }
+    #else
+    // watchOS fallback - no images for watch
+    static func generateTestImages() -> [ItemImage] {
+        return []
+    }
+    #endif
 }
