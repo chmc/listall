@@ -1948,6 +1948,7 @@ private struct MacListDetailView: View {
                 print("🎯 MacListDetailView: Forwarding edit request to MacMainView for item: \(item.title)")
                 onEditItem(item)
             },
+            onDuplicate: { viewModel.duplicateItem(item) },  // Task 16.3: Duplicate item action
             onDelete: { deleteItem(item) },
             onQuickLook: { showQuickLook(for: item) },
             onToggleSelection: { viewModel.toggleSelection(for: item.id) }
@@ -2416,6 +2417,7 @@ private struct MacItemRowView: View {
     let isArchivedList: Bool  // Task 13.2: Read-only mode for archived lists
     let onToggle: () -> Void
     let onEdit: () -> Void
+    let onDuplicate: () -> Void  // Task 16.3: Duplicate item action
     let onDelete: () -> Void
     let onQuickLook: () -> Void
     let onToggleSelection: () -> Void
@@ -2630,6 +2632,7 @@ private struct MacItemRowView: View {
                 Button(isSelected ? "Deselect" : "Select") { onToggleSelection() }
             } else {
                 Button("Edit") { onEdit() }
+                Button("Duplicate") { onDuplicate() }  // Task 16.3: Duplicate item action
                 Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
 
                 if item.hasImages {
