@@ -274,24 +274,27 @@ struct ListView: View {
                                 Image(systemName: "square.and.arrow.up")
                                     .foregroundColor(.primary)
                             }
+                            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .help("Share list")
-                            
+
                             Button(action: {
                                 viewModel.showingOrganizationOptions = true
                             }) {
                                 Image(systemName: "arrow.up.arrow.down")
                                     .foregroundColor(.primary)
                             }
+                            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .help(String(localized: "Sort and filter options"))
-                            
+
                             Button(action: {
                                 viewModel.toggleShowCrossedOutItems()
                             }) {
                                 Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
                                     .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
                             }
+                            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .help(viewModel.showCrossedOutItems ? "Hide crossed out items" : "Show crossed out items")
-                            
+
                             Button(action: {
                                 withAnimation {
                                     viewModel.enterSelectionMode()
@@ -299,6 +302,7 @@ struct ListView: View {
                             }) {
                                 Image(systemName: "pencil")
                             }
+                            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .help("Edit items")
                         }
                     }
@@ -606,6 +610,7 @@ struct ListView: View {
                     .strokeBorder(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5)
             )
         }
+        .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .accessibilityLabel("Add new item")
         .keyboardShortcut("n", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+N
     }

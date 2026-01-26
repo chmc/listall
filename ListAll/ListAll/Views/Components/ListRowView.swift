@@ -136,6 +136,7 @@ struct ListRowView: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.md)
+        .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .if(!mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists) { view in
             view.swipeActions(edge: .trailing) {
                 // Active list: Show archive

@@ -112,7 +112,8 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    
+                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+
                     Button(action: {
                         showingResetTooltipsAlert = true
                     }) {
@@ -123,6 +124,7 @@ struct SettingsView: View {
                                 .foregroundColor(.primary)
                         }
                     }
+                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                 }
                 
                 Section(header: Text("Security"), footer: securityFooterText) {
@@ -176,10 +178,12 @@ struct SettingsView: View {
                     Button("Export Data") {
                         showingExportSheet = true
                     }
-                    
+                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+
                     Button("Import Data") {
                         showingImportSheet = true
                     }
+                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                 }
                 
                 Section("About") {

@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ItemRowView: View {
     let item: Item
@@ -138,6 +137,7 @@ struct ItemRowView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, Theme.Spacing.md)
         .contentShape(Rectangle())
+        .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .if(!isInSelectionMode) { view in
             view.swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(action: {

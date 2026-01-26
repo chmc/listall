@@ -149,6 +149,7 @@ struct MainView: View {
                                 }) {
                                     Image(systemName: viewModel.showingArchivedLists ? "tray" : "archivebox")
                                 }
+                                .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                                 .keyboardShortcut("a", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+A
                                 .help(viewModel.showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
                                 
@@ -159,6 +160,7 @@ struct MainView: View {
                                     }) {
                                         Image(systemName: "square.and.arrow.up")
                                     }
+                                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                                     .help("Share all data")
                                 }
                                 
@@ -175,6 +177,7 @@ struct MainView: View {
                                     }) {
                                         Image(systemName: Constants.UI.syncIcon)
                                     }
+                                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                                     .disabled(cloudKitService.isSyncing || viewModel.isSyncingFromWatch)
                                     .keyboardShortcut("r", modifiers: .command)  // Task 15.8: iPad Cmd+R
                                     .help("Sync with iCloud and Apple Watch")
@@ -206,6 +209,7 @@ struct MainView: View {
                                         }) {
                                             Image(systemName: "pencil")
                                         }
+                                        .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                                     }
                                 }
                             }
@@ -254,6 +258,7 @@ struct MainView: View {
                                     .padding(.horizontal, -2)
                             }
                             .buttonStyle(.plain)
+                            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .accessibilityIdentifier("AddListButton")
                             .keyboardShortcut("n", modifiers: .command)  // Task 15.8: iPad Cmd+N
                             .padding(.horizontal, Theme.Spacing.sm)
@@ -607,8 +612,9 @@ struct CustomBottomToolbar: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }
+            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
             .accessibilityLabel(String(localized: "Lists"))
-            
+
             // Settings Button
             Button(action: onSettingsTap) {
                 VStack(spacing: 4) {
@@ -622,6 +628,7 @@ struct CustomBottomToolbar: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }
+            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
             .accessibilityLabel(String(localized: "Settings"))
             .accessibilityIdentifier("SettingsButton")
         }
