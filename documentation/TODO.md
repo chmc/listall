@@ -255,7 +255,7 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.4: [IN PROGRESS] macOS Bulk Delete Lists
+### Task 15.4: [COMPLETED] macOS Bulk Delete Lists
 **Platform**: macOS
 **Severity**: Medium
 **TDD**: Write tests before implementation
@@ -289,7 +289,7 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-### Task 15.5: macOS Export CSV
+### Task 15.5: [IN PROGRESS] macOS Export CSV
 **Platform**: macOS
 **Severity**: Medium
 **TDD**: Write tests before implementation

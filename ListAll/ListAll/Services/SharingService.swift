@@ -13,6 +13,7 @@ import AppKit
 enum ShareFormat {
     case plainText
     case json
+    case csv  // Task 15.5: CSV format for spreadsheet compatibility
     case url
 }
 
@@ -123,6 +124,8 @@ class SharingService: ObservableObject {
             return shareListAsPlainText(list, options: options)
         case .json:
             return shareListAsJSON(list, options: options)
+        case .csv:
+            return shareListAsCSV(list, options: options)
         case .url:
             shareError = "URL sharing is not supported (app is not publicly distributed)"
             return nil
@@ -227,8 +230,78 @@ class SharingService: ObservableObject {
             return nil
         }
     }
-    
-    
+
+    /// Creates shareable CSV content for a list (Task 15.5)
+    private func shareListAsCSV(_ list: List, options: ShareOptions) -> ShareResult? {
+        // Get fresh list with items from repository
+        guard let freshList = dataRepository.getAllLists().first(where: { $0.id == list.id }) else {
+            shareError = "List not found"
+            return nil
+        }
+
+        var items = freshList.sortedItems
+
+        // Filter items based on options
+        if !options.includeCrossedOutItems {
+            items = items.filter { !$0.isCrossedOut }
+        }
+
+        // Build CSV header
+        var csvContent = "Item"
+        if options.includeDescriptions {
+            csvContent += ",Description"
+        }
+        if options.includeQuantities {
+            csvContent += ",Quantity"
+        }
+        csvContent += ",Crossed Out"
+        if options.includeDates {
+            csvContent += ",Created,Modified"
+        }
+        csvContent += "\n"
+
+        // Add items
+        for item in items {
+            var row = escapeCSV(item.title)
+
+            if options.includeDescriptions {
+                row += "," + escapeCSV(item.itemDescription ?? "")
+            }
+            if options.includeQuantities {
+                row += ",\(item.quantity)"
+            }
+            row += ",\(item.isCrossedOut ? "Yes" : "No")"
+            if options.includeDates {
+                row += ",\(formatDateISO(item.createdAt)),\(formatDateISO(item.modifiedAt))"
+            }
+            csvContent += row + "\n"
+        }
+
+        // Create temporary file for CSV
+        let fileName = "\(list.name)-\(formatDateForFilename(Date())).csv"
+        if let fileData = csvContent.data(using: .utf8),
+           let fileURL = createTemporaryFile(data: fileData, fileName: fileName) {
+            return ShareResult(format: .csv, content: fileURL, fileName: fileName)
+        } else {
+            shareError = "Failed to create CSV file"
+            return nil
+        }
+    }
+
+    /// Escapes special characters in CSV fields
+    private func escapeCSV(_ field: String) -> String {
+        if field.contains(",") || field.contains("\"") || field.contains("\n") {
+            return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
+        }
+        return field
+    }
+
+    /// Formats date as ISO 8601 for CSV
+    private func formatDateISO(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        return formatter.string(from: date)
+    }
+
     // MARK: - Share All Data
     
     /// Creates shareable content for all lists and items
@@ -253,7 +326,7 @@ class SharingService: ObservableObject {
                 shareError = "Failed to export to JSON"
                 return nil
             }
-            
+
             // Create temporary file
             let fileName = "ListAll-Export-\(formatDateForFilename(Date())).json"
             if let fileURL = createTemporaryFile(data: jsonData, fileName: fileName) {
@@ -262,13 +335,30 @@ class SharingService: ObservableObject {
                 shareError = "Failed to create temporary file"
                 return nil
             }
-            
+
+        case .csv:
+            // Task 15.5: CSV export for all lists
+            guard let csvString = exportService.exportToCSV(options: exportOptions) else {
+                shareError = "Failed to export to CSV"
+                return nil
+            }
+
+            // Create temporary file
+            let fileName = "ListAll-Export-\(formatDateForFilename(Date())).csv"
+            if let csvData = csvString.data(using: .utf8),
+               let fileURL = createTemporaryFile(data: csvData, fileName: fileName) {
+                return ShareResult(format: .csv, content: fileURL, fileName: fileName)
+            } else {
+                shareError = "Failed to create temporary file"
+                return nil
+            }
+
         case .url:
             shareError = "URL format not supported for all data"
             return nil
         }
     }
-    
+
     // MARK: - URL Scheme Handling
     
     /// Parses a ListAll deep link URL and extracts list information

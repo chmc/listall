@@ -66,6 +66,16 @@ struct MacShareFormatPickerView: View {
                     isSelected: selectedFormat == .json,
                     onSelect: { selectedFormat = .json }
                 )
+
+                // Task 15.5: CSV format for spreadsheet compatibility
+                FormatOptionRow(
+                    format: .csv,
+                    title: "CSV",
+                    description: "Spreadsheet format, compatible with Excel",
+                    icon: "tablecells",
+                    isSelected: selectedFormat == .csv,
+                    onSelect: { selectedFormat = .csv }
+                )
             }
 
             Divider()
@@ -85,6 +95,12 @@ struct MacShareFormatPickerView: View {
                 if selectedFormat == .json {
                     Toggle("Include images", isOn: $shareOptions.includeImages)
                         .help("Images are base64 encoded in JSON format")
+                }
+
+                if selectedFormat == .csv {
+                    Text("Note: CSV format does not include images")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
 
