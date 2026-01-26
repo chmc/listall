@@ -282,6 +282,12 @@ struct MacMainView: View {
             dataManager.loadData()
             dataManager.loadArchivedData()
         }
+        // MARK: - Duplicate List Menu Command Handler (Task 16.9)
+        // Responds to Lists > Duplicate List (Cmd+D) menu command
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("DuplicateSelectedList"))) { _ in
+            guard let list = selectedList, !list.isArchived else { return }
+            duplicateList(list)
+        }
         // Note: ToggleArchivedLists handler removed - archived lists now always visible
         // in their own sidebar section (Apple HIG two-section pattern)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshData"))) { _ in
@@ -477,6 +483,47 @@ struct MacMainView: View {
         }
         dataManager.deleteList(withId: list.id)
         dataManager.loadData()
+    }
+
+    // MARK: - Duplicate List (Task 16.9)
+    /// Duplicates a list and all its items
+    private func duplicateList(_ list: List) {
+        // Generate duplicate name
+        let baseName = list.name
+        var duplicateNumber = 1
+        var candidateName = "\(baseName) Copy"
+
+        // Check if a list with this name already exists
+        while dataManager.lists.contains(where: { $0.name == candidateName }) {
+            duplicateNumber += 1
+            candidateName = "\(baseName) Copy \(duplicateNumber)"
+        }
+
+        // Create new list with duplicate name
+        var duplicatedList = List(name: candidateName)
+        duplicatedList.orderNumber = (dataManager.lists.map { $0.orderNumber }.max() ?? -1) + 1
+
+        // Get items from the original list
+        let originalItems = dataManager.getItems(forListId: list.id)
+
+        // Add the duplicated list first
+        dataManager.addList(duplicatedList)
+
+        // Duplicate all items from the original list
+        for originalItem in originalItems {
+            var duplicatedItem = originalItem
+            duplicatedItem.id = UUID()
+            duplicatedItem.listId = duplicatedList.id
+            duplicatedItem.createdAt = Date()
+            duplicatedItem.modifiedAt = Date()
+            dataManager.addItem(duplicatedItem, to: duplicatedList.id)
+        }
+
+        // Refresh data to show the new list
+        dataManager.loadData()
+
+        // Select the new duplicated list
+        selectedList = dataManager.lists.first { $0.name == candidateName }
     }
 
     /// Update an item from the edit sheet (called from MacMainView-level sheet)
