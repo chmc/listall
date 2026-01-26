@@ -187,12 +187,57 @@ struct SettingsView: View {
                 }
                 
                 Section("About") {
-                        HStack {
-                            Text("Version")
-                            Spacer()
-                            Text(appVersion)
+                    // App header with icon
+                    HStack(spacing: 12) {
+                        Image(systemName: "list.bullet.clipboard")
+                            .font(.system(size: 40))
+                            .foregroundColor(.accentColor)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Constants.App.name)
+                                .font(.headline)
+                            Text("Version \(appVersion)")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
+                    }
+                    .padding(.vertical, 4)
+
+                    // Creator and copyright
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Created by \(Constants.Creator.name)")
+                            .font(.subheadline)
+                        Text(Constants.Creator.copyrightNotice)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Links
+                    Link(destination: URL(string: Constants.Creator.websiteURL)!) {
+                        HStack {
+                            Image(systemName: "globe")
+                                .foregroundColor(.accentColor)
+                            Text("Visit Website")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Link(destination: URL(string: Constants.Creator.githubURL)!) {
+                        HStack {
+                            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                .foregroundColor(.accentColor)
+                            Text("View Source Code")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
             .navigationTitle("Settings")

@@ -435,14 +435,22 @@ private struct AboutSettingsTab: View {
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
 
+            VStack(spacing: 4) {
+                Text("Created by \(Constants.Creator.name)")
+                    .font(.body)
+                Text(Constants.Creator.copyrightNotice)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Spacer()
 
             HStack(spacing: 16) {
-                Link("Visit Website", destination: URL(string: "https://listall.app/")!)
+                Link("Visit Website", destination: URL(string: Constants.Creator.websiteURL)!)
                     .font(.caption)
                     .accessibilityHint("Opens ListAll website in browser")
 
-                Link("View Source Code", destination: URL(string: "https://github.com/chmc/listall")!)
+                Link("View Source Code", destination: URL(string: Constants.Creator.githubURL)!)
                     .font(.caption)
                     .accessibilityHint("Opens GitHub repository in browser")
             }

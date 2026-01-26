@@ -9,7 +9,25 @@ struct Constants {
         static let build = "1"
         static let bundleIdentifier = "io.github.chmc.ListAll"
     }
-    
+
+    // MARK: - Creator Information
+    struct Creator {
+        static let name = "Aleksi Sutela"
+        static let startYear = 2025
+        static let websiteURL = "https://listall.app/"
+        static let githubURL = "https://github.com/chmc/listall"
+
+        /// Dynamic copyright: "© 2025-2026 Aleksi Sutela" (updates automatically each year)
+        static var copyrightNotice: String {
+            let currentYear = Calendar.current.component(.year, from: Date())
+            if currentYear == startYear {
+                return "© \(startYear) \(name)"
+            } else {
+                return "© \(startYear)-\(currentYear) \(name)"
+            }
+        }
+    }
+
     // MARK: - CloudKit
     struct CloudKit {
         static let containerIdentifier = "iCloud.io.github.chmc.ListAll"

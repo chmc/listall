@@ -140,7 +140,7 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("ListAll Help") {
                 // Open help documentation or website
-                if let url = URL(string: "https://github.com/chmc/listall") {
+                if let url = URL(string: Constants.Creator.githubURL) {
                     NSWorkspace.shared.open(url)
                 }
             }

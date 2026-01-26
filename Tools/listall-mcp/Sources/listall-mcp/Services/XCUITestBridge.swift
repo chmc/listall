@@ -265,6 +265,9 @@ enum XCUITestBridge {
         simulatorUDID: String,
         projectPath: String
     ) async throws -> Result {
+        // Resolve "booted" to actual UDID - xcodebuild requires real UDID
+        let resolvedUDID = try await resolveUDID(simulatorUDID)
+
         // Clean up any existing files from previous runs
         try? FileManager.default.removeItem(atPath: commandPath)
         try? FileManager.default.removeItem(atPath: resultPath)
@@ -285,7 +288,7 @@ enum XCUITestBridge {
         log("XCUITestBridge: Command: \(command.action)")
 
         // Detect simulator platform (iOS vs watchOS)
-        let platform = await detectPlatform(for: simulatorUDID)
+        let platform = await detectPlatform(for: resolvedUDID)
         log("XCUITestBridge: Detected platform: \(platform)")
 
         // Determine timeout based on action type and platform
@@ -305,29 +308,82 @@ enum XCUITestBridge {
                 log("XCUITestBridge: Trying fast path with xctestrun: \(xctestrunPath)")
                 result = try await runWithXCTestRun(
                     xctestrunPath: xctestrunPath,
-                    simulatorUDID: simulatorUDID,
+                    simulatorUDID: resolvedUDID,
                     platform: platform,
                     timeout: timeout
                 )
 
-                // Exit 70 = SDK mismatch, retry with full test
+                // Exit 70 = SDK mismatch, need to rebuild with correct SDK
                 if result.exitCode == 70 {
-                    log("XCUITestBridge: Exit 70 detected (SDK mismatch), falling back to full test")
-                    result = try await runFullTest(
+                    log("XCUITestBridge: Exit 70 detected (SDK mismatch)")
+
+                    // Log SDK versions for diagnosis
+                    if let xctestrunSDK = extractSDKVersion(from: xctestrunPath),
+                       let simulatorSDK = await getSimulatorOSVersion(for: resolvedUDID) {
+                        log("XCUITestBridge: xctestrun SDK: \(xctestrunSDK), simulator: \(simulatorSDK)")
+                    }
+
+                    // Clean stale DerivedData and rebuild
+                    log("XCUITestBridge: Cleaning ListAll DerivedData for fresh build")
+                    cleanListAllDerivedData(in: derivedDataPath)
+
+                    log("XCUITestBridge: Running build-for-testing to regenerate xctestrun")
+                    // Use 300s minimum - build-for-testing from scratch can take 3-5 minutes
+                    let buildTimeout = max(300.0, timeout * 2)
+                    let buildResult = try await buildForTesting(
                         projectPath: projectPath,
-                        simulatorUDID: simulatorUDID,
+                        simulatorUDID: resolvedUDID,
                         platform: platform,
-                        timeout: timeout * 2  // Allow more time for build+test
+                        timeout: buildTimeout
+                    )
+
+                    if buildResult.exitCode != 0 {
+                        log("XCUITestBridge: build-for-testing failed: \(buildResult.stderr.prefix(500))")
+                        throw XCUITestBridgeError.testBuildFailed("build-for-testing failed with exit \(buildResult.exitCode)")
+                    }
+
+                    // Find newly generated xctestrun
+                    guard let freshXctestrunPath = findXCTestRun(in: derivedDataPath, platform: platform) else {
+                        throw XCUITestBridgeError.resultFileNotFound("build-for-testing did not generate xctestrun file")
+                    }
+
+                    log("XCUITestBridge: Retrying with fresh xctestrun: \(freshXctestrunPath)")
+                    result = try await runWithXCTestRun(
+                        xctestrunPath: freshXctestrunPath,
+                        simulatorUDID: resolvedUDID,
+                        platform: platform,
+                        timeout: timeout
                     )
                 }
             } else {
-                // No xctestrun found, use full test directly
-                log("XCUITestBridge: No xctestrun found, using full test (slower)")
-                result = try await runFullTest(
+                // No xctestrun found - build it first, then use fast path
+                log("XCUITestBridge: No xctestrun found, building test runner first")
+
+                // Use 300s minimum - build-for-testing from scratch can take 3-5 minutes
+                let buildTimeout = max(300.0, timeout * 2)
+                let buildResult = try await buildForTesting(
                     projectPath: projectPath,
-                    simulatorUDID: simulatorUDID,
+                    simulatorUDID: resolvedUDID,
                     platform: platform,
-                    timeout: timeout * 2
+                    timeout: buildTimeout
+                )
+
+                if buildResult.exitCode != 0 {
+                    log("XCUITestBridge: build-for-testing failed: \(buildResult.stderr.prefix(500))")
+                    throw XCUITestBridgeError.testBuildFailed("build-for-testing failed with exit \(buildResult.exitCode)")
+                }
+
+                // Find the newly generated xctestrun
+                guard let freshXctestrunPath = findXCTestRun(in: derivedDataPath, platform: platform) else {
+                    throw XCUITestBridgeError.resultFileNotFound("build-for-testing did not generate xctestrun file")
+                }
+
+                log("XCUITestBridge: Using fresh xctestrun: \(freshXctestrunPath)")
+                result = try await runWithXCTestRun(
+                    xctestrunPath: freshXctestrunPath,
+                    simulatorUDID: resolvedUDID,
+                    platform: platform,
+                    timeout: timeout
                 )
             }
         } catch let error as ShellCommandError {
@@ -475,6 +531,97 @@ enum XCUITestBridge {
         }
 
         return nil
+    }
+
+    // MARK: - SDK Version Detection and Recovery
+
+    /// Extract SDK version from xctestrun filename
+    /// Example: "ListAll_iphonesimulator18.1-arm64.xctestrun" -> "18.1"
+    private static func extractSDKVersion(from xctestrunPath: String) -> String? {
+        let filename = (xctestrunPath as NSString).lastPathComponent
+        let pattern = #"_(?:iphone|watch)simulator(\d+\.\d+)-"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)),
+              let versionRange = Range(match.range(at: 1), in: filename) else {
+            return nil
+        }
+        return String(filename[versionRange])
+    }
+
+    /// Get iOS/watchOS version for a simulator UDID
+    private static func getSimulatorOSVersion(for udid: String) async -> String? {
+        guard let result = try? await ShellCommand.simctl(["list", "devices", "-j"]) else {
+            log("XCUITestBridge: Failed to execute simctl list devices")
+            return nil
+        }
+
+        guard result.exitCode == 0 else {
+            log("XCUITestBridge: simctl list devices failed with exit \(result.exitCode)")
+            return nil
+        }
+
+        guard let data = result.stdout.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let devices = json["devices"] as? [String: [[String: Any]]] else {
+            log("XCUITestBridge: Failed to parse simctl JSON output")
+            return nil
+        }
+
+        let resolvedUDID = (try? await resolveUDID(udid)) ?? udid
+
+        for (runtime, deviceList) in devices {
+            if deviceList.contains(where: { ($0["udid"] as? String) == resolvedUDID }) {
+                // Extract version from runtime like "com.apple.CoreSimulator.SimRuntime.iOS-18-2"
+                let patterns = [#"iOS-(\d+)-(\d+)"#, #"watchOS-(\d+)-(\d+)"#]
+                for pattern in patterns {
+                    if let match = runtime.range(of: pattern, options: .regularExpression) {
+                        return runtime[match]
+                            .replacingOccurrences(of: "iOS-", with: "")
+                            .replacingOccurrences(of: "watchOS-", with: "")
+                            .replacingOccurrences(of: "-", with: ".")
+                    }
+                }
+            }
+        }
+        log("XCUITestBridge: Could not find OS version for UDID \(resolvedUDID)")
+        return nil
+    }
+
+    /// Clean ListAll DerivedData folders only
+    private static func cleanListAllDerivedData(in derivedDataPath: String) {
+        let fm = FileManager.default
+        guard let contents = try? fm.contentsOfDirectory(atPath: derivedDataPath) else {
+            log("XCUITestBridge: Cannot read DerivedData directory")
+            return
+        }
+
+        for dir in contents where dir.hasPrefix("ListAll-") {
+            let fullPath = "\(derivedDataPath)/\(dir)"
+            log("XCUITestBridge: Cleaning DerivedData: \(fullPath)")
+            do {
+                try fm.removeItem(atPath: fullPath)
+            } catch {
+                log("XCUITestBridge: Failed to clean \(fullPath): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Build test target to generate fresh xctestrun
+    private static func buildForTesting(
+        projectPath: String,
+        simulatorUDID: String,
+        platform: SimulatorPlatform,
+        timeout: TimeInterval
+    ) async throws -> (exitCode: Int32, stdout: String, stderr: String) {
+        let arguments = [
+            "build-for-testing",
+            "-project", projectPath,
+            "-scheme", platform.schemeName,
+            "-destination", "platform=\(platform.destination),id=\(simulatorUDID)",
+            "-configuration", "Debug"
+        ]
+        let result = try await ShellCommand.execute(xcodebuildPath, arguments: arguments, timeout: timeout)
+        return (exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr)
     }
 
     // MARK: - Simulator Device Type Detection
