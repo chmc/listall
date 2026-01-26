@@ -2033,10 +2033,13 @@
         }
       }
     },
+    "Creates a new list with %lld sample items" : {
+
+    },
     "Creates a new list with sample %@ items" : {
 
     },
-    "Creates new list" : {
+    "Creates new list with the entered name" : {
 
     },
     "Crossed Out Items" : {
@@ -4836,6 +4839,9 @@
     "Not selected" : {
 
     },
+    "Note: CSV format does not include images" : {
+
+    },
     "Notes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4959,6 +4965,9 @@
         }
       }
     },
+    "or start from a template" : {
+
+    },
     "Order" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5078,6 +5087,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Odottaa"
+          }
+        }
+      }
+    },
+    "Permanently delete %lld %@? This action cannot be undone and bypasses archiving." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Permanently delete %1$lld %2$@? This action cannot be undone and bypasses archiving."
           }
         }
       }
@@ -5307,23 +5326,6 @@
         }
       }
     },
-    "Reset All Tips" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset All Tips"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nollaa kaikki vinkit"
-          }
-        }
-      }
-    },
     "Reset all filters and sorting to defaults" : {
       "comment" : "Accessibility label for Reset button in ItemOrganizationView",
       "extractionState" : "manual",
@@ -5338,6 +5340,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nollaa kaikki suodattimet ja lajittelu oletuksiin"
+          }
+        }
+      }
+    },
+    "Reset All Tips" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset All Tips"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nollaa kaikki vinkit"
           }
         }
       }
