@@ -139,14 +139,32 @@ struct ItemRowView: View {
         .contentShape(Rectangle())
         .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .if(!isInSelectionMode) { view in
-            view.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(action: {
-                    onDelete?()
-                }) {
-                    Label("Delete", systemImage: "trash")
+            view
+                // Task 16.14: Left swipe for non-destructive actions (Edit, Duplicate)
+                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                    Button(action: {
+                        onEdit?()
+                    }) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    .tint(.blue)
+
+                    Button(action: {
+                        onDuplicate?()
+                    }) {
+                        Label("Duplicate", systemImage: "doc.on.doc")
+                    }
+                    .tint(.green)
                 }
-                .tint(.red)
-            }
+                // Right swipe for destructive action (Delete)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(action: {
+                        onDelete?()
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .tint(.red)
+                }
         }
     }
 }
