@@ -131,9 +131,893 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-## Phase 15: App Store Submission
+## Phase 15: Feature Parity - High & Medium Priority
 
-### Task 15.1: Submit to App Store
+**Source**: Generated from `/documentation/FEATURE_PARITY.md` verification (2026-01-23)
+
+### Task 15.1: macOS Active/Archived Toggle
+**Platform**: macOS
+**Severity**: High
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add sidebar sections for "Lists" and "Archived" with toggle, like iOS
+
+**Steps**:
+1. Write failing tests for active/archived toggle functionality
+2. Implement toggle in MacSidebarView to show/hide archived lists
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.2: iPad Split View Layout
+**Platform**: iPad
+**Severity**: High
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Remove/conditionalize `.navigationViewStyle(.stack)` for non-screenshot contexts
+
+**Steps**:
+1. Write failing tests for split view layout on iPad
+2. Implement conditional NavigationSplitView for iPad (keep stack for screenshots)
+3. Verify tests pass
+4. Visual verification on iPad simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPad simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.3: iPad NavigationSplitView Sidebar
+**Platform**: iPad
+**Severity**: High
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Implement NavigationSplitView for iPad with sidebar showing lists
+
+**Steps**:
+1. Write failing tests for sidebar navigation on iPad
+2. Implement NavigationSplitView with sidebar for lists
+3. Verify tests pass
+4. Visual verification on iPad simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPad simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.4: macOS Bulk Delete Lists
+**Platform**: macOS
+**Severity**: Medium
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add "Delete Lists" option to SelectionActionsMenu in ListsToolbarView
+
+**Steps**:
+1. Write failing tests for bulk delete lists functionality
+2. Implement delete option in SelectionActionsMenu
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.5: macOS Export CSV
+**Platform**: macOS
+**Severity**: Medium
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add CSV format option to export dialogs for spreadsheet compatibility
+
+**Steps**:
+1. Write failing tests for CSV export functionality
+2. Implement CSV export option in ShareListView and ExportAllListsView
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.6: macOS Manual Sync Button
+**Platform**: macOS
+**Severity**: Medium
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add refresh button to toolbar with sync animation
+
+**Steps**:
+1. Write failing tests for manual sync button functionality
+2. Implement sync button in toolbar with animation feedback
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.7: iOS Default Sort Order in Settings
+**Platform**: iOS
+**Severity**: Medium
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add sort order picker to iOS Settings like macOS has
+
+**Steps**:
+1. Write failing tests for default sort order setting
+2. Implement sort order picker in iOS SettingsView
+3. Verify tests pass
+4. Visual verification on iPhone simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPhone simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 15.8: iPad Keyboard Shortcuts
+**Platform**: iPad
+**Severity**: Medium
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add `.keyboardShortcut()` modifiers for common actions (Cmd+N new item, etc.)
+
+**Steps**:
+1. Write failing tests for keyboard shortcuts on iPad
+2. Implement keyboard shortcuts for common actions
+3. Verify tests pass
+4. Visual verification on iPad simulator (test via hardware keyboard)
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPad simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+## Phase 16: Feature Parity - Low Priority & Polish
+
+**Source**: Generated from `/documentation/FEATURE_PARITY.md` verification (2026-01-23)
+
+### Task 16.1: macOS Filter: Has Description
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add advanced filter option to filter items with non-empty description (parity with iOS)
+
+**Steps**:
+1. Write failing tests for "Has Description" filter
+2. Implement filter option in MacFilterView
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.2: macOS Filter: Has Images
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add advanced filter option to filter items with attached images (parity with iOS)
+
+**Steps**:
+1. Write failing tests for "Has Images" filter
+2. Implement filter option in MacFilterView
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.3: macOS Duplicate Item Action
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add "Duplicate" to item context menu or selection actions
+
+**Steps**:
+1. Write failing tests for duplicate item functionality
+2. Implement duplicate action in item context menu
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.4: macOS Include Images in Share List
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add "Include images" option to single list Share dialog
+
+**Steps**:
+1. Write failing tests for images option in share dialog
+2. Implement images toggle in ShareListView
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.5: macOS Collapse/Expand Suggestions Toggle
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add expand/collapse button on "Suggestions" header
+
+**Steps**:
+1. Write failing tests for suggestions collapse/expand toggle
+2. Implement toggle button on suggestions section header
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.6: macOS Live Sync Status Indicator
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add sync status indicator in toolbar showing last sync time
+
+**Steps**:
+1. Write failing tests for live sync status indicator
+2. Implement sync status in toolbar with last sync timestamp
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.7: macOS Feature Tips Reset Button
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add "Reset All Tips" button to clear viewed tips and show them again
+
+**Steps**:
+1. Write failing tests for feature tips reset functionality
+2. Implement reset button in Settings > General
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.8: macOS Auth Timeout Duration
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add timeout duration picker when biometric auth is enabled
+
+**Steps**:
+1. Write failing tests for auth timeout duration setting
+2. Implement timeout picker in Settings > Security
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.9: macOS Duplicate List Visibility
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Make duplicate list action more discoverable - may be sync/UI refresh issue
+
+**Steps**:
+1. Investigate why Cmd+D duplicate doesn't appear in sidebar
+2. Write failing tests for duplicate list visibility
+3. Fix the UI refresh/sync issue
+4. Verify tests pass
+5. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.10: macOS Sample List Templates
+**Platform**: macOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add template picker when creating new list (e.g., Grocery, Travel, Project)
+
+**Steps**:
+1. Write failing tests for sample list templates
+2. Implement template picker in CreateListView
+3. Verify tests pass
+4. Visual verification on macOS
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on macOS
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.11: iOS Live Sync Status Indicator
+**Platform**: iOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add visual indicator for ongoing sync (spinner/badge)
+
+**Steps**:
+1. Write failing tests for live sync status indicator
+2. Implement sync indicator in toolbar
+3. Verify tests pass
+4. Visual verification on iPhone simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPhone simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.12: iOS Clear All Filters Button
+**Platform**: iOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add "Reset" button to ItemOrganizationView to clear all active filters
+
+**Steps**:
+1. Write failing tests for clear all filters button
+2. Implement reset button in ItemOrganizationView
+3. Verify tests pass
+4. Visual verification on iPhone simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPhone simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.13: iOS Explicit 10 Image Limit UI
+**Platform**: iOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add guard check for max 10 images like macOS and show clear UI indication
+
+**Steps**:
+1. Write failing tests for 10 image limit
+2. Implement limit check and UI feedback in ItemEditView
+3. Verify tests pass
+4. Visual verification on iPhone simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPhone simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.14: iOS Left Swipe Actions on Items
+**Platform**: iOS
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: iOS only has Delete on right swipe; consider adding Edit/Duplicate on left swipe
+
+**Steps**:
+1. Write failing tests for left swipe actions
+2. Implement left swipe actions in ItemRowView
+3. Verify tests pass
+4. Visual verification on iPhone simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPhone simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.15: iPad Multi-Column Layout
+**Platform**: iPad
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Consider showing list detail alongside items on larger iPads
+
+**Steps**:
+1. Write failing tests for multi-column layout on large iPads
+2. Implement adaptive layout for 12.9" iPad Pro
+3. Verify tests pass
+4. Visual verification on iPad simulator
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPad simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.16: iPad Pointer/Trackpad Hover Effects
+**Platform**: iPad
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add `.hoverEffect()` for buttons and list rows
+
+**Steps**:
+1. Write failing tests for hover effects (if testable)
+2. Implement `.hoverEffect()` modifiers on interactive elements
+3. Verify tests pass
+4. Visual verification on iPad simulator with trackpad
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on iPad simulator
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+### Task 16.17: All Platforms - Test Data Images for UITEST_MODE
+**Platform**: All
+**Severity**: Low
+**TDD**: Write tests before implementation
+
+**Implementation Hint**: Add sample images to UITEST_MODE data for verification of image features
+
+**Steps**:
+1. Write failing tests for UITEST_MODE sample data with images
+2. Add sample images to test data generation
+3. Verify tests pass
+4. Visual verification on macOS, iPhone, and iPad
+
+**Task Rule**:
+- Mark title `[IN PROGRESS]` when starting
+- Follow strict TDD: write tests first, then implement
+- Mark title `[COMPLETED]` only after ALL of the following:
+  1. All tests pass (`xcodebuild test`)
+  2. Visual verification loop (MANDATORY):
+     a. Launch app with UITEST_MODE via MCP tools
+     b. Interact with app (click, type, navigate) while taking screenshots
+        - Take multiple screenshots during interaction
+        - Retake screenshots if they don't reveal what you need
+        - Analyze each screenshot to understand what's happening
+     c. Does feature work as expected?
+     d. If NO: fix the issue, then repeat from step (a)
+     e. If YES: continue to next check
+  3. Feature verified working on ALL platforms: macOS, iPhone, iPad
+- If MCP visual verification tools fail:
+  1. Investigate and fix the MCP tool issue
+  2. Rebuild: `cd Tools/listall-mcp && swift build`
+  3. Restart Claude Code, then resume verification
+
+---
+
+## Phase 17: App Store Submission
+
+### Task 17.1: Submit to App Store
 **TDD**: Submission verification
 
 **Steps**:
@@ -146,9 +1030,9 @@ Detailed implementation records are preserved in split files for LLM reference.
 
 ---
 
-## Phase 16: Spotlight Integration (Optional)
+## Phase 18: Spotlight Integration (Optional)
 
-### Task 16.1: Implement Spotlight Integration
+### Task 18.1: Implement Spotlight Integration
 **TDD**: Write Spotlight indexing tests
 
 **Priority**: Low - Optional feature, disabled by default
@@ -318,10 +1202,12 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 | Phase 12: UX Polish & Best Practices | Completed | 13/13 |
 | Phase 13: Archived Lists Bug Fixes | Completed | 4/4 |
 | Phase 14: Visual Verification MCP Server | Completed | 10/10 |
-| Phase 15: App Store Submission | Not Started | 0/1 |
-| Phase 16: Spotlight Integration | Optional | 0/1 |
+| Phase 15: Feature Parity - High & Medium | Not Started | 0/8 |
+| Phase 16: Feature Parity - Low Priority | Not Started | 0/17 |
+| Phase 17: App Store Submission | Not Started | 0/1 |
+| Phase 18: Spotlight Integration | Optional | 0/1 |
 
-**Total Tasks: 93** (91 completed, 2 remaining)
+**Total Tasks: 118** (91 completed, 27 remaining)
 
 **Phase 11 Status** (Completed):
 - Task 11.1: [COMPLETED] Keyboard Navigation
@@ -355,16 +1241,46 @@ Based on swarm analysis, all workflows use **parallel jobs** for platform isolat
 - Task 13.3: [COMPLETED] Update Documentation Status
 - Task 13.4: [COMPLETED] Fix Selection Persistence Bug When Switching Tabs
 
-**Phase 15 Status**:
-- Task 15.1: Submit to App Store
+**Phase 15 Status** (Feature Parity - High & Medium Priority):
+- Task 15.1: macOS Active/Archived Toggle
+- Task 15.2: iPad Split View Layout
+- Task 15.3: iPad NavigationSplitView Sidebar
+- Task 15.4: macOS Bulk Delete Lists
+- Task 15.5: macOS Export CSV
+- Task 15.6: macOS Manual Sync Button
+- Task 15.7: iOS Default Sort Order in Settings
+- Task 15.8: iPad Keyboard Shortcuts
 
-**Phase 16 Status** (Optional):
-- Task 16.1: Implement Spotlight Integration
+**Phase 16 Status** (Feature Parity - Low Priority & Polish):
+- Task 16.1: macOS Filter: Has Description
+- Task 16.2: macOS Filter: Has Images
+- Task 16.3: macOS Duplicate Item Action
+- Task 16.4: macOS Include Images in Share List
+- Task 16.5: macOS Collapse/Expand Suggestions Toggle
+- Task 16.6: macOS Live Sync Status Indicator
+- Task 16.7: macOS Feature Tips Reset Button
+- Task 16.8: macOS Auth Timeout Duration
+- Task 16.9: macOS Duplicate List Visibility
+- Task 16.10: macOS Sample List Templates
+- Task 16.11: iOS Live Sync Status Indicator
+- Task 16.12: iOS Clear All Filters Button
+- Task 16.13: iOS Explicit 10 Image Limit UI
+- Task 16.14: iOS Left Swipe Actions on Items
+- Task 16.15: iPad Multi-Column Layout
+- Task 16.16: iPad Pointer/Trackpad Hover Effects
+- Task 16.17: All Platforms - Test Data Images for UITEST_MODE
+
+**Phase 17 Status**:
+- Task 17.1: Submit to App Store
+
+**Phase 18 Status** (Optional):
+- Task 18.1: Implement Spotlight Integration
 
 **Notes**:
 - Phase 12 added based on agent swarm UX research (January 2026)
 - Phase 13 added based on agent swarm investigation (January 2026) - discovered missing restore UI and mutable archived lists bugs
 - Phase 14 revised (January 2026): Visual Verification MCP Server with 10 tasks - includes spike validation, XCUITest bridge for simulators, and Claude self-instruction skills
-- Task 6.4 (Spotlight Integration) moved to Phase 16 as optional feature (disabled by default)
+- Phase 15-16 added (January 2026): Feature parity tasks from `/documentation/FEATURE_PARITY.md` verification - 25 tasks across 4 platforms (macOS, iOS, iPad, watchOS)
+- Task 6.4 (Spotlight Integration) moved to Phase 18 as optional feature (disabled by default)
 - Phase 9 revised based on swarm analysis: uses parallel jobs architecture (Task 9.0 added as blocking pre-requisite)
 - Task 11.7 added comprehensive feature parity analysis with `/documentation/FEATURES.md`
