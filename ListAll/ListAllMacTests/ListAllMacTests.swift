@@ -4196,7 +4196,7 @@ final class MainViewModelMacTests: XCTestCase {
     /// Test that MainViewModel conforms to ObservableObject
     func testMainViewModelIsObservableObject() {
         // MainViewModel should be an ObservableObject
-        let isObservable = MainViewModel.self is ObservableObject.Type
+        let isObservable = MainViewModel.self is (any ObservableObject).Type
         XCTAssertTrue(isObservable, "MainViewModel should conform to ObservableObject")
     }
 
@@ -4548,7 +4548,7 @@ final class ListViewModelMacTests: XCTestCase {
 
     func testListViewModelIsObservableObject() {
         // Verify ListViewModel conforms to ObservableObject
-        let conformsToObservableObject = ListViewModel.self is ObservableObject.Type
+        let conformsToObservableObject = ListViewModel.self is (any ObservableObject).Type
         XCTAssertTrue(conformsToObservableObject, "ListViewModel should conform to ObservableObject")
     }
 
@@ -5617,7 +5617,7 @@ final class ImportViewModelMacTests: XCTestCase {
     func testImportViewModelIsObservableObject() {
         // Verify ImportViewModel conforms to ObservableObject
         let vm = ImportViewModel()
-        XCTAssertTrue(vm is ObservableObject, "ImportViewModel should conform to ObservableObject")
+        XCTAssertTrue(vm is any ObservableObject, "ImportViewModel should conform to ObservableObject")
     }
 
     // MARK: - Published Properties Tests
@@ -5928,7 +5928,7 @@ final class ExportViewModelMacTests: XCTestCase {
     func testExportViewModelIsObservableObject() {
         // Verify ExportViewModel conforms to ObservableObject
         let vm = TestHelpers.createTestExportViewModel()
-        XCTAssertTrue(vm is ObservableObject, "ExportViewModel should conform to ObservableObject")
+        XCTAssertTrue(vm is any ObservableObject, "ExportViewModel should conform to ObservableObject")
     }
 
     // MARK: - Published Properties Tests
