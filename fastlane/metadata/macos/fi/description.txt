@@ -68,7 +68,7 @@ MITÄ KÄYTTÄJÄT RAKASTAVAT:
 • Ei mainoksia, yksityisyyteen keskittyvä
 • Säännölliset päivitykset ja parannukset
 
-Olivatpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe tehokas ja joustava listojen hallintasovellus!
+Olitpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe tehokas ja joustava listojen hallintasovellus!
 
 AVOIN LÄHDEKOODI
 ListAll on avoimen lähdekoodin sovellus ja ilmainen. Voit tarkastella koodia, osallistua kehitykseen tai luoda oman versiosi osoitteessa https://github.com/chmc/listall

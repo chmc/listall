@@ -248,8 +248,9 @@ struct MacShareFormatPickerView: View {
 
         picker.show(relativeTo: rect, of: contentView, preferredEdge: .minY)
 
-        // Dismiss our popover after showing picker
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        // Dismiss our popover after showing picker (longer delay to avoid race condition)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            guard isSharing else { return }  // Guard against double-dismiss
             isSharing = false
             onDismiss()
         }
