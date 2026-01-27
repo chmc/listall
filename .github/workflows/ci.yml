@@ -133,7 +133,7 @@ jobs:
         xcodebuild clean build \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
-          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest' \
+          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.1' \
           -configuration Debug \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
@@ -147,7 +147,7 @@ jobs:
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
-          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest' \
+          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.1' \
           -resultBundlePath TestResults-Watch.xcresult \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
