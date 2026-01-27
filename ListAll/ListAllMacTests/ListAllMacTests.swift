@@ -4194,10 +4194,14 @@ final class MainViewModelMacTests: XCTestCase {
     }
 
     /// Test that MainViewModel conforms to ObservableObject
+    /// Note: Uses instance-based check to avoid Swift metatype protocol conformance issues across modules
+    /// See: https://github.com/swiftlang/swift/issues/62056
+    @MainActor
     func testMainViewModelIsObservableObject() {
-        // MainViewModel should be an ObservableObject
-        let isObservable = MainViewModel.self is (any ObservableObject).Type
-        XCTAssertTrue(isObservable, "MainViewModel should conform to ObservableObject")
+        // Create test infrastructure
+        let testDataManager = TestHelpers.createTestDataManager()
+        let vm = MainViewModel(dataManager: testDataManager)
+        XCTAssertTrue(vm is any ObservableObject, "MainViewModel should conform to ObservableObject")
     }
 
     // MARK: - Published Properties Tests
@@ -4546,10 +4550,14 @@ final class ListViewModelMacTests: XCTestCase {
         XCTAssertNotNil(type, "ListViewModel class should exist")
     }
 
+    /// Note: Uses instance-based check to avoid Swift metatype protocol conformance issues across modules
+    /// See: https://github.com/swiftlang/swift/issues/62056
     func testListViewModelIsObservableObject() {
-        // Verify ListViewModel conforms to ObservableObject
-        let conformsToObservableObject = ListViewModel.self is (any ObservableObject).Type
-        XCTAssertTrue(conformsToObservableObject, "ListViewModel should conform to ObservableObject")
+        // Verify ListViewModel conforms to ObservableObject using instance check
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testList = ListAll.List(name: "Test List")
+        let vm = ListViewModel(list: testList, dataManager: testDataManager)
+        XCTAssertTrue(vm is any ObservableObject, "ListViewModel should conform to ObservableObject")
     }
 
     // MARK: - Published Properties Verification
