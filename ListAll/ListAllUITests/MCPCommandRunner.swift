@@ -80,6 +80,12 @@ final class MCPCommandRunner: XCTestCase {
     /// Main entry point that reads command file, executes action, and writes result.
     /// This is invoked by the MCP server via xcodebuild.
     func testRunMCPCommand() throws {
+        // Skip if no command file - this test is only meant to be invoked by MCP server
+        try XCTSkipUnless(
+            FileManager.default.fileExists(atPath: Self.commandPath),
+            "No MCP command file present - this test is invoked by MCP server, not CI"
+        )
+
         var result: MCPResult
 
         do {
