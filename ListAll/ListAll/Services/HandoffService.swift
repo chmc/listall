@@ -48,27 +48,27 @@ class HandoffService {
     // MARK: - Activity Types
 
     /// Activity type for browsing the main lists view
-    static let browsingListsActivityType = "io.github.chmc.ListAll.browsing-lists"
+    nonisolated static let browsingListsActivityType = "io.github.chmc.ListAll.browsing-lists"
 
     /// Activity type for viewing a specific list
-    static let viewingListActivityType = "io.github.chmc.ListAll.viewing-list"
+    nonisolated static let viewingListActivityType = "io.github.chmc.ListAll.viewing-list"
 
     /// Activity type for viewing a specific item detail
-    static let viewingItemActivityType = "io.github.chmc.ListAll.viewing-item"
+    nonisolated static let viewingItemActivityType = "io.github.chmc.ListAll.viewing-item"
 
     // MARK: - UserInfo Keys
 
     /// Key for list UUID string in userInfo dictionary
-    static let listIdKey = "listId"
+    nonisolated static let listIdKey = "listId"
 
     /// Key for item UUID string in userInfo dictionary
-    static let itemIdKey = "itemId"
+    nonisolated static let itemIdKey = "itemId"
 
     /// Key for list name string in userInfo dictionary
-    static let listNameKey = "listName"
+    nonisolated static let listNameKey = "listName"
 
     /// Key for item title string in userInfo dictionary
-    static let itemTitleKey = "itemTitle"
+    nonisolated static let itemTitleKey = "itemTitle"
 
     // MARK: - Properties
 

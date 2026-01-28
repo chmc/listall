@@ -473,7 +473,9 @@ class MainViewModel: ObservableObject {
         
         // Set up timer to hide notification after timeout
         archiveNotificationTimer = Timer.scheduledTimer(withTimeInterval: archiveNotificationTimeout, repeats: false) { [weak self] _ in
-            self?.hideArchiveNotification()
+            Task { @MainActor in
+                self?.hideArchiveNotification()
+            }
         }
     }
     
