@@ -1187,7 +1187,39 @@ class DataManager: ObservableObject {
                 existingItem.orderNumber = Int32(item.orderNumber)
                 existingItem.isCrossedOut = item.isCrossedOut
                 existingItem.modifiedAt = item.modifiedAt
-                
+
+                // Re-associate with target list (item may have been orphaned)
+                let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+                listRequest.predicate = NSPredicate(format: "id == %@", listId as CVarArg)
+                if let listEntity = try context.fetch(listRequest).first {
+                    existingItem.list = listEntity
+                }
+
+                // Update images: First delete existing image entities
+                if let existingImages = existingItem.images?.allObjects as? [ItemImageEntity] {
+                    for imageEntity in existingImages {
+                        context.delete(imageEntity)
+                    }
+                }
+
+                // Create new image entities (with duplicate ID protection)
+                for itemImage in item.images {
+                    let imageCheck: NSFetchRequest<ItemImageEntity> = ItemImageEntity.fetchRequest()
+                    imageCheck.predicate = NSPredicate(format: "id == %@", itemImage.id as CVarArg)
+
+                    let existingImageEntities = try context.fetch(imageCheck)
+                    if existingImageEntities.first != nil {
+                        // Image ID already exists elsewhere - create with new ID
+                        var newImageData = itemImage
+                        newImageData.id = UUID()
+                        let imageEntity = ItemImageEntity.fromItemImage(newImageData, context: context)
+                        imageEntity.item = existingItem
+                    } else {
+                        let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
+                        imageEntity.item = existingItem
+                    }
+                }
+
                 saveData()
                 // Don't call loadData() here - let the caller handle batching
                 return

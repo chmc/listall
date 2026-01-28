@@ -335,6 +335,26 @@ class TestDataManager: ObservableObject {
                 existingItem.isCrossedOut = item.isCrossedOut
                 existingItem.modifiedAt = item.modifiedAt
 
+                // Re-associate with target list (item may have been orphaned)
+                let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
+                listRequest.predicate = NSPredicate(format: "id == %@", listId as CVarArg)
+                if let listEntity = try context.fetch(listRequest).first {
+                    existingItem.list = listEntity
+                }
+
+                // Update images: First delete existing image entities
+                if let existingImages = existingItem.images?.allObjects as? [ItemImageEntity] {
+                    for imageEntity in existingImages {
+                        context.delete(imageEntity)
+                    }
+                }
+
+                // Create new image entities
+                for itemImage in item.images {
+                    let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
+                    imageEntity.item = existingItem
+                }
+
                 saveData()
                 loadData()
                 return
