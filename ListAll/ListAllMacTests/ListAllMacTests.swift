@@ -7381,6 +7381,7 @@ final class HandoffServiceMacTests: XCTestCase {
     // MARK: - Singleton Pattern Test
 
     /// Test that HandoffService follows singleton pattern
+    @MainActor
     func testSingletonPattern() {
         // Act
         let instance1 = HandoffService.shared
@@ -9955,7 +9956,7 @@ struct MemoryLeakTests {
 
     // MARK: - Service Singleton Pattern Tests
 
-    @Test("Service singletons use correct patterns")
+    @MainActor @Test("Service singletons use correct patterns")
     func serviceSingletonsUseCorrectPatterns() {
         // These singletons should exist but NOT be deallocated (by design)
         // We're testing that they exist and are accessible

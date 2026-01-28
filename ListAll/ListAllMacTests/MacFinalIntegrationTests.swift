@@ -495,6 +495,7 @@ final class CloudKitSyncIntegrationTests: XCTestCase {
         XCTAssertFalse(viewingItemType.isEmpty)
     }
 
+    @MainActor
     func testHandoffServiceExists() {
         let service = HandoffService.shared
         XCTAssertNotNil(service)
