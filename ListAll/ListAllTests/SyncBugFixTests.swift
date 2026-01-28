@@ -11,25 +11,18 @@ import XCTest
 
 /// Tests for critical sync bug fixes in Phase 79B
 /// These tests verify that data loss and transfer size issues are prevented
+@MainActor
 final class SyncBugFixTests: XCTestCase {
-    
-    var dataManager: DataManager!
-    
+
+    var dataManager: TestDataManager!
+
     override func setUp() {
         super.setUp()
-        // Use a fresh DataManager instance for each test
-        dataManager = DataManager.shared
-        // Clean up any existing data
-        for list in dataManager.lists {
-            dataManager.deleteList(withId: list.id)
-        }
+        // Use isolated TestDataManager to avoid App Groups entitlement issues in CI
+        dataManager = TestHelpers.createTestDataManager()
     }
-    
+
     override func tearDown() {
-        // Clean up test data
-        for list in dataManager.lists {
-            dataManager.deleteList(withId: list.id)
-        }
         dataManager = nil
         super.tearDown()
     }

@@ -316,9 +316,34 @@ class TestDataManager: ObservableObject {
     }
     
     // MARK: - Item Operations
-    
+
     func addItem(_ item: Item, to listId: UUID) {
         let context = coreDataManager.viewContext
+
+        // Check if item already exists (prevent duplicates during sync)
+        let itemCheck: NSFetchRequest<ItemEntity> = ItemEntity.fetchRequest()
+        itemCheck.predicate = NSPredicate(format: "id == %@", item.id as CVarArg)
+
+        do {
+            let existingItems = try context.fetch(itemCheck)
+            if let existingItem = existingItems.first {
+                // Item already exists, update it instead
+                existingItem.title = item.title
+                existingItem.itemDescription = item.itemDescription
+                existingItem.quantity = Int32(item.quantity)
+                existingItem.orderNumber = Int32(item.orderNumber)
+                existingItem.isCrossedOut = item.isCrossedOut
+                existingItem.modifiedAt = item.modifiedAt
+
+                saveData()
+                loadData()
+                return
+            }
+        } catch {
+            print("Failed to check for existing item: \(error)")
+        }
+
+        // Item doesn't exist, create new one
         let itemEntity = ItemEntity(context: context)
         itemEntity.id = item.id
         itemEntity.itemDescription = item.itemDescription
@@ -328,11 +353,11 @@ class TestDataManager: ObservableObject {
         itemEntity.title = item.title
         itemEntity.createdAt = item.createdAt
         itemEntity.modifiedAt = item.modifiedAt
-        
+
         // Find the list entity
         let listRequest: NSFetchRequest<ListEntity> = ListEntity.fetchRequest()
         listRequest.predicate = NSPredicate(format: "id == %@", listId as CVarArg)
-        
+
         do {
             let listEntities = try context.fetch(listRequest)
             if let listEntity = listEntities.first {
@@ -341,13 +366,13 @@ class TestDataManager: ObservableObject {
         } catch {
             print("Failed to find list for item: \(error)")
         }
-        
+
         // Create image entities from the item's images
         for itemImage in item.images {
             let imageEntity = ItemImageEntity.fromItemImage(itemImage, context: context)
             imageEntity.item = itemEntity
         }
-        
+
         saveData()
         loadData()
     }
