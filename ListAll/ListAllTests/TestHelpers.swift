@@ -71,10 +71,71 @@ class TestHelpers {
     @available(*, deprecated, message: "Use createTestMainViewModel() for proper test isolation")
     static func resetSharedSingletons() {
         resetUserDefaults()
-        
+
         // Note: Resetting shared singletons doesn't provide proper test isolation
         // because Core Data contexts are still shared. Use isolated test instances instead.
         DataManager.shared.lists = []
+    }
+
+    // MARK: - Sync Simulation Helpers
+
+    /// Simulates the sync logic from MainViewModel.updateCoreDataWithLists
+    /// Reference: MainViewModel.swift lines 175-244
+    /// Use this to test sync behavior without requiring App Groups entitlements
+    static func simulateSyncFromWatch(receivedLists: [List], dataManager: TestDataManager) {
+        for receivedList in receivedLists {
+            let existingList = dataManager.lists.first(where: { $0.id == receivedList.id })
+
+            if let existingList = existingList {
+                // Update list if received version is STRICTLY newer
+                if receivedList.modifiedAt > existingList.modifiedAt {
+                    dataManager.updateList(receivedList)
+                }
+                // CRITICAL: Always sync items regardless of list modifiedAt (this is the bug fix!)
+                syncItemsForList(receivedList, existingList: existingList, dataManager: dataManager)
+            } else {
+                // Add new list
+                dataManager.addList(receivedList)
+                for item in receivedList.items {
+                    dataManager.addItem(item, to: receivedList.id)
+                }
+            }
+        }
+
+        // CRITICAL: Remove lists not in received data (production behavior)
+        // This handles the case where a list was deleted on the Watch
+        if !receivedLists.isEmpty {
+            let receivedListIds = Set(receivedLists.map { $0.id })
+            let localActiveListIds = Set(dataManager.lists.filter { !$0.isArchived }.map { $0.id })
+            for listIdToRemove in localActiveListIds.subtracting(receivedListIds) {
+                dataManager.deleteList(withId: listIdToRemove)
+            }
+        }
+
+        dataManager.loadData()
+    }
+
+    private static func syncItemsForList(_ receivedList: List, existingList: List, dataManager: TestDataManager) {
+        let receivedItemIds = Set(receivedList.items.map { $0.id })
+        let existingItemIds = Set(existingList.items.map { $0.id })
+
+        for receivedItem in receivedList.items {
+            if existingItemIds.contains(receivedItem.id) {
+                // Update existing item if newer
+                if let existingItem = existingList.items.first(where: { $0.id == receivedItem.id }),
+                   receivedItem.modifiedAt > existingItem.modifiedAt {
+                    dataManager.updateItem(receivedItem)
+                }
+            } else {
+                // Add new item
+                dataManager.addItem(receivedItem, to: receivedList.id)
+            }
+        }
+
+        // Remove deleted items
+        for itemIdToRemove in existingItemIds.subtracting(receivedItemIds) {
+            dataManager.deleteItem(withId: itemIdToRemove, from: receivedList.id)
+        }
     }
 }
 

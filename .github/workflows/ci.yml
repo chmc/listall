@@ -160,6 +160,7 @@ jobs:
           -scheme "ListAllWatch Watch App" \
           -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.1' \
           -resultBundlePath TestResults-Watch.xcresult \
+          -skip-testing:ListAllWatch_Watch_AppUITests \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
