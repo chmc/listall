@@ -301,27 +301,23 @@ class ListOrderingTests: XCTestCase {
         try! testViewModel.addList(name: "List 2")
         try! testViewModel.addList(name: "List 3")
 
-        // Get original timestamps
-        let originalTimestamps = testViewModel.lists.map { $0.modifiedAt }
+        // Get original timestamps BY LIST ID (not position)
+        let originalTimestamps = Dictionary(uniqueKeysWithValues:
+            testViewModel.lists.map { ($0.id, $0.modifiedAt) }
+        )
 
-        // Wait to ensure new timestamps will be different
-        let expectation = self.expectation(description: "Wait for timestamp difference")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
+        // Wait for timestamp difference (Thread.sleep is more reliable in CI)
+        Thread.sleep(forTimeInterval: 0.1)
 
         // Act - Reorder lists
         testViewModel.moveList(from: IndexSet(integer: 2), to: 0)
 
-        // Assert - All lists should have updated modifiedAt timestamps
-        let newTimestamps = testViewModel.lists.map { $0.modifiedAt }
-
-        for (index, newTimestamp) in newTimestamps.enumerated() {
+        // Assert - Each list's new timestamp should be > its OWN original timestamp
+        for list in testViewModel.lists {
             XCTAssertGreaterThan(
-                newTimestamp,
-                originalTimestamps[index],
-                "List at index \(index) should have updated modifiedAt after reorder"
+                list.modifiedAt,
+                originalTimestamps[list.id]!,
+                "List '\(list.name)' should have updated modifiedAt after reorder"
             )
         }
     }
@@ -333,29 +329,29 @@ class ListOrderingTests: XCTestCase {
         try! testViewModel.addList(name: "Y")
         try! testViewModel.addList(name: "Z")
 
-        // Wait for timestamp difference
-        let expectation = self.expectation(description: "Wait for timestamp")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
+        // Wait for timestamp difference (Thread.sleep is more reliable in CI)
+        Thread.sleep(forTimeInterval: 0.1)
 
         // Act - Reorder
         testViewModel.moveList(from: IndexSet(integer: 0), to: 3)
 
-        let timestampsAfterReorder = testViewModel.lists.map { $0.modifiedAt }
+        // Capture timestamps BY LIST ID after reorder
+        let timestampsAfterReorder = Dictionary(uniqueKeysWithValues:
+            testViewModel.lists.map { ($0.id, $0.modifiedAt) }
+        )
 
         // Simulate restart
         let newViewModel = TestMainViewModel(dataManager: testDataManager)
-        let persistedTimestamps = newViewModel.lists.map { $0.modifiedAt }
 
-        // Assert - Timestamps should match after restart (proving they persisted)
-        for (index, persistedTimestamp) in persistedTimestamps.enumerated() {
-            let difference = abs(persistedTimestamp.timeIntervalSince(timestampsAfterReorder[index]))
+        // Assert - Timestamps should match by list ID (not position)
+        for list in newViewModel.lists {
+            let persistedTimestamp = list.modifiedAt
+            let expectedTimestamp = timestampsAfterReorder[list.id]!
+            let difference = abs(persistedTimestamp.timeIntervalSince(expectedTimestamp))
             XCTAssertLessThan(
                 difference,
                 0.001,
-                "Timestamp for list at index \(index) should persist to database (difference: \(difference)s)"
+                "Timestamp for list '\(list.name)' should persist (diff: \(difference)s)"
             )
         }
     }
