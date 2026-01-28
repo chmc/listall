@@ -106,7 +106,13 @@ class SuggestionService: ObservableObject {
     @Published var suggestions: [ItemSuggestion] = []
 
     /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
-    private lazy var dataRepository: DataRepository = DataRepository()
+    private lazy var _lazyDataRepository: DataRepository = DataRepository()
+    private var _injectedDataRepository: DataRepository?
+
+    private var dataRepository: DataRepository {
+        _injectedDataRepository ?? _lazyDataRepository
+    }
+
     private let suggestionCache = SuggestionCache()
 
     // Advanced suggestion configuration
@@ -118,6 +124,11 @@ class SuggestionService: ObservableObject {
     init() {
         // Temporarily disable notification observers to fix test issues
         // setupNotificationObservers()
+    }
+
+    /// Internal initializer for testing with a custom DataRepository
+    init(dataRepository: DataRepository) {
+        self._injectedDataRepository = dataRepository
     }
     
     deinit {

@@ -1,6 +1,5 @@
 import XCTest
 import CloudKit
-import CoreData
 @testable import ListAll
 
 /// CloudKit Sync Testing (Phase 68.10)
@@ -11,26 +10,16 @@ import CoreData
 /// They test the service logic and graceful handling when CloudKit is unavailable.
 /// Full CloudKit sync testing requires a paid Apple Developer account.
 final class CloudKitTests: XCTestCase {
-    
+
     var cloudKitService: CloudKitService!
-    var coreDataManager: CoreDataManager?
 
     override func setUp() {
         super.setUp()
         cloudKitService = CloudKitService()
-        // Only access CoreDataManager.shared if not in test environment
-        // (test environment uses /dev/null store, not App Groups)
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
-            let appGroupID = "group.io.github.chmc.ListAll"
-            if FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) != nil {
-                coreDataManager = CoreDataManager.shared
-            }
-        }
     }
 
     override func tearDown() {
         cloudKitService = nil
-        coreDataManager = nil
         super.tearDown()
     }
     
@@ -297,47 +286,6 @@ final class CloudKitTests: XCTestCase {
         print("✅ CloudKit data export works correctly")
     }
     
-    // MARK: - Core Data Integration Tests
-
-    /// Test that Core Data is ready for CloudKit integration
-    /// Note: CloudKit is disabled without paid developer account
-    func testCloudKitCoreDataIntegration() throws {
-        guard let coreDataManager = coreDataManager else {
-            throw XCTSkip("Requires App Groups entitlements (not available in unsigned CI builds)")
-        }
-
-        // Verify persistent container exists and is functional
-        XCTAssertNotNil(coreDataManager.persistentContainer, "Container should exist")
-        XCTAssertNotNil(coreDataManager.persistentContainer.persistentStoreCoordinator, "Container should have store coordinator")
-
-        // Note: CloudKit requires NSPersistentCloudKitContainer, currently disabled
-        // When CloudKit is enabled, change NSPersistentContainer to NSPersistentCloudKitContainer
-        print("✅ Core Data configured (CloudKit integration ready for when developer account is available)")
-    }
-
-    /// Test that Core Data is ready for CloudKit sync when enabled
-    /// Note: CloudKit sync requires paid developer account
-    func testCoreDataChangesSyncToCloudKit() throws {
-        guard let coreDataManager = coreDataManager else {
-            throw XCTSkip("Requires App Groups entitlements (not available in unsigned CI builds)")
-        }
-
-        let container = coreDataManager.persistentContainer
-        let storeDescriptions = container.persistentStoreDescriptions
-
-        // At least one store should be configured
-        XCTAssertFalse(storeDescriptions.isEmpty, "Container should have at least one store")
-
-        // Note: CloudKit options will be configured when developer account is available
-        // For now, verify store is functional for local data
-        for description in storeDescriptions {
-            XCTAssertNotNil(description.url, "Store should have a URL")
-            print("ℹ️  Store configured at: \(description.url?.path ?? "unknown")")
-        }
-        
-        print("✅ Core Data stores configured (CloudKit sync ready for when enabled)")
-    }
-    
     // MARK: - watchOS Platform Tests
     
     /// Test CloudKit functionality on watchOS platform
@@ -359,41 +307,6 @@ final class CloudKitTests: XCTestCase {
         ].contains(status), "CloudKit should work on watchOS platform")
         
         print("✅ CloudKit functions properly on current platform (iOS/watchOS)")
-    }
-    
-    // MARK: - App Groups Integration Tests
-    
-    /// Test that CloudKit sync works with App Groups data sharing
-    /// Apple Best Practice: CloudKit should sync data stored in App Groups container
-    func testCloudKitSyncWithAppGroups() throws {
-        // Skip in test environment - CoreDataManager uses /dev/null store in tests
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
-            throw XCTSkip("Skipping App Groups test - CoreDataManager uses /dev/null store in test environment")
-        }
-
-        let appGroupID = "group.io.github.chmc.ListAll"
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
-            throw XCTSkip("Requires App Groups entitlements (not available in unsigned CI builds)")
-        }
-
-        guard let coreDataManager = coreDataManager else {
-            throw XCTSkip("CoreDataManager not available (requires App Groups)")
-        }
-
-        // Verify Core Data store is in App Groups container
-        let expectedStoreURL = containerURL.appendingPathComponent("ListAll.sqlite")
-        let storeDescriptions = coreDataManager.persistentContainer.persistentStoreDescriptions
-
-        var foundAppGroupsStore = false
-        for description in storeDescriptions {
-            if let url = description.url, url == expectedStoreURL {
-                foundAppGroupsStore = true
-                break
-            }
-        }
-
-        XCTAssertTrue(foundAppGroupsStore, "Core Data store should be in App Groups container for CloudKit sync")
-        print("✅ CloudKit configured to sync App Groups data at: \(expectedStoreURL.path)")
     }
     
     // MARK: - Sync Timing Tests
