@@ -25,6 +25,8 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -104,18 +106,31 @@ jobs:
         if: ${{ !inputs.skip_validation }}
         run: bundle exec fastlane ios validate_delivery_screenshots
 
-      - name: Upload metadata and screenshots to App Store Connect
+      - name: Upload iOS metadata and screenshots to App Store Connect
         run: bundle exec fastlane release version:${{ inputs.version }}
+
+      - name: Prepare Match Git URL for macOS
+        env:
+          TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+        run: |
+          echo "MATCH_GIT_URL=https://x-access-token:${TOKEN}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
+
+      - name: Upload macOS metadata and screenshots to App Store Connect
+        run: bundle exec fastlane release_macos version:${{ inputs.version }}
 
       - name: Summary
         run: |
           echo "## App Store Publication Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version **${{ inputs.version }}** metadata and screenshots uploaded to App Store Connect." >> $GITHUB_STEP_SUMMARY
+          echo "Version **${{ inputs.version }}** metadata and screenshots uploaded for both iOS and macOS." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "- iOS: iPhone, iPad, Watch screenshots and metadata" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS: Desktop screenshots and metadata" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY
-          echo "2. Navigate to version: **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
-          echo "3. Verify screenshots uploaded correctly for all platforms" >> $GITHUB_STEP_SUMMARY
-          echo "4. Select the TestFlight build you want to release" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify iOS version **${{ inputs.version }}** has screenshots" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify macOS version **${{ inputs.version }}** has screenshots" >> $GITHUB_STEP_SUMMARY
+          echo "4. Select the TestFlight builds for each platform" >> $GITHUB_STEP_SUMMARY
           echo "5. Review and submit for review" >> $GITHUB_STEP_SUMMARY
