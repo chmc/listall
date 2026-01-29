@@ -16,8 +16,8 @@
       "parallelizable" : true,
       "target" : {
         "containerPath" : "container:ListAll.xcodeproj",
-        "identifier" : "451D22642EA54064004688D4",
-        "name" : "ListAllWatch Watch AppUITests"
+        "identifier" : "451D225A2EA54064004688D4",
+        "name" : "ListAllWatch Watch AppTests"
       }
     }
   ],

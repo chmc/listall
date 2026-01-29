@@ -177,7 +177,8 @@ jobs:
         set -o pipefail
         cd ListAll
 
-        # Use same UDID discovery logic for consistent simulator selection
+        # Use UDID-based selection to avoid "multiple devices matched" errors
+        # when paired simulators exist on the runner
         WATCH_UDID=$(xcrun simctl list devices available -j 2>/dev/null | jq -r '
           .devices | to_entries[] |
           select(.key | contains("watchOS")) |
@@ -193,12 +194,12 @@ jobs:
 
         echo "Using watchOS simulator UDID: ${WATCH_UDID}"
 
+        # Test plan runs unit tests only (UI tests excluded from plan)
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
           -destination "platform=watchOS Simulator,id=${WATCH_UDID}" \
           -resultBundlePath TestResults-Watch.xcresult \
-          -skip-testing:ListAllWatch_Watch_AppUITests \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \

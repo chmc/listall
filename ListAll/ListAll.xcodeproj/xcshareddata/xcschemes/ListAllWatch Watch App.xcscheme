@@ -36,7 +36,7 @@
       </TestPlans>
       <Testables>
          <TestableReference
-            skipped = "YES"
+            skipped = "NO"
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
@@ -47,7 +47,7 @@
             </BuildableReference>
          </TestableReference>
          <TestableReference
-            skipped = "NO"
+            skipped = "YES"
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
