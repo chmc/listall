@@ -100,7 +100,7 @@ RSpec.describe 'DeviceFrameRegistry' do
         expect(result).to be_a(Hash)
         expect(result[:type]).to eq(:watch)
         expect(result[:frame]).to eq('apple_watch_series_10_46mm')
-        expect(result[:screen_size]).to eq([396, 484])
+        expect(result[:screen_size]).to eq([416, 496])
       end
 
       it 'detects Apple Watch with different naming' do
@@ -356,8 +356,8 @@ RSpec.describe 'DeviceFrameRegistry' do
     create_test_metadata(
       File.join(watch_dir, 'metadata.json'),
       'Apple Watch Series 10 (46mm)',
-      { x: 52, y: 58, width: 396, height: 484 },
-      { width: 500, height: 600 }
+      { x: 52, y: 62, width: 416, height: 496 },
+      { width: 520, height: 620 }
     )
   end
 end

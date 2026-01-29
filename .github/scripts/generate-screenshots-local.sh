@@ -120,7 +120,7 @@ Platform Details:
               Screenshots: 2 per locale (framed with device bezel)
               Estimated time: ~40 minutes
 
-    watch   - Apple Watch Series 10 46mm (45mm slot, 396x484)
+    watch   - Apple Watch Series 10 46mm (46mm slot, 416x496)
               Fastlane lane: watch_screenshots
               Screenshots: 5 per locale (unframed)
               Estimated time: ~20 minutes
@@ -685,7 +685,7 @@ generate_ipad_screenshots() {
 
 generate_watch_screenshots() {
     log_info "Platform: Apple Watch Series 10 46mm (45mm slot)"
-    log_info "Expected output: 396x484 pixels"
+    log_info "Expected output: 416x496 pixels"
     log_info "Screenshots: 5 per locale"
     log_info "Estimated time: ~20 minutes"
     echo ""

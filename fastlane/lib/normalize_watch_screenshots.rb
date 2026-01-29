@@ -9,7 +9,7 @@ require_relative 'watch_screenshot_helper'
 # Configuration
 INPUT_DIR = File.expand_path("../../screenshots/watch", __FILE__)
 OUTPUT_DIR = File.expand_path("../../screenshots/watch_normalized", __FILE__)
-TARGET_SIZE = :series7plus  # Apple Watch Series 7+ (45mm) - 396x484
+TARGET_SIZE = :series10  # Apple Watch Series 10 (46mm) - 416x496
 
 def main
   puts "=" * 70

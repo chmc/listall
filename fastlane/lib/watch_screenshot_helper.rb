@@ -8,12 +8,13 @@ module WatchScreenshotHelper
   # Apple App Store Connect official watchOS screenshot sizes
   OFFICIAL_WATCH_SIZES = {
     ultra: { width: 410, height: 502, name: "Apple Watch Ultra (49mm)" },
+    series10: { width: 416, height: 496, name: "Apple Watch Series 10 (46mm)" },
     series7plus: { width: 396, height: 484, name: "Apple Watch Series 7+ (45mm)" },
     series4to6: { width: 368, height: 448, name: "Apple Watch Series 4-6 (40mm)" }
   }.freeze
 
-  # Default target size for normalization (45mm is most common)
-  DEFAULT_TARGET = :series7plus
+  # Default target size for normalization (Series 10 46mm is current standard)
+  DEFAULT_TARGET = :series10
 
   class ValidationError < StandardError; end
 

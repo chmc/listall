@@ -20,7 +20,7 @@ end
 # App Store Connect requires exact pixel dimensions:
 # - iPhone 6.7": 1290x2796
 # - iPad 13": 2064x2752 (2024 standard, replaces old 12.9" 2048x2732)
-# - Watch Series 7+: 396x484
+# - Watch Series 10: 416x496
 # - macOS: 2880x1800 (16:10 Retina)
 # Framed screenshots have device bezels which change dimensions to non-standard sizes
 # that App Store Connect rejects.
@@ -3760,7 +3760,7 @@ platform :ios do
       WatchScreenshotHelper.normalize_screenshots(
         watch_raw_dir,
         watch_normalized_dir,
-        target_size: :series7plus  # 396x484 - Apple Watch Series 7+ (45mm)
+        target_size: :series10  # 416x496 - Apple Watch Series 10 (46mm)
       )
     rescue => e
       UI.user_error!("Failed to normalize watch screenshots: #{e.message}")
@@ -3792,7 +3792,7 @@ platform :ios do
       end
     end
 
-    UI.success("✅ Normalized watch screenshots copied to #{unified_framed_root} (396x484, unframed)")
+    UI.success("✅ Normalized watch screenshots copied to #{unified_framed_root} (416x496, unframed)")
   end
 
   desc "Validate watch screenshot sizes and naming (uses App Store Connect requirements)"
@@ -3804,7 +3804,7 @@ platform :ios do
       WatchScreenshotHelper.validate_screenshots(
         watch_normalized_dir,
         expected_count: 5,
-        allowed_sizes: [:series7plus]  # Only accept 396x484 (45mm)
+        allowed_sizes: [:series10]  # Only accept 416x496 (46mm)
       )
       UI.success("✅ All watch screenshots validated successfully!")
     rescue WatchScreenshotHelper::ValidationError => e
@@ -4047,7 +4047,7 @@ platform :ios do
     # These are RAW normalized screenshots, NOT framed
     iphone_size = { width: 1290, height: 2796, tolerance: 0 }  # iPhone 6.7" exact
     ipad_size = { width: 2064, height: 2752, tolerance: 0 }    # iPad 13" exact (2024 standard)
-    watch_size = { width: 396, height: 484, tolerance: 0 }     # Watch Series 7+ exact
+    watch_size = { width: 416, height: 496, tolerance: 0 }     # Watch Series 10 exact
 
     # Check normalized iPhone/iPad screenshots (App Store ready)
     compat_dir = File.expand_path("screenshots_compat", __dir__)
@@ -4176,7 +4176,7 @@ platform :ios do
       puts "\nReady for upload:"
       puts "  • iPhone: 4 screenshots (1290x2796)"
       puts "  • iPad: 4 screenshots (2064x2752)"
-      puts "  • Watch: 10 screenshots (396x484)"
+      puts "  • Watch: 10 screenshots (416x496)"
       puts "  • macOS: 8 screenshots (2880x1800)"
       puts "  • Total: 26 screenshots across EN + FI locales"
     end

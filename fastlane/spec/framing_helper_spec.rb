@@ -239,7 +239,7 @@ RSpec.describe 'FramingHelper' do
         watch_spec = {
           type: :watch,
           frame: 'apple_watch_series_10_46mm',
-          screen_size: [396, 484]
+          screen_size: [416, 496]
         }
 
         FramingHelper.frame_screenshot(watch_screenshot, watch_output, watch_spec)
@@ -532,7 +532,7 @@ RSpec.describe 'FramingHelper' do
     # Create Watch screenshot
     create_test_screenshot(
       File.join(en_us_dir, 'Apple Watch Series 10 (46mm)-01_Watch.png'),
-      396, 484, '#EEEEEE'
+      416, 496, '#EEEEEE'
     )
   end
 
@@ -560,8 +560,8 @@ RSpec.describe 'FramingHelper' do
     FileUtils.mkdir_p(watch_dir)
     create_test_frame(
       File.join(watch_dir, 'apple_watch_series_10_46mm_black.png'),
-      500, 600,
-      { x: 52, y: 58, width: 396, height: 484 }
+      520, 620,
+      { x: 52, y: 62, width: 416, height: 496 }
     )
   end
 end
