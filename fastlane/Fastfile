@@ -563,7 +563,7 @@ platform :ios do
 
   desc "Deliver metadata/screenshots to App Store (no auto-submit)"
   desc "Creates new app version if needed. Usage: fastlane release version:1.2.0"
-  desc "Options: skip_watch:true to skip watch screenshots (for manual upload)"
+  desc "Options: skip_watch:true to skip watch screenshots, skip_screenshots:true to skip ALL screenshots"
   lane :release do |options|
     require_asc_env!
 
@@ -574,6 +574,10 @@ platform :ios do
     # Skip watch screenshots if ASC API is rejecting the display type
     # Watch screenshots can be uploaded manually via App Store Connect web UI
     skip_watch = options[:skip_watch] == true || options[:skip_watch] == "true"
+
+    # Skip ALL screenshots if ASC version is in a corrupted state
+    # All screenshots must be uploaded manually via App Store Connect web UI
+    skip_screenshots = options[:skip_screenshots] == true || options[:skip_screenshots] == "true"
 
     api_key = app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
@@ -589,23 +593,28 @@ platform :ios do
     # - iPad 13": 2064x2752 (2024 standard)
     compat_path = File.expand_path("screenshots_compat", __dir__)
 
-    # Verify normalized screenshots exist
-    unless Dir.exist?(compat_path)
+    # Verify normalized screenshots exist (unless skipping all screenshots)
+    unless skip_screenshots || Dir.exist?(compat_path)
       UI.user_error!("Screenshots not found at #{compat_path}. Run screenshots_framed first.")
     end
 
     # Prepare delivery directory with raw normalized screenshots (not framed)
-    delivery_path = prepare_screenshots_for_delivery(compat_path, skip_watch: skip_watch)
+    delivery_path = skip_screenshots ? nil : prepare_screenshots_for_delivery(compat_path, skip_watch: skip_watch)
 
-    UI.message("📸 Using normalized screenshots from: #{delivery_path}")
+    if skip_screenshots
+      UI.important("⚠️ Skipping ALL screenshots (skip_screenshots: true)")
+      UI.message("📱 All screenshots must be uploaded manually via App Store Connect")
+    else
+      UI.message("📸 Using normalized screenshots from: #{delivery_path}")
+    end
     UI.message("📦 Creating/updating App Store version: #{version}")
 
     deliver(
       api_key: api_key,
       app_version: version,  # Creates new version if doesn't exist
-      screenshots_path: delivery_path,
-      skip_screenshots: false,
-      overwrite_screenshots: true,
+      screenshots_path: skip_screenshots ? nil : delivery_path,
+      skip_screenshots: skip_screenshots,
+      overwrite_screenshots: !skip_screenshots,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,  # No IAPs in this app (also incompatible with API key auth)

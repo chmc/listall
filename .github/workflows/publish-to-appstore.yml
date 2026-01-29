@@ -105,32 +105,32 @@ jobs:
         run: bundle exec fastlane ios validate_delivery_screenshots
 
       - name: Upload metadata and screenshots to App Store Connect
-        # Note: skip_watch:true due to ASC API rejecting watch display types
-        # Watch screenshots must be uploaded manually via App Store Connect
-        # See: https://github.com/chmc/listall/actions/runs/21475849249
-        run: bundle exec fastlane release version:${{ inputs.version }} skip_watch:true
+        # Note: skip_screenshots:true due to ASC API rejecting display types
+        # All screenshots must be uploaded manually via App Store Connect
+        # The ASC version 1.1.14 appears to be in a corrupted state
+        # See: https://github.com/chmc/listall/actions/runs/21477378329
+        run: bundle exec fastlane release version:${{ inputs.version }} skip_screenshots:true
 
       - name: Summary
         run: |
           echo "## App Store Publication Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Screenshots Uploaded (from repository)" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚠️ Screenshots Skipped - Manual Upload Required" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Locales | Screenshots |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| iPhone | en-US, fi | 4 per locale (1290x2796) |" >> $GITHUB_STEP_SUMMARY
-          echo "| iPad 13\" | en-US, fi | 4 per locale (2064x2752) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Watch** | **SKIPPED** | **Upload manually via ASC** |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | en-US, fi | 4 per locale (2880x1800) |" >> $GITHUB_STEP_SUMMARY
+          echo "App Store Connect API is rejecting screenshot display types for this version." >> $GITHUB_STEP_SUMMARY
+          echo "All screenshots must be uploaded manually via the ASC web interface." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚠️ Manual Action Required: Watch Screenshots" >> $GITHUB_STEP_SUMMARY
-          echo "Watch screenshots must be uploaded manually due to ASC API limitations." >> $GITHUB_STEP_SUMMARY
-          echo "Screenshots are in: \`fastlane/screenshots/watch_normalized/\`" >> $GITHUB_STEP_SUMMARY
+          echo "### Screenshot Locations" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Location |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| iPhone | \`fastlane/screenshots/en-US/\` and \`fi/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| iPad | \`fastlane/screenshots/en-US/\` and \`fi/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Watch | \`fastlane/screenshots/watch_normalized/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | \`fastlane/screenshots/mac/processed/\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY
-          echo "2. Review version: **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
-          echo "3. **Upload watch screenshots manually** (5 per locale from watch_normalized)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Navigate to version: **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Upload ALL screenshots manually** from the locations above" >> $GITHUB_STEP_SUMMARY
           echo "4. Select the TestFlight build you want to release" >> $GITHUB_STEP_SUMMARY
-          echo "5. Review the uploaded screenshots and metadata" >> $GITHUB_STEP_SUMMARY
-          echo "6. Submit for review" >> $GITHUB_STEP_SUMMARY
+          echo "5. Review and submit for review" >> $GITHUB_STEP_SUMMARY
