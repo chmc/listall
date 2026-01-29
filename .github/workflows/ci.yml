@@ -141,10 +141,31 @@ jobs:
       run: |
         set -o pipefail
         cd ListAll
+
+        # Find the first available Apple Watch Series 10 (46mm) simulator UDID
+        # Using jq (available on GitHub runners) for reliable JSON parsing
+        # This avoids "multiple devices matched" errors when paired simulators exist
+        WATCH_UDID=$(xcrun simctl list devices available -j 2>/dev/null | jq -r '
+          .devices | to_entries[] |
+          select(.key | contains("watchOS")) |
+          .value[] |
+          select(.isAvailable == true and .name == "Apple Watch Series 10 (46mm)") |
+          .udid
+        ' | head -n 1)
+
+        if [[ -z "${WATCH_UDID}" ]]; then
+          echo "ERROR: No available Apple Watch Series 10 (46mm) simulator found"
+          echo "Available watchOS simulators:"
+          xcrun simctl list devices available | grep -i watch
+          exit 1
+        fi
+
+        echo "Using watchOS simulator UDID: ${WATCH_UDID}"
+
         xcodebuild clean build \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
-          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.2' \
+          -destination "platform=watchOS Simulator,id=${WATCH_UDID}" \
           -configuration Debug \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
@@ -155,10 +176,27 @@ jobs:
       run: |
         set -o pipefail
         cd ListAll
+
+        # Use same UDID discovery logic for consistent simulator selection
+        WATCH_UDID=$(xcrun simctl list devices available -j 2>/dev/null | jq -r '
+          .devices | to_entries[] |
+          select(.key | contains("watchOS")) |
+          .value[] |
+          select(.isAvailable == true and .name == "Apple Watch Series 10 (46mm)") |
+          .udid
+        ' | head -n 1)
+
+        if [[ -z "${WATCH_UDID}" ]]; then
+          echo "ERROR: No available Apple Watch Series 10 (46mm) simulator found"
+          exit 1
+        fi
+
+        echo "Using watchOS simulator UDID: ${WATCH_UDID}"
+
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
-          -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.2' \
+          -destination "platform=watchOS Simulator,id=${WATCH_UDID}" \
           -resultBundlePath TestResults-Watch.xcresult \
           -skip-testing:ListAllWatch_Watch_AppUITests \
           CODE_SIGN_IDENTITY="" \
