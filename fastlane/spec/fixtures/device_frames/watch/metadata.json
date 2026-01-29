@@ -1,17 +1,17 @@
 {
-  "device": "Apple Watch Series 10 (46mm)",
+  "device": "Apple Watch Series 7+ (45mm)",
   "screen_area": {
     "x": 52,
-    "y": 62,
-    "width": 416,
-    "height": 496
+    "y": 56,
+    "width": 396,
+    "height": 484
   },
   "frame_dimensions": {
-    "width": 520,
-    "height": 620
+    "width": 500,
+    "height": 596
   },
   "variants": {
-    "black": "apple_watch_series_10_(46mm)_black.png"
+    "black": "apple_watch_series_7+_(45mm)_black.png"
   },
   "default_variant": "black",
   "corner_radius": 55

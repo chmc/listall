@@ -99,8 +99,8 @@ RSpec.describe 'DeviceFrameRegistry' do
 
         expect(result).to be_a(Hash)
         expect(result[:type]).to eq(:watch)
-        expect(result[:frame]).to eq('apple_watch_series_10_46mm')
-        expect(result[:screen_size]).to eq([416, 496])
+        expect(result[:frame]).to eq('apple_watch_series_7plus_45mm')
+        expect(result[:screen_size]).to eq([396, 484])
       end
 
       it 'detects Apple Watch with different naming' do
@@ -189,10 +189,10 @@ RSpec.describe 'DeviceFrameRegistry' do
       it 'loads metadata for Apple Watch Series 10' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        metadata = DeviceFrameRegistry.frame_metadata('apple_watch_series_10_46mm')
+        metadata = DeviceFrameRegistry.frame_metadata('apple_watch_series_7plus_45mm')
 
         expect(metadata).to be_a(Hash)
-        expect(metadata[:device]).to eq('Apple Watch Series 10 (46mm)')
+        expect(metadata[:device]).to eq('Apple Watch Series 7+ (45mm)')
         expect(metadata[:screen_area][:width]).to eq(396)
         expect(metadata[:screen_area][:height]).to eq(484)
       end
@@ -276,7 +276,7 @@ RSpec.describe 'DeviceFrameRegistry' do
       expect(frames).to be_an(Array)
       expect(frames).to include('iPhone 16 Pro Max')
       expect(frames).to include('iPad Pro 13-inch (M4)')
-      expect(frames).to include('Apple Watch Series 10 (46mm)')
+      expect(frames).to include('Apple Watch Series 7+ (45mm)')
     end
 
     it 'returns empty array when no frames available' do
@@ -318,7 +318,7 @@ RSpec.describe 'DeviceFrameRegistry' do
     it 'constructs correct path for Watch frame' do
       skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-      path = DeviceFrameRegistry.metadata_path_for('apple_watch_series_10_46mm')
+      path = DeviceFrameRegistry.metadata_path_for('apple_watch_series_7plus_45mm')
 
       expect(path).to include('watch')
       expect(path).to end_with('metadata.json')
@@ -355,9 +355,9 @@ RSpec.describe 'DeviceFrameRegistry' do
 
     create_test_metadata(
       File.join(watch_dir, 'metadata.json'),
-      'Apple Watch Series 10 (46mm)',
-      { x: 52, y: 62, width: 416, height: 496 },
-      { width: 520, height: 620 }
+      'Apple Watch Series 7+ (45mm)',
+      { x: 52, y: 56, width: 396, height: 484 },
+      { width: 500, height: 596 }
     )
   end
 end

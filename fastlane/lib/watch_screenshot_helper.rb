@@ -13,8 +13,11 @@ module WatchScreenshotHelper
     series4to6: { width: 368, height: 448, name: "Apple Watch Series 4-6 (40mm)" }
   }.freeze
 
-  # Default target size for normalization (Series 10 46mm is current standard)
-  DEFAULT_TARGET = :series10
+  # Default target size for normalization
+  # Note: Series 10 (416x496) not yet accepted by App Store Connect API
+  # Using Series 7+ until Apple enables APP_WATCH_SERIES_10 display type
+  # See: https://github.com/chmc/listall/actions/runs/21474934567
+  DEFAULT_TARGET = :series7plus
 
   class ValidationError < StandardError; end
 

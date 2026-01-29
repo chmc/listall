@@ -34,7 +34,7 @@ module ScreenshotHelper
   DEFAULT_TARGETS = {
     ios: :iphone_67,      # iPhone 6.7" for main App Store slot
     ipados: :ipad_13,     # iPad 13" for iPad screenshots (2024 standard)
-    watchos: :watch_series10  # Apple Watch Series 10 46mm
+    watchos: :watch_series7plus  # Apple Watch Series 7+ 45mm (Series 10 not yet accepted by App Store Connect)
   }.freeze
 
   class ValidationError < StandardError; end
@@ -65,7 +65,7 @@ module ScreenshotHelper
     when :ipad
       OFFICIAL_SIZES[:ipad_13]  # 2024: Use 13" (2064x2752) instead of 12.9" (2048x2732)
     when :watch
-      OFFICIAL_SIZES[:watch_series10]
+      OFFICIAL_SIZES[:watch_series7plus]
     else
       raise ArgumentError, "Unknown device type: #{device_type}"
     end
@@ -167,7 +167,7 @@ module ScreenshotHelper
     puts "=" * 70
     puts "iPhone: #{stats[:iphone]} screenshots normalized to #{OFFICIAL_SIZES[:iphone_67][:width]}x#{OFFICIAL_SIZES[:iphone_67][:height]}"
     puts "iPad: #{stats[:ipad]} screenshots normalized to #{OFFICIAL_SIZES[:ipad_13][:width]}x#{OFFICIAL_SIZES[:ipad_13][:height]}"
-    puts "Watch: #{stats[:watch]} screenshots normalized to #{OFFICIAL_SIZES[:watch_series10][:width]}x#{OFFICIAL_SIZES[:watch_series10][:height]}"
+    puts "Watch: #{stats[:watch]} screenshots normalized to #{OFFICIAL_SIZES[:watch_series7plus][:width]}x#{OFFICIAL_SIZES[:watch_series7plus][:height]}"
     puts "Skipped: #{stats[:skipped]}" if stats[:skipped] > 0
     puts "Total: #{normalized_count} screenshots"
     puts "=" * 70

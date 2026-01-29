@@ -47,9 +47,9 @@ readonly -a IPAD_VALID_DIMENSIONS=(
     "2064x2752"  # iPad 13" exact (2024 standard)
 )
 
-# Apple Watch: Series 10 (46mm)
+# Apple Watch: Series 7+ (45mm) - Series 10 not yet accepted by App Store Connect API
 readonly -a WATCH_VALID_DIMENSIONS=(
-    "416x496"    # Watch Series 10 exact
+    "396x484"    # Watch Series 7+ exact
 )
 
 # macOS: 16:10 aspect ratio displays
@@ -315,7 +315,7 @@ Arguments:
 Device Types:
   iphone          - iPhone 6.7" display (1290x2796)
   ipad            - iPad 13" display (2064x2752)
-  watch           - Apple Watch Series 10 (416x496)
+  watch           - Apple Watch Series 7+ (396x484)
   mac             - Raw macOS screenshots (various dimensions)
   macos-processed - Processed macOS screenshots for App Store
                     Validates: 2880x1800, no alpha channel, <10MB

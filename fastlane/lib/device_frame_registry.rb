@@ -22,7 +22,7 @@ module DeviceFrameRegistry
   APP_STORE_DIMENSIONS = {
     iphone_6_7: { width: 1290, height: 2796, name: 'iPhone 6.7"' },
     ipad_13: { width: 2064, height: 2752, name: 'iPad 13"' },
-    watch: { width: 416, height: 496, name: 'Apple Watch Series 10' }
+    watch: { width: 396, height: 484, name: 'Apple Watch Series 7+' }
   }.freeze
 
   # Custom exception raised when frame metadata cannot be found
@@ -47,8 +47,8 @@ module DeviceFrameRegistry
     },
     /Apple Watch Series 10 \(46mm\)/ => {
       type: :watch,
-      frame: 'apple_watch_series_10_46mm',
-      screen_size: [416, 496]
+      frame: 'apple_watch_series_7plus_45mm',
+      screen_size: [396, 484]
     }
   }.freeze
 
