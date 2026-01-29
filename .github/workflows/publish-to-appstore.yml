@@ -117,7 +117,7 @@ jobs:
           echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
           echo "| iPhone | en-US, fi | 4 per locale (1290x2796) |" >> $GITHUB_STEP_SUMMARY
           echo "| iPad 13\" | en-US, fi | 4 per locale (2064x2752) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Watch | en-US, fi | 10 per locale (396x484) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Watch | en-US, fi | 5 per locale (416x496) |" >> $GITHUB_STEP_SUMMARY
           echo "| macOS | en-US, fi | 4 per locale (2880x1800) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
