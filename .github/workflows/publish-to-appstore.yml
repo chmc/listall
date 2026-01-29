@@ -105,32 +105,17 @@ jobs:
         run: bundle exec fastlane ios validate_delivery_screenshots
 
       - name: Upload metadata and screenshots to App Store Connect
-        # Note: skip_screenshots:true due to ASC API rejecting display types
-        # All screenshots must be uploaded manually via App Store Connect
-        # The ASC version 1.1.14 appears to be in a corrupted state
-        # See: https://github.com/chmc/listall/actions/runs/21477378329
-        run: bundle exec fastlane release version:${{ inputs.version }} skip_screenshots:true
+        run: bundle exec fastlane release version:${{ inputs.version }}
 
       - name: Summary
         run: |
           echo "## App Store Publication Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚠️ Screenshots Skipped - Manual Upload Required" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "App Store Connect API is rejecting screenshot display types for this version." >> $GITHUB_STEP_SUMMARY
-          echo "All screenshots must be uploaded manually via the ASC web interface." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Screenshot Locations" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Location |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|----------|" >> $GITHUB_STEP_SUMMARY
-          echo "| iPhone | \`fastlane/screenshots/en-US/\` and \`fi/\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| iPad | \`fastlane/screenshots/en-US/\` and \`fi/\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Watch | \`fastlane/screenshots/watch_normalized/\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | \`fastlane/screenshots/mac/processed/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "Version **${{ inputs.version }}** metadata and screenshots uploaded to App Store Connect." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY
           echo "2. Navigate to version: **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
-          echo "3. **Upload ALL screenshots manually** from the locations above" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify screenshots uploaded correctly for all platforms" >> $GITHUB_STEP_SUMMARY
           echo "4. Select the TestFlight build you want to release" >> $GITHUB_STEP_SUMMARY
           echo "5. Review and submit for review" >> $GITHUB_STEP_SUMMARY
