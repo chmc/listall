@@ -107,8 +107,9 @@ jobs:
         run: bundle exec fastlane ios validate_delivery_screenshots
 
       - name: Upload iOS metadata and screenshots to App Store Connect
-        # Using sync_screenshots:true to avoid deleting all screenshots first
-        # This incremental approach may avoid the ASC API "Display Type Not Allowed" bug
+        # The release lane now handles screenshot failures gracefully:
+        # - First uploads metadata to ensure version exists
+        # - Then attempts screenshot upload (catches failures without breaking)
         # See: documentation/learnings/asc-watch-screenshot-display-type.md
         run: bundle exec fastlane release version:${{ inputs.version }}
 
@@ -119,21 +120,29 @@ jobs:
           echo "MATCH_GIT_URL=https://x-access-token:${TOKEN}@github.com/chmc/listall-signing-certs.git" >> $GITHUB_ENV
 
       - name: Upload macOS metadata and screenshots to App Store Connect
-        # Using sync_screenshots approach for macOS as well
+        # The release_macos lane now handles screenshot failures gracefully
         run: bundle exec fastlane release_macos version:${{ inputs.version }}
 
       - name: Summary
         run: |
           echo "## App Store Publication Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version **${{ inputs.version }}** metadata and screenshots uploaded for both iOS and macOS." >> $GITHUB_STEP_SUMMARY
+          echo "Version **${{ inputs.version }}** metadata uploaded for both iOS and macOS." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Uploaded" >> $GITHUB_STEP_SUMMARY
-          echo "- iOS: App metadata + screenshots (iPhone, iPad, Watch)" >> $GITHUB_STEP_SUMMARY
-          echo "- macOS: App metadata + screenshots" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚠️ Check Screenshot Upload Status" >> $GITHUB_STEP_SUMMARY
+          echo "The fastlane output above shows whether screenshots were uploaded successfully." >> $GITHUB_STEP_SUMMARY
+          echo "If screenshot upload failed, upload manually via App Store Connect." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Screenshot Locations (for manual upload)" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Location |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| iPhone | \`fastlane/screenshots_compat/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| iPad | \`fastlane/screenshots_compat/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Watch | \`fastlane/screenshots/watch_normalized/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | \`fastlane/screenshots/mac/processed/\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY
-          echo "2. Verify screenshots uploaded correctly for version **${{ inputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify screenshots for version **${{ inputs.version }}** (upload manually if needed)" >> $GITHUB_STEP_SUMMARY
           echo "3. Select the TestFlight builds for each platform" >> $GITHUB_STEP_SUMMARY
           echo "4. Review and submit for review" >> $GITHUB_STEP_SUMMARY

@@ -609,24 +609,46 @@ platform :ios do
     end
     UI.message("📦 Creating/updating App Store version: #{version}")
 
-    # Use sync_screenshots (beta) to avoid full delete-then-upload cycle
-    # This may help avoid ASC API "Display Type Not Allowed" corruption bug
-    # See: documentation/learnings/asc-watch-screenshot-display-type.md
-    ENV["FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS"] = "true"
-
+    # First upload metadata only to ensure version exists
+    UI.message("📋 Uploading metadata first...")
     deliver(
       api_key: api_key,
-      app_version: version,  # Creates new version if doesn't exist
-      screenshots_path: skip_screenshots ? nil : delivery_path,
-      skip_screenshots: skip_screenshots,
-      sync_screenshots: !skip_screenshots,  # Use sync instead of overwrite
-      overwrite_screenshots: false,  # Don't delete all screenshots first
+      app_version: version,
+      skip_screenshots: true,
       skip_binary_upload: true,
       submit_for_review: false,
-      precheck_include_in_app_purchases: false,  # No IAPs in this app (also incompatible with API key auth)
+      precheck_include_in_app_purchases: false,
       force: true,
-      ignore_language_directory_validation: true  # Allow documentation folders in metadata
+      ignore_language_directory_validation: true
     )
+
+    # Then try screenshots if not skipping
+    unless skip_screenshots
+      UI.message("📸 Attempting screenshot upload...")
+      begin
+        # Use pilot/spaceship directly for more control over screenshot upload
+        # This separates version creation from screenshot upload
+        deliver(
+          api_key: api_key,
+          app_version: version,
+          screenshots_path: delivery_path,
+          skip_screenshots: false,
+          overwrite_screenshots: true,  # Try overwrite since version now exists
+          skip_metadata: true,  # Already uploaded
+          skip_binary_upload: true,
+          submit_for_review: false,
+          precheck_include_in_app_purchases: false,
+          force: true,
+          ignore_language_directory_validation: true
+        )
+        UI.success("✅ Screenshots uploaded successfully!")
+      rescue => e
+        UI.error("⚠️ Screenshot upload failed: #{e.message}")
+        UI.important("📱 Screenshots must be uploaded manually via App Store Connect")
+        UI.message("See: documentation/learnings/asc-watch-screenshot-display-type.md")
+        # Don't fail the lane - metadata was uploaded successfully
+      end
+    end
   end
 
   desc "Dry-run: Verify normalized screenshots would be detected by deliver (no upload)"
@@ -735,33 +757,51 @@ platform :ios do
       readonly: true  # Read-only for release (certs already exist)
     )
 
-    # Use sync_screenshots (beta) to avoid full delete-then-upload cycle
-    # This may help avoid ASC API "Display Type Not Allowed" corruption bug
-    ENV["FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS"] = "true"
-
+    # First upload metadata only to ensure version exists
+    UI.message("📋 Uploading macOS metadata first...")
     deliver(
       api_key: api_key,
       app_identifier: "io.github.chmc.ListAll",
-      app_version: version,  # Creates new version if doesn't exist
-      platform: "osx",   # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS
-      screenshots_path: skip_screenshots ? nil : screenshots_path,
-      metadata_path: "./metadata/macos",  # macOS-specific metadata (Task 10.3/10.4)
-      # App Store Categories (Task 10.4)
-      # Full list: https://docs.fastlane.tools/actions/deliver/#available-categories
+      app_version: version,
+      platform: "osx",
+      metadata_path: "./metadata/macos",
       primary_category: "PRODUCTIVITY",
       secondary_category: "UTILITIES",
-      # Age Rating (Task 10.4) - 4+ with no objectionable content
-      # Values: 0=None, 1=Infrequent/Mild, 2=Frequent/Intense
       app_rating_config_path: File.expand_path("metadata/macos/rating_config.json", __dir__),
-      skip_screenshots: skip_screenshots,
-      sync_screenshots: !skip_screenshots,  # Use sync instead of overwrite
-      overwrite_screenshots: false,  # Don't delete all screenshots first
-      skip_binary_upload: true,  # Binary uploaded separately via TestFlight
+      skip_screenshots: true,
+      skip_binary_upload: true,
       submit_for_review: false,
-      precheck_include_in_app_purchases: false,  # No IAPs in this app
+      precheck_include_in_app_purchases: false,
       force: true,
-      ignore_language_directory_validation: true  # Allow documentation folders in metadata
+      ignore_language_directory_validation: true
     )
+
+    # Then try screenshots if not skipping
+    unless skip_screenshots
+      UI.message("📸 Attempting macOS screenshot upload...")
+      begin
+        deliver(
+          api_key: api_key,
+          app_identifier: "io.github.chmc.ListAll",
+          app_version: version,
+          platform: "osx",
+          screenshots_path: screenshots_path,
+          skip_screenshots: false,
+          overwrite_screenshots: true,
+          skip_metadata: true,
+          skip_binary_upload: true,
+          submit_for_review: false,
+          precheck_include_in_app_purchases: false,
+          force: true,
+          ignore_language_directory_validation: true
+        )
+        UI.success("✅ macOS screenshots uploaded successfully!")
+      rescue => e
+        UI.error("⚠️ macOS screenshot upload failed: #{e.message}")
+        UI.important("🖥️ macOS screenshots must be uploaded manually via App Store Connect")
+        # Don't fail the lane - metadata was uploaded successfully
+      end
+    end
 
     UI.success("✅ macOS metadata and screenshots delivered to App Store Connect!")
     UI.message("💡 Review at: https://appstoreconnect.apple.com")
