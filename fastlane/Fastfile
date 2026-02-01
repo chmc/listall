@@ -609,12 +609,18 @@ platform :ios do
     end
     UI.message("📦 Creating/updating App Store version: #{version}")
 
+    # Use sync_screenshots (beta) to avoid full delete-then-upload cycle
+    # This may help avoid ASC API "Display Type Not Allowed" corruption bug
+    # See: documentation/learnings/asc-watch-screenshot-display-type.md
+    ENV["FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS"] = "true"
+
     deliver(
       api_key: api_key,
       app_version: version,  # Creates new version if doesn't exist
       screenshots_path: skip_screenshots ? nil : delivery_path,
       skip_screenshots: skip_screenshots,
-      overwrite_screenshots: !skip_screenshots,
+      sync_screenshots: !skip_screenshots,  # Use sync instead of overwrite
+      overwrite_screenshots: false,  # Don't delete all screenshots first
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,  # No IAPs in this app (also incompatible with API key auth)
@@ -729,6 +735,10 @@ platform :ios do
       readonly: true  # Read-only for release (certs already exist)
     )
 
+    # Use sync_screenshots (beta) to avoid full delete-then-upload cycle
+    # This may help avoid ASC API "Display Type Not Allowed" corruption bug
+    ENV["FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS"] = "true"
+
     deliver(
       api_key: api_key,
       app_identifier: "io.github.chmc.ListAll",
@@ -744,7 +754,8 @@ platform :ios do
       # Values: 0=None, 1=Infrequent/Mild, 2=Frequent/Intense
       app_rating_config_path: File.expand_path("metadata/macos/rating_config.json", __dir__),
       skip_screenshots: skip_screenshots,
-      overwrite_screenshots: !skip_screenshots,
+      sync_screenshots: !skip_screenshots,  # Use sync instead of overwrite
+      overwrite_screenshots: false,  # Don't delete all screenshots first
       skip_binary_upload: true,  # Binary uploaded separately via TestFlight
       submit_for_review: false,
       precheck_include_in_app_purchases: false,  # No IAPs in this app
