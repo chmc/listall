@@ -33,11 +33,12 @@ Error: An attribute value is invalid. - Display Type Not Allowed! - /data/attrib
 3. **New app version (1.1.15)**: Fresh version still has the error
 4. **Different screenshot dimensions**: Error persists
 5. **Skip watch, upload only iPhone/iPad**: All mobile types rejected
+6. **Fastlane 2.231.1 upgrade**: Same error persists (tested 2026-02-01)
 
 ## Root Cause Analysis
 
 This is NOT:
-- A fastlane version issue (using 2.230.0 with all fixes)
+- A fastlane version issue (tested 2.230.0 and 2.231.1)
 - A screenshot dimension issue (all dimensions are correct)
 - A version-specific corruption (fresh versions fail too)
 
@@ -94,9 +95,33 @@ This requires Apple to fix the ASC API. Options:
 
 ## Workflow Status
 
-Run [21560362548](https://github.com/chmc/listall/actions/runs/21560362548) shows:
-- Workflow: SUCCESS
-- iOS metadata: Uploaded
-- macOS metadata: Uploaded
-- macOS screenshots: Uploaded
-- iOS/Watch screenshots: Failed (manual upload required)
+Latest runs tested:
+
+| Run | Fastlane | iOS Screenshots | macOS Screenshots |
+|-----|----------|-----------------|-------------------|
+| [21560362548](https://github.com/chmc/listall/actions/runs/21560362548) | 2.230.0 | ❌ Failed | ✅ Uploaded |
+| [21561056043](https://github.com/chmc/listall/actions/runs/21561056043) | 2.231.1 | ❌ Failed | ✅ Uploaded |
+
+## Community Research
+
+Based on Apple Developer Forums research (2026-02-01):
+
+1. **New display types not in API**: The ASC API documentation doesn't list new 6.9" iPhone and 13" iPad display types (forum threads 763908, 751867)
+2. **Fastlane fix already applied**: PR #29760 added support for latest device resolutions in fastlane 2.230.0
+3. **API-level rejection**: The error occurs at `POST /v1/appScreenshotSets` endpoint, rejecting valid display types
+
+This is a known Apple ASC API issue affecting developers using automated screenshot uploads.
+
+## Blocked - Cannot Complete Automated Upload
+
+**Task Completion Status**: BLOCKED by Apple ASC API bug
+
+This task cannot be fully completed because:
+- The ASC API rejects ALL mobile device screenshot display types
+- This is a server-side Apple issue, not a code/configuration issue
+- Manual upload via App Store Connect web UI is the only current workaround
+
+**Recommended Actions**:
+1. Report bug to Apple via Feedback Assistant
+2. Monitor [fastlane/fastlane GitHub issues](https://github.com/fastlane/fastlane/issues) for community workarounds
+3. Re-test automated upload after Apple fixes the API
