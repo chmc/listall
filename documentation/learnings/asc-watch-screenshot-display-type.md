@@ -49,24 +49,41 @@ This appears to be an ASC API bug around version state management after screensh
 
 ## Solution
 
-1. Add `skip_screenshots` option to fastlane release lane:
+The release lanes now handle this gracefully:
+1. First upload metadata only to ensure version exists
+2. Then attempt screenshot upload with error handling
+3. If screenshot upload fails, continue with metadata-only success
+4. Report clear status about what was uploaded vs what failed
+
+Current behavior (as of February 2026):
+- ✅ **macOS screenshots (APP_DESKTOP)**: Upload works via API
+- ❌ **iOS/iPadOS/Watch screenshots**: Rejected with "Display Type Not Allowed!" error
+- iOS screenshots must be uploaded manually via App Store Connect web UI
+
+## Fastlane Configuration
+
 ```ruby
-lane :release do |options|
-  skip_screenshots = options[:skip_screenshots] == true
+# Two-phase upload approach in release lane
+# Phase 1: Upload metadata only (always succeeds)
+deliver(
+  api_key: api_key,
+  skip_screenshots: true,
+  # ...
+)
+
+# Phase 2: Attempt screenshot upload (catches failures)
+begin
   deliver(
-    skip_screenshots: skip_screenshots,
-    overwrite_screenshots: !skip_screenshots,
+    api_key: api_key,
+    skip_screenshots: false,
+    skip_metadata: true,  # Already uploaded
     # ...
   )
+rescue => e
+  UI.error("Screenshot upload failed: #{e.message}")
+  # Continue - metadata was uploaded successfully
 end
 ```
-
-2. Enable skip_screenshots in CI workflow:
-```yaml
-run: bundle exec fastlane release version:${{ inputs.version }} skip_screenshots:true
-```
-
-3. Upload ALL screenshots manually via App Store Connect web UI
 
 ## Prevention
 
@@ -77,4 +94,4 @@ run: bundle exec fastlane release version:${{ inputs.version }} skip_screenshots
 
 ## Key Insight
 
-> App Store Connect API may corrupt version state when deleting/switching screenshot display types; the only workaround is manual upload via web UI or creating a new app version.
+> App Store Connect API may corrupt version state when deleting/switching screenshot display types; macOS (APP_DESKTOP) screenshots still work via API, but iOS/iPadOS/Watch display types require manual upload via web UI.
