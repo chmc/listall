@@ -724,7 +724,7 @@ platform :ios do
 
     # Path to processed macOS screenshots (2880x1800 with gradient background)
     # macOS screenshots are generated locally via generate-screenshots-local.sh macos
-    screenshots_path = File.expand_path("../screenshots/mac/processed", __dir__)
+    screenshots_path = File.expand_path("screenshots/mac/processed", __dir__)
 
     # Verify processed screenshots exist (unless skipping all screenshots)
     unless skip_screenshots || Dir.exist?(screenshots_path)
