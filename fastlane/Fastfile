@@ -738,8 +738,8 @@ platform :ios do
       metadata_path: "./metadata/macos",  # macOS-specific metadata (Task 10.3/10.4)
       # App Store Categories (Task 10.4)
       # Full list: https://docs.fastlane.tools/actions/deliver/#available-categories
-      primary_category: "Productivity",
-      secondary_category: "Utilities",
+      primary_category: "PRODUCTIVITY",
+      secondary_category: "UTILITIES",
       # Age Rating (Task 10.4) - 4+ with no objectionable content
       # Values: 0=None, 1=Infrequent/Mild, 2=Frequent/Intense
       app_rating_config_path: File.expand_path("metadata/macos/rating_config.json", __dir__),
