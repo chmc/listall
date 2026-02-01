@@ -742,7 +742,7 @@ platform :ios do
       secondary_category: "Utilities",
       # Age Rating (Task 10.4) - 4+ with no objectionable content
       # Values: 0=None, 1=Infrequent/Mild, 2=Frequent/Intense
-      app_rating_config_path: "./metadata/macos/rating_config.json",
+      app_rating_config_path: File.expand_path("metadata/macos/rating_config.json", __dir__),
       skip_screenshots: skip_screenshots,
       overwrite_screenshots: !skip_screenshots,
       skip_binary_upload: true,  # Binary uploaded separately via TestFlight
