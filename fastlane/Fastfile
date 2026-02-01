@@ -764,7 +764,7 @@ platform :ios do
       app_identifier: "io.github.chmc.ListAll",
       app_version: version,
       platform: "osx",
-      metadata_path: "./metadata/macos",
+      metadata_path: "./fastlane/metadata/macos",
       primary_category: "PRODUCTIVITY",
       secondary_category: "UTILITIES",
       app_rating_config_path: File.expand_path("metadata/macos/rating_config.json", __dir__),
