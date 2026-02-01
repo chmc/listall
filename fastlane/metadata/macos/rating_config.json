@@ -11,7 +11,7 @@
   "sexualContentOrNudity": "NONE",
   "sexualContentGraphicAndNudity": "NONE",
   "unrestrictedWebAccess": false,
-  "gambling": false,
-  "contests": false,
+  "gambling": "NONE",
+  "contests": "NONE",
   "ageRatingOverride": "NONE"
 }
