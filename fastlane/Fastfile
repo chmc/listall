@@ -733,7 +733,7 @@ platform :ios do
       api_key: api_key,
       app_identifier: "io.github.chmc.ListAll",
       app_version: version,  # Creates new version if doesn't exist
-      app_platform: "osx",   # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS
+      platform: "osx",   # CRITICAL: Must be "osx" (NOT "macos" or "mac") for macOS
       screenshots_path: skip_screenshots ? nil : screenshots_path,
       metadata_path: "./metadata/macos",  # macOS-specific metadata (Task 10.3/10.4)
       # App Store Categories (Task 10.4)
