@@ -81,6 +81,8 @@ Deliver metadata/screenshots to App Store (no auto-submit)
 
 Creates new app version if needed. Usage: fastlane release version:1.2.0
 
+Options: skip_watch:true to skip watch screenshots, skip_screenshots:true to skip ALL screenshots
+
 ### ios release_dry_run
 
 ```sh
@@ -88,6 +90,8 @@ Creates new app version if needed. Usage: fastlane release version:1.2.0
 ```
 
 Dry-run: Verify normalized screenshots would be detected by deliver (no upload)
+
+Options: skip_watch:true to skip watch screenshots
 
 ### ios release_macos
 
