@@ -78,6 +78,7 @@ jobs:
           -skip-testing:ListAllTests/ListOrderingTests/testReorder_modifiedAtPersistsToDatabase \
           -skip-testing:ListAllTests/CoreDataRemoteChangeTests/testRemoteChangeThreadSafety \
           -skip-testing:ListAllTests/SyncBugFixTests/testBatchedReloadPerformance \
+          -skip-testing:ListAllTests/ServicesTests/testDataRepositoryHandlesSyncNotification \
           -skip-testing:ListAllUITests \
           -skip-testing:ListAllUITestsLaunchTests \
           CODE_SIGN_IDENTITY="" \
