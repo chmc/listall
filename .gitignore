@@ -90,6 +90,7 @@ fastlane/derivedDataWatch/
 
 # Ignore all raw/intermediate screenshot files
 fastlane/screenshots/*
+fastlane/screenshots_raw/
 fastlane/screenshots_compat/delivery/
 
 # KEEP (track) normalized Watch screenshots (396x484)
