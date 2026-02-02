@@ -381,6 +381,10 @@ module FramingHelper
       '-composite',
       escaped_frame,
       '-composite',
+      '-flatten',              # Flatten all layers onto canvas
+      '-alpha', 'off',         # Strip alpha channel from PNG structure (ASC requirement)
+      '-strip',                # Remove metadata, ICC profiles, PNG chunks
+      '-colorspace', 'sRGB',   # Force sRGB colorspace for ASC compatibility
       "-quality #{options[:quality]}",
       escaped_output
     ]
@@ -482,6 +486,10 @@ module FramingHelper
       '\\)',
       "-geometry +#{frame_x}+#{frame_y}",
       '-composite',
+      '-flatten',              # Flatten all layers onto canvas
+      '-alpha', 'off',         # Strip alpha channel from PNG structure (ASC requirement)
+      '-strip',                # Remove metadata, ICC profiles, PNG chunks
+      '-colorspace', 'sRGB',   # Force sRGB colorspace for ASC compatibility
       "-quality #{options[:quality]}",
       escaped_output
     ]
