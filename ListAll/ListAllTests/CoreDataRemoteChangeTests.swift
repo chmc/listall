@@ -4,43 +4,49 @@ import Combine
 @testable import ListAll
 
 final class CoreDataRemoteChangeTests: XCTestCase {
-    
+
     override func setUp() {
         super.setUp()
-        // Reset Core Data for clean test state
-        let context = CoreDataManager.shared.viewContext
-        context.reset()
+        // CRITICAL: Reset singleton state to prevent cross-test contamination
+        // This clears any pending debounce timers from previous tests
+        CoreDataManager.resetForTesting()
+
+        // Ensure Core Data stack is fully initialized before tests run
+        // Access persistentStoreCoordinator to trigger lazy initialization
+        _ = CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
     }
-    
+
     override func tearDown() {
+        // Reset again after test to clean up any state changes
+        CoreDataManager.resetForTesting()
         super.tearDown()
     }
-    
+
     // MARK: - Test 1: Remote Change Notification Posted
-    
+
     func testRemoteChangeNotificationPosted() throws {
-        let expectation = XCTestExpectation(description: "CoreData remote change notification posted")
-        
-        // Observe the custom notification
-        let observer = NotificationCenter.default.addObserver(
-            forName: .coreDataRemoteChange,
+        // Use XCTest's built-in expectation for notification - more reliable than manual observer
+        let notificationExpectation = expectation(
+            forNotification: .coreDataRemoteChange,
             object: nil,
-            queue: .main
-        ) { _ in
-            expectation.fulfill()
-        }
-        
-        // Simulate remote change by posting NSPersistentStoreRemoteChange
-        NotificationCenter.default.post(
-            name: .NSPersistentStoreRemoteChange,
-            object: CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
+            handler: nil
         )
-        
-        // Wait for debounced notification (500ms + buffer)
-        wait(for: [expectation], timeout: 2.0)
-        
-        // Cleanup
-        NotificationCenter.default.removeObserver(observer)
+
+        // Give the run loop a chance to process any pending work before posting
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+
+        // Simulate remote change by posting NSPersistentStoreRemoteChange
+        // IMPORTANT: Post on main thread to ensure consistent timer scheduling
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .NSPersistentStoreRemoteChange,
+                object: CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
+            )
+        }
+
+        // Wait for debounced notification
+        // Timeout: 500ms debounce + 2.5s buffer for CI environments (slower runners)
+        wait(for: [notificationExpectation], timeout: 3.0)
     }
     
     // MARK: - Test 2: DataManager Reloads on Remote Change
@@ -94,12 +100,12 @@ final class CoreDataRemoteChangeTests: XCTestCase {
     }
     
     // MARK: - Test 3: Debouncing Prevents Excessive Reloads
-    
+
     func testDebouncingPreventsExcessiveReloads() throws {
         var notificationCount = 0
         let expectation = XCTestExpectation(description: "Debounced notification received once")
         expectation.assertForOverFulfill = true
-        
+
         // Observe the custom notification
         let observer = NotificationCenter.default.addObserver(
             forName: .coreDataRemoteChange,
@@ -109,21 +115,27 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             notificationCount += 1
             expectation.fulfill()
         }
-        
+
+        // Give the run loop a chance to process any pending work
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+
         // Post multiple rapid remote changes (should be debounced to single notification)
-        for _ in 0..<5 {
-            NotificationCenter.default.post(
-                name: .NSPersistentStoreRemoteChange,
-                object: CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
-            )
+        // Post on main thread to ensure consistent timer scheduling
+        DispatchQueue.main.async {
+            for _ in 0..<5 {
+                NotificationCenter.default.post(
+                    name: .NSPersistentStoreRemoteChange,
+                    object: CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
+                )
+            }
         }
-        
-        // Wait for debounced notification (500ms + buffer)
-        wait(for: [expectation], timeout: 2.0)
-        
+
+        // Wait for debounced notification (500ms + buffer for CI)
+        wait(for: [expectation], timeout: 3.0)
+
         // Verify only one notification was sent despite 5 rapid changes
         XCTAssertEqual(notificationCount, 1)
-        
+
         // Cleanup
         NotificationCenter.default.removeObserver(observer)
     }
