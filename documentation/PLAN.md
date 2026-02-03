@@ -48,7 +48,7 @@ Each phase below is designed to be run as a Ralph Loop prompt. Copy the phase co
 | 1A: Retry Logic | ✅ Completed | 2026-02-03 |
 | 1B: idb Spike | ✅ Completed | 2026-02-03 |
 | 1C: Command Batching | ✅ Completed | 2026-02-03 |
-| 2: Decision Point | ⏳ Pending | - |
+| 2: Decision Point | ✅ Completed | 2026-02-03 |
 
 ---
 
@@ -177,7 +177,13 @@ Output COMPLETE when all criteria are met.
 
 ---
 
-### PHASE 2: Decision Point
+### PHASE 2: Decision Point ✅ COMPLETED
+
+**Status**: Completed 2026-02-03
+- Decision: Continue with XCUITest + Batching (do NOT adopt idb)
+- Rationale: idb uses coordinate-based interactions only, incompatible with our identifier/label-based tools
+- Performance achieved: ~50% reduction for batched operations (2-3x faster)
+- Findings: documentation/learnings/mcp-improvement-decision.md
 
 TASK: Evaluate Phase 1 results and decide next steps
 
