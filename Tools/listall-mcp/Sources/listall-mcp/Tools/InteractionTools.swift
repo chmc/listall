@@ -218,6 +218,73 @@ enum InteractionTools {
         )
     }
 
+    /// Tool definition for listall_batch
+    static var batchTool: Tool {
+        Tool(
+            name: "listall_batch",
+            description: """
+                Execute multiple UI actions in a single operation (simulator only).
+
+                This is more efficient than calling individual tools when you need to perform
+                multiple actions in sequence. Each action in the batch is executed sequentially.
+
+                Use this when you need to: click button A, then type text, then click button B.
+                Performance: ~10-12s for 3 actions vs ~24s for 3 separate calls.
+
+                Note: query action is not supported in batch (use separate listall_query call).
+                """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "simulator_udid": .object([
+                        "type": .string("string"),
+                        "description": .string("The UDID of the simulator (use 'booted' for any booted simulator)")
+                    ]),
+                    "bundle_id": .object([
+                        "type": .string("string"),
+                        "description": .string("Bundle identifier of the target app")
+                    ]),
+                    "actions": .object([
+                        "type": .string("array"),
+                        "description": .string("Array of actions to execute sequentially"),
+                        "items": .object([
+                            "type": .string("object"),
+                            "properties": .object([
+                                "action": .object([
+                                    "type": .string("string"),
+                                    "enum": .array([.string("click"), .string("type"), .string("swipe")]),
+                                    "description": .string("Action type: click, type, or swipe")
+                                ]),
+                                "identifier": .object([
+                                    "type": .string("string"),
+                                    "description": .string("Accessibility identifier of target element")
+                                ]),
+                                "label": .object([
+                                    "type": .string("string"),
+                                    "description": .string("Accessibility label of target element")
+                                ]),
+                                "text": .object([
+                                    "type": .string("string"),
+                                    "description": .string("Text to type (for type action)")
+                                ]),
+                                "direction": .object([
+                                    "type": .string("string"),
+                                    "description": .string("Swipe direction: up, down, left, right (for swipe action)")
+                                ]),
+                                "clear_first": .object([
+                                    "type": .string("boolean"),
+                                    "description": .string("Clear text before typing (for type action)")
+                                ])
+                            ]),
+                            "required": .array([.string("action")])
+                        ])
+                    ])
+                ]),
+                "required": .array([.string("simulator_udid"), .string("bundle_id"), .string("actions")])
+            ])
+        )
+    }
+
     // MARK: - Tool Collection
 
     /// All interaction tools
@@ -226,7 +293,8 @@ enum InteractionTools {
             clickTool,
             typeTool,
             swipeTool,
-            queryTool
+            queryTool,
+            batchTool
         ]
     }
 
@@ -247,7 +315,22 @@ enum InteractionTools {
 
         // If simulator_udid is provided, use XCUITest bridge
         if let udid = simulatorUDID {
+            // Batch tool is simulator-only (macOS uses Accessibility API which is already fast)
+            if name == "listall_batch" {
+                guard let bundleId = arguments?["bundle_id"].flatMap({ value -> String? in
+                    if case .string(let str) = value { return str }
+                    return nil
+                }) else {
+                    throw MCPError.invalidParams("bundle_id is required for batch operations")
+                }
+                return try await handleSimulatorBatch(udid: udid, bundleId: bundleId, arguments: arguments)
+            }
             return try await handleSimulatorToolCall(name: name, udid: udid, arguments: arguments)
+        }
+
+        // Batch tool is not supported for macOS (Accessibility API is already fast)
+        if name == "listall_batch" {
+            throw MCPError.invalidParams("listall_batch is only supported for simulators. For macOS, use individual tools (listall_click, listall_type, listall_swipe) which are already fast via Accessibility API.")
         }
 
         // Otherwise, use macOS Accessibility API
@@ -459,6 +542,139 @@ enum InteractionTools {
             return CallTool.Result(content: [.text(output)])
         } else {
             throw MCPError.internalError(result.error ?? result.message)
+        }
+    }
+
+    /// Handle simulator batch execution via XCUITest
+    private static func handleSimulatorBatch(udid: String, bundleId: String, arguments: [String: Value]?) async throws -> CallTool.Result {
+        // Parse actions array from arguments
+        guard let actionsValue = arguments?["actions"] else {
+            throw MCPError.invalidParams("Missing required parameter: actions")
+        }
+
+        guard case .array(let actionsArray) = actionsValue else {
+            throw MCPError.invalidParams("actions must be an array")
+        }
+
+        if actionsArray.isEmpty {
+            return CallTool.Result(content: [.text("No actions to execute")])
+        }
+
+        // Convert Value array to XCUITestBridge.Action array
+        var actions: [XCUITestBridge.Action] = []
+
+        for (index, actionValue) in actionsArray.enumerated() {
+            guard case .object(let actionDict) = actionValue else {
+                throw MCPError.invalidParams("Action at index \(index) must be an object")
+            }
+
+            // Extract action type (required)
+            guard let actionTypeValue = actionDict["action"],
+                  case .string(let actionType) = actionTypeValue else {
+                throw MCPError.invalidParams("Action at index \(index) missing required 'action' field")
+            }
+
+            // Validate action type
+            guard ["click", "type", "swipe"].contains(actionType) else {
+                throw MCPError.invalidParams("Action at index \(index) has invalid action type '\(actionType)'. Must be click, type, or swipe.")
+            }
+
+            // Extract optional fields
+            let identifier = actionDict["identifier"].flatMap { value -> String? in
+                if case .string(let str) = value { return str }
+                return nil
+            }
+
+            let label = actionDict["label"].flatMap { value -> String? in
+                if case .string(let str) = value { return str }
+                return nil
+            }
+
+            let text = actionDict["text"].flatMap { value -> String? in
+                if case .string(let str) = value { return str }
+                return nil
+            }
+
+            let direction = actionDict["direction"].flatMap { value -> String? in
+                if case .string(let str) = value { return str }
+                return nil
+            }
+
+            let clearFirst = actionDict["clear_first"].flatMap { value -> Bool? in
+                if case .bool(let b) = value { return b }
+                return nil
+            }
+
+            // Validate action-specific required fields
+            switch actionType {
+            case "click":
+                guard identifier != nil || label != nil else {
+                    throw MCPError.invalidParams("Click action at index \(index) requires either 'identifier' or 'label'")
+                }
+            case "type":
+                guard text != nil else {
+                    throw MCPError.invalidParams("Type action at index \(index) requires 'text' field")
+                }
+            case "swipe":
+                guard direction != nil else {
+                    throw MCPError.invalidParams("Swipe action at index \(index) requires 'direction' field")
+                }
+                guard ["up", "down", "left", "right"].contains(direction!) else {
+                    throw MCPError.invalidParams("Swipe action at index \(index) has invalid direction '\(direction!)'. Must be up, down, left, or right.")
+                }
+            default:
+                break
+            }
+
+            let action = XCUITestBridge.Action(
+                action: actionType,
+                identifier: identifier,
+                label: label,
+                text: text,
+                direction: direction,
+                timeout: 10,
+                clearFirst: clearFirst,
+                queryRole: nil,
+                queryDepth: nil
+            )
+            actions.append(action)
+        }
+
+        log("listall_batch: Executing \(actions.count) actions on simulator \(udid)")
+
+        // Execute batch via XCUITestBridge
+        let result = try await XCUITestBridge.executeBatch(
+            actions: actions,
+            simulatorUDID: udid,
+            bundleId: bundleId,
+            projectPath: defaultProjectPath
+        )
+
+        // Format results
+        var output = "Batch execution \(result.success ? "completed" : "failed"): \(result.message)\n"
+        output += "Actions: \(actions.count), Results: \(result.results.count)\n\n"
+
+        for (index, actionResult) in result.results.enumerated() {
+            let action = actions[index]
+            let status = actionResult.success ? "SUCCESS" : "FAILED"
+            output += "[\(index + 1)] \(action.action.uppercased()) - \(status)\n"
+            output += "    \(actionResult.message)\n"
+
+            if let error = actionResult.error {
+                output += "    Error: \(error)\n"
+            }
+            if let elementType = actionResult.elementType {
+                output += "    Element type: \(elementType)\n"
+            }
+            if let hint = actionResult.hint {
+                output += "    Hint: \(hint)\n"
+            }
+        }
+
+        if result.success {
+            return CallTool.Result(content: [.text(output)])
+        } else {
+            throw MCPError.internalError(output)
         }
     }
 

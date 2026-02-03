@@ -2,21 +2,44 @@ import XCTest
 
 // MARK: - MCP Command Models
 
-/// Command structure for MCP -> XCUITest communication
-struct MCPCommand: Codable {
+/// Single action to execute in XCUITest
+/// Used both for single-command mode (embedded in MCPCommand) and batch mode (in commands array)
+struct MCPAction: Codable {
     let action: String
     let identifier: String?
     let label: String?
     let text: String?
     let direction: String?
-    let bundleId: String
     let timeout: TimeInterval?
     let clearFirst: Bool?
     let queryRole: String?
     let queryDepth: Int?
 }
 
-/// Result structure for XCUITest -> MCP communication
+/// Command structure for MCP -> XCUITest communication
+/// Supports two modes:
+/// - Single command (backward compatible): action fields at top level
+/// - Batch mode: bundleId shared, multiple actions in commands array
+struct MCPCommand: Codable {
+    // Shared field for all actions
+    let bundleId: String
+
+    // Single-command mode fields (backward compatible)
+    let action: String?
+    let identifier: String?
+    let label: String?
+    let text: String?
+    let direction: String?
+    let timeout: TimeInterval?
+    let clearFirst: Bool?
+    let queryRole: String?
+    let queryDepth: Int?
+
+    // Batch mode: array of actions to execute sequentially
+    let commands: [MCPAction]?
+}
+
+/// Result structure for XCUITest -> MCP communication (single action)
 struct MCPResult: Codable {
     let success: Bool
     let message: String
@@ -46,6 +69,27 @@ struct MCPResult: Codable {
         self.elementFrame = elementFrame
         self.usedCoordinateFallback = usedCoordinateFallback
         self.hint = hint
+    }
+}
+
+/// Result structure for batch command execution
+/// Contains overall success status and individual results for each action
+struct MCPBatchResult: Codable {
+    let success: Bool
+    let message: String
+    let results: [MCPResult]
+    let error: String?
+
+    init(
+        success: Bool,
+        message: String,
+        results: [MCPResult],
+        error: String? = nil
+    ) {
+        self.success = success
+        self.message = message
+        self.results = results
+        self.error = error
     }
 }
 
@@ -89,6 +133,7 @@ final class MCPCommandRunner: XCTestCase {
 
     /// Main entry point that reads command file, executes action, and writes result.
     /// This is invoked by the MCP server via xcodebuild.
+    /// Supports both single-command (backward compatible) and batch mode.
     func testRunMCPCommand() throws {
         // Skip if no command file - this test is only meant to be invoked by MCP server
         try XCTSkipUnless(
@@ -96,36 +141,58 @@ final class MCPCommandRunner: XCTestCase {
             "No MCP command file present - this test is invoked by MCP server, not CI"
         )
 
-        var result: MCPResult
-
         do {
             // Read command from file
             let command = try readCommand()
 
-            // Execute the command
-            result = try executeCommand(command)
+            // Check if this is a batch command
+            if let actions = command.commands, !actions.isEmpty {
+                // Batch mode: execute multiple actions and write batch result
+                let batchResult = try executeBatchCommand(command, actions: actions)
+                try writeBatchResult(batchResult)
+
+                // If any action failed, fail the test for visibility
+                if !batchResult.success {
+                    XCTFail(batchResult.error ?? batchResult.message)
+                }
+            } else {
+                // Single-command mode (backward compatible)
+                var result: MCPResult
+
+                do {
+                    result = try executeCommand(command)
+                } catch {
+                    result = MCPResult(
+                        success: false,
+                        message: "Command execution failed",
+                        elements: nil,
+                        error: error.localizedDescription
+                    )
+                }
+
+                try writeResult(result)
+
+                if !result.success {
+                    XCTFail(result.error ?? result.message)
+                }
+            }
 
         } catch {
-            // Capture any errors and write to result
-            result = MCPResult(
+            // Capture any setup/read errors and write to result
+            let result = MCPResult(
                 success: false,
                 message: "Command execution failed",
                 elements: nil,
                 error: error.localizedDescription
             )
-        }
 
-        // Write result to file
-        do {
-            try writeResult(result)
-        } catch {
-            // If we can't write the result, fail the test
-            XCTFail("Failed to write result: \(error)")
-        }
+            do {
+                try writeResult(result)
+            } catch {
+                XCTFail("Failed to write result: \(error)")
+            }
 
-        // If the command failed, fail the test for visibility
-        if !result.success {
-            XCTFail(result.error ?? result.message)
+            XCTFail(error.localizedDescription)
         }
     }
 
@@ -146,6 +213,15 @@ final class MCPCommandRunner: XCTestCase {
 
     /// Write result to the result file
     private func writeResult(_ result: MCPResult) throws {
+        let resultURL = URL(fileURLWithPath: Self.resultPath)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        let data = try encoder.encode(result)
+        try data.write(to: resultURL, options: .atomic)
+    }
+
+    /// Write batch result to the result file
+    private func writeBatchResult(_ result: MCPBatchResult) throws {
         let resultURL = URL(fileURLWithPath: Self.resultPath)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
@@ -174,7 +250,11 @@ final class MCPCommandRunner: XCTestCase {
         }
 
         // Execute the appropriate action
-        switch command.action {
+        guard let action = command.action else {
+            throw MCPCommandError.missingParameter("action")
+        }
+
+        switch action {
         case "click":
             return try executeClick(app: app, command: command)
         case "type":
@@ -184,8 +264,345 @@ final class MCPCommandRunner: XCTestCase {
         case "query":
             return try executeQuery(app: app, command: command)
         default:
-            throw MCPCommandError.unknownAction(command.action)
+            throw MCPCommandError.unknownAction(action)
         }
+    }
+
+    // MARK: - Batch Command Execution
+
+    /// Execute a batch of actions and return batch result
+    /// The app is launched once and all actions are executed sequentially.
+    /// If any action fails, subsequent actions still run but overall success is false.
+    /// watchOS-specific: uses longer timeouts for slower simulator
+    private func executeBatchCommand(_ command: MCPCommand, actions: [MCPAction]) throws -> MCPBatchResult {
+        // Get or launch the app once for all actions
+        let app = XCUIApplication(bundleIdentifier: command.bundleId)
+
+        // Launch the app with UITEST_MODE if not running
+        if app.state != .runningForeground {
+            app.launchArguments = ["UITEST_MODE", "DISABLE_TOOLTIPS"]
+            app.launch()
+
+            // Wait for app to be in foreground (watchOS needs longer timeout)
+            let timeout = Self.appLaunchTimeout
+            let appeared = app.wait(for: .runningForeground, timeout: timeout)
+            if !appeared {
+                throw MCPCommandError.appNotReady(command.bundleId, app.state.rawValue)
+            }
+        }
+
+        // Execute each action and collect results
+        var results: [MCPResult] = []
+        var overallSuccess = true
+
+        for (index, action) in actions.enumerated() {
+            let result: MCPResult
+
+            do {
+                result = try executeAction(app: app, action: action)
+            } catch {
+                result = MCPResult(
+                    success: false,
+                    message: "Action \(index + 1) (\(action.action)) failed",
+                    elements: nil,
+                    error: error.localizedDescription
+                )
+            }
+
+            results.append(result)
+
+            if !result.success {
+                overallSuccess = false
+            }
+        }
+
+        // Build summary message
+        let successCount = results.filter { $0.success }.count
+        let message = "Executed \(actions.count) actions: \(successCount) succeeded, \(actions.count - successCount) failed"
+
+        return MCPBatchResult(
+            success: overallSuccess,
+            message: message,
+            results: results,
+            error: overallSuccess ? nil : "One or more actions failed"
+        )
+    }
+
+    /// Execute a single action from a batch
+    private func executeAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
+        switch action.action {
+        case "click":
+            return try executeClickAction(app: app, action: action)
+        case "type":
+            return try executeTypeAction(app: app, action: action)
+        case "swipe":
+            return try executeSwipeAction(app: app, action: action)
+        case "query":
+            return try executeQueryAction(app: app, action: action)
+        default:
+            throw MCPCommandError.unknownAction(action.action)
+        }
+    }
+
+    // MARK: - Action Execution (for batch mode)
+
+    /// Execute a click/tap action from batch
+    /// watchOS-specific: uses longer stability timeout
+    private func executeClickAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
+        let element = try findElementForAction(in: app, action: action)
+        let timeout = action.timeout ?? Self.defaultTimeout
+
+        guard element.waitForExistence(timeout: timeout) else {
+            throw MCPCommandError.elementNotFound(action.identifier ?? action.label ?? "unknown")
+        }
+
+        // Capture element info for feedback
+        let elementType = String(describing: element.elementType)
+        let frame = element.frame
+        let frameStr = "x:\(Int(frame.origin.x)), y:\(Int(frame.origin.y)), w:\(Int(frame.width)), h:\(Int(frame.height))"
+
+        // Wait for animation stabilization (watchOS needs longer)
+        waitForElementStability(element, timeout: Self.elementStabilityTimeout)
+
+        var usedCoordinateFallback = false
+        var hint: String? = nil
+
+        if element.isHittable {
+            element.tap()
+        } else {
+            usedCoordinateFallback = true
+            let coordinate = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            coordinate.tap()
+            hint = "Element was not hittable, used coordinate-based tap."
+        }
+
+        Thread.sleep(forTimeInterval: 0.15)
+
+        let targetDesc = action.identifier ?? action.label ?? "element"
+        return MCPResult(
+            success: true,
+            message: "Successfully clicked '\(targetDesc)'",
+            elements: nil,
+            error: nil,
+            elementType: elementType,
+            elementFrame: frameStr,
+            usedCoordinateFallback: usedCoordinateFallback,
+            hint: hint
+        )
+    }
+
+    /// Execute a type/text entry action from batch
+    private func executeTypeAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
+        guard let text = action.text else {
+            throw MCPCommandError.missingParameter("text")
+        }
+
+        let timeout = action.timeout ?? Self.defaultTimeout
+        var targetElement: XCUIElement
+
+        if action.identifier != nil || action.label != nil {
+            targetElement = try findElementForAction(in: app, action: action)
+
+            guard targetElement.waitForExistence(timeout: timeout) else {
+                throw MCPCommandError.elementNotFound(action.identifier ?? action.label ?? "unknown")
+            }
+
+            targetElement.tap()
+        } else {
+            // watchOS: no textViews, only textFields and searchFields
+            let textFields = app.textFields.allElementsBoundByIndex
+            let searchFields = app.searchFields.allElementsBoundByIndex
+
+            let allTextElements = textFields + searchFields
+
+            guard let firstFocusable = allTextElements.first(where: { $0.exists && $0.isHittable }) else {
+                throw MCPCommandError.noFocusableElement
+            }
+
+            targetElement = firstFocusable
+            targetElement.tap()
+        }
+
+        if action.clearFirst == true {
+            targetElement.tap()
+            if let currentValue = targetElement.value as? String, !currentValue.isEmpty {
+                targetElement.tap()
+                targetElement.tap()
+                targetElement.tap()
+                targetElement.typeText(XCUIKeyboardKey.delete.rawValue)
+            }
+        }
+
+        targetElement.typeText(text)
+
+        let targetDesc = action.identifier ?? action.label ?? "focused element"
+        return MCPResult(
+            success: true,
+            message: "Successfully typed '\(text)' into '\(targetDesc)'",
+            elements: nil,
+            error: nil
+        )
+    }
+
+    /// Execute a swipe/scroll action from batch
+    /// watchOS uses swipe extensively for navigation
+    private func executeSwipeAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
+        guard let direction = action.direction else {
+            throw MCPCommandError.missingParameter("direction")
+        }
+
+        let timeout = action.timeout ?? Self.defaultTimeout
+        var targetElement: XCUIElement
+
+        if action.identifier != nil || action.label != nil {
+            targetElement = try findElementForAction(in: app, action: action)
+
+            guard targetElement.waitForExistence(timeout: timeout) else {
+                throw MCPCommandError.elementNotFound(action.identifier ?? action.label ?? "unknown")
+            }
+        } else {
+            targetElement = app
+        }
+
+        switch direction {
+        case "up":
+            targetElement.swipeUp()
+        case "down":
+            targetElement.swipeDown()
+        case "left":
+            targetElement.swipeLeft()
+        case "right":
+            // Right swipe often goes "back" on watchOS
+            targetElement.swipeRight()
+        default:
+            throw MCPCommandError.invalidDirection(direction)
+        }
+
+        let targetDesc = action.identifier ?? action.label ?? "app window"
+        return MCPResult(
+            success: true,
+            message: "Successfully swiped \(direction) on '\(targetDesc)'",
+            elements: nil,
+            error: nil
+        )
+    }
+
+    /// Execute a query action from batch
+    private func executeQueryAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
+        var elements: [[String: String]] = []
+        let maxDepth = action.queryDepth ?? 3
+        let roleFilter = action.queryRole
+
+        collectElements(from: app, role: roleFilter, depth: maxDepth, elements: &elements)
+
+        return MCPResult(
+            success: true,
+            message: "Found \(elements.count) elements",
+            elements: elements,
+            error: nil
+        )
+    }
+
+    /// Find element for an MCPAction (batch mode)
+    /// watchOS-adapted: no sheet search (watchOS doesn't have sheets)
+    private func findElementForAction(in app: XCUIApplication, action: MCPAction) throws -> XCUIElement {
+        // Search in navigation bars first
+        if let element = findElementInNavigationBarsForAction(app: app, action: action) {
+            return element
+        }
+
+        // Search in alerts
+        if let element = findElementInAlertsForAction(app: app, action: action) {
+            return element
+        }
+
+        // Standard element search
+        if let element = findElementStandardForAction(in: app, action: action) {
+            return element
+        }
+
+        throw MCPCommandError.elementNotFound(action.identifier ?? action.label ?? "unknown")
+    }
+
+    private func findElementInNavigationBarsForAction(app: XCUIApplication, action: MCPAction) -> XCUIElement? {
+        let navBars = app.navigationBars
+        guard navBars.count > 0 else { return nil }
+
+        if let identifier = action.identifier, !identifier.isEmpty {
+            let button = navBars.buttons[identifier]
+            if button.exists { return button.firstMatch }
+        }
+
+        if let label = action.label, !label.isEmpty {
+            let predicate = NSPredicate(format: "label CONTAINS[c] %@", label)
+
+            let buttons = navBars.buttons.matching(predicate)
+            if buttons.firstMatch.exists { return buttons.firstMatch }
+        }
+
+        return nil
+    }
+
+    private func findElementInAlertsForAction(app: XCUIApplication, action: MCPAction) -> XCUIElement? {
+        let alerts = app.alerts
+        guard alerts.count > 0 else { return nil }
+
+        if let identifier = action.identifier, !identifier.isEmpty {
+            let button = alerts.buttons[identifier]
+            if button.exists { return button.firstMatch }
+        }
+
+        if let label = action.label, !label.isEmpty {
+            let predicate = NSPredicate(format: "label CONTAINS[c] %@", label)
+
+            let buttons = alerts.buttons.matching(predicate)
+            if buttons.firstMatch.exists { return buttons.firstMatch }
+        }
+
+        return nil
+    }
+
+    private func findElementStandardForAction(in app: XCUIApplication, action: MCPAction) -> XCUIElement? {
+        if let identifier = action.identifier, !identifier.isEmpty {
+            let buttons = app.buttons[identifier]
+            if buttons.exists { return buttons.firstMatch }
+
+            let textFields = app.textFields[identifier]
+            if textFields.exists { return textFields.firstMatch }
+
+            let staticTexts = app.staticTexts[identifier]
+            if staticTexts.exists { return staticTexts.firstMatch }
+
+            let cells = app.cells[identifier]
+            if cells.exists { return cells.firstMatch }
+
+            let switches = app.switches[identifier]
+            if switches.exists { return switches.firstMatch }
+
+            let images = app.images[identifier]
+            if images.exists { return images.firstMatch }
+
+            let element = app.descendants(matching: .any)[identifier].firstMatch
+            if element.exists {
+                return element
+            }
+        }
+
+        if let label = action.label, !label.isEmpty {
+            let buttons = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", label))
+            if buttons.firstMatch.exists { return buttons.firstMatch }
+
+            let staticTexts = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", label))
+            if staticTexts.firstMatch.exists { return staticTexts.firstMatch }
+
+            let textFields = app.textFields.matching(NSPredicate(format: "label CONTAINS %@", label))
+            if textFields.firstMatch.exists { return textFields.firstMatch }
+
+            let cells = app.cells.matching(NSPredicate(format: "label CONTAINS %@", label))
+            if cells.firstMatch.exists { return cells.firstMatch }
+        }
+
+        return nil
     }
 
     // MARK: - Click Action

@@ -71,21 +71,86 @@ enum XCUITestBridge {
 
     // MARK: - Command Models
 
-    /// Command to send to XCUITest
-    struct Command: Encodable {
+    /// Single action to execute in XCUITest
+    /// Used both for single-command mode (embedded in Command) and batch mode (in commands array)
+    struct Action: Encodable {
         let action: String
         let identifier: String?
         let label: String?
         let text: String?
         let direction: String?
-        let bundleId: String
         let timeout: TimeInterval?
         let clearFirst: Bool?
         let queryRole: String?
         let queryDepth: Int?
     }
 
-    /// Result from XCUITest
+    /// Command to send to XCUITest
+    /// Supports two modes:
+    /// - Single command (backward compatible): action fields at top level
+    /// - Batch mode: bundleId shared, multiple actions in commands array
+    struct Command: Encodable {
+        // Shared field for all actions
+        let bundleId: String
+
+        // Single-command mode fields (backward compatible)
+        let action: String?
+        let identifier: String?
+        let label: String?
+        let text: String?
+        let direction: String?
+        let timeout: TimeInterval?
+        let clearFirst: Bool?
+        let queryRole: String?
+        let queryDepth: Int?
+
+        // Batch mode: array of actions to execute sequentially
+        let commands: [Action]?
+
+        /// Initialize for single-command mode (backward compatible)
+        init(
+            action: String,
+            identifier: String?,
+            label: String?,
+            text: String?,
+            direction: String?,
+            bundleId: String,
+            timeout: TimeInterval?,
+            clearFirst: Bool?,
+            queryRole: String?,
+            queryDepth: Int?
+        ) {
+            self.bundleId = bundleId
+            self.action = action
+            self.identifier = identifier
+            self.label = label
+            self.text = text
+            self.direction = direction
+            self.timeout = timeout
+            self.clearFirst = clearFirst
+            self.queryRole = queryRole
+            self.queryDepth = queryDepth
+            self.commands = nil
+        }
+
+        /// Initialize for batch mode
+        init(bundleId: String, commands: [Action]) {
+            self.bundleId = bundleId
+            self.commands = commands
+            // Single-command fields are nil in batch mode
+            self.action = nil
+            self.identifier = nil
+            self.label = nil
+            self.text = nil
+            self.direction = nil
+            self.timeout = nil
+            self.clearFirst = nil
+            self.queryRole = nil
+            self.queryDepth = nil
+        }
+    }
+
+    /// Result from XCUITest (single command)
     struct Result: Decodable {
         let success: Bool
         let message: String
@@ -96,6 +161,15 @@ enum XCUITestBridge {
         let elementFrame: String?
         let usedCoordinateFallback: Bool?
         let hint: String?
+    }
+
+    /// Result from XCUITest batch execution
+    /// Contains individual results for each action in the batch
+    struct BatchResult: Decodable {
+        let success: Bool
+        let message: String
+        let results: [Result]
+        let error: String?
     }
 
     // MARK: - Public API
@@ -226,6 +300,37 @@ enum XCUITestBridge {
         return try await executeCommand(command, simulatorUDID: simulatorUDID, projectPath: projectPath)
     }
 
+    /// Execute multiple actions in a single XCUITest run
+    ///
+    /// This method reduces spawn overhead by batching multiple actions into one xcodebuild invocation.
+    /// Instead of 5-15s per action, a batch of 3 actions takes approximately 10-12s total.
+    ///
+    /// - Parameters:
+    ///   - actions: Array of actions to execute sequentially
+    ///   - simulatorUDID: UDID of the target simulator (or "booted" for any booted simulator)
+    ///   - bundleId: Bundle ID of the target app
+    ///   - projectPath: Path to the Xcode project
+    /// - Returns: BatchResult with individual results for each action
+    /// - Throws: XCUITestBridgeError if execution fails
+    static func executeBatch(
+        actions: [Action],
+        simulatorUDID: String,
+        bundleId: String,
+        projectPath: String
+    ) async throws -> BatchResult {
+        guard !actions.isEmpty else {
+            return BatchResult(
+                success: true,
+                message: "No actions to execute",
+                results: [],
+                error: nil
+            )
+        }
+
+        let command = Command(bundleId: bundleId, commands: actions)
+        return try await executeBatchCommand(command, simulatorUDID: simulatorUDID, projectPath: projectPath)
+    }
+
     // MARK: - Retry Logic
 
     /// Execute an async throwing operation with exponential backoff retry
@@ -297,6 +402,35 @@ enum XCUITestBridge {
         }
     }
 
+    /// Execute a batch command via XCUITest with serial queue protection and retry logic
+    /// Similar to executeCommand but returns BatchResult for multiple actions
+    private static func executeBatchCommand(
+        _ command: Command,
+        simulatorUDID: String,
+        projectPath: String
+    ) async throws -> BatchResult {
+        // Use retry logic with exponential backoff for transient failures
+        try await executeWithRetry(maxAttempts: 3) {
+            // Use serial queue to prevent race conditions on shared temp files
+            try await withCheckedThrowingContinuation { continuation in
+                executionQueue.async {
+                    Task {
+                        do {
+                            let result = try await executeBatchCommandInternal(
+                                command,
+                                simulatorUDID: simulatorUDID,
+                                projectPath: projectPath
+                            )
+                            continuation.resume(returning: result)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Internal command execution (called within serial queue)
     private static func executeCommandInternal(
         _ command: Command,
@@ -323,7 +457,7 @@ enum XCUITestBridge {
         try commandData.write(to: URL(fileURLWithPath: commandPath), options: .atomic)
 
         log("XCUITestBridge: Wrote command to \(commandPath)")
-        log("XCUITestBridge: Command: \(command.action)")
+        log("XCUITestBridge: Command: \(command.action ?? "batch")")
 
         // Detect simulator platform (iOS vs watchOS)
         let platform = await detectPlatform(for: resolvedUDID)
@@ -427,7 +561,7 @@ enum XCUITestBridge {
         } catch let error as ShellCommandError {
             // Convert shell timeout to XCUITest-specific error with recovery instructions
             if case .timeout = error {
-                throw XCUITestBridgeError.operationTimedOut(action: command.action, timeout: timeout)
+                throw XCUITestBridgeError.operationTimedOut(action: command.action ?? "batch", timeout: timeout)
             }
             throw error
         }
@@ -455,6 +589,173 @@ enum XCUITestBridge {
         let testResult = try JSONDecoder().decode(Result.self, from: resultData)
 
         log("XCUITestBridge: Result - success: \(testResult.success), message: \(testResult.message)")
+
+        return testResult
+    }
+
+    /// Internal batch command execution (called within serial queue)
+    /// Similar to executeCommandInternal but with batch-specific timeout calculation and result parsing
+    private static func executeBatchCommandInternal(
+        _ command: Command,
+        simulatorUDID: String,
+        projectPath: String
+    ) async throws -> BatchResult {
+        // Resolve "booted" to actual UDID - xcodebuild requires real UDID
+        let resolvedUDID = try await resolveUDID(simulatorUDID)
+
+        // Clean up any existing files from previous runs
+        try? FileManager.default.removeItem(atPath: commandPath)
+        try? FileManager.default.removeItem(atPath: resultPath)
+
+        // Always cleanup on exit (even on error)
+        defer {
+            try? FileManager.default.removeItem(atPath: commandPath)
+            try? FileManager.default.removeItem(atPath: resultPath)
+        }
+
+        // Write command to file
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        let commandData = try encoder.encode(command)
+        try commandData.write(to: URL(fileURLWithPath: commandPath), options: .atomic)
+
+        let actionCount = command.commands?.count ?? 0
+        log("XCUITestBridge: Wrote batch command to \(commandPath)")
+        log("XCUITestBridge: Batch with \(actionCount) actions")
+
+        // Detect simulator platform (iOS vs watchOS)
+        let platform = await detectPlatform(for: resolvedUDID)
+        log("XCUITestBridge: Detected platform: \(platform)")
+
+        // Calculate timeout based on number of actions
+        // Base timeout per action + startup overhead
+        // watchOS is significantly slower (~2x)
+        let baseTimeoutPerAction: TimeInterval = 30  // 30s per action (conservative)
+        let startupOverhead: TimeInterval = 60       // 60s for xcodebuild startup
+        let calculatedTimeout = startupOverhead + (baseTimeoutPerAction * Double(actionCount))
+        let timeout = platform == .watchOS ? calculatedTimeout * 1.5 : calculatedTimeout
+
+        // Run xcodebuild with catch-and-retry pattern for SDK mismatch (exit code 70)
+        log("XCUITestBridge: Running xcodebuild batch (timeout: \(Int(timeout))s)")
+
+        var result: (exitCode: Int32, stdout: String, stderr: String)
+        let derivedDataPath = findDerivedDataPath(for: projectPath)
+
+        do {
+            // Try fast path with xctestrun if available
+            if let xctestrunPath = findXCTestRun(in: derivedDataPath, platform: platform) {
+                log("XCUITestBridge: Trying fast path with xctestrun: \(xctestrunPath)")
+                result = try await runWithXCTestRun(
+                    xctestrunPath: xctestrunPath,
+                    simulatorUDID: resolvedUDID,
+                    platform: platform,
+                    timeout: timeout
+                )
+
+                // Exit 70 = SDK mismatch, need to rebuild with correct SDK
+                if result.exitCode == 70 {
+                    log("XCUITestBridge: Exit 70 detected (SDK mismatch)")
+
+                    // Log SDK versions for diagnosis
+                    if let xctestrunSDK = extractSDKVersion(from: xctestrunPath),
+                       let simulatorSDK = await getSimulatorOSVersion(for: resolvedUDID) {
+                        log("XCUITestBridge: xctestrun SDK: \(xctestrunSDK), simulator: \(simulatorSDK)")
+                    }
+
+                    // Clean stale DerivedData and rebuild
+                    log("XCUITestBridge: Cleaning ListAll DerivedData for fresh build")
+                    cleanListAllDerivedData(in: derivedDataPath)
+
+                    log("XCUITestBridge: Running build-for-testing to regenerate xctestrun")
+                    // Use 300s minimum - build-for-testing from scratch can take 3-5 minutes
+                    let buildTimeout = max(300.0, timeout * 2)
+                    let buildResult = try await buildForTesting(
+                        projectPath: projectPath,
+                        simulatorUDID: resolvedUDID,
+                        platform: platform,
+                        timeout: buildTimeout
+                    )
+
+                    if buildResult.exitCode != 0 {
+                        log("XCUITestBridge: build-for-testing failed: \(buildResult.stderr.prefix(500))")
+                        throw XCUITestBridgeError.testBuildFailed("build-for-testing failed with exit \(buildResult.exitCode)")
+                    }
+
+                    // Find newly generated xctestrun
+                    guard let freshXctestrunPath = findXCTestRun(in: derivedDataPath, platform: platform) else {
+                        throw XCUITestBridgeError.resultFileNotFound("build-for-testing did not generate xctestrun file")
+                    }
+
+                    log("XCUITestBridge: Retrying with fresh xctestrun: \(freshXctestrunPath)")
+                    result = try await runWithXCTestRun(
+                        xctestrunPath: freshXctestrunPath,
+                        simulatorUDID: resolvedUDID,
+                        platform: platform,
+                        timeout: timeout
+                    )
+                }
+            } else {
+                // No xctestrun found - build it first, then use fast path
+                log("XCUITestBridge: No xctestrun found, building test runner first")
+
+                // Use 300s minimum - build-for-testing from scratch can take 3-5 minutes
+                let buildTimeout = max(300.0, timeout * 2)
+                let buildResult = try await buildForTesting(
+                    projectPath: projectPath,
+                    simulatorUDID: resolvedUDID,
+                    platform: platform,
+                    timeout: buildTimeout
+                )
+
+                if buildResult.exitCode != 0 {
+                    log("XCUITestBridge: build-for-testing failed: \(buildResult.stderr.prefix(500))")
+                    throw XCUITestBridgeError.testBuildFailed("build-for-testing failed with exit \(buildResult.exitCode)")
+                }
+
+                // Find the newly generated xctestrun
+                guard let freshXctestrunPath = findXCTestRun(in: derivedDataPath, platform: platform) else {
+                    throw XCUITestBridgeError.resultFileNotFound("build-for-testing did not generate xctestrun file")
+                }
+
+                log("XCUITestBridge: Using fresh xctestrun: \(freshXctestrunPath)")
+                result = try await runWithXCTestRun(
+                    xctestrunPath: freshXctestrunPath,
+                    simulatorUDID: resolvedUDID,
+                    platform: platform,
+                    timeout: timeout
+                )
+            }
+        } catch let error as ShellCommandError {
+            // Convert shell timeout to XCUITest-specific error with recovery instructions
+            if case .timeout = error {
+                throw XCUITestBridgeError.operationTimedOut(action: "batch", timeout: timeout)
+            }
+            throw error
+        }
+
+        log("XCUITestBridge: xcodebuild exit code: \(result.exitCode)")
+
+        if result.exitCode != 0 {
+            // Log full output for debugging
+            if !result.stderr.isEmpty {
+                log("XCUITestBridge FULL stderr:\n\(result.stderr.prefix(2000))")
+            }
+            if !result.stdout.isEmpty {
+                log("XCUITestBridge FULL stdout:\n\(result.stdout.prefix(2000))")
+            }
+        }
+
+        // Read result from file
+        guard FileManager.default.fileExists(atPath: resultPath) else {
+            throw XCUITestBridgeError.resultFileNotFound(
+                "XCUITest did not write result file. xcodebuild exit code: \(result.exitCode)"
+            )
+        }
+
+        let resultData = try Data(contentsOf: URL(fileURLWithPath: resultPath))
+        let testResult = try JSONDecoder().decode(BatchResult.self, from: resultData)
+
+        log("XCUITestBridge: BatchResult - success: \(testResult.success), message: \(testResult.message), results: \(testResult.results.count)")
 
         return testResult
     }
