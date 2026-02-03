@@ -46,7 +46,7 @@ Each phase below is designed to be run as a Ralph Loop prompt. Copy the phase co
 | Phase | Status | Date |
 |-------|--------|------|
 | 1A: Retry Logic | ✅ Completed | 2026-02-03 |
-| 1B: idb Spike | ⏳ Pending | - |
+| 1B: idb Spike | ✅ Completed | 2026-02-03 |
 | 1C: Command Batching | ⏳ Pending | - |
 | 2: Decision Point | ⏳ Pending | - |
 
@@ -90,7 +90,13 @@ Output COMPLETE when all criteria are met.
 
 ---
 
-### PHASE 1B: idb Spike Investigation
+### PHASE 1B: idb Spike Investigation ✅ COMPLETED
+
+**Status**: Completed 2026-02-03
+- idb provides coordinate-based interactions only (no identifier/label support)
+- Performance: 1-3s per action (vs 5-15s current)
+- Recommendation: Do NOT adopt idb - interaction model mismatch
+- Findings: documentation/learnings/idb-spike-findings.md
 
 TASK: Investigate Facebook idb as alternative backend for iOS simulator interactions
 
