@@ -226,6 +226,41 @@ enum XCUITestBridge {
         return try await executeCommand(command, simulatorUDID: simulatorUDID, projectPath: projectPath)
     }
 
+    // MARK: - Retry Logic
+
+    /// Execute an async throwing operation with exponential backoff retry
+    /// - Parameters:
+    ///   - maxAttempts: Maximum number of attempts (default 3)
+    ///   - operation: The async throwing operation to execute
+    /// - Returns: The result of the operation
+    /// - Throws: The last error if all attempts fail
+    private static func executeWithRetry<T>(
+        maxAttempts: Int = 3,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        var lastError: Error?
+
+        for attempt in 1...maxAttempts {
+            do {
+                return try await operation()
+            } catch {
+                lastError = error
+                log("XCUITestBridge: Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
+
+                // Don't sleep after the last attempt
+                if attempt < maxAttempts {
+                    // Exponential backoff: 500ms, 1000ms, 2000ms
+                    let delayMs = 500 * (1 << (attempt - 1))  // 500, 1000, 2000
+                    log("XCUITestBridge: Retrying in \(delayMs)ms...")
+                    try await Task.sleep(nanoseconds: UInt64(delayMs) * 1_000_000)
+                }
+            }
+        }
+
+        // All attempts failed, throw the last error
+        throw lastError!
+    }
+
     // MARK: - Internal
 
     /// Timeout for XCUITest operations (allows for first-run compile time)
@@ -234,25 +269,28 @@ enum XCUITestBridge {
     /// Timeout for query operations (larger element trees)
     private static let queryTimeout: TimeInterval = 120.0
 
-    /// Execute a command via XCUITest with serial queue protection
+    /// Execute a command via XCUITest with serial queue protection and retry logic
     private static func executeCommand(
         _ command: Command,
         simulatorUDID: String,
         projectPath: String
     ) async throws -> Result {
-        // Use serial queue to prevent race conditions on shared temp files
-        try await withCheckedThrowingContinuation { continuation in
-            executionQueue.async {
-                Task {
-                    do {
-                        let result = try await executeCommandInternal(
-                            command,
-                            simulatorUDID: simulatorUDID,
-                            projectPath: projectPath
-                        )
-                        continuation.resume(returning: result)
-                    } catch {
-                        continuation.resume(throwing: error)
+        // Use retry logic with exponential backoff for transient failures
+        try await executeWithRetry(maxAttempts: 3) {
+            // Use serial queue to prevent race conditions on shared temp files
+            try await withCheckedThrowingContinuation { continuation in
+                executionQueue.async {
+                    Task {
+                        do {
+                            let result = try await executeCommandInternal(
+                                command,
+                                simulatorUDID: simulatorUDID,
+                                projectPath: projectPath
+                            )
+                            continuation.resume(returning: result)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
                     }
                 }
             }
