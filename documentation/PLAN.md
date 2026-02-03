@@ -60,7 +60,7 @@ After extensive research including open source alternatives (idb, Appium, AskUI)
 
 ### Phase 0: Baseline Measurements (REQUIRED FIRST)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
 
 **Problem**: We have no actual performance data. All current estimates are assumptions.
 
@@ -87,7 +87,13 @@ After extensive research including open source alternatives (idb, Appium, AskUI)
 
 ### Phase 1: Add Accessibility Identifiers (HIGH IMPACT)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
+
+**Implementation Notes (2026-02-03)**:
+- Added 31 accessibility identifiers across 8 watchOS view files
+- Known limitation: SwiftUI's accessibilityIdentifier doesn't always propagate to XCUITest, especially for complex views (Picker, NavigationLink-based elements)
+- Label-based targeting remains reliable and should be preferred
+- Files modified: WatchListsView, WatchListView, WatchItemRowView, WatchFilterPicker, WatchListRowView, WatchEmptyStateView, WatchLoadingView
 
 **Problem**: watchOS views use `accessibilityLabel`/`accessibilityHint` but **ZERO** `accessibilityIdentifier` modifiers. This is a significant gap compared to iOS app.
 
@@ -128,7 +134,14 @@ After extensive research including open source alternatives (idb, Appium, AskUI)
 
 ### Phase 2: Optimize watchOS MCPCommandRunner (MEDIUM IMPACT)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
+
+**Implementation Notes (2026-02-03)**:
+- Added action-specific stability timeouts (click: 0.5s, swipe: 1.0s)
+- Optimized element search order (buttons first for watchOS)
+- Added `continueOnFailure` option for batch operations
+- Added comprehensive integration tests in MCPCommandRunnerTests.swift
+- Finding: depth parameter has no effect (documented as TODO) - XCUITest descendants() gets all elements
 
 **File**: `ListAll/ListAllWatch Watch AppUITests/MCPCommandRunner.swift`
 
@@ -173,7 +186,16 @@ After extensive research including open source alternatives (idb, Appium, AskUI)
 
 ### Phase 3: Timeout & Batch Improvements (MEDIUM IMPACT)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
+
+**Implementation Notes (2026-02-03)**:
+- Added `XCUITestBridgeConfig` struct with `useWatchOSOptimizations` flag and `watchOSMaxBatchSize` constant
+- Added `getActionTimeout(action:platform:)` function with action-specific base timeouts:
+  - click: 60s, type: 75s, query: 90s, swipe: 60s, default: 90s
+  - watchOS multiplier: 1.5x
+- Added watchOS batch size validation in `executeBatch()` - rejects batches > 5 actions
+- Added `watchOSBatchTooLarge` error case with helpful error message
+- Feature flag allows disabling optimizations if issues arise
 
 **File**: `Tools/listall-mcp/Sources/listall-mcp/Services/XCUITestBridge.swift`
 
@@ -209,7 +231,12 @@ After extensive research including open source alternatives (idb, Appium, AskUI)
 
 ### Phase 4: Platform-Specific Temp Files (RELIABILITY)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
+
+**Implementation Notes (2026-02-03)**:
+- XCUITestBridge: Added platform-specific path helpers, uses `_watch_` paths for watchOS
+- watchOS MCPCommandRunner: Updated to `/tmp/listall_mcp_watch_command.json` and `_result.json`
+- iOS MCPCommandRunner: Unchanged (backward compatible)
 
 **Files**:
 - `Tools/listall-mcp/Sources/listall-mcp/Services/XCUITestBridge.swift`
@@ -233,7 +260,12 @@ private static let resultPath = "/tmp/listall_mcp_result.json"
 
 ### Phase 5: Enhanced Diagnostics (LOW EFFORT)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
+
+**Implementation Notes (2026-02-03)**:
+- Added `generateWatchOSPerformanceGuidance()` function to DiagnosticsTool.swift
+- Outputs performance expectations, tips, and known limitations
+- Added cross-reference from simulators section to guidance section
 
 **File**: `Tools/listall-mcp/Sources/listall-mcp/Tools/DiagnosticsTool.swift`
 
@@ -257,7 +289,12 @@ WATCHOS PERFORMANCE GUIDANCE:
 
 ### Phase 6: Error Messages (LOW EFFORT)
 <!-- Status: pending | in-progress | completed -->
-**Status**: `pending`
+**Status**: `completed`
+
+**Implementation Notes (2026-02-03)**:
+- XCUITestBridge: Added platform-aware timeout error with watchOS-specific recovery steps
+- MCPCommandRunner: Enhanced all error cases with watchOS context and actionable guidance
+- Errors now explain normal watchOS timing (8-15s) and recommend appropriate actions
 
 **Files**:
 - `Tools/listall-mcp/Sources/listall-mcp/Services/XCUITestBridge.swift`

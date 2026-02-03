@@ -65,17 +65,17 @@ struct WatchListView: View {
                         ) { newFilter in
                             viewModel.setFilter(newFilter)
                         }
-                        
+
                         Spacer()
                     }
                     .padding(.horizontal)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
-                    
+
                     itemCountSummary
                         .padding(.horizontal)
                         .padding(.bottom, 8)
-                    
+
                     // Items list
                     ForEach(viewModel.sortedItems) { item in
                         WatchItemRowView(item: item) {
@@ -83,8 +83,9 @@ struct WatchListView: View {
                                 viewModel.toggleItemCompletion(item)
                             }
                         }
+                        .accessibilityIdentifier("WatchItemRow_\(item.title)")
                         .padding(.horizontal, 4)
-                        
+
                         Divider()
                             .padding(.leading, 36)
                     }
@@ -94,6 +95,7 @@ struct WatchListView: View {
             WatchHapticManager.shared.playRefresh()
             await viewModel.refresh()
         }
+        .accessibilityIdentifier("WatchItemsContent")
     }
     
     // MARK: - Item Count Summary
@@ -108,8 +110,9 @@ struct WatchListView: View {
                         .font(.caption)
                 }
                 .foregroundColor(.blue)
+                .accessibilityIdentifier("WatchActiveItemCount")
             }
-            
+
             // Completed items count
             if viewModel.completedItemCount > 0 {
                 HStack(spacing: 4) {
@@ -119,10 +122,11 @@ struct WatchListView: View {
                         .font(.caption)
                 }
                 .foregroundColor(.green)
+                .accessibilityIdentifier("WatchCompletedItemCount")
             }
-            
+
             Spacer()
-            
+
             // Total count
             Text(String.localizedStringWithFormat(
                 watchLocalizedString("%lld total", comment: "watchOS item count - total items"),
@@ -130,11 +134,13 @@ struct WatchListView: View {
             ))
                 .font(.caption2)
                 .foregroundColor(.secondary)
+                .accessibilityIdentifier("WatchTotalItemCount")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.secondary.opacity(0.1))
         .cornerRadius(8)
+        .accessibilityIdentifier("WatchItemCountSummary")
     }
     
     // MARK: - Empty State
@@ -143,16 +149,17 @@ struct WatchListView: View {
             Image(systemName: emptyStateIcon)
                 .font(.system(size: 40))
                 .foregroundColor(.secondary)
-            
+
             Text(emptyStateTitle)
                 .font(.headline)
-            
+
             Text(emptyStateMessage)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding()
+        .accessibilityIdentifier("WatchItemsEmptyState")
     }
     
     // MARK: - Empty State Content

@@ -1,5 +1,21 @@
 import Foundation
 
+// MARK: - XCUITestBridge Configuration
+
+/// Configuration options for XCUITestBridge
+/// Feature flags allow disabling optimizations if issues arise
+struct XCUITestBridgeConfig {
+    /// Enable watchOS-specific optimizations (action-specific timeouts, batch limits)
+    /// Set to false to revert to original behavior if issues arise
+    /// Note: nonisolated(unsafe) is used because this flag is read-only after initialization
+    /// in normal operation, and any runtime changes are for debugging/rollback scenarios
+    nonisolated(unsafe) static var useWatchOSOptimizations = true
+
+    /// Maximum batch size for watchOS to stay under XCUITest 600s timeout
+    /// With ~30s per action + 60s overhead, 5 actions = ~210s (safe margin)
+    static let watchOSMaxBatchSize = 5
+}
+
 // MARK: - XCUITest Bridge
 
 /// Service that bridges MCP server commands to XCUITest execution via xcodebuild.
@@ -60,10 +76,36 @@ enum XCUITestBridge {
 
     // MARK: - Constants
 
-    private static let commandPath = "/tmp/listall_mcp_command.json"
-    private static let resultPath = "/tmp/listall_mcp_result.json"
+    // Platform-specific temp file paths to enable parallel iOS+watchOS testing
+    // iOS uses the original paths for backward compatibility
+    private static let iOSCommandPath = "/tmp/listall_mcp_command.json"
+    private static let iOSResultPath = "/tmp/listall_mcp_result.json"
+    // watchOS uses separate paths to avoid file conflicts during parallel execution
+    private static let watchOSCommandPath = "/tmp/listall_mcp_watch_command.json"
+    private static let watchOSResultPath = "/tmp/listall_mcp_watch_result.json"
+
     private static let xcodebuildPath = "/usr/bin/xcodebuild"
     private static let xcrunPath = "/usr/bin/xcrun"
+
+    /// Get the command file path for a specific platform
+    private static func commandPath(for platform: SimulatorPlatform) -> String {
+        switch platform {
+        case .watchOS:
+            return watchOSCommandPath
+        case .iOS, .unknown:
+            return iOSCommandPath
+        }
+    }
+
+    /// Get the result file path for a specific platform
+    private static func resultPath(for platform: SimulatorPlatform) -> String {
+        switch platform {
+        case .watchOS:
+            return watchOSResultPath
+        case .iOS, .unknown:
+            return iOSResultPath
+        }
+    }
 
     /// Serial queue for XCUITest command execution
     /// Prevents race conditions on shared temp files without IPC protocol changes
@@ -305,13 +347,16 @@ enum XCUITestBridge {
     /// This method reduces spawn overhead by batching multiple actions into one xcodebuild invocation.
     /// Instead of 5-15s per action, a batch of 3 actions takes approximately 10-12s total.
     ///
+    /// Note: For watchOS, batches are limited to 5 actions to stay under XCUITest's 600s timeout.
+    /// watchOS actions take ~30s each, plus 60s overhead, so 5 actions = ~210s (safe margin).
+    ///
     /// - Parameters:
     ///   - actions: Array of actions to execute sequentially
     ///   - simulatorUDID: UDID of the target simulator (or "booted" for any booted simulator)
     ///   - bundleId: Bundle ID of the target app
     ///   - projectPath: Path to the Xcode project
     /// - Returns: BatchResult with individual results for each action
-    /// - Throws: XCUITestBridgeError if execution fails
+    /// - Throws: XCUITestBridgeError if execution fails or batch exceeds watchOS limit
     static func executeBatch(
         actions: [Action],
         simulatorUDID: String,
@@ -325,6 +370,20 @@ enum XCUITestBridge {
                 results: [],
                 error: nil
             )
+        }
+
+        // Check watchOS batch size limit when optimizations are enabled
+        if XCUITestBridgeConfig.useWatchOSOptimizations {
+            // Resolve UDID to detect platform
+            let resolvedUDID = try await resolveUDID(simulatorUDID)
+            let platform = await detectPlatform(for: resolvedUDID)
+
+            if platform == .watchOS && actions.count > XCUITestBridgeConfig.watchOSMaxBatchSize {
+                throw XCUITestBridgeError.watchOSBatchTooLarge(
+                    requested: actions.count,
+                    maximum: XCUITestBridgeConfig.watchOSMaxBatchSize
+                )
+            }
         }
 
         let command = Command(bundleId: bundleId, commands: actions)
@@ -373,6 +432,38 @@ enum XCUITestBridge {
 
     /// Timeout for query operations (larger element trees)
     private static let queryTimeout: TimeInterval = 120.0
+
+    // MARK: - Action-Specific Timeouts
+
+    /// Get appropriate timeout for an action based on type and platform
+    /// watchOS is significantly slower (~1.5x) due to simulator emulation overhead
+    /// - Parameters:
+    ///   - action: The action type (click, type, query, swipe)
+    ///   - platform: The simulator platform
+    /// - Returns: Timeout in seconds
+    private static func getActionTimeout(action: String, platform: SimulatorPlatform) -> TimeInterval {
+        guard XCUITestBridgeConfig.useWatchOSOptimizations else {
+            // Fall back to original behavior when optimizations disabled
+            let baseTimeout = action == "query" ? queryTimeout : xcuiTestTimeout
+            return platform == .watchOS ? baseTimeout * 1.5 : baseTimeout
+        }
+
+        let base: TimeInterval
+        switch action {
+        case "click":
+            base = 60
+        case "type":
+            base = 75
+        case "query":
+            base = 90
+        case "swipe":
+            base = 60
+        default:
+            base = 90
+        }
+
+        return platform == .watchOS ? base * 1.5 : base
+    }
 
     /// Execute a command via XCUITest with serial queue protection and retry logic
     private static func executeCommand(
@@ -440,33 +531,35 @@ enum XCUITestBridge {
         // Resolve "booted" to actual UDID - xcodebuild requires real UDID
         let resolvedUDID = try await resolveUDID(simulatorUDID)
 
+        // Detect simulator platform (iOS vs watchOS) early to determine file paths
+        let platform = await detectPlatform(for: resolvedUDID)
+        log("XCUITestBridge: Detected platform: \(platform)")
+
+        // Get platform-specific file paths
+        let cmdPath = commandPath(for: platform)
+        let resPath = resultPath(for: platform)
+
         // Clean up any existing files from previous runs
-        try? FileManager.default.removeItem(atPath: commandPath)
-        try? FileManager.default.removeItem(atPath: resultPath)
+        try? FileManager.default.removeItem(atPath: cmdPath)
+        try? FileManager.default.removeItem(atPath: resPath)
 
         // Always cleanup on exit (even on error)
         defer {
-            try? FileManager.default.removeItem(atPath: commandPath)
-            try? FileManager.default.removeItem(atPath: resultPath)
+            try? FileManager.default.removeItem(atPath: cmdPath)
+            try? FileManager.default.removeItem(atPath: resPath)
         }
 
         // Write command to file
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
         let commandData = try encoder.encode(command)
-        try commandData.write(to: URL(fileURLWithPath: commandPath), options: .atomic)
+        try commandData.write(to: URL(fileURLWithPath: cmdPath), options: .atomic)
 
-        log("XCUITestBridge: Wrote command to \(commandPath)")
+        log("XCUITestBridge: Wrote command to \(cmdPath)")
         log("XCUITestBridge: Command: \(command.action ?? "batch")")
 
-        // Detect simulator platform (iOS vs watchOS)
-        let platform = await detectPlatform(for: resolvedUDID)
-        log("XCUITestBridge: Detected platform: \(platform)")
-
         // Determine timeout based on action type and platform
-        // watchOS is significantly slower (~2x)
-        let baseTimeout = command.action == "query" ? queryTimeout : xcuiTestTimeout
-        let timeout = platform == .watchOS ? baseTimeout * 1.5 : baseTimeout
+        let timeout = getActionTimeout(action: command.action ?? "unknown", platform: platform)
 
         // Run xcodebuild with catch-and-retry pattern for SDK mismatch (exit code 70)
         log("XCUITestBridge: Running xcodebuild (timeout: \(Int(timeout))s)")
@@ -561,7 +654,7 @@ enum XCUITestBridge {
         } catch let error as ShellCommandError {
             // Convert shell timeout to XCUITest-specific error with recovery instructions
             if case .timeout = error {
-                throw XCUITestBridgeError.operationTimedOut(action: command.action ?? "batch", timeout: timeout)
+                throw XCUITestBridgeError.operationTimedOut(action: command.action ?? "batch", timeout: timeout, platform: platform)
             }
             throw error
         }
@@ -579,13 +672,13 @@ enum XCUITestBridge {
         }
 
         // Read result from file
-        guard FileManager.default.fileExists(atPath: resultPath) else {
+        guard FileManager.default.fileExists(atPath: resPath) else {
             throw XCUITestBridgeError.resultFileNotFound(
-                "XCUITest did not write result file. xcodebuild exit code: \(result.exitCode)"
+                "XCUITest did not write result file at \(resPath). xcodebuild exit code: \(result.exitCode)"
             )
         }
 
-        let resultData = try Data(contentsOf: URL(fileURLWithPath: resultPath))
+        let resultData = try Data(contentsOf: URL(fileURLWithPath: resPath))
         let testResult = try JSONDecoder().decode(Result.self, from: resultData)
 
         log("XCUITestBridge: Result - success: \(testResult.success), message: \(testResult.message)")
@@ -603,29 +696,33 @@ enum XCUITestBridge {
         // Resolve "booted" to actual UDID - xcodebuild requires real UDID
         let resolvedUDID = try await resolveUDID(simulatorUDID)
 
+        // Detect simulator platform (iOS vs watchOS) early to determine file paths
+        let platform = await detectPlatform(for: resolvedUDID)
+        log("XCUITestBridge: Detected platform: \(platform)")
+
+        // Get platform-specific file paths
+        let cmdPath = commandPath(for: platform)
+        let resPath = resultPath(for: platform)
+
         // Clean up any existing files from previous runs
-        try? FileManager.default.removeItem(atPath: commandPath)
-        try? FileManager.default.removeItem(atPath: resultPath)
+        try? FileManager.default.removeItem(atPath: cmdPath)
+        try? FileManager.default.removeItem(atPath: resPath)
 
         // Always cleanup on exit (even on error)
         defer {
-            try? FileManager.default.removeItem(atPath: commandPath)
-            try? FileManager.default.removeItem(atPath: resultPath)
+            try? FileManager.default.removeItem(atPath: cmdPath)
+            try? FileManager.default.removeItem(atPath: resPath)
         }
 
         // Write command to file
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
         let commandData = try encoder.encode(command)
-        try commandData.write(to: URL(fileURLWithPath: commandPath), options: .atomic)
+        try commandData.write(to: URL(fileURLWithPath: cmdPath), options: .atomic)
 
         let actionCount = command.commands?.count ?? 0
-        log("XCUITestBridge: Wrote batch command to \(commandPath)")
+        log("XCUITestBridge: Wrote batch command to \(cmdPath)")
         log("XCUITestBridge: Batch with \(actionCount) actions")
-
-        // Detect simulator platform (iOS vs watchOS)
-        let platform = await detectPlatform(for: resolvedUDID)
-        log("XCUITestBridge: Detected platform: \(platform)")
 
         // Calculate timeout based on number of actions
         // Base timeout per action + startup overhead
@@ -728,7 +825,7 @@ enum XCUITestBridge {
         } catch let error as ShellCommandError {
             // Convert shell timeout to XCUITest-specific error with recovery instructions
             if case .timeout = error {
-                throw XCUITestBridgeError.operationTimedOut(action: "batch", timeout: timeout)
+                throw XCUITestBridgeError.operationTimedOut(action: "batch", timeout: timeout, platform: platform)
             }
             throw error
         }
@@ -746,13 +843,13 @@ enum XCUITestBridge {
         }
 
         // Read result from file
-        guard FileManager.default.fileExists(atPath: resultPath) else {
+        guard FileManager.default.fileExists(atPath: resPath) else {
             throw XCUITestBridgeError.resultFileNotFound(
-                "XCUITest did not write result file. xcodebuild exit code: \(result.exitCode)"
+                "XCUITest did not write result file at \(resPath). xcodebuild exit code: \(result.exitCode)"
             )
         }
 
-        let resultData = try Data(contentsOf: URL(fileURLWithPath: resultPath))
+        let resultData = try Data(contentsOf: URL(fileURLWithPath: resPath))
         let testResult = try JSONDecoder().decode(BatchResult.self, from: resultData)
 
         log("XCUITestBridge: BatchResult - success: \(testResult.success), message: \(testResult.message), results: \(testResult.results.count)")
@@ -1077,7 +1174,8 @@ enum XCUITestBridgeError: LocalizedError {
     case invalidSimulatorData
     case testBuildFailed(String)
     case projectNotFound(String)
-    case operationTimedOut(action: String, timeout: TimeInterval)
+    case operationTimedOut(action: String, timeout: TimeInterval, platform: XCUITestBridge.SimulatorPlatform)
+    case watchOSBatchTooLarge(requested: Int, maximum: Int)
 
     var errorDescription: String? {
         switch self {
@@ -1091,14 +1189,45 @@ enum XCUITestBridgeError: LocalizedError {
             return "Failed to build/run XCUITest: \(details)"
         case .projectNotFound(let path):
             return "Xcode project not found at: \(path)"
-        case .operationTimedOut(let action, let timeout):
+        case .operationTimedOut(let action, let timeout, let platform):
+            if platform == .watchOS {
+                return """
+                    watchOS XCUITest '\(action)' timed out after \(Int(timeout))s.
+
+                    watchOS actions typically take 8-15s per action (this is normal due to
+                    watchOS simulator overhead). Recovery steps:
+
+                    1. Run listall_screenshot(udid: "booted") to check simulator state
+                    2. If unresponsive: listall_shutdown_simulator(udid: "all")
+                    3. Run listall_boot_simulator with watchOS device UDID
+                    4. For multi-action sequences, use listall_batch (max 5 actions)
+
+                    Note: If timeouts persist, try running fewer actions per batch.
+                    """
+            } else {
+                return """
+                    XCUITest '\(action)' timed out after \(Int(timeout))s.
+                    The simulator may be unresponsive. Recovery steps:
+
+                    1. Run listall_screenshot to check simulator state
+                    2. Run listall_shutdown_simulator(udid: "all") to stop simulators
+                    3. Run listall_boot_simulator to restart
+                    4. Retry the operation
+                    """
+            }
+        case .watchOSBatchTooLarge(let requested, let maximum):
             return """
-                XCUITest '\(action)' timed out after \(Int(timeout))s.
-                The simulator may be unresponsive. Recovery steps:
-                1. Run listall_screenshot to check simulator state
-                2. Run listall_shutdown_simulator(udid: "all") to stop simulators
-                3. Run listall_boot_simulator to restart
-                4. Retry the operation
+                watchOS batch size \(requested) exceeds maximum of \(maximum) actions.
+
+                watchOS actions take ~8-15 seconds each due to simulator overhead.
+                Larger batches risk hitting XCUITest's 600 second timeout.
+
+                Solutions:
+                1. Split into multiple smaller batches (max \(maximum) actions each)
+                2. Use individual actions for complex sequences
+                3. Combine simple actions (e.g., click + type can often be one type action)
+
+                Example: Instead of 8 actions in one batch, use two batches of 4 actions.
                 """
         }
     }

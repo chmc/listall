@@ -14,6 +14,8 @@ struct MCPAction: Codable {
     let clearFirst: Bool?
     let queryRole: String?
     let queryDepth: Int?
+
+    // Note: continueOnFailure is handled at batch level, not per-action
 }
 
 /// Command structure for MCP -> XCUITest communication
@@ -37,6 +39,10 @@ struct MCPCommand: Codable {
 
     // Batch mode: array of actions to execute sequentially
     let commands: [MCPAction]?
+
+    // Batch mode: stop executing on first failure (default: true = continue on failure)
+    // When false, batch execution stops at the first failed action
+    let continueOnFailure: Bool?
 }
 
 /// Result structure for XCUITest -> MCP communication (single action)
@@ -113,13 +119,30 @@ final class MCPCommandRunner: XCTestCase {
 
     // MARK: - Constants (watchOS-adapted timeouts)
 
-    private static let commandPath = "/tmp/listall_mcp_command.json"
-    private static let resultPath = "/tmp/listall_mcp_result.json"
+    // watchOS uses separate temp file paths to enable parallel iOS+watchOS testing
+    // This avoids file conflicts when both platforms run XCUITest simultaneously
+    private static let commandPath = "/tmp/listall_mcp_watch_command.json"
+    private static let resultPath = "/tmp/listall_mcp_watch_result.json"
 
     // watchOS-specific: increased timeouts for slower simulator
     private static let defaultTimeout: TimeInterval = 15.0
-    private static let elementStabilityTimeout: TimeInterval = 1.0
     private static let appLaunchTimeout: TimeInterval = 45.0
+
+    // MARK: - Action-Specific Stability Timeouts
+
+    /// Returns the appropriate stability timeout for different action types.
+    /// - Click: 0.5s - buttons typically don't animate much before tap
+    /// - Type: 0.5s - text fields need stability for reliable input
+    /// - Swipe: 1.0s - scroll animations need time to settle
+    /// - Default: 0.5s - conservative default for unknown actions
+    private func getStabilityTimeout(for action: String) -> TimeInterval {
+        switch action {
+        case "click": return 0.5
+        case "type": return 0.5
+        case "swipe": return 1.0
+        default: return 0.5
+        }
+    }
 
     // MARK: - Setup
 
@@ -272,7 +295,8 @@ final class MCPCommandRunner: XCTestCase {
 
     /// Execute a batch of actions and return batch result
     /// The app is launched once and all actions are executed sequentially.
-    /// If any action fails, subsequent actions still run but overall success is false.
+    /// By default (continueOnFailure=true), all actions run even if some fail.
+    /// Set continueOnFailure=false to stop at the first failure.
     /// watchOS-specific: uses longer timeouts for slower simulator
     private func executeBatchCommand(_ command: MCPCommand, actions: [MCPAction]) throws -> MCPBatchResult {
         // Get or launch the app once for all actions
@@ -291,9 +315,13 @@ final class MCPCommandRunner: XCTestCase {
             }
         }
 
+        // Determine failure behavior (default: continue on failure for backward compatibility)
+        let shouldContinueOnFailure = command.continueOnFailure ?? true
+
         // Execute each action and collect results
         var results: [MCPResult] = []
         var overallSuccess = true
+        var stoppedEarly = false
 
         for (index, action) in actions.enumerated() {
             let result: MCPResult
@@ -313,12 +341,22 @@ final class MCPCommandRunner: XCTestCase {
 
             if !result.success {
                 overallSuccess = false
+
+                // Stop early if continueOnFailure is false
+                if !shouldContinueOnFailure {
+                    stoppedEarly = true
+                    break
+                }
             }
         }
 
         // Build summary message
         let successCount = results.filter { $0.success }.count
-        let message = "Executed \(actions.count) actions: \(successCount) succeeded, \(actions.count - successCount) failed"
+        let executedCount = results.count
+        var message = "Executed \(executedCount) of \(actions.count) actions: \(successCount) succeeded, \(executedCount - successCount) failed"
+        if stoppedEarly {
+            message += " (stopped on first failure)"
+        }
 
         return MCPBatchResult(
             success: overallSuccess,
@@ -347,7 +385,7 @@ final class MCPCommandRunner: XCTestCase {
     // MARK: - Action Execution (for batch mode)
 
     /// Execute a click/tap action from batch
-    /// watchOS-specific: uses longer stability timeout
+    /// watchOS-specific: uses action-specific stability timeout
     private func executeClickAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
         let element = try findElementForAction(in: app, action: action)
         let timeout = action.timeout ?? Self.defaultTimeout
@@ -361,8 +399,8 @@ final class MCPCommandRunner: XCTestCase {
         let frame = element.frame
         let frameStr = "x:\(Int(frame.origin.x)), y:\(Int(frame.origin.y)), w:\(Int(frame.width)), h:\(Int(frame.height))"
 
-        // Wait for animation stabilization (watchOS needs longer)
-        waitForElementStability(element, timeout: Self.elementStabilityTimeout)
+        // Wait for animation stabilization using action-specific timeout
+        waitForElementStability(element, timeout: getStabilityTimeout(for: action.action))
 
         var usedCoordinateFallback = false
         var hint: String? = nil
@@ -562,22 +600,25 @@ final class MCPCommandRunner: XCTestCase {
         return nil
     }
 
+    /// Standard element search for batch mode
+    /// watchOS-optimized: search order prioritizes interactive elements (button, cell, switch)
     private func findElementStandardForAction(in app: XCUIApplication, action: MCPAction) -> XCUIElement? {
         if let identifier = action.identifier, !identifier.isEmpty {
+            // Search order optimized for watchOS: buttons and cells are most common interactions
             let buttons = app.buttons[identifier]
             if buttons.exists { return buttons.firstMatch }
-
-            let textFields = app.textFields[identifier]
-            if textFields.exists { return textFields.firstMatch }
-
-            let staticTexts = app.staticTexts[identifier]
-            if staticTexts.exists { return staticTexts.firstMatch }
 
             let cells = app.cells[identifier]
             if cells.exists { return cells.firstMatch }
 
             let switches = app.switches[identifier]
             if switches.exists { return switches.firstMatch }
+
+            let staticTexts = app.staticTexts[identifier]
+            if staticTexts.exists { return staticTexts.firstMatch }
+
+            let textFields = app.textFields[identifier]
+            if textFields.exists { return textFields.firstMatch }
 
             let images = app.images[identifier]
             if images.exists { return images.firstMatch }
@@ -589,17 +630,18 @@ final class MCPCommandRunner: XCTestCase {
         }
 
         if let label = action.label, !label.isEmpty {
+            // Search order optimized for watchOS: buttons and cells first
             let buttons = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", label))
             if buttons.firstMatch.exists { return buttons.firstMatch }
+
+            let cells = app.cells.matching(NSPredicate(format: "label CONTAINS %@", label))
+            if cells.firstMatch.exists { return cells.firstMatch }
 
             let staticTexts = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", label))
             if staticTexts.firstMatch.exists { return staticTexts.firstMatch }
 
             let textFields = app.textFields.matching(NSPredicate(format: "label CONTAINS %@", label))
             if textFields.firstMatch.exists { return textFields.firstMatch }
-
-            let cells = app.cells.matching(NSPredicate(format: "label CONTAINS %@", label))
-            if cells.firstMatch.exists { return cells.firstMatch }
         }
 
         return nil
@@ -621,8 +663,8 @@ final class MCPCommandRunner: XCTestCase {
         let frame = element.frame
         let frameStr = "x:\(Int(frame.origin.x)), y:\(Int(frame.origin.y)), w:\(Int(frame.width)), h:\(Int(frame.height))"
 
-        // Wait for animation stabilization (watchOS animations)
-        waitForElementStability(element, timeout: Self.elementStabilityTimeout)
+        // Wait for animation stabilization using action-specific timeout
+        waitForElementStability(element, timeout: getStabilityTimeout(for: "click"))
 
         // Track if we used coordinate fallback
         var usedCoordinateFallback = false
@@ -806,8 +848,15 @@ final class MCPCommandRunner: XCTestCase {
         )
     }
 
-    /// Recursively collect elements from the hierarchy
+    /// Collect elements from the UI hierarchy
     /// watchOS-adapted: simplified element types for watch UI
+    ///
+    /// TODO: The `depth` parameter currently has no effect because `descendants(matching:)`
+    /// retrieves ALL descendants regardless of depth. XCUITest does not provide a built-in
+    /// way to limit traversal depth. For watchOS this is acceptable since the UI typically
+    /// has ~27 elements. If depth limiting becomes necessary, we would need to implement
+    /// manual tree traversal using `children(matching:)` recursively, but this would be
+    /// significantly slower due to multiple XCUITest queries.
     private func collectElements(
         from element: XCUIElement,
         role: String?,
@@ -817,10 +866,11 @@ final class MCPCommandRunner: XCTestCase {
         guard depth > 0 else { return }
 
         // watchOS-specific element types (simplified from iOS)
+        // Ordered by interaction frequency: buttons are most common for watchOS interactions
         let types: [XCUIElement.ElementType] = [
-            .button, .staticText, .textField, .image,
-            .cell, .table, .scrollView, .navigationBar,
-            .switch, .slider, .picker,
+            .button, .cell, .switch, .staticText, .textField, .image,
+            .table, .scrollView, .navigationBar,
+            .slider, .picker,
             .searchField, .link, .alert
         ]
 
@@ -935,24 +985,26 @@ final class MCPCommandRunner: XCTestCase {
     }
 
     /// Standard element search
+    /// watchOS-optimized: search order prioritizes interactive elements (button, cell, switch)
+    /// since most watchOS interactions are taps on these element types
     private func findElementStandard(in app: XCUIApplication, command: MCPCommand) -> XCUIElement? {
         // Try identifier first (preferred)
         if let identifier = command.identifier, !identifier.isEmpty {
-            // Try specific element types with identifier first (more reliable)
+            // Search order optimized for watchOS: buttons and cells are most common interactions
             let buttons = app.buttons[identifier]
             if buttons.exists { return buttons.firstMatch }
-
-            let textFields = app.textFields[identifier]
-            if textFields.exists { return textFields.firstMatch }
-
-            let staticTexts = app.staticTexts[identifier]
-            if staticTexts.exists { return staticTexts.firstMatch }
 
             let cells = app.cells[identifier]
             if cells.exists { return cells.firstMatch }
 
             let switches = app.switches[identifier]
             if switches.exists { return switches.firstMatch }
+
+            let staticTexts = app.staticTexts[identifier]
+            if staticTexts.exists { return staticTexts.firstMatch }
+
+            let textFields = app.textFields[identifier]
+            if textFields.exists { return textFields.firstMatch }
 
             let images = app.images[identifier]
             if images.exists { return images.firstMatch }
@@ -966,18 +1018,18 @@ final class MCPCommandRunner: XCTestCase {
 
         // Try label
         if let label = command.label, !label.isEmpty {
-            // Search through common element types for matching label
+            // Search order optimized for watchOS: buttons and cells first
             let buttons = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", label))
             if buttons.firstMatch.exists { return buttons.firstMatch }
+
+            let cells = app.cells.matching(NSPredicate(format: "label CONTAINS %@", label))
+            if cells.firstMatch.exists { return cells.firstMatch }
 
             let staticTexts = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", label))
             if staticTexts.firstMatch.exists { return staticTexts.firstMatch }
 
             let textFields = app.textFields.matching(NSPredicate(format: "label CONTAINS %@", label))
             if textFields.firstMatch.exists { return textFields.firstMatch }
-
-            let cells = app.cells.matching(NSPredicate(format: "label CONTAINS %@", label))
-            if cells.firstMatch.exists { return cells.firstMatch }
         }
 
         return nil
@@ -986,7 +1038,8 @@ final class MCPCommandRunner: XCTestCase {
 
 // MARK: - Errors
 
-/// Errors that can occur during MCP command execution
+/// Errors that can occur during MCP command execution on watchOS
+/// These error messages provide watchOS-specific context and recovery guidance.
 enum MCPCommandError: LocalizedError {
     case commandFileNotFound(String)
     case unknownAction(String)
@@ -1000,21 +1053,79 @@ enum MCPCommandError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .commandFileNotFound(let path):
-            return "Command file not found at: \(path)"
+            return """
+                watchOS command file not found at: \(path)
+
+                This indicates the MCP server did not write the command file.
+                Recovery: Run listall_diagnostics to check XCUITest runner status.
+                """
         case .unknownAction(let action):
-            return "Unknown action: \(action). Supported: click, type, swipe, query"
+            return """
+                Unknown watchOS action: \(action)
+
+                Supported actions: click, type, swipe, query
+                Note: watchOS has limited UI patterns compared to iOS.
+                Use swipe for Digital Crown-like scrolling.
+                """
         case .missingParameter(let param):
             return "Missing required parameter: \(param)"
         case .elementNotFound(let identifier):
-            return "Element not found: \(identifier)"
+            return """
+                watchOS element not found: '\(identifier)'
+
+                Recovery steps:
+                1. Run listall_screenshot(udid: "booted") to see current UI state
+                2. Run listall_query to discover available element identifiers
+                3. Check if element is visible (watchOS has small screen, may need to scroll)
+
+                Note: watchOS uses Digital Crown for scrolling. Use listall_swipe(direction: "up")
+                or listall_swipe(direction: "down") to scroll the view.
+                """
         case .elementNotHittable(let identifier):
-            return "Element is not hittable (may be off-screen or hidden): \(identifier)"
+            return """
+                watchOS element not hittable: '\(identifier)'
+
+                The element exists but cannot be tapped. Possible causes:
+                1. Element is off-screen (use listall_swipe to scroll)
+                2. Element is behind another view
+                3. Element is disabled
+
+                Recovery: Run listall_screenshot to verify element visibility.
+                """
         case .appNotReady(let bundleId, let state):
-            return "App '\(bundleId)' not ready. Current state: \(state)"
+            return """
+                watchOS app '\(bundleId)' not ready (state: \(state))
+
+                watchOS simulator is slower to launch apps than iOS.
+                Recovery steps:
+                1. Wait a few seconds and retry
+                2. Run listall_screenshot to check simulator state
+                3. If stuck: listall_shutdown_simulator(udid: "all") and restart
+
+                Note: watchOS app launch can take 30-45 seconds on first run.
+                """
         case .invalidDirection(let direction):
-            return "Invalid swipe direction: \(direction). Use: up, down, left, right"
+            return """
+                Invalid swipe direction: '\(direction)'
+
+                Valid directions: up, down, left, right
+
+                watchOS swipe patterns:
+                - up/down: Scroll content (like Digital Crown)
+                - left: Often reveals delete/action buttons
+                - right: Navigate back (dismiss current view)
+                """
         case .noFocusableElement:
-            return "No focusable text element found in the app"
+            return """
+                No focusable text element found on watchOS
+
+                Recovery steps:
+                1. Run listall_query(role: "textField") to find text inputs
+                2. watchOS has limited text input - check if current screen has text fields
+                3. Use listall_screenshot to verify the UI state
+
+                Note: Many watchOS screens use buttons/lists instead of text input.
+                """
         }
     }
 }

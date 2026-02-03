@@ -15,6 +15,7 @@ struct WatchItemRowView: View {
                 Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20))
                     .foregroundColor(item.isCrossedOut ? .green : .blue)
+                    .accessibilityIdentifier("WatchItemRow_Checkbox_\(item.id.uuidString)")
                 
                 // Item content
                 VStack(alignment: .leading, spacing: 2) {
@@ -49,6 +50,7 @@ struct WatchItemRowView: View {
             .itemToggleAnimation()
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("WatchItemRow_\(item.id.uuidString)")
         .accessibilityLabel(item.isCrossedOut ? "Completed: \(item.displayTitle)" : "Incomplete: \(item.displayTitle)")
         .accessibilityHint("Tap to toggle completion status")
         .accessibilityAddTraits(item.isCrossedOut ? .isSelected : [])

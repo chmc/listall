@@ -10,13 +10,16 @@ struct WatchListRowView: View {
                 .font(.headline)
                 .lineLimit(2)
                 .foregroundColor(.primary)
-            
+                .accessibilityIdentifier("WatchListRow_Name_\(list.id.uuidString)")
+
             // Show item count in iOS format: "7 (22) items"
             Text(itemCountText)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .accessibilityIdentifier("WatchListRow_ItemCount_\(list.id.uuidString)")
         }
         .padding(.vertical, 4)
+        .accessibilityIdentifier("WatchListRowView_\(list.id.uuidString)")
     }
     
     /// Format item count like iOS: "7 (22) items"

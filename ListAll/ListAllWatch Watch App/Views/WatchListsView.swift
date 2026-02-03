@@ -47,6 +47,7 @@ struct WatchListsView: View {
             .padding(.bottom, 8)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .animation(WatchAnimationManager.syncIndicator, value: viewModel.isSyncingFromiOS)
+            .accessibilityIdentifier("WatchSyncIndicator")
     }
     
     // MARK: - Lists Content
@@ -60,6 +61,7 @@ struct WatchListsView: View {
                             WatchListRowView(list: list)
                         }
                         .listRowBackground(Color.clear)
+                        .accessibilityIdentifier("WatchListRow_\(list.id.uuidString)")
                         .accessibilityLabel("\(list.name) " + watchLocalizedString("list", comment: "watchOS accessibility label suffix for list"))
                         .accessibilityHint(watchLocalizedString("Tap to view items in this list", comment: "watchOS accessibility hint for list row"))
                     }

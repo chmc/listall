@@ -46,11 +46,13 @@ struct WatchFilterPicker: View {
             ForEach(ItemFilterOption.watchOSOptions) { option in
                 Label(option.shortLabel, systemImage: option.systemImage)
                     .tag(option)
+                    .accessibilityIdentifier("WatchFilter_\(option.rawValue)")
             }
         } label: {
             Text(NSLocalizedString("Filter", comment: "watchOS filter picker label"))
         }
         .pickerStyle(.navigationLink)
+        .accessibilityIdentifier("WatchFilterPicker")
         .accessibilityLabel(NSLocalizedString("Filter items", comment: "watchOS accessibility label for filter picker"))
         .accessibilityHint(NSLocalizedString("Choose which items to display", comment: "watchOS accessibility hint for filter picker"))
     }

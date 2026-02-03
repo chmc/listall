@@ -86,6 +86,10 @@ enum DiagnosticsTool {
         output += xcodeOutput
         issueCount += xcodeIssues
 
+        // 5. watchOS Performance Guidance
+        let watchOSGuidance = generateWatchOSPerformanceGuidance()
+        output += watchOSGuidance
+
         // Overall Status
         output += "OVERALL STATUS: "
         if issueCount == 0 {
@@ -197,6 +201,9 @@ enum DiagnosticsTool {
             output += "  Available: \(totalAvailable) devices\n"
             output += "  iOS/iPadOS: \(iOSCount) devices\n"
             output += "  watchOS: \(watchOSCount) devices\n"
+            if watchOSCount > 0 {
+                output += "    -> See WATCHOS PERFORMANCE GUIDANCE section below for tips\n"
+            }
 
             if totalAvailable == 0 {
                 output += "    -> No simulators available\n"
@@ -545,5 +552,29 @@ enum DiagnosticsTool {
 
         output += "\n"
         return (output, issues)
+    }
+
+    // MARK: - watchOS Performance Guidance
+
+    /// Generate watchOS-specific performance guidance
+    private static func generateWatchOSPerformanceGuidance() -> String {
+        var output = "WATCHOS PERFORMANCE GUIDANCE:\n"
+        output += "  Single action: 8-15 seconds (normal for warm simulator)\n"
+        output += "  Batched (3 actions): 12-15 seconds total\n"
+        output += "  Screenshot: 1-2 seconds\n"
+        output += "  Query: 15-20 seconds (depends on UI complexity)\n"
+        output += "\n"
+        output += "  Tips:\n"
+        output += "  - Use listall_batch for multi-action sequences (saves ~50% time)\n"
+        output += "  - Screenshots are fast - use them liberally for verification\n"
+        output += "  - Pre-boot simulator: listall_boot_simulator before interactions\n"
+        output += "  - Maximum batch size for watchOS: 5 actions\n"
+        output += "\n"
+        output += "  Known Limitations:\n"
+        output += "  - Digital Crown: NOT supported - use swipe gestures instead\n"
+        output += "  - Force Touch: NOT supported (deprecated by Apple)\n"
+        output += "  - Accessibility identifiers: May not propagate from SwiftUI to XCUITest\n"
+        output += "\n"
+        return output
     }
 }
