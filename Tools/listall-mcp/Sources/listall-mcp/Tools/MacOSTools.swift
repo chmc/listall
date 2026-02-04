@@ -676,7 +676,43 @@ enum MacOSTools {
 
         log("Quitting macOS app: \(identifier)")
 
-        // Build AppleScript - inputs are validated, safe to interpolate
+        // PREFER: Use NSRunningApplication.terminate() (no Automation permission needed, handles modals)
+        if let bid = bundleId {
+            if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bid).first {
+                let success = app.terminate()
+                if success {
+                    // Wait for termination (up to 3 seconds)
+                    let startTime = Date()
+                    while !app.isTerminated && Date().timeIntervalSince(startTime) < 3 {
+                        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                    }
+
+                    if app.isTerminated {
+                        log("Successfully quit app using NSRunningApplication.terminate()")
+                        return CallTool.Result(content: [.text("Successfully quit '\(identifier)'.")])
+                    }
+
+                    // App didn't terminate in time (e.g. modal blocking) - force terminate
+                    log("terminate() timed out, trying forceTerminate()")
+                    let forced = app.forceTerminate()
+                    if forced {
+                        try await Task.sleep(nanoseconds: 500_000_000) // 500ms for force
+                        if app.isTerminated {
+                            log("Successfully force-quit app using NSRunningApplication.forceTerminate()")
+                            return CallTool.Result(content: [.text("Successfully quit '\(identifier)' (forced due to modal dialog).")])
+                        }
+                    }
+                }
+                // Fall through to AppleScript if terminate()/forceTerminate() failed
+                log("NSRunningApplication.terminate() failed, trying AppleScript")
+            } else {
+                // App not running
+                log("App '\(identifier)' is not running (NSRunningApplication check)")
+                return CallTool.Result(content: [.text("App '\(identifier)' was not running.")])
+            }
+        }
+
+        // FALLBACK: AppleScript (for when only app_name is provided, or terminate() failed)
         let quitScript: String
         if let bundleId = bundleId {
             quitScript = "tell application id \"\(bundleId)\" to quit"
@@ -694,6 +730,14 @@ enum MacOSTools {
             // App might not be running - not an error
             if result.stderr.contains("not running") {
                 return CallTool.Result(content: [.text("App '\(identifier)' was not running.")])
+            }
+            // Modal dialog open causes -128 / "User canceled" - force terminate
+            if result.stderr.contains("User canceled") || result.stderr.contains("-128") {
+                log("AppleScript quit blocked by modal dialog, force-terminating via killall")
+                if let appName = appName {
+                    _ = try await ShellCommand.execute("/usr/bin/killall", arguments: [appName])
+                    return CallTool.Result(content: [.text("Successfully quit '\(identifier)' (forced due to modal dialog).")])
+                }
             }
             throw MCPError.internalError("Failed to quit app: \(result.stderr)")
         }

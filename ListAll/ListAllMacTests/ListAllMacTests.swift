@@ -15396,12 +15396,12 @@ final class SettingsWindowResizableTests: XCTestCase {
 
     /// Test that Settings view uses minimum height constraint
     func testSettingsViewHasMinimumHeight() {
-        // The minimum height should be 350 points to ensure all tabs fit
-        let expectedMinHeight: CGFloat = 350
+        // The minimum height should be 480 points to ensure all General tab content fits
+        let expectedMinHeight: CGFloat = 480
 
         // This test verifies the implementation follows the spec
-        // MacSettingsView should use .frame(..., minHeight: 350, ...)
-        XCTAssertEqual(expectedMinHeight, 350, "Minimum height should be 350 points")
+        // MacSettingsView should use .frame(..., minHeight: 480, ...)
+        XCTAssertEqual(expectedMinHeight, 480, "Minimum height should be 480 points")
     }
 
     /// Test that Settings view has ideal width for better default appearance
@@ -15415,11 +15415,11 @@ final class SettingsWindowResizableTests: XCTestCase {
 
     /// Test that Settings view has ideal height for better default appearance
     func testSettingsViewHasIdealHeight() {
-        // The ideal height should be 400 points for comfortable viewing
-        let expectedIdealHeight: CGFloat = 400
+        // The ideal height should be 500 points for comfortable viewing
+        let expectedIdealHeight: CGFloat = 500
 
-        // MacSettingsView should use .frame(..., idealHeight: 400)
-        XCTAssertEqual(expectedIdealHeight, 400, "Ideal height should be 400 points")
+        // MacSettingsView should use .frame(..., idealHeight: 500)
+        XCTAssertEqual(expectedIdealHeight, 500, "Ideal height should be 500 points")
     }
 
     // MARK: - Accessibility Tests
@@ -15442,8 +15442,8 @@ final class SettingsWindowResizableTests: XCTestCase {
         // Some languages (German, Finnish) have longer strings
         // A resizable window allows content to fit without clipping
 
-        let minHeight: CGFloat = 350
-        let idealHeight: CGFloat = 400
+        let minHeight: CGFloat = 480
+        let idealHeight: CGFloat = 500
 
         XCTAssertGreaterThan(idealHeight, minHeight,
             "Ideal height should be larger than minimum to support longer localized strings")
@@ -15495,7 +15495,7 @@ final class SettingsWindowResizableTests: XCTestCase {
     /// Test that the frame configuration uses min/ideal pattern instead of fixed
     func testFrameUsesMinIdealPattern() {
         // The correct pattern is:
-        // .frame(minWidth: 500, idealWidth: 550, minHeight: 350, idealHeight: 400)
+        // .frame(minWidth: 500, idealWidth: 550, minHeight: 480, idealHeight: 500)
         //
         // NOT the antipattern:
         // .frame(width: 500, height: 350)  // Fixed size, cannot resize
@@ -15513,7 +15513,7 @@ final class SettingsWindowResizableTests: XCTestCase {
 
         struct SettingsConstraints {
             let minWidth: CGFloat = 500
-            let minHeight: CGFloat = 350
+            let minHeight: CGFloat = 480
         }
 
         let constraints = SettingsConstraints()
@@ -15521,8 +15521,8 @@ final class SettingsWindowResizableTests: XCTestCase {
         // Verify minimums are reasonable for 5-tab settings UI
         XCTAssertGreaterThanOrEqual(constraints.minWidth, 450,
             "Minimum width should be at least 450 for tabs and form content")
-        XCTAssertGreaterThanOrEqual(constraints.minHeight, 300,
-            "Minimum height should be at least 300 for form sections")
+        XCTAssertGreaterThanOrEqual(constraints.minHeight, 400,
+            "Minimum height should be at least 400 for form sections")
     }
 
     /// Test ideal constraints provide comfortable default size
@@ -15531,7 +15531,7 @@ final class SettingsWindowResizableTests: XCTestCase {
 
         struct SettingsConstraints {
             let idealWidth: CGFloat = 550
-            let idealHeight: CGFloat = 400
+            let idealHeight: CGFloat = 500
         }
 
         let constraints = SettingsConstraints()
@@ -15539,7 +15539,7 @@ final class SettingsWindowResizableTests: XCTestCase {
         // Verify ideals provide breathing room
         XCTAssertGreaterThan(constraints.idealWidth, 500,
             "Ideal width should exceed minimum for comfortable viewing")
-        XCTAssertGreaterThan(constraints.idealHeight, 350,
+        XCTAssertGreaterThan(constraints.idealHeight, 480,
             "Ideal height should exceed minimum for comfortable viewing")
     }
 
@@ -15565,7 +15565,7 @@ final class SettingsWindowResizableTests: XCTestCase {
         SOLUTION IMPLEMENTED:
         ---------------------
         Replace fixed frame with min/ideal constraints:
-        .frame(minWidth: 500, idealWidth: 550, minHeight: 350, idealHeight: 400)
+        .frame(minWidth: 500, idealWidth: 550, minHeight: 480, idealHeight: 500)
 
         BENEFITS:
         ---------
@@ -15578,8 +15578,8 @@ final class SettingsWindowResizableTests: XCTestCase {
         ------------------
         - minWidth: 500   (ensures tabs and form fit)
         - idealWidth: 550 (comfortable default)
-        - minHeight: 350  (ensures all sections visible)
-        - idealHeight: 400 (room for longer content)
+        - minHeight: 480  (ensures all sections visible)
+        - idealHeight: 500 (room for longer content)
 
         TEST RESULTS:
         -------------

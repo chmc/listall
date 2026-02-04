@@ -41,6 +41,7 @@ struct MacAllFeatureTipsView: View {
                     }
                 }
             }
+            .padding(.horizontal)
 
             Divider()
 
@@ -60,7 +61,7 @@ struct MacAllFeatureTipsView: View {
             .padding()
             .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 450, height: 400)
+        .frame(width: 520, height: 480)
     }
 }
 
