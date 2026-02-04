@@ -55,8 +55,7 @@ struct MacSettingsView: View {
                 }
                 .tag(SettingsTab.about)
         }
-        .frame(minWidth: 500, idealWidth: 550, minHeight: 350, idealHeight: 400)
-        .padding()
+        .frame(minWidth: 500, idealWidth: 550, minHeight: 480, idealHeight: 500)
     }
 }
 
@@ -162,6 +161,7 @@ private struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.horizontal, -20)
         .alert("Language Changed", isPresented: $showingLanguageRestartAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -248,6 +248,7 @@ private struct SecuritySettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.horizontal, -20)
     }
 }
 
@@ -280,6 +281,7 @@ private struct SyncSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.horizontal, -20)
     }
 }
 
@@ -353,6 +355,7 @@ private struct DataSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.horizontal, -20)
         .fileImporter(
             isPresented: $showingFilePicker,
             allowedContentTypes: [.json],
