@@ -107,12 +107,12 @@ jobs:
         retention-days: 7
 
   #############################################################################
-  # Job 2: watchOS Build and Test (~10-12 min)
+  # Job 2: watchOS Build and Test (~3-5 min, unit tests only)
   #############################################################################
   build-and-test-watchos:
     name: Build and Test watchOS
     runs-on: macos-14
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
     - name: Checkout code
@@ -139,11 +139,9 @@ jobs:
         xcrun simctl shutdown all || true
         xcrun simctl delete unavailable || true
 
-    - name: Build watchOS app
+    - name: Resolve watchOS simulator
+      id: watch-sim
       run: |
-        set -o pipefail
-        cd ListAll
-
         # Find the first available Apple Watch Series 10 (46mm) simulator UDID
         # Using jq (available on GitHub runners) for reliable JSON parsing
         # This avoids "multiple devices matched" errors when paired simulators exist
@@ -163,11 +161,22 @@ jobs:
         fi
 
         echo "Using watchOS simulator UDID: ${WATCH_UDID}"
+        echo "udid=${WATCH_UDID}" >> "$GITHUB_OUTPUT"
 
+    - name: Pre-boot watchOS simulator
+      run: |
+        xcrun simctl boot "${{ steps.watch-sim.outputs.udid }}" || true
+        xcrun simctl bootstatus "${{ steps.watch-sim.outputs.udid }}" -b
+        sleep 5
+
+    - name: Build watchOS app
+      run: |
+        set -o pipefail
+        cd ListAll
         xcodebuild clean build \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
-          -destination "platform=watchOS Simulator,id=${WATCH_UDID}" \
+          -destination "platform=watchOS Simulator,id=${{ steps.watch-sim.outputs.udid }}" \
           -configuration Debug \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
@@ -175,33 +184,18 @@ jobs:
           | xcpretty
 
     - name: Run watchOS tests
+      timeout-minutes: 10
       run: |
         set -o pipefail
         cd ListAll
-
-        # Use UDID-based selection to avoid "multiple devices matched" errors
-        # when paired simulators exist on the runner
-        WATCH_UDID=$(xcrun simctl list devices available -j 2>/dev/null | jq -r '
-          .devices | to_entries[] |
-          select(.key | contains("watchOS")) |
-          .value[] |
-          select(.isAvailable == true and .name == "Apple Watch Series 10 (46mm)") |
-          .udid
-        ' | head -n 1)
-
-        if [[ -z "${WATCH_UDID}" ]]; then
-          echo "ERROR: No available Apple Watch Series 10 (46mm) simulator found"
-          exit 1
-        fi
-
-        echo "Using watchOS simulator UDID: ${WATCH_UDID}"
 
         # Test plan runs unit tests only (UI tests excluded from plan)
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme "ListAllWatch Watch App" \
-          -destination "platform=watchOS Simulator,id=${WATCH_UDID}" \
+          -destination "platform=watchOS Simulator,id=${{ steps.watch-sim.outputs.udid }}" \
           -resultBundlePath TestResults-Watch.xcresult \
+          -skip-testing:"ListAllWatch Watch AppUITests" \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
