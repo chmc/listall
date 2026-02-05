@@ -588,10 +588,13 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Some platforms failed while others succeeded." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Common cause:** The version may already be approved on one platform." >> $GITHUB_STEP_SUMMARY
+            echo "App Store Connect closes the version train per-platform once approved." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Recovery options:**" >> $GITHUB_STEP_SUMMARY
-            echo "1. Re-run the failed platform job only" >> $GITHUB_STEP_SUMMARY
-            echo "2. Trigger a new release with \`platforms: '<failed_platform>'\`" >> $GITHUB_STEP_SUMMARY
-            echo "3. If version-bump committed, use \`skip_version_bump: true\`" >> $GITHUB_STEP_SUMMARY
+            echo "1. **Version already released?** Bump version and re-release: trigger workflow with \`bump_type: patch\` and \`platforms: '<failed_platform>'\`" >> $GITHUB_STEP_SUMMARY
+            echo "2. **Transient failure?** Re-run the failed job from the Actions UI" >> $GITHUB_STEP_SUMMARY
+            echo "3. **Re-release same version?** Only works if the version train is still open on that platform" >> $GITHUB_STEP_SUMMARY
 
             echo "::warning::Partial release for v${VERSION}! iOS: ${IOS_RESULT}, macOS: ${MACOS_RESULT}"
           fi
