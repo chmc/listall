@@ -363,6 +363,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("✅ AppDelegate: Fallback window created and displayed")
     }
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
+    }
+
     /// Request permission to show notifications for Services feedback
     private func requestNotificationPermissions() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
