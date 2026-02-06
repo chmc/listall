@@ -38,7 +38,7 @@ module DeviceFrameRegistry
     /iPhone 16 Pro Max/ => {
       type: :iphone,
       frame: 'iphone_16_pro_max',
-      screen_size: [1290, 2796]
+      screen_size: [1260, 2736]  # 2026 App Store standard (pre-resized by Fastfile)
     },
     /iPad Pro 13-inch \(M4\)/ => {
       type: :ipad,
@@ -198,10 +198,18 @@ module DeviceFrameRegistry
   def self.enhance_device_spec(device_spec, metadata)
     app_store = app_store_dimensions(device_spec[:type])
 
+    # Use screen_size from DEVICE_MAPPINGS for expected screenshot dimensions
+    # This allows pre-resized screenshots (e.g., 1260x2736 for iPhone) to pass validation
+    # The frame's screen_area from metadata defines the frame's physical screen hole
+    screenshot_width, screenshot_height = device_spec[:screen_size]
+
     device_spec.merge({
       name: metadata[:device],
-      screenshot_width: metadata[:screen_area][:width],
-      screenshot_height: metadata[:screen_area][:height],
+      screenshot_width: screenshot_width,
+      screenshot_height: screenshot_height,
+      # Frame's screen area (where screenshot is placed in the frame)
+      frame_screen_width: metadata[:screen_area][:width],
+      frame_screen_height: metadata[:screen_area][:height],
       screenshot_x: metadata[:screen_area][:x],
       screenshot_y: metadata[:screen_area][:y],
       final_width: metadata[:frame_dimensions][:width],

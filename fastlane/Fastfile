@@ -4206,11 +4206,11 @@ platform :ios do
     errors = []
     warnings = []
 
-    # Expected App Store dimensions (Apple's 2026 requirements, exact sizes)
-    # These are RAW normalized screenshots, NOT framed
-    iphone_size = { width: 1260, height: 2736, tolerance: 0 }  # iPhone 6.9" exact (2026 standard)
-    ipad_size = { width: 2064, height: 2752, tolerance: 0 }    # iPad 13" exact (2024 standard)
-    watch_size = { width: 416, height: 496, tolerance: 0 }     # Watch Series 10 exact (2026 standard)
+    # Expected App Store dimensions (Apple's requirements, exact sizes)
+    # These are FRAMED screenshots ready for App Store submission
+    iphone_size = { width: 1290, height: 2796, tolerance: 0 }  # iPhone 6.7" exact (framed)
+    ipad_size = { width: 2064, height: 2752, tolerance: 0 }    # iPad 13" exact (framed)
+    watch_size = { width: 416, height: 496, tolerance: 0 }     # Watch Series 10 exact (no frame)
 
     # Check normalized iPhone/iPad screenshots (App Store ready)
     compat_dir = File.expand_path("screenshots_compat", __dir__)
