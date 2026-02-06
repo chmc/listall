@@ -106,7 +106,23 @@ final class ListAllUITests_Screenshots: XCTestCase {
         }
 
         // Wait for UI to be ready (dynamic wait instead of fixed sleep)
-        _ = waitForUIReady()
+        let uiReady = waitForUIReady()
+
+        // iPad welcome screen may not have the elements waitForUIReady() checks for
+        // (no cells in empty state, navigation structure differs from iPhone)
+        // Add explicit wait for iPad to ensure UI renders before screenshot
+        if !uiReady {
+            print("⏳ UI ready check returned false - adding fallback wait for iPad rendering...")
+            sleep(5)
+        }
+
+        // Verify app window is actually rendered by checking window existence
+        let window = app.windows.firstMatch
+        if !window.waitForExistence(timeout: 10) {
+            print("⚠️ Warning: Window not detected, but proceeding with screenshot")
+        } else {
+            print("✅ App window confirmed visible")
+        }
 
         // Take screenshot of empty state
         print("📸 Capturing welcome screen screenshot")
