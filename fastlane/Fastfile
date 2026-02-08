@@ -235,10 +235,12 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
       derived_data_path: derived,
       devices: [device],
       languages: [locale],
-      clear_previous_screenshots: is_first,
+      clear_previous_screenshots: false,  # Shell script handles platform-specific cleanup
       only_testing: [
         "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
-        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow"
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow",
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots03_GroceryItems",
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_AddItem"
       ],
       skip_testing: ["ListAllTests"],
       xcodebuild_formatter: "",
@@ -1379,14 +1381,16 @@ platform :ios do
           languages: [locale],
           # Note: ios_version parameter removed - Fastlane will auto-select iOS 18.1 for both devices
           # iPhone 16 Pro Max only has iOS 18.1, iPad has both 18.1 and 18.2 beta (18.1 preferred)
-          clear_previous_screenshots: is_first,  # Only clear on first run
+          clear_previous_screenshots: false,  # Shell script handles platform-specific cleanup
           # SIMPLIFIED: Use method-level only_testing to run ONLY the screenshot tests
           # Format: "TargetName/ClassName/testMethodName"
-          # This runs only the 2 simplified screenshot test methods and skips all other tests
-          # Using new simplified ListAllUITests_Screenshots class with no complex detection logic
+          # This runs only the 4 screenshot test methods and skips all other tests
+          # Using simplified ListAllUITests_Screenshots class with no complex detection logic
           only_testing: [
             "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
-            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow"
+            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow",
+            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots03_GroceryItems",
+            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_AddItem"
           ],
           skip_testing: ["ListAllTests"],  # Skip unit tests
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
@@ -3875,7 +3879,7 @@ platform :ios do
       devices: [watch_device],
       languages: ["en-US", "fi"],
       output_directory: "./fastlane/screenshots/watch",
-      clear_previous_screenshots: true,
+      clear_previous_screenshots: false,  # Shell script handles platform-specific cleanup
       override_status_bar: true,
       reinstall_app: true,
       derived_data_path: derived,
@@ -4199,149 +4203,164 @@ platform :ios do
   end
 
   desc "Validate all delivery-ready screenshots (normalized iPhone/iPad + naked Watch)"
-  lane :validate_delivery_screenshots do
-    UI.header("📸 Validating delivery-ready screenshots for App Store submission")
+  lane :validate_delivery_screenshots do |options|
+    platform = options.fetch(:platform, "all")
+    UI.header("Validating delivery-ready screenshots (platform: #{platform})")
 
     locales = %w[en-US fi]
     errors = []
     warnings = []
+    validated_platforms = []
 
     # Expected App Store dimensions (Apple's requirements, exact sizes)
-    # These are FRAMED screenshots ready for App Store submission
-    iphone_size = { width: 1290, height: 2796, tolerance: 0 }  # iPhone 6.7" exact (framed)
-    ipad_size = { width: 2064, height: 2752, tolerance: 0 }    # iPad 13" exact (framed)
-    watch_size = { width: 416, height: 496, tolerance: 0 }     # Watch Series 10 exact (no frame)
+    iphone_size = { width: 1290, height: 2796 }  # iPhone 6.7" exact (framed)
+    ipad_size = { width: 2064, height: 2752 }    # iPad 13" exact (framed)
+    watch_size = { width: 416, height: 496 }     # Watch Series 10 exact (no frame)
+    macos_size = { width: 2880, height: 1800 }   # macOS Retina exact
 
-    # Check normalized iPhone/iPad screenshots (App Store ready)
-    compat_dir = File.expand_path("screenshots_compat", __dir__)
-    locales.each do |locale|
-      locale_dir = File.join(compat_dir, locale)
-      unless Dir.exist?(locale_dir)
-        errors << "❌ Missing screenshots directory: #{locale_dir}"
-        next
-      end
-
-      # Check iPhone screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
-      # Only count non-framed iPhone files
-      iphone_shots = Dir.glob(File.join(locale_dir, "iPhone*.png")).reject { |f| f.include?("_framed") }
-      if iphone_shots.count != 2
-        warnings << "⚠️  #{locale}: Expected 2 iPhone screenshots, found #{iphone_shots.count}"
-      end
-
-      iphone_shots.each do |shot|
-        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-        w, h = dims.split('x').map(&:to_i)
-        if w != iphone_size[:width] || h != iphone_size[:height]
-          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{iphone_size[:width]}x#{iphone_size[:height]})"
-        else
-          puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
-        end
-      end
-
-      # Check iPad screenshots (2 screenshots: 01_Welcome, 02_MainScreen)
-      # Only count non-framed iPad files
-      ipad_shots = Dir.glob(File.join(locale_dir, "iPad*.png")).reject { |f| f.include?("_framed") }
-      if ipad_shots.count != 2
-        warnings << "⚠️  #{locale}: Expected 2 iPad screenshots, found #{ipad_shots.count}"
-      end
-
-      ipad_shots.each do |shot|
-        dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-        w, h = dims.split('x').map(&:to_i)
-        if w != ipad_size[:width] || h != ipad_size[:height]
-          errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{ipad_size[:width]}x#{ipad_size[:height]})"
-        else
-          puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
-        end
-      end
-    end
-    
-    # Check watch naked screenshots
-    watch_dir = File.expand_path("screenshots/watch_normalized", __dir__)
-    if Dir.exist?(watch_dir)
+    # Validate iPhone/iPad screenshots
+    if %w[iphone ipad all].include?(platform)
+      compat_dir = File.expand_path("screenshots_compat", __dir__)
       locales.each do |locale|
-        locale_dir = File.join(watch_dir, locale)
+        locale_dir = File.join(compat_dir, locale)
         unless Dir.exist?(locale_dir)
-          errors << "❌ Missing watch screenshots directory: #{locale_dir}"
+          errors << "Missing screenshots directory: #{locale_dir}"
           next
         end
 
-        watch_shots = Dir.glob(File.join(locale_dir, "*.png"))
-        if watch_shots.count != 5
-          warnings << "⚠️  #{locale}: Expected 5 watch screenshots, found #{watch_shots.count}"
+        if %w[iphone all].include?(platform)
+          iphone_shots = Dir.glob(File.join(locale_dir, "iPhone*.png")).reject { |f| f.include?("_framed") }
+          if iphone_shots.count != 4
+            warnings << "#{locale}: Expected 4 iPhone screenshots, found #{iphone_shots.count}"
+          end
+
+          iphone_shots.each do |shot|
+            dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+            w, h = dims.split('x').map(&:to_i)
+            if w != iphone_size[:width] || h != iphone_size[:height]
+              errors << "#{locale}/#{File.basename(shot)}: #{dims} (expected #{iphone_size[:width]}x#{iphone_size[:height]})"
+            else
+              puts "  #{locale}/#{File.basename(shot)}: #{dims}"
+            end
+          end
+          validated_platforms << "iPhone"
         end
 
-        watch_shots.each do |shot|
-          dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-          w, h = dims.split('x').map(&:to_i)
-          if w != watch_size[:width] || h != watch_size[:height]
-            errors << "❌ #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{watch_size[:width]}x#{watch_size[:height]})"
-          else
-            puts "✅ #{locale}/#{File.basename(shot)}: #{dims}"
+        if %w[ipad all].include?(platform)
+          ipad_shots = Dir.glob(File.join(locale_dir, "iPad*.png")).reject { |f| f.include?("_framed") }
+          if ipad_shots.count != 4
+            warnings << "#{locale}: Expected 4 iPad screenshots, found #{ipad_shots.count}"
           end
+
+          ipad_shots.each do |shot|
+            dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+            w, h = dims.split('x').map(&:to_i)
+            if w != ipad_size[:width] || h != ipad_size[:height]
+              errors << "#{locale}/#{File.basename(shot)}: #{dims} (expected #{ipad_size[:width]}x#{ipad_size[:height]})"
+            else
+              puts "  #{locale}/#{File.basename(shot)}: #{dims}"
+            end
+          end
+          validated_platforms << "iPad"
         end
       end
-    else
-      warnings << "⚠️  Watch screenshots directory not found: #{watch_dir}"
     end
 
-    # Check macOS processed screenshots
-    # macOS screenshots should be exactly 2880x1800 (16:10 aspect ratio)
-    macos_size = { width: 2880, height: 1800, tolerance: 0 }  # macOS Retina exact
-    macos_dir = File.expand_path("screenshots/mac/processed", __dir__)
-    if Dir.exist?(macos_dir)
-      locales.each do |locale|
-        locale_dir = File.join(macos_dir, locale)
-        unless Dir.exist?(locale_dir)
-          warnings << "⚠️  Missing macOS screenshots directory: #{locale_dir}"
-          next
-        end
+    # Validate watch screenshots
+    if %w[watch all].include?(platform)
+      watch_dir = File.expand_path("screenshots/watch_normalized", __dir__)
+      if Dir.exist?(watch_dir)
+        locales.each do |locale|
+          locale_dir = File.join(watch_dir, locale)
+          unless Dir.exist?(locale_dir)
+            errors << "Missing watch screenshots directory: #{locale_dir}"
+            next
+          end
 
-        # Expected 4 macOS screenshots: 01_MainWindow, 02_ListDetailView, 03_ItemEditSheet, 04_SettingsWindow
-        macos_shots = Dir.glob(File.join(locale_dir, "*.png"))
-        if macos_shots.count < 3
-          warnings << "⚠️  #{locale}: Expected at least 3 macOS screenshots (App Store minimum), found #{macos_shots.count}"
-        elsif macos_shots.count != 4
-          warnings << "⚠️  #{locale}: Expected 4 macOS screenshots, found #{macos_shots.count}"
-        end
+          watch_shots = Dir.glob(File.join(locale_dir, "*.png"))
+          if watch_shots.count != 5
+            warnings << "#{locale}: Expected 5 watch screenshots, found #{watch_shots.count}"
+          end
 
-        macos_shots.each do |shot|
-          dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
-          w, h = dims.split('x').map(&:to_i)
-          if w != macos_size[:width] || h != macos_size[:height]
-            errors << "❌ macOS #{locale}/#{File.basename(shot)}: #{dims} (expected exactly #{macos_size[:width]}x#{macos_size[:height]})"
-          else
-            puts "✅ macOS #{locale}/#{File.basename(shot)}: #{dims}"
+          watch_shots.each do |shot|
+            dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+            w, h = dims.split('x').map(&:to_i)
+            if w != watch_size[:width] || h != watch_size[:height]
+              errors << "watch #{locale}/#{File.basename(shot)}: #{dims} (expected #{watch_size[:width]}x#{watch_size[:height]})"
+            else
+              puts "  watch #{locale}/#{File.basename(shot)}: #{dims}"
+            end
           end
         end
+        validated_platforms << "Watch"
+      else
+        if platform == "watch"
+          errors << "Watch screenshots directory not found: #{watch_dir}"
+        else
+          warnings << "Watch screenshots directory not found: #{watch_dir}"
+        end
       end
-    else
-      warnings << "⚠️  macOS screenshots directory not found: #{macos_dir}"
+    end
+
+    # Validate macOS screenshots
+    if %w[macos all].include?(platform)
+      macos_dir = File.expand_path("screenshots/mac/processed", __dir__)
+      if Dir.exist?(macos_dir)
+        locales.each do |locale|
+          locale_dir = File.join(macos_dir, locale)
+          unless Dir.exist?(locale_dir)
+            if platform == "macos"
+              errors << "Missing macOS screenshots directory: #{locale_dir}"
+            else
+              warnings << "Missing macOS screenshots directory: #{locale_dir}"
+            end
+            next
+          end
+
+          macos_shots = Dir.glob(File.join(locale_dir, "*.png"))
+          if macos_shots.count < 3
+            warnings << "#{locale}: Expected at least 3 macOS screenshots (App Store minimum), found #{macos_shots.count}"
+          elsif macos_shots.count != 4
+            warnings << "#{locale}: Expected 4 macOS screenshots, found #{macos_shots.count}"
+          end
+
+          macos_shots.each do |shot|
+            dims = `identify -format '%wx%h' #{Shellwords.escape(shot)}`.strip
+            w, h = dims.split('x').map(&:to_i)
+            if w != macos_size[:width] || h != macos_size[:height]
+              errors << "macOS #{locale}/#{File.basename(shot)}: #{dims} (expected #{macos_size[:width]}x#{macos_size[:height]})"
+            else
+              puts "  macOS #{locale}/#{File.basename(shot)}: #{dims}"
+            end
+          end
+        end
+        validated_platforms << "macOS"
+      else
+        if platform == "macos"
+          errors << "macOS screenshots directory not found: #{macos_dir}"
+        else
+          warnings << "macOS screenshots directory not found: #{macos_dir}"
+        end
+      end
     end
 
     # Print summary
     puts "\n" + "=" * 70
-    puts "Delivery Screenshot Validation Summary"
+    puts "Delivery Screenshot Validation Summary (#{validated_platforms.join(', ')})"
     puts "=" * 70
-    
+
     if warnings.any?
       puts "\nWarnings:"
-      warnings.each { |w| puts w }
+      warnings.each { |w| puts "  #{w}" }
     end
-    
+
     if errors.any?
       puts "\nErrors:"
-      errors.each { |e| puts e }
-      puts "\n❌ Validation FAILED: #{errors.count} error(s)"
+      errors.each { |e| puts "  #{e}" }
+      puts "\nValidation FAILED: #{errors.count} error(s)"
       UI.user_error!("Delivery screenshots validation failed")
     else
-      puts "\n✅ All delivery screenshots are valid and ready for App Store submission!"
-      puts "\nReady for upload (Apple's 2026 requirements):"
-      puts "  • iPhone: 4 screenshots (1260x2736)"
-      puts "  • iPad: 4 screenshots (2064x2752)"
-      puts "  • Watch: 10 screenshots (416x496)"
-      puts "  • macOS: 8 screenshots (2880x1800)"
-      puts "  • Total: 26 screenshots across EN + FI locales"
+      puts "\nAll #{validated_platforms.join('/')} screenshots validated successfully!"
     end
   end
 

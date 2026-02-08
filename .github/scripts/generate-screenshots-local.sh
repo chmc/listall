@@ -112,12 +112,12 @@ Examples:
 Platform Details:
     iphone  - iPhone 16 Pro Max (6.7" display, 1290x2796)
               Fastlane lane: screenshots_iphone + framing
-              Screenshots: 2 per locale (framed with device bezel)
+              Screenshots: 4 per locale (framed with device bezel)
               Estimated time: ~25 minutes
 
     ipad    - iPad Pro 13" M4 (13" display, 2064x2752)
               Fastlane lane: screenshots_ipad + framing
-              Screenshots: 2 per locale (framed with device bezel)
+              Screenshots: 4 per locale (framed with device bezel)
               Estimated time: ~40 minutes
 
     watch   - Apple Watch Series 10 46mm (45mm slot, 396x484)
@@ -131,7 +131,7 @@ Platform Details:
               Estimated time: ~5 minutes
 
     all     - All platforms (iPhone + iPad + Watch + macOS)
-              Screenshots: 13 per locale (26 total)
+              Screenshots: 17 per locale (34 total)
               iPhone/iPad: framed with device bezels
               Watch/macOS: unframed
               Estimated time: ~70-100 minutes
@@ -361,6 +361,31 @@ clean_screenshot_directories() {
 
     log_success "Screenshot directories cleaned for platform: ${platform}"
     echo ""
+}
+
+# =============================================================================
+# Output Verification
+# =============================================================================
+
+verify_processed_output() {
+    local platform="$1"
+    local dir="$2"
+
+    if [[ ! -d "${dir}" ]]; then
+        log_error "${platform}: Processed output directory missing: ${dir}"
+        return 1
+    fi
+
+    local actual_count
+    actual_count=$(find "${dir}" -name "*.png" -type f | wc -l | tr -d ' ')
+
+    if [[ "${actual_count}" -eq 0 ]]; then
+        log_error "${platform}: Processed output directory is empty: ${dir}"
+        return 1
+    fi
+
+    log_success "${platform}: ${actual_count} processed screenshots in ${dir}"
+    return 0
 }
 
 # =============================================================================
@@ -656,7 +681,7 @@ trap cleanup_restore_apps EXIT
 generate_iphone_screenshots() {
     log_info "Platform: iPhone 16 Pro Max (6.7\" display)"
     log_info "Expected output: 1290x2796 pixels"
-    log_info "Screenshots: 2 per locale"
+    log_info "Screenshots: 4 per locale"
     log_info "Estimated time: ~20 minutes"
     echo ""
 
@@ -671,7 +696,7 @@ generate_iphone_screenshots() {
 generate_ipad_screenshots() {
     log_info "Platform: iPad Pro 13\" M4 (13\" display)"
     log_info "Expected output: 2064x2752 pixels"
-    log_info "Screenshots: 2 per locale"
+    log_info "Screenshots: 4 per locale"
     log_info "Estimated time: ~35 minutes"
     echo ""
 
@@ -711,8 +736,26 @@ generate_macos_screenshots() {
 
     # Now launch fastlane to run tests and take screenshots
     # The tests should NOT try to hide apps - just activate ListAll to foreground
-    if ! bundle exec fastlane ios screenshots_macos; then
-        log_error "macOS screenshot generation failed"
+    # Retry on failure - macOS XCUITest can flake with "Timed out while enabling automation mode"
+    local max_retries=2
+    local attempt=1
+    local macos_success=false
+    while [[ $attempt -le $max_retries ]]; do
+        if bundle exec fastlane ios screenshots_macos; then
+            macos_success=true
+            break
+        fi
+        log_warn "macOS screenshot attempt $attempt/$max_retries failed"
+        ((attempt++))
+        if [[ $attempt -le $max_retries ]]; then
+            log_info "Retrying macOS screenshots in 10 seconds..."
+            sleep 10
+            # Re-prepare desktop in case state was disrupted
+            hide_and_quit_background_apps_macos
+        fi
+    done
+    if [[ "$macos_success" != "true" ]]; then
+        log_error "macOS screenshot generation failed after $max_retries attempts"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
@@ -723,12 +766,18 @@ generate_macos_screenshots() {
         return "${EXIT_GENERATION_FAILED}"
     fi
 
+    # Stage processed screenshots so git status reflects new files (not stale deletions)
+    local processed_dir="${PROJECT_ROOT}/fastlane/screenshots/mac/processed"
+    if [[ -d "${processed_dir}" ]]; then
+        git add "${processed_dir}" 2>/dev/null || true
+    fi
+
     return 0
 }
 
 generate_all_screenshots() {
     log_info "Platform: All (iPhone + iPad + Watch + macOS)"
-    log_info "Screenshots: 13 per locale (26 total)"
+    log_info "Screenshots: 17 per locale (34 total)"
     log_info "Estimated time: ~70-100 minutes"
     log_info "Mode: iPhone/iPad with device frames, Watch/macOS unframed"
     echo ""
@@ -750,18 +799,21 @@ generate_all_screenshots() {
         log_error "Screenshot framing failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
+    verify_processed_output "iPhone/iPad" "${PROJECT_ROOT}/fastlane/screenshots_compat" || return $?
 
     log_info "Step 4/5: Generating Watch screenshots (unframed)..."
     if ! bundle exec fastlane ios watch_screenshots; then
         log_error "Watch screenshot generation failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
+    verify_processed_output "Watch" "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized" || return $?
 
     log_info "Step 5/5: Generating macOS screenshots (unframed)..."
     # Use helper function to ensure background apps are hidden
     if ! generate_macos_screenshots; then
         return "${EXIT_GENERATION_FAILED}"
     fi
+    verify_processed_output "macOS" "${PROJECT_ROOT}/fastlane/screenshots/mac/processed" || return $?
 
     return 0
 }
@@ -800,17 +852,19 @@ generate_framed_screenshots() {
 # =============================================================================
 
 validate_screenshots() {
+    local platform="${1:-all}"
+
     log_header "Screenshot Validation"
 
-    log_info "Validating screenshot dimensions..."
+    log_info "Validating screenshot dimensions for platform: ${platform}..."
     echo ""
 
-    if ! bundle exec fastlane ios validate_delivery_screenshots; then
+    if ! bundle exec fastlane ios validate_delivery_screenshots platform:"${platform}"; then
         log_error "Screenshot validation failed"
         return "${EXIT_VALIDATION_FAILED}"
     fi
 
-    log_success "All screenshots validated successfully"
+    log_success "Screenshots validated successfully for platform: ${platform}"
     return 0
 }
 
@@ -930,19 +984,23 @@ main() {
             log_header "iPhone Screenshot Generation"
             generate_iphone_screenshots || exit $?
             frame_ios_screenshots_inplace || exit $?
+            verify_processed_output "iPhone" "${PROJECT_ROOT}/fastlane/screenshots_compat" || exit $?
             ;;
         ipad)
             log_header "iPad Screenshot Generation"
             generate_ipad_screenshots || exit $?
             frame_ios_screenshots_inplace || exit $?
+            verify_processed_output "iPad" "${PROJECT_ROOT}/fastlane/screenshots_compat" || exit $?
             ;;
         watch)
             log_header "Watch Screenshot Generation (Unframed)"
             generate_watch_screenshots || exit $?
+            verify_processed_output "Watch" "${PROJECT_ROOT}/fastlane/screenshots/watch_normalized" || exit $?
             ;;
         macos)
             log_header "macOS Screenshot Generation (Unframed)"
             generate_macos_screenshots || exit $?
+            verify_processed_output "macOS" "${PROJECT_ROOT}/fastlane/screenshots/mac/processed" || exit $?
             ;;
         all)
             log_header "All Platforms Screenshot Generation"
@@ -951,7 +1009,8 @@ main() {
         framed)
             log_header "Custom Screenshot Framing"
             generate_framed_screenshots || exit $?
-            # Skip validation for framed mode (different dimensions)
+            verify_processed_output "iPhone/iPad (framed)" "${PROJECT_ROOT}/fastlane/screenshots_compat" || exit $?
+            # Skip dimension validation for framed mode (frameit may produce slightly different sizes)
             END_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
             readonly END_TIME
             log_success "Framed screenshot generation complete"
@@ -959,8 +1018,8 @@ main() {
             ;;
     esac
 
-    # Validate screenshots
-    validate_screenshots || exit $?
+    # Validate screenshots (platform-aware: only validates the platform that was generated)
+    validate_screenshots "${PLATFORM}" || exit $?
 
     # Record end time
     END_TIME="$(date '+%Y-%m-%d %H:%M:%S')"

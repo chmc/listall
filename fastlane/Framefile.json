@@ -36,6 +36,28 @@
       }
     },
     {
+      "filter": "03_GroceryItems",
+      "title": {
+        "en-US": "Track Every Item",
+        "fi": "Seuraa Jokaista Kohdetta"
+      },
+      "subtitle": {
+        "en-US": "Check off as you go",
+        "fi": "Merkitse valmiiksi lennossa"
+      }
+    },
+    {
+      "filter": "04_AddItem",
+      "title": {
+        "en-US": "Add Items in Seconds",
+        "fi": "Lisää Kohteita Sekunneissa"
+      },
+      "subtitle": {
+        "en-US": "Quick and easy entry",
+        "fi": "Nopea ja helppo lisäys"
+      }
+    },
+    {
       "filter": "01_Watch_Lists_Home",
       "title": {
         "en-US": "Lists on Your Wrist",

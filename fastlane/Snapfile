@@ -84,7 +84,9 @@ skip_testing(["ListAllTests"])
 # This prevents duplicate screenshots from both old and new test classes
 only_testing([
   "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
-  "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow"
+  "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow",
+  "ListAllUITests/ListAllUITests_Screenshots/testScreenshots03_GroceryItems",
+  "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_AddItem"
 ])
 
 # For more information about all available options run

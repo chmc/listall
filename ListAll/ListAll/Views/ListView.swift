@@ -30,6 +30,11 @@ struct ListView: View {
         Constants.AddButtonPosition(rawValue: addButtonPositionRaw) ?? .right
     }
     
+    /// Use fullScreenCover instead of sheet in screenshot mode to avoid dark dimming bands
+    private var isScreenshotMode: Bool {
+        ProcessInfo.processInfo.arguments.contains("UITEST_SCREENSHOT_MODE")
+    }
+
     // Computed property for edit mode binding to simplify type-checking
     private var editModeBinding: Binding<EditMode> {
         if viewModel.currentSortOption == .orderNumber && viewModel.isInSelectionMode {
@@ -310,7 +315,10 @@ struct ListView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingCreateItem) {
+        .sheet(isPresented: isScreenshotMode ? .constant(false) : $showingCreateItem) {
+            ItemEditView(list: list)
+        }
+        .fullScreenCover(isPresented: isScreenshotMode ? $showingCreateItem : .constant(false)) {
             ItemEditView(list: list)
         }
         .sheet(isPresented: $showingEditItem) {

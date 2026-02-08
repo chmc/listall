@@ -98,7 +98,9 @@ fastlane/screenshots_compat/delivery/
 !fastlane/screenshots/watch_normalized/
 
 # KEEP (track) processed macOS screenshots (2880x1800 with gradient background)
-# Note: Use git add -f to initially add mac/processed/
+# Un-ignore mac/ so git descends into it, then ignore its raw contents
+!fastlane/screenshots/mac/
+fastlane/screenshots/mac/*
 !fastlane/screenshots/mac/processed/
 
 # KEEP (track) normalized iPhone/iPad screenshots (1290x2796, 2064x2752)

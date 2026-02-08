@@ -176,4 +176,136 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("✅ Main screen screenshot captured")
         print("========================================")
     }
+
+    // MARK: - Navigation Helpers
+
+    /// Launch app with test data, wait for list cells to load, and navigate to the first list (Grocery Shopping)
+    /// Returns true if navigation succeeded
+    private func launchAndNavigateToGroceryList() -> Bool {
+        guard launchAppWithRetry(arguments: ["UITEST_MODE", "UITEST_SCREENSHOT_MODE", "DISABLE_TOOLTIPS"]) else {
+            XCTFail("App failed to launch")
+            return false
+        }
+
+        _ = waitForUIReady()
+
+        // Wait for list cells to appear
+        let firstCell = app.cells.firstMatch
+        if firstCell.waitForExistence(timeout: elementTimeout) {
+            print("✅ Data loaded - found list cells")
+        } else {
+            print("⚠️ No cells found on first attempt, waiting additional time for iPad/locale...")
+            sleep(5)
+            if firstCell.waitForExistence(timeout: elementTimeout) {
+                print("✅ Data loaded on retry - found list cells")
+            } else {
+                XCTFail("List cells not found - data did not load in time.")
+                return false
+            }
+        }
+
+        // Tap the first list cell (Grocery Shopping / Ruokaostokset - orderNumber 0)
+        print("👆 Tapping first list cell to navigate to grocery items")
+        firstCell.tap()
+
+        // Wait for items view to load - look for item cells
+        // Don't check add button by label since it's localized
+        let itemCell = app.cells.firstMatch
+        if itemCell.waitForExistence(timeout: elementTimeout) {
+            print("✅ Navigated to grocery list items view")
+            sleep(1) // settle time
+            return true
+        }
+
+        // Fallback: the navigation may have worked but items are slow to render
+        print("⚠️ Items view elements not detected, proceeding anyway")
+        sleep(2)
+        return true
+    }
+
+    /// Test: Capture grocery shopping list items
+    func testScreenshots03_GroceryItems() throws {
+        print("========================================")
+        print("📱 Starting Grocery Items Screenshot Test")
+        print("========================================")
+
+        guard launchAndNavigateToGroceryList() else {
+            XCTFail("Failed to navigate to grocery list")
+            return
+        }
+
+        print("📸 Capturing grocery items screenshot")
+        snapshot("03_GroceryItems")
+        print("✅ Grocery items screenshot captured")
+        print("========================================")
+    }
+
+    /// Test: Capture add new item sheet on grocery list
+    func testScreenshots04_AddItem() throws {
+        print("========================================")
+        print("📱 Starting Add Item Screenshot Test")
+        print("========================================")
+
+        guard launchAndNavigateToGroceryList() else {
+            XCTFail("Failed to navigate to grocery list")
+            return
+        }
+
+        // Tap the floating add item button - try both English and Finnish labels
+        let addButtonEN = app.buttons["Add new item"]
+        let addButtonFI = app.buttons["Lisää uusi tuote"]
+        var addButtonFound = false
+        if addButtonEN.waitForExistence(timeout: elementTimeout) {
+            print("👆 Tapping add item button (EN)")
+            addButtonEN.tap()
+            addButtonFound = true
+        } else if addButtonFI.waitForExistence(timeout: 5) {
+            print("👆 Tapping add item button (FI)")
+            addButtonFI.tap()
+            addButtonFound = true
+        }
+
+        if !addButtonFound {
+            XCTFail("Add item button not found in either locale")
+            return
+        }
+
+        // Wait for the item edit sheet to appear
+        // Try both English and Finnish placeholder text
+        let titleFieldEN = app.textFields["Enter item name"]
+        let titleFieldFI = app.textFields["Syötä tuotteen nimi"]
+        var titleField: XCUIElement?
+
+        if titleFieldEN.waitForExistence(timeout: elementTimeout) {
+            titleField = titleFieldEN
+            print("✅ Add item sheet appeared (EN)")
+        } else if titleFieldFI.waitForExistence(timeout: 5) {
+            titleField = titleFieldFI
+            print("✅ Add item sheet appeared (FI)")
+        } else {
+            print("⚠️ Title field not found by placeholder, waiting for sheet...")
+            sleep(3)
+        }
+
+        // Determine locale and type appropriate item name
+        let isFinnish = titleField == titleFieldFI
+        let itemName = isFinnish ? "Avokado" : "Avocado"
+
+        print("🌐 Locale: \(isFinnish ? "Finnish" : "English"), typing '\(itemName)'")
+        if let field = titleField {
+            field.tap()
+            field.typeText(itemName)
+        } else {
+            // Fallback: type into whatever field is focused
+            app.typeText(itemName)
+        }
+
+        // Brief settle time for text to render
+        sleep(1)
+
+        print("📸 Capturing add item screenshot")
+        snapshot("04_AddItem")
+        print("✅ Add item screenshot captured")
+        print("========================================")
+    }
 }
