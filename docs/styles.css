@@ -1082,6 +1082,13 @@ section:first-of-type {
     padding: 14px;
 }
 
+.device-mac {
+    width: 360px;
+    height: 240px;
+    border-radius: 12px;
+    padding: 12px 12px 24px 12px;
+}
+
 .device-screen {
     width: 100%;
     height: 100%;
@@ -2052,6 +2059,11 @@ strong {
     .device-ipad {
         width: 220px;
         height: 300px;
+    }
+
+    .device-mac {
+        width: 260px;
+        height: 180px;
     }
     
     .platform-number {
