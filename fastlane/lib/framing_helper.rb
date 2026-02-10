@@ -90,8 +90,14 @@ module FramingHelper
       raise FramingError, "Input directory does not exist: #{input_dir}"
     end
 
-    # Find all PNG files in input directory
+    # Find all PNG files in input directory, optionally filtered by device
     screenshots = Dir.glob(File.join(input_dir, '*.png')).sort
+
+    # Filter by device type if specified (e.g., /^iPhone/ or /^iPad/)
+    if opts[:device_filter]
+      filter = opts[:device_filter]
+      screenshots = screenshots.select { |path| File.basename(path).match?(filter) }
+    end
 
     if screenshots.empty?
       puts "No screenshots found in #{input_dir}" if opts[:verbose]

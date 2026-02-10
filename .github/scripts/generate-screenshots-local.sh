@@ -137,9 +137,9 @@ Platform Details:
               Estimated time: ~70-100 minutes
 
     framed  - Re-apply device frames to existing screenshots
-              Fastlane lane: frame_screenshots_custom
-              Requires: Screenshots must exist in screenshots_compat/
-              Output: Replaces screenshots with framed versions
+              Fastlane lane: normalize_screenshots + frame_screenshots_custom
+              Requires: Raw screenshots must exist in screenshots/
+              Output: Framed versions in screenshots_compat/
               Estimated time: ~2-5 minutes
 
 Output Locations:
@@ -394,8 +394,21 @@ verify_processed_output() {
 
 # Frame iPhone/iPad screenshots in-place (replace raw with framed)
 # Watch screenshots are NOT framed
+# Args: $1 = device filter (optional): "iphone", "ipad", or empty for both
 frame_ios_screenshots_inplace() {
-    log_header "Applying Device Frames to iPhone/iPad Screenshots"
+    local device_filter="${1:-}"
+    local filter_label="iPhone/iPad"
+    local fastlane_args=""
+
+    if [[ -n "${device_filter}" ]]; then
+        case "${device_filter}" in
+            iphone) filter_label="iPhone" ; fastlane_args="device_filter:^iPhone" ;;
+            ipad)   filter_label="iPad"   ; fastlane_args="device_filter:^iPad" ;;
+            *)      log_error "Unknown device filter: ${device_filter}"; return "${EXIT_GENERATION_FAILED}" ;;
+        esac
+    fi
+
+    log_header "Applying Device Frames to ${filter_label} Screenshots"
 
     local compat_dir="${PROJECT_ROOT}/fastlane/screenshots_compat"
     local framed_dir="${PROJECT_ROOT}/fastlane/screenshots_framed/ios"
@@ -412,16 +425,27 @@ frame_ios_screenshots_inplace() {
         return "${EXIT_GENERATION_FAILED}"
     fi
 
-    log_info "Framing screenshots with device bezels..."
+    log_info "Framing ${filter_label} screenshots with device bezels..."
     log_info "Input: fastlane/screenshots_compat/"
     log_info "Output: Framed images will replace raw images in same location"
     echo ""
 
-    # Run the framing lane
-    if ! bundle exec fastlane ios frame_screenshots_custom; then
+    # Run the framing lane (with optional device filter)
+    if ! bundle exec fastlane ios frame_screenshots_custom ${fastlane_args}; then
         log_error "Screenshot framing failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
+
+    # Verify that framing actually produced output
+    local framed_count
+    framed_count=$(find "${framed_dir}" -name "*.png" -type f 2>/dev/null | wc -l | tr -d ' ')
+    framed_count="${framed_count:-0}"
+    if [[ "${framed_count}" -eq 0 ]]; then
+        log_error "Framing produced 0 screenshots — expected at least 1"
+        log_error "Check that screenshots exist in fastlane/screenshots_compat/ and device_filter regex is correct"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+    log_info "Framing produced ${framed_count} screenshots"
 
     # Copy framed images back to screenshots_compat, replacing raw
     log_info "Replacing raw screenshots with framed versions..."
@@ -449,7 +473,7 @@ frame_ios_screenshots_inplace() {
     rm -rf "${PROJECT_ROOT}/fastlane/screenshots_framed"
     log_info "Cleaned up temporary framed directory"
 
-    log_success "Device frames applied to all iPhone/iPad screenshots"
+    log_success "Device frames applied to ${filter_label} screenshots"
     echo ""
 
     return 0
@@ -820,15 +844,25 @@ generate_all_screenshots() {
 
 generate_framed_screenshots() {
     log_info "Mode: Re-apply Device Frames to Existing Screenshots"
-    log_info "Input: Screenshots in fastlane/screenshots_compat/"
-    log_info "Output: Framed versions replace originals in same location"
+    log_info "Input: Raw screenshots from fastlane/screenshots/"
+    log_info "Output: Framed versions in fastlane/screenshots_compat/"
     log_info "Estimated time: ~2-5 minutes"
     echo ""
 
-    # Check that screenshots exist
-    if [[ ! -d "${PROJECT_ROOT}/fastlane/screenshots_compat" ]]; then
-        log_error "Screenshots not found at fastlane/screenshots_compat/"
+    # Check that raw screenshots exist (source of truth)
+    local raw_dir="${PROJECT_ROOT}/fastlane/screenshots"
+    if [[ ! -d "${raw_dir}" ]]; then
+        log_error "Raw screenshots not found at fastlane/screenshots/"
         log_error "Run './generate-screenshots-local.sh all' first to generate screenshots"
+        return "${EXIT_GENERATION_FAILED}"
+    fi
+
+    # Re-normalize raw screenshots to screenshots_compat/ before framing.
+    # This is critical: screenshots_compat/ may contain already-framed images
+    # from a previous run, which would cause double-framing.
+    log_info "Normalizing raw screenshots to screenshots_compat/..."
+    if ! bundle exec fastlane ios normalize_screenshots; then
+        log_error "Screenshot normalization failed"
         return "${EXIT_GENERATION_FAILED}"
     fi
 
@@ -983,13 +1017,13 @@ main() {
         iphone)
             log_header "iPhone Screenshot Generation"
             generate_iphone_screenshots || exit $?
-            frame_ios_screenshots_inplace || exit $?
+            frame_ios_screenshots_inplace "iphone" || exit $?
             verify_processed_output "iPhone" "${PROJECT_ROOT}/fastlane/screenshots_compat" || exit $?
             ;;
         ipad)
             log_header "iPad Screenshot Generation"
             generate_ipad_screenshots || exit $?
-            frame_ios_screenshots_inplace || exit $?
+            frame_ios_screenshots_inplace "ipad" || exit $?
             verify_processed_output "iPad" "${PROJECT_ROOT}/fastlane/screenshots_compat" || exit $?
             ;;
         watch)

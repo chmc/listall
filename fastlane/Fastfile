@@ -1097,6 +1097,30 @@ platform :ios do
     UI.message("📁 Output: #{compat_dir}")
   end
 
+  desc "Re-normalize raw screenshots to App Store dimensions"
+  desc "Copies/resizes raw captures from screenshots/ to screenshots_compat/"
+  desc "Use before re-framing to ensure screenshots_compat/ has unframed images"
+  lane :normalize_screenshots do
+    UI.header("Normalizing Raw Screenshots to App Store Dimensions")
+
+    screenshots_dir = File.expand_path("screenshots", __dir__)
+
+    # Check that raw screenshots exist
+    has_iphone = Dir.glob(File.join(screenshots_dir, '*', 'iPhone*.png')).any?
+    has_ipad = Dir.glob(File.join(screenshots_dir, '*', 'iPad*.png')).any?
+
+    unless has_iphone || has_ipad
+      UI.user_error!("No raw screenshots found in #{screenshots_dir}. Run screenshot generation first.")
+    end
+
+    normalize_device_screenshots(:iphone) if has_iphone
+    normalize_device_screenshots(:ipad) if has_ipad
+
+    compat_dir = File.expand_path("screenshots_compat", __dir__)
+    total = Dir.glob(File.join(compat_dir, '**', '*.png')).count
+    UI.success("Normalized #{total} screenshots to #{compat_dir}")
+  end
+
   desc "Unified App Store screenshot generation pipeline"
   desc "Generates all screenshots (iPhone, iPad, Watch) with validation and fail-fast checks"
   desc "This is the main entry point for CI/CD pipelines"
@@ -4413,13 +4437,22 @@ platform :ios do
       UI.message("Framing iPhone/iPad screenshots...")
 
       begin
-        results = FramingHelper.frame_all_locales(
-          input_root,
-          File.join(output_root, 'ios'),
+        framing_opts = {
           verbose: true,
           skip_if_exists: options.fetch(:skip_existing, false),
           app_store_mode: app_store_mode,
           background_color: background_color
+        }
+        if options[:device_filter]
+          # Convert string pattern from CLI (e.g., "^iPhone") to Regexp
+          filter = options[:device_filter]
+          framing_opts[:device_filter] = filter.is_a?(Regexp) ? filter : Regexp.new(filter)
+        end
+
+        results = FramingHelper.frame_all_locales(
+          input_root,
+          File.join(output_root, 'ios'),
+          framing_opts
         )
 
         total_framed += results[:total_screenshots]
@@ -4428,6 +4461,10 @@ platform :ios do
       rescue FramingHelper::FramingError => e
         UI.error("  iOS framing failed: #{e.message}")
       end
+    end
+
+    if total_framed == 0 && options[:device_filter]
+      UI.important("Warning: device_filter '#{options[:device_filter]}' matched 0 screenshots")
     end
 
     UI.success("Framed #{total_framed} screenshots across #{total_locales} locale(s)")

@@ -171,6 +171,18 @@ Captures iPad Pro 13-inch (M4) screenshots for EN and FI locales
 
 Outputs normalized screenshots to screenshots_compat/ ready for App Store
 
+### ios normalize_screenshots
+
+```sh
+[bundle exec] fastlane ios normalize_screenshots
+```
+
+Re-normalize raw screenshots to App Store dimensions
+
+Copies/resizes raw captures from screenshots/ to screenshots_compat/
+
+Use before re-framing to ensure screenshots_compat/ has unframed images
+
 ### ios prepare_appstore
 
 ```sh
