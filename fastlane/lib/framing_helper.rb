@@ -14,9 +14,10 @@ module FramingHelper
 
   # Default options for framing operations
   DEFAULT_OPTIONS = {
-    background_color: '#0E1117',
+    background_color: '#0E1117',        # fallback solid color (unused when gradient set)
+    gradient_center: '#2A5F6D',         # teal center (matches macOS)
+    gradient_edge: '#0D1F26',           # dark navy edge (matches macOS)
     quality: 95,
-    gravity: 'center',
     skip_if_exists: false,
     verbose: false,
     # App Store mode: scale frame to fit within App Store required dimensions
@@ -345,6 +346,24 @@ module FramingHelper
   end
   private_class_method :build_imagemagick_command
 
+  # Generate ImageMagick args for a radial gradient canvas.
+  # Creates a square gradient (to keep it circular) then crops to target dimensions.
+  def self.gradient_canvas_args(width, height, options)
+    center = options[:gradient_center] || '#2A5F6D'
+    edge = options[:gradient_edge] || '#0D1F26'
+    square_size = [width, height].max
+    [
+      "-size #{square_size}x#{square_size}",
+      "-depth 8",
+      "radial-gradient:'#{center}-#{edge}'",
+      "-gravity center",
+      "-crop #{width}x#{height}+0+0",
+      "+repage",
+      "+gravity"              # Reset gravity — prevents leaking into subsequent composites
+    ]
+  end
+  private_class_method :gradient_canvas_args
+
   # Build standard framing command (frame at original size)
   def self.build_standard_command(frame_path:, screenshot_path:, output_path:, device_spec:, options:)
     escaped_frame = Shellwords.escape(frame_path)
@@ -357,7 +376,6 @@ module FramingHelper
     screenshot_height = device_spec[:screenshot_height]
     final_width = device_spec[:final_width]
     final_height = device_spec[:final_height]
-    bg_color = options[:background_color]
 
     # Calculate screen fill area - use the exact screen position with corner radius
     # The frame has rounded corners, so use a rounded rectangle to match
@@ -366,8 +384,10 @@ module FramingHelper
     fill_padding = 40
     screen_fill_x1 = x_offset - fill_padding
     screen_fill_y1 = y_offset - fill_padding
-    screen_fill_x2 = x_offset + screenshot_width + fill_padding
-    screen_fill_y2 = y_offset + screenshot_height + fill_padding
+    fill_width = device_spec[:frame_screen_width] || screenshot_width
+    fill_height = device_spec[:frame_screen_height] || screenshot_height
+    screen_fill_x2 = x_offset + fill_width + fill_padding
+    screen_fill_y2 = y_offset + fill_height + fill_padding
 
     # Get the corner radius from device spec (iPhone has rounded corners)
     # The corner radius must match the frame's screen cutout curve precisely
@@ -377,8 +397,7 @@ module FramingHelper
 
     cmd_parts = [
       'magick',
-      "-size #{final_width}x#{final_height}",
-      "xc:'#{bg_color}'",
+      *gradient_canvas_args(final_width, final_height, options),
       # Fill screen area with white rounded rectangle to match frame's screen cutout
       '-fill white',
       "-draw \"roundrectangle #{screen_fill_x1},#{screen_fill_y1} #{screen_fill_x2},#{screen_fill_y2} #{corner_radius},#{corner_radius}\"",
@@ -450,8 +469,6 @@ module FramingHelper
     final_screenshot_x = frame_x + scaled_screenshot_x
     final_screenshot_y = frame_y + scaled_screenshot_y
 
-    bg_color = options[:background_color]
-
     # Build command:
     # 1. Create canvas at App Store dimensions
     # 2. Fill screen area with white (for iPhone rounded corners)
@@ -465,8 +482,10 @@ module FramingHelper
     fill_padding = (40 * scale).to_i
     screen_fill_x1 = final_screenshot_x - fill_padding
     screen_fill_y1 = final_screenshot_y - fill_padding
-    screen_fill_x2 = final_screenshot_x + scaled_screenshot_width + fill_padding
-    screen_fill_y2 = final_screenshot_y + scaled_screenshot_height + fill_padding
+    scaled_fill_width = ((device_spec[:frame_screen_width] || device_spec[:screenshot_width]) * scale).to_i
+    scaled_fill_height = ((device_spec[:frame_screen_height] || device_spec[:screenshot_height]) * scale).to_i
+    screen_fill_x2 = final_screenshot_x + scaled_fill_width + fill_padding
+    screen_fill_y2 = final_screenshot_y + scaled_fill_height + fill_padding
 
     # Scale the corner radius to match the scaled frame
     # The corner radius must match the frame's screen cutout curve precisely
@@ -475,8 +494,7 @@ module FramingHelper
 
     cmd_parts = [
       'magick',
-      "-size #{target_width}x#{target_height}",
-      "xc:'#{bg_color}'",
+      *gradient_canvas_args(target_width, target_height, options),
       # Fill screen area with white rounded rectangle to match frame's screen cutout
       '-fill white',
       "-draw \"roundrectangle #{screen_fill_x1},#{screen_fill_y1} #{screen_fill_x2},#{screen_fill_y2} #{corner_radius},#{corner_radius}\"",
