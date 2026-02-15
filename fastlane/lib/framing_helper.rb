@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'fileutils'
+require 'json'
 require 'shellwords'
 require_relative 'device_frame_registry'
 
@@ -364,6 +365,27 @@ module FramingHelper
   end
   private_class_method :gradient_canvas_args
 
+  # Look up per-screenshot screen_fill_color from Framefile.json
+  #
+  # @param screenshot_path [String] Path to the screenshot file
+  # @return [String] Fill color (e.g., '#EFEFF3') or 'white' as default
+  def self.screen_fill_color_for_screenshot(screenshot_path)
+    @@framefile_data ||= begin
+      framefile_path = File.join(File.dirname(__dir__), 'Framefile.json')
+      if File.exist?(framefile_path)
+        JSON.parse(File.read(framefile_path))
+      else
+        {}
+      end
+    end
+
+    basename = File.basename(screenshot_path)
+    data = @@framefile_data['data'] || []
+    entry = data.find { |e| basename.include?(e['filter']) }
+    entry&.dig('screen_fill_color') || 'white'
+  end
+  private_class_method :screen_fill_color_for_screenshot
+
   # Build standard framing command (frame at original size)
   def self.build_standard_command(frame_path:, screenshot_path:, output_path:, device_spec:, options:)
     escaped_frame = Shellwords.escape(frame_path)
@@ -398,8 +420,8 @@ module FramingHelper
     cmd_parts = [
       'magick',
       *gradient_canvas_args(final_width, final_height, options),
-      # Fill screen area with white rounded rectangle to match frame's screen cutout
-      '-fill white',
+      # Fill screen area with rounded rectangle to match frame's screen cutout
+      "-fill '#{screen_fill_color_for_screenshot(screenshot_path)}'",
       "-draw \"roundrectangle #{screen_fill_x1},#{screen_fill_y1} #{screen_fill_x2},#{screen_fill_y2} #{corner_radius},#{corner_radius}\"",
       escaped_screenshot,
       "-geometry +#{x_offset}+#{y_offset}",
@@ -495,8 +517,8 @@ module FramingHelper
     cmd_parts = [
       'magick',
       *gradient_canvas_args(target_width, target_height, options),
-      # Fill screen area with white rounded rectangle to match frame's screen cutout
-      '-fill white',
+      # Fill screen area with rounded rectangle to match frame's screen cutout
+      "-fill '#{screen_fill_color_for_screenshot(screenshot_path)}'",
       "-draw \"roundrectangle #{screen_fill_x1},#{screen_fill_y1} #{screen_fill_x2},#{screen_fill_y2} #{corner_radius},#{corner_radius}\"",
       '\\(',
       escaped_screenshot,

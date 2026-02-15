@@ -48,6 +48,7 @@
     },
     {
       "filter": "04_AddItem",
+      "screen_fill_color": "#EFEFF3",
       "title": {
         "en-US": "Add Items in Seconds",
         "fi": "Lisää Kohteita Sekunneissa"

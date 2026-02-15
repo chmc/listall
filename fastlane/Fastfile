@@ -174,7 +174,7 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
   derived = File.join(project_root, "fastlane", "derivedDataSnapshot")
 
   # Expected screenshots per device/locale combination
-  expected_per_combination = 2  # 01_Welcome, 02_MainScreen
+  expected_per_combination = 4  # 01_Welcome, 02_MainScreen, 03_GroceryItems, 04_AddItem
 
   # Set environment variables
   ENV['SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT'] = '30'

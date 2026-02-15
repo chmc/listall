@@ -208,18 +208,26 @@ final class ListAllUITests_Screenshots: XCTestCase {
         print("👆 Tapping first list cell to navigate to grocery items")
         firstCell.tap()
 
-        // Wait for items view to load - look for item cells
-        // Don't check add button by label since it's localized
-        let itemCell = app.cells.firstMatch
-        if itemCell.waitForExistence(timeout: elementTimeout) {
-            print("✅ Navigated to grocery list items view")
+        // Wait for items view to load - use the AddItemButton identifier (locale-independent)
+        let addButton = app.buttons["AddItemButton"]
+        if addButton.waitForExistence(timeout: elementTimeout) {
+            print("✅ Navigated to grocery list items view (found AddItemButton)")
             sleep(1) // settle time
             return true
         }
 
-        // Fallback: the navigation may have worked but items are slow to render
-        print("⚠️ Items view elements not detected, proceeding anyway")
-        sleep(2)
+        // Fallback: check for known item text (English or Finnish)
+        let milkEN = app.staticTexts["Milk"]
+        let milkFI = app.staticTexts["Maito"]
+        if milkEN.waitForExistence(timeout: 5) || milkFI.waitForExistence(timeout: 3) {
+            print("✅ Navigated to grocery list items view (found item text)")
+            sleep(1) // settle time
+            return true
+        }
+
+        // Last fallback: the navigation may have worked but items are slow to render
+        print("⚠️ Items view elements not detected, proceeding with extended wait")
+        sleep(5)
         return true
     }
 
@@ -251,21 +259,33 @@ final class ListAllUITests_Screenshots: XCTestCase {
             return
         }
 
-        // Tap the floating add item button - try both English and Finnish labels
+        // Tap the floating add item button - primary: identifier (locale-independent)
+        let addButtonByID = app.buttons["AddItemButton"]
         let addButtonEN = app.buttons["Add new item"]
         let addButtonFI = app.buttons["Lisää uusi tuote"]
         var addButtonFound = false
-        if addButtonEN.waitForExistence(timeout: elementTimeout) {
-            print("👆 Tapping add item button (EN)")
+
+        if addButtonByID.waitForExistence(timeout: elementTimeout) {
+            print("👆 Tapping add item button (by identifier)")
+            addButtonByID.tap()
+            addButtonFound = true
+        } else if addButtonEN.waitForExistence(timeout: 5) {
+            print("👆 Tapping add item button (EN label fallback)")
             addButtonEN.tap()
             addButtonFound = true
-        } else if addButtonFI.waitForExistence(timeout: 5) {
-            print("👆 Tapping add item button (FI)")
+        } else if addButtonFI.waitForExistence(timeout: 3) {
+            print("👆 Tapping add item button (FI label fallback)")
             addButtonFI.tap()
             addButtonFound = true
         }
 
         if !addButtonFound {
+            // Diagnostic output: dump button hierarchy
+            let allButtons = app.buttons.allElementsBoundByAccessibilityElement
+            print("❌ Add item button not found. Button count: \(allButtons.count)")
+            for (index, button) in allButtons.enumerated() where index < 10 {
+                print("  Button[\(index)]: identifier='\(button.identifier)', label='\(button.label)'")
+            }
             XCTFail("Add item button not found in either locale")
             return
         }

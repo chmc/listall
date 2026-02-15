@@ -620,6 +620,7 @@ struct ListView: View {
         }
         .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .accessibilityLabel("Add new item")
+        .accessibilityIdentifier("AddItemButton")
         .keyboardShortcut("n", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+N
     }
 }
