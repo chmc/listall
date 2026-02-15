@@ -252,6 +252,7 @@ venv.bak/
 
 # xcode-build-server (machine-specific)
 buildServer.json
+.compile
 
 # --- MCP Visual Verification Screenshots ---
 # Screenshots captured by the listall-mcp visual verification tools
