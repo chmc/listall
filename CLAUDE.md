@@ -118,6 +118,24 @@ MCP server binary: `Tools/listall-mcp/.build/debug/listall-mcp`
 
 See `.claude/skills/visual-verification/SKILL.md` for detailed patterns.
 
+## Call Graph Tool
+
+The `listall_call_graph` MCP tool queries Swift call graphs via Xcode's index store.
+
+**Usage:**
+```
+listall_call_graph(symbol: "addList(name:)")                    # both directions
+listall_call_graph(symbol: "updateItem(_:)", direction: "incoming")  # callers only
+listall_call_graph(symbol: "listCreated()", direction: "outgoing")   # callees only
+listall_call_graph(symbol: "save()", file: "ItemViewModel.swift")    # scoped to file
+```
+
+**Requirements:**
+- Project must be built in Xcode (populates the index store at `~/Library/Developer/Xcode/DerivedData/`)
+- After rebuilding the MCP server (`swift build` in `Tools/listall-mcp/`), restart Claude Code
+
+**When to use:** Impact analysis ("who calls this function?"), understanding call chains, exploring dependencies between components.
+
 ## Agents & Skills
 
 Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.md` for skill reference.

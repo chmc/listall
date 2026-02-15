@@ -48,7 +48,7 @@ struct ListAllMCP {
         )
 
         // Collect all tools
-        let allTools: [Tool] = [echoTool] + SimulatorTools.allTools + MacOSTools.allTools + InteractionTools.allTools + DiagnosticsTool.allTools
+        let allTools: [Tool] = [echoTool] + SimulatorTools.allTools + MacOSTools.allTools + InteractionTools.allTools + DiagnosticsTool.allTools + CallGraphTool.allTools
 
         // Register tool listing handler
         await server.withMethodHandler(ListTools.self) { _ in
@@ -78,6 +78,11 @@ struct ListAllMCP {
             // Handle diagnostic tools
             if DiagnosticsTool.isDiagnosticTool(params.name) {
                 return try await DiagnosticsTool.handleToolCall(name: params.name, arguments: params.arguments)
+            }
+
+            // Handle call graph tools
+            if CallGraphTool.isCallGraphTool(params.name) {
+                return try await CallGraphTool.handleToolCall(name: params.name, arguments: params.arguments)
             }
 
             // Handle echo tool

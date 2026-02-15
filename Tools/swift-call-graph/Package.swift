@@ -2,14 +2,8 @@
 import PackageDescription
 
 let package = Package(
-    name: "listall-mcp",
+    name: "swift-call-graph",
     platforms: [.macOS(.v14)],
-    products: [
-        .executable(name: "listall-mcp", targets: ["listall-mcp"]),
-    ],
-    dependencies: [
-        .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.10.2"),
-    ],
     targets: [
         .systemLibrary(
             name: "CIndexStore",
@@ -21,11 +15,8 @@ let package = Package(
             path: "Sources/IndexStoreWrapper"
         ),
         .executableTarget(
-            name: "listall-mcp",
-            dependencies: [
-                .product(name: "MCP", package: "swift-sdk"),
-                "IndexStoreWrapper",
-            ],
+            name: "swift-call-graph",
+            dependencies: ["IndexStoreWrapper"],
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"])
             ],
