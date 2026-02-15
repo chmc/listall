@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prefer-call-graph.sh"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "ralph-loop@claude-plugins-official": true,
     "swift-lsp@claude-plugins-official": true,

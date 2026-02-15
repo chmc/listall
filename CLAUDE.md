@@ -136,6 +136,8 @@ listall_call_graph(symbol: "save()", file: "ItemViewModel.swift")    # scoped to
 
 **When to use:** Impact analysis ("who calls this function?"), understanding call chains, exploring dependencies between components.
 
+**MANDATORY**: Use `listall_call_graph` instead of Grep/Glob when investigating who calls a function or what a function calls. Only fall back to Grep if the call graph tool returns no results or the index store is unavailable.
+
 ## Agents & Skills
 
 Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.md` for skill reference.
