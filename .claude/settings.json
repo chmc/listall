@@ -6,7 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/prefer-call-graph.sh"
+            "command": ".claude/hooks/semantic-search-enforce.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-search-reminder.sh"
           }
         ]
       }

@@ -254,6 +254,9 @@ venv.bak/
 buildServer.json
 .compile
 
+# --- Grep fallback authorization (semantic search enforcement) ---
+.claude/.grep-fallback-authorized
+
 # --- MCP Visual Verification Screenshots ---
 # Screenshots captured by the listall-mcp visual verification tools
 # History is preserved locally for debugging but not committed

@@ -21,10 +21,19 @@ enum CallGraphTool {
                 Input: A symbol name (function/method name) and optionally a file path to disambiguate.
                 Output: List of incoming callers and outgoing callees with file paths and line numbers.
 
+                Modes:
+                - "graph" (default): Full call graph — incoming callers + outgoing callees
+                - "callers": Who calls this function (incoming only)
+                - "callees": What this function calls (outgoing only)
+                - "definition": Find where the symbol is defined (file and line)
+                - "references": All usages — calls, references, reads, writes, type refs
+
                 Examples:
-                - symbol: "addList(name:)" → finds all callers and callees of addList
-                - symbol: "updateItem(_:)", file: "DataRepository.swift" → scoped to specific file
-                - symbol: "viewDidLoad()" → finds callers/callees of viewDidLoad
+                - symbol: "addList(name:)" → full call graph (default mode)
+                - symbol: "addList(name:)", mode: "callers" → who calls addList
+                - symbol: "DataRepository", mode: "definition" → find where defined
+                - symbol: "addList", mode: "references" → all usages across codebase
+                - symbol: "save()", file: "ItemViewModel.swift" → scoped to specific file
 
                 The symbol name should match Swift's indexed name format (e.g., "methodName(param1:param2:)").
                 For simple names without parameters, just use the name (e.g., "listCreated").
@@ -40,9 +49,9 @@ enum CallGraphTool {
                         "type": .string("string"),
                         "description": .string("Optional: file name to disambiguate (e.g., 'MainViewModel.swift'). If omitted, searches all files.")
                     ]),
-                    "direction": .object([
+                    "mode": .object([
                         "type": .string("string"),
-                        "description": .string("Optional: 'incoming' for callers only, 'outgoing' for callees only, 'both' for both (default: 'both')")
+                        "description": .string("Query mode: 'graph' (default, callers+callees), 'callers', 'callees', 'definition', 'references'")
                     ])
                 ]),
                 "required": .array([.string("symbol")])
@@ -86,14 +95,22 @@ enum CallGraphTool {
             fileFilter = nil
         }
 
-        let direction: String
-        if case .string(let d) = args["direction"] {
-            direction = d
+        // Support both "mode" (new) and "direction" (legacy) parameters
+        let mode: String
+        if case .string(let m) = args["mode"] {
+            mode = m
+        } else if case .string(let d) = args["direction"] {
+            // Legacy mapping
+            switch d {
+            case "incoming": mode = "callers"
+            case "outgoing": mode = "callees"
+            default: mode = "graph"
+            }
         } else {
-            direction = "both"
+            mode = "graph"
         }
 
-        log("listall_call_graph: symbol='\(symbol)' file=\(fileFilter ?? "all") direction=\(direction)")
+        log("listall_call_graph: symbol='\(symbol)' file=\(fileFilter ?? "all") mode=\(mode)")
 
         // Find the index store
         guard let storePath = findIndexStorePath() else {
@@ -118,12 +135,12 @@ enum CallGraphTool {
             )], isError: true)
         }
 
-        var output = ""
-
         // Find the symbol's definition
         let definitions = findDefinitions(symbol: symbol, fileFilter: fileFilter, store: store)
 
-        if definitions.isEmpty {
+        // For references and callers, we can proceed without a definition (name-based search)
+        // For definition, callees, and graph, we need a definition anchor
+        if definitions.isEmpty && !["references", "callers"].contains(mode) {
             return CallTool.Result(content: [.text(
                 """
                 No definition found for '\(symbol)'\(fileFilter.map { " in \($0)" } ?? "").
@@ -133,13 +150,91 @@ enum CallGraphTool {
                 - For methods without parameters: "methodName()"
                 - For properties: "propertyName"
                 - Check spelling and ensure the project has been built in Xcode
+                - For framework symbols (SwiftUI, Foundation, etc.), use mode: "references" or "callers"
                 """
             )], isError: true)
         }
 
-        // Use the first definition (deduplicated)
+        switch mode {
+        case "definition":
+            return handleDefinitionMode(definitions: definitions)
+        case "references":
+            return handleReferencesMode(symbol: symbol, definitions: definitions, store: store)
+        case "callers":
+            return handleCallersMode(symbol: symbol, definitions: definitions, store: store)
+        case "callees":
+            return handleCalleesMode(symbol: symbol, definitions: definitions, fileFilter: fileFilter, store: store)
+        case "graph":
+            return handleGraphMode(symbol: symbol, definitions: definitions, fileFilter: fileFilter, store: store)
+        default:
+            throw MCPError.invalidParams("Unknown mode: '\(mode)'. Valid modes: graph, callers, callees, definition, references")
+        }
+    }
+
+    // MARK: - Mode Handlers
+
+    private static func handleDefinitionMode(definitions: [SymbolDefinition]) -> CallTool.Result {
+        var output = "## Symbol: \(definitions[0].symbolName)\n\n"
+        for def in definitions {
+            output += "- \(def.kind ?? "symbol") in \(def.fileName):\(def.line)\n"
+        }
+        return CallTool.Result(content: [.text(output)])
+    }
+
+    private static func handleCallersMode(symbol: String, definitions: [SymbolDefinition], store: IndexStore) -> CallTool.Result {
+        let usr: String?
+        var output: String
+        if let def = definitions.first {
+            usr = def.usr
+            output = "## \(def.symbolName)\n"
+            output += "Defined in: \(def.fileName):\(def.line)\n\n"
+        } else {
+            usr = nil
+            output = "## Callers of: \(symbol) (name-based search)\n\n"
+        }
+
+        let callers = findIncomingCallers(symbol: symbol, usr: usr, store: store)
+        output += "### Incoming Callers (\(callers.count))\n\n"
+        if callers.isEmpty {
+            output += "_No callers found_\n"
+        } else {
+            let grouped = Dictionary(grouping: callers, by: { $0.fileName })
+            for (file, calls) in grouped.sorted(by: { $0.key < $1.key }) {
+                output += "**\(file)**\n"
+                for call in calls.sorted(by: { $0.line < $1.line }) {
+                    output += "- `\(call.callerName)` (line \(call.line))\n"
+                }
+                output += "\n"
+            }
+
+            if usr == nil && callers.count >= 100 {
+                output += "\n_Results capped at 100. Use a more specific symbol name or add file filter to narrow results._\n"
+            }
+        }
+        return CallTool.Result(content: [.text(output)])
+    }
+
+    private static func handleCalleesMode(symbol: String, definitions: [SymbolDefinition], fileFilter: String?, store: IndexStore) -> CallTool.Result {
         let def = definitions[0]
-        output += "## \(def.symbolName)\n"
+        var output = "## \(def.symbolName)\n"
+        output += "Defined in: \(def.fileName):\(def.line)\n\n"
+
+        let callees = findOutgoingCallees(symbol: symbol, usr: def.usr, fileFilter: fileFilter, store: store)
+        output += "### Outgoing Callees (\(callees.count))\n\n"
+        if callees.isEmpty {
+            output += "_No callees found_\n"
+        } else {
+            for callee in callees {
+                output += "- `\(callee.calleeName)` (line \(callee.line))\n"
+            }
+            output += "\n"
+        }
+        return CallTool.Result(content: [.text(output)])
+    }
+
+    private static func handleGraphMode(symbol: String, definitions: [SymbolDefinition], fileFilter: String?, store: IndexStore) -> CallTool.Result {
+        let def = definitions[0]
+        var output = "## \(def.symbolName)\n"
         output += "Defined in: \(def.fileName):\(def.line)\n"
         if let usr = def.usr {
             output += "USR: \(usr)\n"
@@ -147,35 +242,72 @@ enum CallGraphTool {
         output += "\n"
 
         // Find incoming callers
-        if direction == "both" || direction == "incoming" {
-            let callers = findIncomingCallers(symbol: symbol, usr: def.usr, store: store)
-            output += "### Incoming Callers (\(callers.count))\n\n"
-            if callers.isEmpty {
-                output += "_No callers found_\n"
-            } else {
-                // Group by file
-                let grouped = Dictionary(grouping: callers, by: { $0.fileName })
-                for (file, calls) in grouped.sorted(by: { $0.key < $1.key }) {
-                    output += "**\(file)**\n"
-                    for call in calls.sorted(by: { $0.line < $1.line }) {
-                        output += "- `\(call.callerName)` (line \(call.line))\n"
-                    }
-                    output += "\n"
+        let callers = findIncomingCallers(symbol: symbol, usr: def.usr, store: store)
+        output += "### Incoming Callers (\(callers.count))\n\n"
+        if callers.isEmpty {
+            output += "_No callers found_\n"
+        } else {
+            let grouped = Dictionary(grouping: callers, by: { $0.fileName })
+            for (file, calls) in grouped.sorted(by: { $0.key < $1.key }) {
+                output += "**\(file)**\n"
+                for call in calls.sorted(by: { $0.line < $1.line }) {
+                    output += "- `\(call.callerName)` (line \(call.line))\n"
                 }
+                output += "\n"
             }
         }
 
         // Find outgoing callees
-        if direction == "both" || direction == "outgoing" {
-            let callees = findOutgoingCallees(symbol: symbol, usr: def.usr, fileFilter: fileFilter, store: store)
-            output += "### Outgoing Callees (\(callees.count))\n\n"
-            if callees.isEmpty {
-                output += "_No callees found_\n"
-            } else {
-                for callee in callees {
-                    output += "- `\(callee.calleeName)` (line \(callee.line))\n"
+        let callees = findOutgoingCallees(symbol: symbol, usr: def.usr, fileFilter: fileFilter, store: store)
+        output += "### Outgoing Callees (\(callees.count))\n\n"
+        if callees.isEmpty {
+            output += "_No callees found_\n"
+        } else {
+            for callee in callees {
+                output += "- `\(callee.calleeName)` (line \(callee.line))\n"
+            }
+            output += "\n"
+        }
+
+        return CallTool.Result(content: [.text(output)])
+    }
+
+    private static func handleReferencesMode(symbol: String, definitions: [SymbolDefinition], store: IndexStore) -> CallTool.Result {
+        let usr: String?
+        var output: String
+        if let def = definitions.first {
+            usr = def.usr
+            output = "## References to: \(def.symbolName)\n"
+            output += "Defined in: \(def.fileName):\(def.line)\n\n"
+        } else {
+            usr = nil
+            output = "## References to: \(symbol) (name-based search)\n\n"
+        }
+
+        let references = findAllReferences(symbol: symbol, usr: usr, store: store)
+
+        if references.isEmpty {
+            output += "_No references found_\n"
+        } else {
+            output += "Found \(references.count) references across "
+            let fileCount = Set(references.map { $0.fileName }).count
+            output += "\(fileCount) file\(fileCount == 1 ? "" : "s"):\n\n"
+
+            let grouped = Dictionary(grouping: references, by: { $0.fileName })
+            for (file, refs) in grouped.sorted(by: { $0.key < $1.key }) {
+                output += "**\(file)**\n"
+                for ref in refs.sorted(by: { $0.line < $1.line }) {
+                    output += "- Line \(ref.line): \(ref.roleDescription)"
+                    if let container = ref.containerName {
+                        output += " in \(container)"
+                    }
+                    output += "\n"
                 }
                 output += "\n"
+            }
+
+            if usr == nil && references.count >= 100 {
+                output += "\n_Results capped at 100. Use a more specific symbol name or add file filter to narrow results._\n"
             }
         }
 
@@ -189,6 +321,7 @@ enum CallGraphTool {
         let fileName: String
         let line: Int
         let usr: String?
+        let kind: String?
     }
 
     private struct IncomingCaller {
@@ -200,6 +333,13 @@ enum CallGraphTool {
     private struct OutgoingCallee {
         let calleeName: String
         let line: Int
+    }
+
+    private struct SymbolReference {
+        let fileName: String
+        let line: Int
+        let roleDescription: String
+        let containerName: String?
     }
 
     private static func findDefinitions(symbol: String, fileFilter: String?, store: IndexStore) -> [SymbolDefinition] {
@@ -230,11 +370,14 @@ enum CallGraphTool {
                     return
                 }
 
+                let kindName = symbolKindName(sym.kind)
+
                 definitions.append(SymbolDefinition(
                     symbolName: sym.name,
                     fileName: shortFile,
                     line: occurrence.location.line,
-                    usr: usr
+                    usr: usr,
+                    kind: kindName
                 ))
             })
         }
@@ -242,48 +385,75 @@ enum CallGraphTool {
         return definitions
     }
 
+    private static func symbolKindName(_ kind: IndexStoreWrapper.SymbolKind) -> String {
+        // SymbolKind is a C struct (indexstore_symbol_kind_t), use its description
+        return kind.description
+    }
+
     private static func findIncomingCallers(symbol: String, usr: String?, store: IndexStore) -> [IncomingCaller] {
+        // When doing name-based search (no USR), try exact match first, then fall back to contains
+        let nameMatchers: [(String, String) -> Bool] = [
+            { name, sym in name == sym },
+            { name, sym in name.contains(sym) }
+        ]
+
         var callers: [IncomingCaller] = []
         var seen: Set<String> = []
+        let resultCap = 100
 
-        for unit in store.units {
-            guard let recordName = unit.recordName else { continue }
-            guard let reader = try? RecordReader(indexStore: store, recordName: recordName) else { continue }
-            let shortFile = unit.mainFile.components(separatedBy: "/").last ?? unit.mainFile
+        for passMatcher in (usr != nil ? [nameMatchers[0]] : nameMatchers) {
+            callers.removeAll()
+            seen.removeAll()
 
-            reader.forEach(occurrence: { occurrence in
-                let sym = occurrence.symbol
+            for unit in store.units {
+                guard let recordName = unit.recordName else { continue }
+                guard let reader = try? RecordReader(indexStore: store, recordName: recordName) else { continue }
+                let shortFile = unit.mainFile.components(separatedBy: "/").last ?? unit.mainFile
 
-                // Match by USR if available, otherwise by name
-                let matches: Bool
-                if let usr = usr {
-                    matches = sym.usr == usr
-                } else {
-                    matches = sym.name.contains(symbol)
-                }
+                reader.forEach(occurrence: { occurrence in
+                    let sym = occurrence.symbol
 
-                guard matches,
-                      occurrence.roles.contains(.call) || occurrence.roles.contains(.reference) else { return }
-
-                var callerName: String?
-                occurrence.forEach(relation: { relSym, relRoles in
-                    if relRoles.contains(.calledBy) || relRoles.contains(.containedBy) {
-                        callerName = relSym.name
+                    // Match by USR if available, otherwise by name
+                    let matches: Bool
+                    if let usr = usr {
+                        matches = sym.usr == usr
+                    } else {
+                        matches = passMatcher(sym.name, symbol)
                     }
+
+                    guard matches,
+                          occurrence.roles.contains(.call) || occurrence.roles.contains(.reference) else { return }
+
+                    var callerName: String?
+                    occurrence.forEach(relation: { relSym, relRoles in
+                        if relRoles.contains(.calledBy) || relRoles.contains(.containedBy) {
+                            callerName = relSym.name
+                        }
+                    })
+
+                    guard let caller = callerName else { return }
+
+                    let key = "\(shortFile):\(occurrence.location.line):\(caller)"
+                    guard !seen.contains(key) else { return }
+                    seen.insert(key)
+
+                    callers.append(IncomingCaller(
+                        callerName: caller,
+                        fileName: shortFile,
+                        line: occurrence.location.line
+                    ))
                 })
+            }
 
-                guard let caller = callerName else { return }
+            // For USR-based search, run once; for name-based, stop if exact match found results
+            if usr != nil || !callers.isEmpty {
+                break
+            }
+        }
 
-                let key = "\(shortFile):\(occurrence.location.line):\(caller)"
-                guard !seen.contains(key) else { return }
-                seen.insert(key)
-
-                callers.append(IncomingCaller(
-                    callerName: caller,
-                    fileName: shortFile,
-                    line: occurrence.location.line
-                ))
-            })
+        // Cap results for name-based searches to prevent massive output
+        if usr == nil && callers.count > resultCap {
+            return Array(callers.prefix(resultCap))
         }
 
         return callers
@@ -334,6 +504,95 @@ enum CallGraphTool {
         }
 
         return callees.sorted(by: { $0.line < $1.line })
+    }
+
+    private static func findAllReferences(symbol: String, usr: String?, store: IndexStore) -> [SymbolReference] {
+        // When doing name-based search (no USR), try exact match first, then fall back to contains
+        let nameMatchers: [(String, String) -> Bool] = [
+            { name, sym in name == sym },
+            { name, sym in name.contains(sym) }
+        ]
+
+        var references: [SymbolReference] = []
+        var seen: Set<String> = []
+        let resultCap = 100
+
+        for passMatcher in (usr != nil ? [nameMatchers[0]] : nameMatchers) {
+            references.removeAll()
+            seen.removeAll()
+
+            for unit in store.units {
+                guard let recordName = unit.recordName else { continue }
+                guard let reader = try? RecordReader(indexStore: store, recordName: recordName) else { continue }
+                let shortFile = unit.mainFile.components(separatedBy: "/").last ?? unit.mainFile
+
+                reader.forEach(occurrence: { occurrence in
+                    let sym = occurrence.symbol
+
+                    // Match by USR if available, otherwise by name
+                    let matches: Bool
+                    if let usr = usr {
+                        matches = sym.usr == usr
+                    } else {
+                        matches = passMatcher(sym.name, symbol)
+                    }
+
+                    guard matches else { return }
+
+                    // Skip pure definitions — we already show the definition location
+                    if occurrence.roles == .definition {
+                        return
+                    }
+
+                    // Skip if no meaningful role
+                    let roles = occurrence.roles
+                    guard !roles.isEmpty else { return }
+
+                    let key = "\(shortFile):\(occurrence.location.line):\(roleDescription(roles))"
+                    guard !seen.contains(key) else { return }
+                    seen.insert(key)
+
+                    // Find containing function/type
+                    var containerName: String?
+                    occurrence.forEach(relation: { relSym, relRoles in
+                        if relRoles.contains(.calledBy) || relRoles.contains(.containedBy) {
+                            containerName = relSym.name
+                        }
+                    })
+
+                    references.append(SymbolReference(
+                        fileName: shortFile,
+                        line: occurrence.location.line,
+                        roleDescription: roleDescription(roles),
+                        containerName: containerName
+                    ))
+                })
+            }
+
+            // For USR-based search, run once; for name-based, stop if exact match found results
+            if usr != nil || !references.isEmpty {
+                break
+            }
+        }
+
+        // Cap results for name-based searches to prevent massive output
+        if usr == nil && references.count > resultCap {
+            return Array(references.prefix(resultCap))
+        }
+
+        return references
+    }
+
+    private static func roleDescription(_ roles: SymbolRoles) -> String {
+        var parts: [String] = []
+        if roles.contains(.call) { parts.append("call") }
+        if roles.contains(.reference) && !roles.contains(.call) { parts.append("reference") }
+        if roles.contains(.read) { parts.append("read") }
+        if roles.contains(.write) { parts.append("write") }
+        if roles.contains(.definition) { parts.append("definition") }
+        if roles.contains(.declaration) { parts.append("declaration") }
+        if parts.isEmpty { return "usage" }
+        return parts.joined(separator: "+")
     }
 
     // MARK: - Index Store Discovery

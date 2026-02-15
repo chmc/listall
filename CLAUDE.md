@@ -118,25 +118,39 @@ MCP server binary: `Tools/listall-mcp/.build/debug/listall-mcp`
 
 See `.claude/skills/visual-verification/SKILL.md` for detailed patterns.
 
-## Call Graph Tool
+## Semantic Search Tools
 
-The `listall_call_graph` MCP tool queries Swift call graphs via Xcode's index store.
+`listall_call_graph` queries Xcode's IndexStore for structured code analysis.
 
-**Usage:**
-```
-listall_call_graph(symbol: "addList(name:)")                    # both directions
-listall_call_graph(symbol: "updateItem(_:)", direction: "incoming")  # callers only
-listall_call_graph(symbol: "listCreated()", direction: "outgoing")   # callees only
-listall_call_graph(symbol: "save()", file: "ItemViewModel.swift")    # scoped to file
-```
+**Modes:**
+| Mode | Use for | Example |
+|------|---------|---------|
+| `"graph"` (default) | Callers + callees | `listall_call_graph(symbol: "addList(name:)")` |
+| `"callers"` | Who calls this | `listall_call_graph(symbol: "save()", mode: "callers")` |
+| `"callees"` | What this calls | `listall_call_graph(symbol: "save()", mode: "callees")` |
+| `"definition"` | Find where defined | `listall_call_graph(symbol: "DataRepository", mode: "definition")` |
+| `"references"` | All usages | `listall_call_graph(symbol: "addList", mode: "references")` |
 
-**Requirements:**
-- Project must be built in Xcode (populates the index store at `~/Library/Developer/Xcode/DerivedData/`)
-- After rebuilding the MCP server (`swift build` in `Tools/listall-mcp/`), restart Claude Code
+**Requirements:** Project must be built in Xcode. After rebuilding MCP server, restart Claude Code.
 
-**When to use:** Impact analysis ("who calls this function?"), understanding call chains, exploring dependencies between components.
+**MANDATORY**: Use `listall_call_graph` as your primary tool for understanding Swift code. This includes: how features work, who calls what, where things are defined, and how components connect. Use Grep only for string literals, comments, docs, and non-code content.
 
-**MANDATORY**: Use `listall_call_graph` instead of Grep/Glob when investigating who calls a function or what a function calls. Only fall back to Grep if the call graph tool returns no results or the index store is unavailable.
+**Bootstrapping workflow** (when you don't know the symbol name yet):
+1. Use Glob to find likely source files (e.g., `**/Suggestion*.swift`)
+2. Use `listall_call_graph(symbol: "SuggestionService", mode: "references")` to map the architecture
+3. Use `listall_call_graph(symbol: "getSuggestions", mode: "graph")` to trace the full call flow
+4. Read source files only for implementation details that call_graph doesn't show
+
+**When to use which:**
+| Question type | Tool | Why |
+|--------------|------|-----|
+| "How does X work?" | Glob → call_graph → Read | Find symbols, trace architecture, then read details |
+| "Where is X defined?" | `call_graph(mode: "definition")` | Direct lookup |
+| "Who uses X?" | `call_graph(mode: "references")` | All usages with context |
+| String literals, config values | Grep | Text content, not code structure |
+| Comments, TODOs, docs | Grep | Non-code content |
+
+**Fallback**: If call_graph fails (index unavailable), run `touch .claude/.grep-fallback-authorized` then retry with Grep.
 
 ## Agents & Skills
 
