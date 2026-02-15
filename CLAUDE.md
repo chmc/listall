@@ -130,23 +130,44 @@ See `.claude/skills/visual-verification/SKILL.md` for detailed patterns.
 | `"callees"` | What this calls | `listall_call_graph(symbol: "save()", mode: "callees")` |
 | `"definition"` | Find where defined | `listall_call_graph(symbol: "DataRepository", mode: "definition")` |
 | `"references"` | All usages | `listall_call_graph(symbol: "addList", mode: "references")` |
+| `"hierarchy"` | Type hierarchy | `listall_call_graph(symbol: "DataRepository", mode: "hierarchy")` |
+| `"members"` | List type members | `listall_call_graph(symbol: "Item", mode: "members")` |
+| `"search"` | Symbol discovery (substring) | `listall_call_graph(symbol: "cross", mode: "search")` |
+| `"dump"` | Raw index data (debug) | `listall_call_graph(symbol: "reorderLists(from:to:)", mode: "dump")` |
+
+**Parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `symbol` | string | required | Function/method/type name |
+| `file` | string | nil | File name to disambiguate |
+| `mode` | string | `"graph"` | Query mode (see above) |
+| `include_source` | bool | `false` | Include 3-line source snippets (~4x output) |
 
 **Requirements:** Project must be built in Xcode. After rebuilding MCP server, restart Claude Code.
+
+**Known limitations:**
+- SwiftUI view modifiers may not appear as calls in IndexStore
+- Index staleness warning is heuristic (may have false negatives with incremental indexing)
+- Multi-target symbols (e.g., shared iOS/macOS code) now correctly find all callers across targets
 
 **MANDATORY**: Use `listall_call_graph` as your primary tool for understanding Swift code. This includes: how features work, who calls what, where things are defined, and how components connect. Use Grep only for string literals, comments, docs, and non-code content.
 
 **Bootstrapping workflow** (when you don't know the symbol name yet):
-1. Use Glob to find likely source files (e.g., `**/Suggestion*.swift`)
-2. Use `listall_call_graph(symbol: "SuggestionService", mode: "references")` to map the architecture
+1. Use `listall_call_graph(symbol: "suggest", mode: "search")` to discover relevant symbols
+2. Use `listall_call_graph(symbol: "SuggestionService", mode: "members")` to see what a type offers
 3. Use `listall_call_graph(symbol: "getSuggestions", mode: "graph")` to trace the full call flow
 4. Read source files only for implementation details that call_graph doesn't show
 
 **When to use which:**
 | Question type | Tool | Why |
 |--------------|------|-----|
-| "How does X work?" | Glob → call_graph → Read | Find symbols, trace architecture, then read details |
+| "How does X work?" | `call_graph(mode: "search")` → `graph` → Read | Discover symbols, trace architecture, then read details |
 | "Where is X defined?" | `call_graph(mode: "definition")` | Direct lookup |
 | "Who uses X?" | `call_graph(mode: "references")` | All usages with context |
+| "What can type X do?" | `call_graph(mode: "members")` | Properties, methods, nested types |
+| "What inherits X?" | `call_graph(mode: "hierarchy")` | Conformances, extensions, overrides |
+| "What symbols relate to X?" | `call_graph(mode: "search")` | Case-insensitive substring discovery |
+| "Debug index issue" | `call_graph(mode: "dump")` | Raw USRs, roles, relations |
 | String literals, config values | Grep | Text content, not code structure |
 | Comments, TODOs, docs | Grep | Non-code content |
 

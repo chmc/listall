@@ -36,8 +36,11 @@ public struct PathMapping {
 public final class IndexStore {
     fileprivate let store: indexstore_t
 
+    public let path: String
+
     public init(path: String) throws {
         let fullPath = (path as NSString).expandingTildeInPath
+        self.path = fullPath
         var error: indexstore_error_t?
         if let store = indexstore_store_create(fullPath, &error) {
             self.store = store
@@ -45,12 +48,13 @@ public final class IndexStore {
             throw IndexStoreError(error!)
         }
     }
-    
+
     public init(
         path: String,
         prefixMappings: [PathMapping] = []
     ) throws {
         let fullPath = (path as NSString).expandingTildeInPath
+        self.path = fullPath
 
         let cOptions = indexstore_creation_options_create()
         defer { indexstore_creation_options_dispose(cOptions) }

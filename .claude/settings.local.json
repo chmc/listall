@@ -1,3 +1,8 @@
 {
-  "enableAllProjectMcpServers": true
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "mcp__listall__listall_call_graph"
+    ]
+  }
 }
