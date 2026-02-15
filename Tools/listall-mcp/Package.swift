@@ -20,11 +20,19 @@ let package = Package(
             dependencies: ["CIndexStore"],
             path: "Sources/IndexStoreWrapper"
         ),
+        .target(
+            name: "MCPHelpers",
+            dependencies: [
+                .product(name: "MCP", package: "swift-sdk"),
+            ],
+            path: "Sources/MCPHelpers"
+        ),
         .executableTarget(
             name: "listall-mcp",
             dependencies: [
                 .product(name: "MCP", package: "swift-sdk"),
                 "IndexStoreWrapper",
+                "MCPHelpers",
             ],
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"])
@@ -36,6 +44,11 @@ let package = Package(
                     "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib",
                 ])
             ]
+        ),
+        .testTarget(
+            name: "MCPHelpersTests",
+            dependencies: ["MCPHelpers"],
+            path: "Tests/MCPHelpersTests"
         ),
     ]
 )

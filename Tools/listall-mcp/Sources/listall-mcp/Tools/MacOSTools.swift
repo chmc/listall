@@ -1,5 +1,6 @@
 import Foundation
 import MCP
+import MCPHelpers
 @preconcurrency import ScreenCaptureKit
 import CoreGraphics
 import AppKit
@@ -821,51 +822,5 @@ enum MacOSTools {
     }
 }
 
-// MARK: - Input Validation
-
-/// Validate app name format (basic security check)
-/// Valid format: alphanumeric with spaces, hyphens, and underscores
-func validateAppName(_ appName: String) throws {
-    // Check for basic format
-    let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " -_"))
-    guard appName.unicodeScalars.allSatisfy({ allowedCharacters.contains($0) }) else {
-        throw MCPError.invalidParams("Invalid app name format: '\(appName)'. App name can only contain letters, numbers, spaces, hyphens, and underscores.")
-    }
-
-    // Check minimum length
-    guard appName.count >= 1 && appName.count <= 255 else {
-        throw MCPError.invalidParams("Invalid app name length: '\(appName)'. App name must be 1-255 characters.")
-    }
-}
-
-// MARK: - ListAll App Name Normalization
-
-/// Normalize ListAll app name variants to the canonical name
-/// The macOS app is named "ListAll" (not "ListAllMac")
-func normalizeListAllAppName(_ appName: String?) -> String? {
-    guard let name = appName else { return nil }
-
-    // Map common variants to the canonical name
-    switch name.lowercased() {
-    case "listallmac", "listall mac", "listall-mac":
-        log("Normalized app name '\(name)' to 'ListAll'")
-        return "ListAll"
-    default:
-        return name
-    }
-}
-
-/// Normalize ListAll bundle ID variants to the canonical ID
-/// The macOS app uses "io.github.chmc.ListAll" (same as iOS)
-func normalizeListAllBundleID(_ bundleId: String?) -> String? {
-    guard let id = bundleId else { return nil }
-
-    // Map common variants to the canonical bundle ID
-    switch id.lowercased() {
-    case "io.github.chmc.listallmac":
-        log("Normalized bundle ID '\(id)' to 'io.github.chmc.ListAll'")
-        return "io.github.chmc.ListAll"
-    default:
-        return id
-    }
-}
+// validateAppName, normalizeListAllAppName, normalizeListAllBundleID
+// are provided by MCPHelpers

@@ -1,5 +1,6 @@
 import Foundation
 import MCP
+import MCPHelpers
 
 // MARK: - Shell Execution Helper
 
@@ -150,36 +151,6 @@ enum ShellCommand {
     }
 }
 
-// MARK: - Input Validation
-
-/// Validate simulator UDID format to prevent command injection
-/// Valid formats: "all", "booted", or UUID (8-4-4-4-12 hex format)
-func validateUDID(_ udid: String) throws {
-    // Special keywords
-    if udid == "all" || udid == "booted" {
-        return
-    }
-
-    // UUID format validation
-    guard UUID(uuidString: udid) != nil else {
-        throw MCPError.invalidParams("Invalid UDID format: '\(udid)'. Must be 'all', 'booted', or a valid UUID.")
-    }
-}
-
-/// Validate bundle ID format
-/// Valid format: reverse domain notation (e.g., "com.example.app")
-func validateBundleID(_ bundleID: String) throws {
-    // Must contain at least one dot
-    guard bundleID.contains(".") else {
-        throw MCPError.invalidParams("Invalid bundle ID format: '\(bundleID)'. Must be in reverse domain notation (e.g., 'com.example.app').")
-    }
-
-    // No spaces allowed
-    guard !bundleID.contains(" ") else {
-        throw MCPError.invalidParams("Invalid bundle ID format: '\(bundleID)'. Bundle ID cannot contain spaces.")
-    }
-}
-
 // MARK: - Simulator Device Models
 
 /// Represents a simulator device from simctl list output
@@ -196,13 +167,7 @@ struct SimulatorDevice: Codable {
 
     /// Determine device type from device type identifier
     var deviceType: String {
-        guard let identifier = deviceTypeIdentifier else { return "Unknown" }
-        if identifier.contains("iPhone") { return "iPhone" }
-        if identifier.contains("iPad") { return "iPad" }
-        if identifier.contains("Watch") { return "Apple Watch" }
-        if identifier.contains("TV") { return "Apple TV" }
-        if identifier.contains("Vision") { return "Apple Vision" }
-        return "Unknown"
+        deviceTypeFromIdentifier(deviceTypeIdentifier)
     }
 }
 
