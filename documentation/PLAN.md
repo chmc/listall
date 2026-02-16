@@ -41,7 +41,8 @@ On iPhone: unchanged (stack navigation with tab bar).
 - **Layout**: Two-column (sidebar + content). Item detail via push navigation.
 - **Code strategy**: Adapt MainView using `@Environment(\.horizontalSizeClass)` — no separate iPad views.
 - **iPad screenshots**: Landscape orientation (not portrait-locked) to show two-column layout.
-- **Phases 2 & 3**: Separate PRs from Phase 1 to keep diffs manageable.
+- **All phases**: Same branch (`feature/new-ipad-ux`), separate commits per phase. No separate PRs.
+- **Phase order**: Pre-work → Phase 1 (NavigationSplitView) → Phase 2 (Pipeline) → Phase 3 (Context Menus) → Phase 4 (Toolbar + Polish).
 
 ## Pre-work: Extract Sub-Views (Commit 1 — No Behavioral Change)
 
@@ -153,9 +154,32 @@ if UITestDataService.isUITesting || env["UITEST_FORCE_PORTRAIT"] == "1" {
 
 Keep `@SceneStorage("selectedListId")` for restoring list selection. The existing restoration logic at `MainView.swift:418-433` can drive the `selectedListForNavigation` property on both iPhone and iPad.
 
-## Phase 2: Context Menus (Separate PR)
+## Phase 2: Screenshot Pipeline Updates (Commit 3)
 
-### Step 2.1: Add context menus to ListRowView
+Pipeline updates before context menus/polish so visual verification is available for later phases.
+
+### Step 2.1: Update UITEST_MODE navigation behavior
+
+Covered by Steps 1.3 (NavigationSplitView on iPad) and 1.8 (landscape for iPad screenshots). UITEST_MODE no longer forces stack navigation on iPad.
+
+### Step 2.2: Update iPad screenshot tests
+
+**File**: `ListAllUITests/ListAllUITests_Simple.swift`
+
+Key changes:
+- `launchAndNavigateToGroceryList()`: Detect device with `UIDevice.current.userInterfaceIdiom`. On iPad: sidebar cells may be in different hierarchy; after tap, verify detail column shows items (sidebar stays visible). On iPhone: keep current stack navigation.
+- Remove `UITEST_FORCE_PORTRAIT` from iPad test launch args (allow landscape).
+- `testScreenshots02_MainFlow()`: On iPad, screenshot shows sidebar + selected list.
+- `testScreenshots03_GroceryItems()`: Same — sidebar visible with grocery items in content area.
+- **Same test class handles both devices** — Snapfile runs iPhone then iPad sequentially. Tests must branch on device type.
+
+### Step 2.3: Verify pipeline
+
+Run `./generate-screenshots-local.sh ipad en-US` and verify output shows sidebar + content layout in landscape.
+
+## Phase 3: Context Menus (Commit 4)
+
+### Step 3.1: Add context menus to ListRowView
 
 **File**: `ListRowView.swift`
 
@@ -165,7 +189,7 @@ Add `.contextMenu` with extracted shared action methods (reuse from swipe action
 - Duplicate
 - Archive / Delete
 
-### Step 2.2: Add context menus to ItemRowView
+### Step 3.2: Add context menus to ItemRowView
 
 **File**: `ItemRowView.swift`
 
@@ -175,7 +199,7 @@ Add `.contextMenu`:
 - Duplicate
 - Delete
 
-### Step 2.3: Use popovers instead of sheets on iPad
+### Step 3.3: Use popovers instead of sheets on iPad
 
 **File**: `MainView.swift`
 
@@ -187,39 +211,18 @@ Keep as `.sheet()`:
 - `SyncConflictResolutionView` (complex, full-width content needed)
 - `ItemEditView` (rich form with images)
 
-## Phase 3: Toolbar + Polish (Separate PR)
+## Phase 4: Toolbar + Polish (Commit 5)
 
-### Step 3.1: Move "Add Item" to toolbar on iPad
+### Step 4.1: Move "Add Item" to toolbar on iPad
 
 **File**: `ListView.swift:194`
 
 On iPad: add to `.toolbar`. Remove floating button overlay.
 On iPhone: keep floating button.
 
-### Step 3.2: Settings in sidebar
+### Step 4.2: Settings in sidebar
 
 On iPad, settings is a sidebar destination (navigation link in sidebar), not a modal sheet from tab bar.
-
-## Phase 4: Screenshot Pipeline Updates (With Phase 1)
-
-### Step 4.1: Update UITEST_MODE navigation behavior
-
-Covered by Steps 1.3 (NavigationSplitView on iPad) and 1.8 (landscape for iPad screenshots). UITEST_MODE no longer forces stack navigation on iPad.
-
-### Step 4.2: Update iPad screenshot tests
-
-**File**: `ListAllUITests/ListAllUITests_Simple.swift`
-
-Key changes:
-- `launchAndNavigateToGroceryList()`: Detect device with `UIDevice.current.userInterfaceIdiom`. On iPad: sidebar cells may be in different hierarchy; after tap, verify detail column shows items (sidebar stays visible). On iPhone: keep current stack navigation.
-- Remove `UITEST_FORCE_PORTRAIT` from iPad test launch args (allow landscape).
-- `testScreenshots02_MainFlow()`: On iPad, screenshot shows sidebar + selected list.
-- `testScreenshots03_GroceryItems()`: Same — sidebar visible with grocery items in content area.
-- **Same test class handles both devices** — Snapfile runs iPhone then iPad sequentially. Tests must branch on device type.
-
-### Step 4.3: Verify pipeline
-
-Run `./generate-screenshots-local.sh ipad en-US` and verify output shows sidebar + content layout in landscape.
 
 ## Key Files to Modify
 
