@@ -137,25 +137,10 @@ def prepare_screenshots_for_delivery(compat_path, skip_watch: false)
     UI.message("📱 Watch screenshots must be uploaded manually via App Store Connect")
   end
 
-  # Also copy macOS screenshots from mac/processed directory
-  macos_src_dir = File.expand_path("screenshots/mac/processed", __dir__)
-  if Dir.exist?(macos_src_dir)
-    locales.each do |locale|
-      macos_locale_dir = File.join(macos_src_dir, locale)
-      dst_dir = File.join(delivery_path, locale)
-      FileUtils.mkdir_p(dst_dir)
-
-      if Dir.exist?(macos_locale_dir)
-        Dir.glob(File.join(macos_locale_dir, "*.png")).each do |screenshot|
-          # Prefix macOS screenshots to distinguish them from iOS screenshots
-          basename = File.basename(screenshot)
-          # Only add prefix if not already prefixed
-          prefixed_name = basename.start_with?("Mac-") ? basename : "Mac-#{basename}"
-          FileUtils.cp(screenshot, File.join(dst_dir, prefixed_name))
-        end
-      end
-    end
-  end
+  # Note: macOS screenshots are NOT included here — they are uploaded
+  # separately via the release_macos lane (platform: osx).
+  # Including them in the iOS delivery path causes "Display Type Not Allowed"
+  # errors because APP_DESKTOP is not valid on the iOS platform.
 
   delivery_path
 end
