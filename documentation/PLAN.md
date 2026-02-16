@@ -1,96 +1,267 @@
-# Plan: Diagnose and Fix ASC Screenshot Upload "Display Type Not Allowed" Error
+# iPad UX Redesign Plan
 
 ## Context
 
-The `publish-to-appstore` workflow fails to upload iOS/iPadOS/watchOS screenshots with "Display Type Not Allowed!" at `POST /v1/appScreenshotSets`. macOS screenshots (`APP_DESKTOP`) work fine. Nobody else reports this exact error publicly, suggesting it's specific to the ListAll app's configuration.
+The ListAll iPad experience is a blown-up iPhone UI. On a 13" iPad Pro, the app shows a full-width single-column list with ~75% empty white space, a bottom tab bar (iPhone pattern), and no multi-column layout. It uses the deprecated `NavigationView` instead of `NavigationSplitView`, has zero `horizontalSizeClass` usage, and no context menus. The deployment target is iOS 16.0 (confirmed in `project.pbxproj`; the comment at `MainView.swift:138` saying "iOS 15" is stale). `NavigationSplitView` is available. The macOS version already implements this pattern at `MacMainView.swift:117`.
 
-**Most likely root cause (from critic review):** Apple may have introduced NEW display type enum values (e.g., `APP_IPHONE_69` for 6.9" screens, `APP_IPAD_13` for 13" iPad) that Fastlane doesn't know about. The old `APP_IPHONE_67` and `APP_IPAD_PRO_3GEN_129` may no longer be accepted. Fastlane PR #29760 only expanded dimension mappings, NOT display type strings.
+## Target Layout: Two-Column (Like Apple Reminders)
 
-**Goal:** Use direct API calls to determine what display types ASC actually accepts, then fix the upload pipeline.
-
-## Steps
-
-### 1. Create feature branch
-- `git checkout -b fix/asc-screenshot-upload`
-
-### 2. Query existing screenshot sets from ASC (5 min)
-
-If screenshots were manually uploaded via ASC web UI, query what display types those sets use:
-```bash
-# Get app store version localizations
-curl -H "Authorization: Bearer $JWT" \
-  "https://api.appstoreconnect.apple.com/v1/apps/{appId}/appStoreVersions?filter[platform]=IOS"
-
-# Get screenshot sets for a localization
-curl -H "Authorization: Bearer $JWT" \
-  "https://api.appstoreconnect.apple.com/v1/appStoreVersionLocalizations/{locId}/appScreenshotSets"
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Sidebar (280pt)       │  Content (remaining ~750pt)               │
+│                        │                                            │
+│  LISTAT                │  Ruokaostokset  ✏️        🔗  🔽  👁  ✎  │
+│  ━━━━━━━━━━━━━━━━━━━  │  4/6 items                                │
+│  ▸ Ruokaostokset  4/6 │                                            │
+│    Viikonlopun p. 2/3 │  ┌─────────────────────────────────────┐   │
+│    Luettavat k.   2/3 │  │ □ Maito                             │   │
+│    Matkapakkaus   3/4 │  │   Kevyt- tai täysmaito         2x   │   │
+│                        │  ├─────────────────────────────────────┤   │
+│  ───────────────────  │  │ □ Leipä                             │   │
+│  ⊘ Arkistoidut        │  │   Täysjyväleipä tai sämpylät       │   │
+│  ───────────────────  │  ├─────────────────────────────────────┤   │
+│  ⚙ Asetukset          │  │ □ Omenat                            │   │
+│                        │  │   Tuoreet kotimaiset           6x   │   │
+│                        │  ├─────────────────────────────────────┤   │
+│                        │  │ □ Broilerin rintafile               │   │
+│                        │  │   Luomu, luuton                2x   │   │
+│                        │  └─────────────────────────────────────┘   │
+│                        │                                            │
+│                        │              Tap item → push to detail     │
+│                        │                                  [+ Add]   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-**This is the most informative step.** If the web UI created sets with `APP_IPHONE_69` instead of `APP_IPHONE_67`, that's the answer.
+On iPhone: unchanged (stack navigation with tab bar).
 
-We can use Fastlane's `spaceship` Ruby API instead of raw curl since we already have API key configuration:
-```ruby
-# Quick Ruby script using spaceship
-require 'spaceship'
-Spaceship::ConnectAPI.token = ... # from existing API key
-app = Spaceship::ConnectAPI::App.find("io.github.chmc.ListAll")
-version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
-localizations = version.get_app_store_version_localizations
-localizations.each { |loc|
-  sets = loc.get_app_screenshot_sets
-  sets.each { |s| puts "#{loc.locale}: #{s.screenshot_display_type}" }
+**Portrait behavior**: In portrait, NavigationSplitView collapses to sidebar overlay. Use `columnVisibility: .automatic` to let the system decide. iPad screenshots should be taken in **landscape** to show the proper two-column layout.
+
+## Design Decisions
+
+- **Layout**: Two-column (sidebar + content). Item detail via push navigation.
+- **Code strategy**: Adapt MainView using `@Environment(\.horizontalSizeClass)` — no separate iPad views.
+- **iPad screenshots**: Landscape orientation (not portrait-locked) to show two-column layout.
+- **Phases 2 & 3**: Separate PRs from Phase 1 to keep diffs manageable.
+
+## Pre-work: Extract Sub-Views (Commit 1 — No Behavioral Change)
+
+Before the navigation rewrite, extract MainView body into sub-views to reduce diff complexity:
+
+1. Extract sidebar/list content into `MainListContent` view struct (lines ~105-130)
+2. Extract toolbar actions into reusable helper methods
+3. This commit has **zero behavioral change** — pure refactor for readability
+
+## Phase 1: NavigationSplitView Migration (Commit 2)
+
+### Step 1.1: Audit and migrate all NavigationLink usages
+
+**Current NavigationLink inventory** (must all be migrated):
+
+| Location | Pattern | Migration |
+|----------|---------|-----------|
+| `MainView.swift:140-167` | Hidden `NavigationLink(destination:isActive:)` with `selectedListForNavigation` binding | Replace with NavigationSplitView `detail:` column binding |
+| `ListRowView.swift:120` | `NavigationLink(destination: ArchivedListView(...))` | Use `.navigationDestination(for:)` in detail column |
+| `ListRowView.swift:126` | `mainViewModel.selectedListForNavigation = list` (Button tap) | On iPad: set sidebar selection binding. On iPhone: keep as push. |
+| `CreateListView.swift:80` | `mainViewModel.selectedListForNavigation = newList` | On iPad: set sidebar selection. On iPhone: keep current. |
+| `ListView.swift:391,421` | `mainViewModel.selectedListForNavigation = refreshedDestination` (after duplicate/delete) | On iPad: update sidebar selection. On iPhone: keep current. |
+| `MainViewModel.swift:34` | `@Published var selectedListForNavigation: List?` | Keep property, but on iPad it drives the NavigationSplitView selection binding |
+
+### Step 1.2: Add size class + selection state to MainView
+
+**File**: `MainView.swift`
+
+```swift
+@Environment(\.horizontalSizeClass) private var horizontalSizeClass
+@State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+```
+
+The existing `selectedListForNavigation` in `MainViewModel` will serve as the selection binding for NavigationSplitView on iPad (it already tracks which list is selected).
+
+### Step 1.3: Replace NavigationView with conditional NavigationSplitView
+
+**File**: `MainView.swift:68`
+
+```swift
+if horizontalSizeClass == .regular {
+    NavigationSplitView(columnVisibility: $columnVisibility) {
+        // Sidebar: list of lists, archived toggle, settings
+        sidebarContent
+    } detail: {
+        // Detail: ListView for selected list, or placeholder
+        if let list = viewModel.selectedListForNavigation {
+            ListView(list: list, mainViewModel: viewModel)
+        } else {
+            ContentUnavailableView("Select a List", systemImage: "list.bullet")
+        }
+    }
+} else {
+    NavigationStack {
+        // iPhone: keep current stack-based layout
+        currentMainViewBody
+    }
 }
 ```
 
-### 3. Test new display type strings via direct API (15 min)
+**Critical**: Check for NavigationPath animation bug (see `MacMainView.swift:72-77`). If NavigationSplitView breaks animations on iPadOS, apply the same `NavigationStack(path:)` workaround inside the detail column.
 
-Try `POST /v1/appScreenshotSets` with hypothetical new display types:
-- `APP_IPHONE_69` (6.9" iPhone)
-- `APP_IPAD_13` (13" iPad)
-- `APP_IPAD_PRO_M4_13` (alternative naming)
-- `APP_WATCH_SERIES_10` (may already be correct)
+### Step 1.4: Build sidebar content
 
-Also re-test `APP_IPHONE_67` as control to confirm it's still rejected.
+Extract into `sidebarContent` computed property:
+- Active lists section with `List` + `.onMove` (reorder) + `.onDelete` (archive)
+- "Archived Lists" toggle/section (currently `showingArchivedLists` state in MainViewModel)
+- "Settings" navigation link
+- Toolbar: + button, sync button, share button
 
-### 4. Check Apple's ScreenshotDisplayType documentation
+**ArchivedListView strategy**: On iPad sidebar, archived lists appear as a separate section (toggled by tapping "Archived" in sidebar). Tapping an archived list shows `ArchivedListView` in the detail column via `.navigationDestination(for:)`. Remove the old `NavigationLink(destination: ArchivedListView(...))` from `ListRowView.swift:120`.
 
-Open https://developer.apple.com/documentation/appstoreconnectapi/screenshotdisplaytype in browser (requires JavaScript) to check if Apple has added new enum values not visible in the text-only API docs.
+### Step 1.5: Update ListRowView for split view
 
-### 5. Fix based on findings
+**File**: `ListRowView.swift:110-136`
 
-**If new display type strings are needed:**
-- Monkey-patch Fastlane locally to use the correct strings
-- Update `prepare_screenshots_for_delivery` if filename-to-type mapping needs changes
-- Generate correct dimension screenshots (1320x2868 for 6.9" iPhone) if needed
-- Submit upstream Fastlane PR
+Current logic branches on `isInSelectionMode` and `showingArchivedLists`:
+- Selection mode: Button for toggle — **keep as-is**
+- Archived list: `NavigationLink(destination: ArchivedListView(...))` — **replace**: set selection binding, let detail column handle presentation
+- Normal mode: Button setting `selectedListForNavigation` — **keep**, already drives the sidebar selection
 
-**If version/app corruption:**
-- Document the recovery steps
-- Test creating a clean version
+### Step 1.6: Remove tab bar on iPad
 
-**If truly an Apple issue:**
-- File Feedback Assistant with full API request/response logs
+**File**: `MainView.swift:630` — `CustomBottomToolbar`
 
-### 6. Update learnings documentation
+Hide when `horizontalSizeClass == .regular`. Sidebar replaces tab bar navigation on iPad.
 
-Update `documentation/learnings/asc-ios-screenshot-api-bug-2026-02.md` with actual findings — either correcting the "Apple bug" conclusion or confirming it with better evidence.
+### Step 1.7: Remove NavigationStyleModifier
 
-## Key Files
+**File**: `MainView.swift:674-700`
 
-- `fastlane/Fastfile` — release lane (lines 694-733), may need display type updates
-- `fastlane/screenshots_compat/en-US/` — current screenshots (1290x2796 iPhone, 2064x2752 iPad)
-- `documentation/learnings/asc-ios-screenshot-api-bug-2026-02.md` — update with findings
-- `documentation/learnings/asc-watch-screenshot-display-type.md` — original corruption report
+Delete entirely. The conditional NavigationSplitView/NavigationStack branching replaces it.
 
-## Verification
+### Step 1.8: Update portrait lock for iPad screenshots
 
-1. API query reveals which display types ASC currently uses/accepts
-2. If fix found: test full screenshot upload via `bundle exec fastlane release version:X.X.X`
-3. Confirm screenshots appear in App Store Connect web UI
-4. All existing tests pass (`bundle exec rspec`)
+**File**: `ListAllApp.swift:179-183`
 
-## Risk Assessment
+Change UITEST_MODE orientation lock to allow **landscape on iPad**:
+```swift
+if UITestDataService.isUITesting || env["UITEST_FORCE_PORTRAIT"] == "1" {
+    if UIDevice.current.userInterfaceIdiom == .pad {
+        return .allButUpsideDown  // Allow landscape for split view screenshots
+    }
+    return .portrait  // iPhone stays portrait
+}
+```
 
-- **Low risk**: Direct API queries are read-only, no side effects
-- **Feature branch**: Changes isolated from main
-- **Quick feedback**: Steps 2-3 take ~20 minutes total before committing to any code changes
+### Step 1.9: State restoration
+
+Keep `@SceneStorage("selectedListId")` for restoring list selection. The existing restoration logic at `MainView.swift:418-433` can drive the `selectedListForNavigation` property on both iPhone and iPad.
+
+## Phase 2: Context Menus (Separate PR)
+
+### Step 2.1: Add context menus to ListRowView
+
+**File**: `ListRowView.swift`
+
+Add `.contextMenu` with extracted shared action methods (reuse from swipe action closures at lines 141-173):
+- Edit (rename)
+- Share
+- Duplicate
+- Archive / Delete
+
+### Step 2.2: Add context menus to ItemRowView
+
+**File**: `ItemRowView.swift`
+
+Add `.contextMenu`:
+- Toggle crossed out
+- Edit
+- Duplicate
+- Delete
+
+### Step 2.3: Use popovers instead of sheets on iPad
+
+**File**: `MainView.swift`
+
+Convert to `.popover()` on regular width:
+- `CreateListView` — anchor to + button
+- `ShareFormatPickerView` — anchor to share button
+
+Keep as `.sheet()`:
+- `SyncConflictResolutionView` (complex, full-width content needed)
+- `ItemEditView` (rich form with images)
+
+## Phase 3: Toolbar + Polish (Separate PR)
+
+### Step 3.1: Move "Add Item" to toolbar on iPad
+
+**File**: `ListView.swift:194`
+
+On iPad: add to `.toolbar`. Remove floating button overlay.
+On iPhone: keep floating button.
+
+### Step 3.2: Settings in sidebar
+
+On iPad, settings is a sidebar destination (navigation link in sidebar), not a modal sheet from tab bar.
+
+## Phase 4: Screenshot Pipeline Updates (With Phase 1)
+
+### Step 4.1: Update UITEST_MODE navigation behavior
+
+Covered by Steps 1.3 (NavigationSplitView on iPad) and 1.8 (landscape for iPad screenshots). UITEST_MODE no longer forces stack navigation on iPad.
+
+### Step 4.2: Update iPad screenshot tests
+
+**File**: `ListAllUITests/ListAllUITests_Simple.swift`
+
+Key changes:
+- `launchAndNavigateToGroceryList()`: Detect device with `UIDevice.current.userInterfaceIdiom`. On iPad: sidebar cells may be in different hierarchy; after tap, verify detail column shows items (sidebar stays visible). On iPhone: keep current stack navigation.
+- Remove `UITEST_FORCE_PORTRAIT` from iPad test launch args (allow landscape).
+- `testScreenshots02_MainFlow()`: On iPad, screenshot shows sidebar + selected list.
+- `testScreenshots03_GroceryItems()`: Same — sidebar visible with grocery items in content area.
+- **Same test class handles both devices** — Snapfile runs iPhone then iPad sequentially. Tests must branch on device type.
+
+### Step 4.3: Verify pipeline
+
+Run `./generate-screenshots-local.sh ipad en-US` and verify output shows sidebar + content layout in landscape.
+
+## Key Files to Modify
+
+| File | Changes |
+|------|---------|
+| `ListAll/ListAll/Views/MainView.swift` | NavigationSplitView, sidebar, remove tab bar, remove NavigationStyleModifier |
+| `ListAll/ListAll/Views/Components/ListRowView.swift` | Migrate NavigationLink for ArchivedListView, context menu (Phase 2) |
+| `ListAll/ListAll/Views/ListView.swift` | Toolbar add button on iPad (Phase 3) |
+| `ListAll/ListAll/Views/Components/ItemRowView.swift` | Context menu (Phase 2) |
+| `ListAll/ListAll/Views/CreateListView.swift` | selectedListForNavigation works on both paths (verify) |
+| `ListAll/ListAll/ViewModels/MainViewModel.swift` | selectedListForNavigation kept but may need type changes |
+| `ListAll/ListAll/ListAllApp.swift` | Portrait lock — allow landscape on iPad in UITEST_MODE |
+| `ListAll/ListAllUITests/ListAllUITests_Simple.swift` | iPad screenshot navigation for split view |
+
+## Existing Code to Reuse
+
+- `MacMainView.swift:117` — NavigationSplitView pattern with columnVisibility
+- `MacMainView.swift:72-77` — NavigationPath animation bug workaround (check if needed on iPadOS)
+- `ListRowView.swift:141-173` — Swipe action closures (extract for context menus)
+- `MainView.swift:13` — `@SceneStorage("selectedListId")` already exists
+- `MainView.swift:297` — Keyboard shortcuts (Cmd+N etc.) — keep as-is
+- `MainViewModel.swift:34` — `selectedListForNavigation` serves as selection binding
+
+## Known Risks
+
+1. **NavigationSplitView animation bug** (`MacMainView.swift:72-77`): Apple-confirmed bug where NavigationSplitView breaks all animations including sheet presentation. Monitor for this; apply NavigationPath workaround if needed.
+2. **iPad multitasking**: In 1/3 width Split View, `horizontalSizeClass` becomes `.compact` → falls back to stack navigation. This is correct automatic behavior.
+3. **Stale comment**: `MainView.swift:138` says "deployment target is iOS 15" — this is wrong, actual target is iOS 16.0. Clean up during migration.
+
+## Verification Plan
+
+1. **Pre-work commit**: Build and verify zero behavioral change on iPhone
+2. **Phase 1 on iPad (landscape)**: Boot iPad Pro 13" simulator, launch with UITEST_MODE, verify:
+   - Sidebar + content two-column layout in landscape
+   - Selecting a list shows items in content area (sidebar stays)
+   - Creating a new list selects it in sidebar
+   - Archived lists section works in sidebar → shows ArchivedListView in detail
+   - Settings accessible from sidebar
+3. **Phase 1 on iPad (portrait)**: Verify sidebar overlay behavior works
+4. **Phase 1 on iPhone**: Boot iPhone 16, verify stack navigation + tab bar unchanged
+5. **Phase 1 multitasking**: Test iPad Split View at 50/50 and 33/66
+6. **Run existing unit tests**: Ensure no regressions
+7. **Screenshot pipeline**: Run `./generate-screenshots-local.sh ipad en-US` — verify landscape two-column output
+8. **iPhone screenshot pipeline**: Run `./generate-screenshots-local.sh iphone en-US` — verify no regression
+9. Cleanup: quit app, shutdown simulators
