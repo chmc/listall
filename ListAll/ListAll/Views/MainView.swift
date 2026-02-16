@@ -9,6 +9,15 @@ struct MainView: View {
     @StateObject private var tooltipManager = TooltipManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
+    // MARK: - iPad NavigationSplitView Support (Phase 1)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    // CRITICAL FIX: Apple-confirmed bug in NavigationSplitView (Xcode 14.3+)
+    // Without a NavigationPath with explicit animation, ALL animations in the app break.
+    // This includes .sheet() presentation - sheets queue but never display until app deactivates.
+    // See: https://developer.apple.com/forums/thread/728132
+    @State private var navigationPath = NavigationPath()
+
     // State restoration: Persist which list user was viewing
     @SceneStorage("selectedListId") private var selectedListIdString: String?
     @State private var hasRestoredNavigation = false
@@ -30,6 +39,11 @@ struct MainView: View {
     @State private var selectedShareFormat: ShareFormat = .plainText
     @State private var shareFileURL: URL?
     @State private var shareItems: [Any] = []
+
+    /// Whether the current layout is regular width (iPad)
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
 
     // MARK: - Task 16.11: Sync Status UI
     /// Sync button image with rotation animation on iOS 18+, fallback for older versions
@@ -64,7 +78,7 @@ struct MainView: View {
 
     // MARK: - Extracted Sub-Views
 
-    /// Main list content: loading state, empty states, and the list of lists
+    /// Main list content for iPhone: loading state, empty states, and the list of lists
     @ViewBuilder
     private var mainListContent: some View {
         if viewModel.isLoading {
@@ -132,9 +146,9 @@ struct MainView: View {
         }
     }
 
-    /// Programmatic navigation for auto-opening newly created list
-    /// Uses deprecated NavigationLink(isActive:) API — will be replaced
-    /// with NavigationSplitView selection binding in Phase 1
+    /// Programmatic navigation for auto-opening newly created list (iPhone only)
+    /// Uses deprecated NavigationLink(isActive:) API -- kept for iPhone NavigationStack path
+    /// iPad uses NavigationSplitView detail column instead
     private var programmaticNavigationLink: some View {
         NavigationLink(
             destination: viewModel.selectedListForNavigation.map { list in
@@ -164,6 +178,105 @@ struct MainView: View {
             EmptyView()
         }
         .hidden()
+    }
+
+    // MARK: - iPad Sidebar Content
+
+    /// Sidebar content for iPad NavigationSplitView layout
+    @ViewBuilder
+    private var sidebarContent: some View {
+        if viewModel.isLoading {
+            ProgressView("Loading lists...")
+                .padding(.top, 16)
+        } else if viewModel.displayedLists.isEmpty {
+            if viewModel.showingArchivedLists {
+                VStack(spacing: Theme.Spacing.lg) {
+                    Image(systemName: "archivebox")
+                        .font(.system(size: 60))
+                        .foregroundColor(Theme.Colors.secondary)
+
+                    Text("No Archived Lists")
+                        .font(Theme.Typography.title)
+
+                    Text("Archived lists will appear here")
+                        .font(Theme.Typography.body)
+                        .emptyStateStyle()
+                }
+                .padding(.top, 40)
+            } else {
+                ListsEmptyStateView(
+                    onCreateSampleList: { template in
+                        let createdList = viewModel.createSampleList(from: template)
+                        viewModel.selectedListForNavigation = createdList
+                    },
+                    onCreateCustomList: {
+                        showingCreateList = true
+                    }
+                )
+            }
+        } else {
+            SwiftUI.List {
+                Section {
+                    ForEach(viewModel.displayedLists) { list in
+                        // ListRowView already handles its own tap (sets selectedListForNavigation)
+                        ListRowView(list: list, mainViewModel: viewModel)
+                            .listRowBackground(
+                                viewModel.selectedListForNavigation?.id == list.id
+                                    ? Color.accentColor.opacity(0.15)
+                                    : Color.clear
+                            )
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            let list = viewModel.displayedLists[index]
+                            viewModel.archiveList(list)
+                        }
+                    }
+                    .onMove(perform: viewModel.moveList)
+                }
+
+                // Settings row in sidebar (replaces bottom toolbar on iPad)
+                Section {
+                    Button(action: { showingSettings = true }) {
+                        Label("Settings", systemImage: "gear")
+                    }
+                }
+            }
+            .environment(\.editMode, $editMode)
+            .listStyle(.sidebar)
+            .id(viewModel.listsReorderTrigger)
+            .refreshable {
+                await cloudKitService.sync()
+                viewModel.manualSync()
+            }
+        }
+    }
+
+    /// Detail column for iPad NavigationSplitView
+    @ViewBuilder
+    private var detailContent: some View {
+        if let list = viewModel.selectedListForNavigation {
+            if list.isArchived {
+                ArchivedListView(list: list, mainViewModel: viewModel)
+            } else {
+                ListView(list: list, mainViewModel: viewModel)
+                    .id(list.id)  // Force recreation when selection changes
+            }
+        } else {
+            if #available(iOS 17.0, *) {
+                ContentUnavailableView("Select a List", systemImage: "list.bullet")
+            } else {
+                VStack(spacing: Theme.Spacing.lg) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 60))
+                        .foregroundColor(Theme.Colors.secondary)
+                    Text("Select a List")
+                        .font(Theme.Typography.title)
+                        .foregroundColor(Theme.Colors.secondary)
+                }
+            }
+        }
     }
 
     /// Leading toolbar: archive toggle, share, sync, edit/cancel buttons
@@ -316,14 +429,14 @@ struct MainView: View {
                     }
                 )
                 .padding(.horizontal, Theme.Spacing.md)
-                .padding(.bottom, 60) // Space for bottom toolbar
+                .padding(.bottom, isRegularWidth ? 16 : 60) // Less padding on iPad (no bottom toolbar)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(Theme.Animation.spring, value: viewModel.showArchivedNotification)
             }
         }
     }
 
-    /// Custom bottom toolbar overlay (tab bar replacement)
+    /// Custom bottom toolbar overlay (tab bar replacement) - iPhone only
     private var bottomToolbarOverlay: some View {
         VStack {
             Spacer()
@@ -341,55 +454,35 @@ struct MainView: View {
         .edgesIgnoringSafeArea(.bottom)
     }
 
+    // MARK: - Body
+
     var body: some View {
         ZStack {
-            // Main Content - Lists View with Navigation
-            NavigationView {
-                ZStack {
-                    VStack(spacing: 0) {
-                        mainListContent
-
-                    programmaticNavigationLink
-                    }
-                    .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
-                    .navigationBarTitleDisplayMode(.large)
-                    .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        leadingToolbarContent
-                    }
-
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        trailingToolbarContent
-                    }
-                    }
-
-                    archiveBannerOverlay
-
-                    bottomToolbarOverlay
-                }
+            if isRegularWidth {
+                iPadBody
+            } else {
+                iPhoneBody
             }
-            // iPad uses split view by default, but stack for screenshots
-            // iPhone always uses stack navigation
-            .modifier(NavigationStyleModifier())
-            .overlay(alignment: .top) {
-                // Watch Sync Indicator - as overlay to avoid affecting navigation bar layout
-                if viewModel.isSyncingFromWatch {
-                    HStack(spacing: 6) {
-                        Image(systemName: "applewatch")
-                            .font(.system(size: 12))
-                        Text(String(localized: "Syncing with Watch..."))
-                            .font(.caption)
-                    }
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(8)
-                    .padding(.top, 8)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .animation(.easeInOut(duration: 0.3), value: viewModel.isSyncingFromWatch)
+        }
+        .overlay(alignment: .top) {
+            // Watch Sync Indicator - as overlay to avoid affecting navigation bar layout
+            if viewModel.isSyncingFromWatch {
+                HStack(spacing: 6) {
+                    Image(systemName: "applewatch")
+                        .font(.system(size: 12))
+                    Text(String(localized: "Syncing with Watch..."))
+                        .font(.caption)
                 }
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
+                .padding(.vertical, 4)
+                .background(.ultraThinMaterial)
+                .cornerRadius(8)
+                .padding(.top, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .animation(.easeInOut(duration: 0.3), value: viewModel.isSyncingFromWatch)
             }
+        }
         .onAppear {
             viewModel.loadLists()
             Task {
@@ -401,14 +494,14 @@ struct MainView: View {
 
             // Advertise Handoff activity for browsing lists
             HandoffService.shared.startBrowsingListsActivity()
-            
+
             // Show add list tooltip if user has no lists and hasn't seen it
             if viewModel.lists.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     tooltipManager.showIfNeeded(.addListButton)
                 }
             }
-            
+
             // Show archive tooltip if user has 3+ lists and hasn't seen it
             if viewModel.lists.count >= 3 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -467,6 +560,10 @@ struct MainView: View {
                 isSyncPollingActive = false
                 print("🔄 iOS: Sync polling disabled")
             }
+        }
+        .onChange(of: viewModel.selectedListForNavigation) { newList in
+            // State restoration: Save selected list ID when sidebar selection changes
+            selectedListIdString = newList?.id.uuidString
         }
         .onReceive(syncPollingTimer) { _ in
             // Only poll when app is active (controlled by scenePhase)
@@ -566,22 +663,80 @@ struct MainView: View {
             let count = viewModel.selectedLists.count
             Text("Archive \(count) \(count == 1 ? "list" : "lists")? You can restore them later from archived lists.")
         }
-            
-            // Tooltip overlay - shows above all content
-            TooltipOverlay()
-        }
+        // Tooltip overlay - shows above all content
+        TooltipOverlay()
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
     }
-    
+
+    // MARK: - iPad Body (NavigationSplitView)
+
+    /// iPad layout using NavigationSplitView with sidebar + detail columns
+    private var iPadBody: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            // CRITICAL FIX: Wrap sidebar in NavigationStack with animated path
+            // This restores SwiftUI's animation system that NavigationSplitView breaks
+            NavigationStack(path: $navigationPath.animation(.linear(duration: 0))) {
+                sidebarContent
+            }
+            .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    leadingToolbarContent
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    trailingToolbarContent
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
+        } detail: {
+            detailContent
+        }
+        .overlay {
+            archiveBannerOverlay
+        }
+    }
+
+    // MARK: - iPhone Body (NavigationView with stack)
+
+    /// iPhone layout using NavigationView with stack navigation
+    private var iPhoneBody: some View {
+        NavigationView {
+            ZStack {
+                VStack(spacing: 0) {
+                    mainListContent
+
+                    programmaticNavigationLink
+                }
+                .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        leadingToolbarContent
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        trailingToolbarContent
+                    }
+                }
+
+                archiveBannerOverlay
+
+                bottomToolbarOverlay
+            }
+        }
+        .navigationViewStyle(.stack)
+    }
+
     private func handleShareAllData(format: ShareFormat) {
         // Create share content asynchronously
         DispatchQueue.global(qos: .userInitiated).async { [weak sharingService] in
             guard let shareResult = sharingService?.shareAllData(format: format) else {
                 return
             }
-            
+
             // Update UI on main thread
             DispatchQueue.main.async {
                 // Use UIActivityItemSource for proper iOS sharing
@@ -597,7 +752,7 @@ struct MainView: View {
                     self.shareFileURL = nil
                     self.shareItems = [itemSource]
                 }
-                
+
                 // Present immediately - no delay needed with direct presentation
                 self.showingShareSheet = true
             }
@@ -610,26 +765,26 @@ struct ArchiveBanner: View {
     let listName: String
     let onUndo: () -> Void
     let onDismiss: () -> Void
-    
+
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
             Image(systemName: "archivebox.fill")
                 .foregroundColor(.orange)
                 .font(.title3)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("Archived")
                     .font(Theme.Typography.caption)
                     .foregroundColor(.secondary)
-                
+
                 Text(listName)
                     .font(Theme.Typography.body)
                     .fontWeight(.medium)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             Button(action: onUndo) {
                 Text("Undo")
                     .font(Theme.Typography.headline)
@@ -639,7 +794,7 @@ struct ArchiveBanner: View {
                     .background(Theme.Colors.primary)
                     .cornerRadius(Theme.CornerRadius.md)
             }
-            
+
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.caption)
@@ -661,7 +816,7 @@ struct ArchiveBanner: View {
 struct CustomBottomToolbar: View {
     let onListsTap: () -> Void
     let onSettingsTap: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 0) {
             // Lists Button (Active/Selected)
@@ -699,34 +854,6 @@ struct CustomBottomToolbar: View {
         }
         .frame(height: 50)
         .padding(.bottom, 8)
-    }
-}
-
-// MARK: - Navigation Style Modifier (Task 15.2)
-/// Controls NavigationView style based on device and context:
-/// - iPhone: Always uses stack navigation
-/// - iPad in UITEST_MODE: Uses stack for consistent App Store screenshots
-/// - iPad normally: Uses default (split view) for better multitasking UX
-private struct NavigationStyleModifier: ViewModifier {
-    private var shouldUseStackNavigation: Bool {
-        #if os(iOS)
-        // iPhone always uses stack navigation
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            return true
-        }
-        // iPad uses stack for screenshots (UITEST_MODE), otherwise split view
-        return UITestDataService.isUITesting
-        #else
-        return true
-        #endif
-    }
-
-    func body(content: Content) -> some View {
-        if shouldUseStackNavigation {
-            content.navigationViewStyle(.stack)
-        } else {
-            content // Use default (automatic) style - enables split view on iPad
-        }
     }
 }
 

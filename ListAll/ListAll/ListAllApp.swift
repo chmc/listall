@@ -177,10 +177,12 @@ struct ListAllApp: App {
 // MARK: - AppDelegate for test-time orientation control
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-        // During UI tests, lock to portrait to make screenshots consistent across devices
         let env = ProcessInfo.processInfo.environment
         if UITestDataService.isUITesting || env["UITEST_FORCE_PORTRAIT"] == "1" {
-            return .portrait
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                return .allButUpsideDown  // Allow landscape for split view screenshots
+            }
+            return .portrait  // iPhone stays portrait
         }
 
         // Normal app behavior (support all orientations as configured by Info.plist)

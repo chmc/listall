@@ -29,7 +29,8 @@ struct ListRowView: View {
     @State private var shareOptions: ShareOptions = .default
     @State private var shareFileURL: URL?
     @State private var shareItems: [Any] = []
-    
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     private var listContent: some View {
         HStack {
             VStack(alignment: .leading, spacing: 1) {
@@ -116,9 +117,19 @@ struct ListRowView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else if mainViewModel.showingArchivedLists {
-                // Archived lists: Navigate to readonly view
-                NavigationLink(destination: ArchivedListView(list: list, mainViewModel: mainViewModel)) {
-                    listContent
+                if horizontalSizeClass == .regular {
+                    // iPad: Set selection, NavigationSplitView detail handles presentation
+                    Button(action: {
+                        mainViewModel.selectedListForNavigation = list
+                    }) {
+                        listContent
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    // iPhone: Use NavigationLink for stack navigation
+                    NavigationLink(destination: ArchivedListView(list: list, mainViewModel: mainViewModel)) {
+                        listContent
+                    }
                 }
             } else {
                 // Normal mode: Use programmatic navigation for state restoration support

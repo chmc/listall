@@ -34,7 +34,7 @@ The ListAll iPad experience is a blown-up iPhone UI. On a 13" iPad Pro, the app 
 
 On iPhone: unchanged (stack navigation with tab bar).
 
-**Portrait behavior**: In portrait, NavigationSplitView collapses to sidebar overlay. Use `columnVisibility: .automatic` to let the system decide. iPad screenshots should be taken in **landscape** to show the proper two-column layout.
+**Portrait behavior**: Sidebar is always visible in both portrait and landscape (`columnVisibility: .all`). This ensures the list sidebar is never hidden behind a swipe gesture — critical for a list management app.
 
 ## Design Decisions
 
@@ -52,7 +52,7 @@ Before the navigation rewrite, extract MainView body into sub-views to reduce di
 2. Extract toolbar actions into reusable helper methods
 3. This commit has **zero behavioral change** — pure refactor for readability
 
-## Phase 1: NavigationSplitView Migration (Commit 2)
+## Phase 1: NavigationSplitView Migration (Commit 2) ✅
 
 ### Step 1.1: Audit and migrate all NavigationLink usages
 
@@ -73,7 +73,7 @@ Before the navigation rewrite, extract MainView body into sub-views to reduce di
 
 ```swift
 @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-@State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+@State private var columnVisibility: NavigationSplitViewVisibility = .all
 ```
 
 The existing `selectedListForNavigation` in `MainViewModel` will serve as the selection binding for NavigationSplitView on iPad (it already tracks which list is selected).
