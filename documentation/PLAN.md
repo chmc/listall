@@ -154,6 +154,10 @@ if UITestDataService.isUITesting || env["UITEST_FORCE_PORTRAIT"] == "1" {
 
 Keep `@SceneStorage("selectedListId")` for restoring list selection. The existing restoration logic at `MainView.swift:418-433` can drive the `selectedListForNavigation` property on both iPhone and iPad.
 
+### Step 1.10: Mark phase complete
+
+Update this document: add ✅ to the Phase 1 heading.
+
 ## Phase 2: Screenshot Pipeline Updates (Commit 3)
 
 Pipeline updates before context menus/polish so visual verification is available for later phases.
@@ -176,6 +180,10 @@ Key changes:
 ### Step 2.3: Verify pipeline
 
 Run `./generate-screenshots-local.sh ipad en-US` and verify output shows sidebar + content layout in landscape.
+
+### Step 2.4: Mark phase complete
+
+Update this document: add ✅ to the Phase 2 heading.
 
 ## Phase 3: Context Menus (Commit 4)
 
@@ -211,6 +219,10 @@ Keep as `.sheet()`:
 - `SyncConflictResolutionView` (complex, full-width content needed)
 - `ItemEditView` (rich form with images)
 
+### Step 3.4: Mark phase complete
+
+Update this document: add ✅ to the Phase 3 heading.
+
 ## Phase 4: Toolbar + Polish (Commit 5)
 
 ### Step 4.1: Move "Add Item" to toolbar on iPad
@@ -223,6 +235,10 @@ On iPhone: keep floating button.
 ### Step 4.2: Settings in sidebar
 
 On iPad, settings is a sidebar destination (navigation link in sidebar), not a modal sheet from tab bar.
+
+### Step 4.3: Mark phase complete
+
+Update this document: add ✅ to the Phase 4 heading.
 
 ## Key Files to Modify
 
