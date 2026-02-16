@@ -63,6 +63,9 @@ cleanup_test_environment() {
         rm -rf "${TEST_TEMP_DIR}"
     fi
 
+    # Clean up mock process script if left behind
+    rm -f "${SCRIPT_DIR}/process-macos-screenshots.sh" 2>/dev/null || true
+
     # Restore any overridden functions
     unset -f xcrun 2>/dev/null || true
     unset -f bundle 2>/dev/null || true
@@ -70,6 +73,9 @@ cleanup_test_environment() {
     unset -f magick 2>/dev/null || true
     unset -f sleep 2>/dev/null || true
     unset -f command 2>/dev/null || true
+    unset -f git 2>/dev/null || true
+    unset -f hide_and_quit_background_apps_macos 2>/dev/null || true
+    unset -f generate_macos_screenshots 2>/dev/null || true
 }
 
 # Setup cleanup trap
@@ -512,8 +518,18 @@ test_frame_ios_screenshots_inplace_success() {
     echo -e "${BLUE}Testing frame_ios_screenshots_inplace() - success case${NC}"
 
     # Setup mocks
-    mock_bundle_success
     mock_magick_exists
+
+    # Mock bundle to also create framed output (as real fastlane would)
+    bundle() {
+        if [[ "$1" == "exec" && "$2" == "fastlane" ]]; then
+            mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
+            touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/screen1.png"
+            return 0
+        fi
+        return 0
+    }
+    export -f bundle
 
     # Ensure screenshots exist
     mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
@@ -728,8 +744,27 @@ test_generate_watch_screenshots_failure() {
 test_generate_all_screenshots_success() {
     echo -e "${BLUE}Testing generate_all_screenshots() - success${NC}"
 
-    mock_bundle_success
     mock_magick_exists
+    mock_sleep
+
+    # Mock bundle to also create framed output (as real fastlane would)
+    bundle() {
+        if [[ "$1" == "exec" && "$2" == "fastlane" ]]; then
+            mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
+            touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/screen1.png"
+            return 0
+        fi
+        return 0
+    }
+    export -f bundle
+
+    # Mock dependencies of generate_macos_screenshots (SCRIPT_DIR is readonly in tests)
+    hide_and_quit_background_apps_macos() { return 0; }
+    export -f hide_and_quit_background_apps_macos
+    printf '#!/usr/bin/env bash\nexit 0\n' > "${SCRIPT_DIR}/process-macos-screenshots.sh"
+    chmod +x "${SCRIPT_DIR}/process-macos-screenshots.sh"
+    git() { return 0; }
+    export -f git
 
     # Create required directories
     mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
@@ -737,15 +772,28 @@ test_generate_all_screenshots_success() {
     touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
     touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/screen1.png"
 
+    # Create mac/processed dir with PNGs for verify_processed_output
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/mac/processed/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots/mac/processed/en-US/01_MainWindow.png"
+
+    # Create watch_normalized dir with PNGs for verify_processed_output
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/watch_normalized/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots/watch_normalized/en-US/watch1.png"
+
     local output
     output=$(generate_all_screenshots 2>&1)
     local exit_code=$?
 
     assert_true "${exit_code}" "generate_all_screenshots returns success"
-    assert_contains "${output}" "Step 1/4" "generate_all_screenshots shows progress"
-    assert_contains "${output}" "Step 2/4" "generate_all_screenshots shows iPad step"
-    assert_contains "${output}" "Step 3/4" "generate_all_screenshots shows framing step"
-    assert_contains "${output}" "Step 4/4" "generate_all_screenshots shows Watch step"
+    assert_contains "${output}" "Step 1/5" "generate_all_screenshots shows iPhone step"
+    assert_contains "${output}" "Step 2/5" "generate_all_screenshots shows iPad step"
+    assert_contains "${output}" "Step 3/5" "generate_all_screenshots shows framing step"
+    assert_contains "${output}" "Step 4/5" "generate_all_screenshots shows Watch step"
+    assert_contains "${output}" "Step 5/5" "generate_all_screenshots shows macOS step"
+
+    # Cleanup mocks
+    unset -f git 2>/dev/null || true
+    rm -f "${SCRIPT_DIR}/process-macos-screenshots.sh"
 
     echo ""
 }
@@ -800,10 +848,14 @@ test_generate_all_screenshots_watch_failure() {
     echo -e "${BLUE}Testing generate_all_screenshots() - Watch failure${NC}"
 
     # Mock bundle to succeed on iPhone/iPad but fail on Watch
+    # Also create framed output for the framing step to pass
     bundle() {
         if [[ "$4" == "watch_screenshots" ]]; then
             return 1
         fi
+        # Create framed output for framing step
+        mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
+        touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/screen1.png"
         return 0
     }
     export -f bundle
@@ -812,9 +864,7 @@ test_generate_all_screenshots_watch_failure() {
 
     # Create directories needed for framing step
     mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
-    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
     touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
-    touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/screen1.png"
 
     local output exit_code
     output=$(generate_all_screenshots 2>&1) && exit_code=0 || exit_code=$?
@@ -878,14 +928,14 @@ test_generate_framed_screenshots_no_screenshots() {
     mock_bundle_success
     mock_magick_exists
 
-    # Remove screenshots directory
-    rm -rf "${TEST_TEMP_DIR}/fastlane/screenshots_compat"
+    # Remove raw screenshots directory (source of truth for framing)
+    rm -rf "${TEST_TEMP_DIR}/fastlane/screenshots"
 
-    local output exit_code
-    output=$(generate_framed_screenshots 2>&1) || exit_code=$?
+    local output exit_code=0
+    output=$(generate_framed_screenshots 2>&1) && exit_code=0 || exit_code=$?
 
     assert_equals "2" "${exit_code}" "generate_framed_screenshots fails when no screenshots"
-    assert_contains "${output}" "Screenshots not found" \
+    assert_contains "${output}" "Raw screenshots not found" \
         "generate_framed_screenshots shows error message"
 
     echo ""
@@ -1430,19 +1480,28 @@ test_validate_locale_case_sensitivity() {
 test_frame_ios_screenshots_empty_locale_dirs() {
     echo -e "${BLUE}Testing frame_ios_screenshots_inplace() - empty locale directories${NC}"
 
-    mock_bundle_success
     mock_magick_exists
 
-    # Create locale directories but no PNG files
+    # Mock bundle to create framed output with at least one file
+    bundle() {
+        if [[ "$1" == "exec" && "$2" == "fastlane" ]]; then
+            mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
+            touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/screen1.png"
+            return 0
+        fi
+        return 0
+    }
+    export -f bundle
+
+    # Create locale directories but no PNG files in compat
     mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
-    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
-    # No files created
+    # No PNG files created in compat
 
     local output
     output=$(frame_ios_screenshots_inplace 2>&1)
     local exit_code=$?
 
-    # Should succeed (no files to copy is valid)
+    # Should succeed (framing produced output even if compat was empty)
     assert_true "${exit_code}" "frame_ios_screenshots_inplace handles empty locale directories"
 
     echo ""
@@ -1459,12 +1518,13 @@ test_frame_ios_screenshots_no_framed_output() {
     touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
     # Don't create screenshots_framed directory
 
-    local output
-    output=$(frame_ios_screenshots_inplace 2>&1)
-    local exit_code=$?
+    local output exit_code
+    output=$(frame_ios_screenshots_inplace 2>&1) || exit_code=$?
 
-    # Should succeed (no framed files to copy back)
-    assert_true "${exit_code}" "frame_ios_screenshots_inplace handles missing framed output"
+    # Should fail because framing produced 0 screenshots
+    assert_equals "2" "${exit_code}" "frame_ios_screenshots_inplace fails when no framed output"
+    assert_contains "${output}" "Framing produced 0 screenshots" \
+        "frame_ios_screenshots_inplace shows framing count error"
 
     echo ""
 }
@@ -1614,6 +1674,8 @@ test_generate_framed_screenshots_framing_failure() {
     mock_bundle_failure
     mock_magick_exists
 
+    # Create both raw screenshots dir (checked first) and compat dir
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/en-US"
     mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
     touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
 
@@ -1621,7 +1683,7 @@ test_generate_framed_screenshots_framing_failure() {
     output=$(generate_framed_screenshots 2>&1) || exit_code=$?
 
     assert_equals "2" "${exit_code}" "generate_framed_screenshots fails on framing error"
-    assert_contains "${output}" "Screenshot framing failed" \
+    assert_contains "${output}" "normalization failed" \
         "generate_framed_screenshots shows error message"
 
     echo ""
@@ -1735,6 +1797,294 @@ test_show_summary_next_steps_section() {
 }
 
 # =============================================================================
+# Test Cases: verify_processed_output Direct Tests
+# =============================================================================
+
+test_verify_processed_output_success() {
+    echo -e "${BLUE}Testing verify_processed_output() - success${NC}"
+
+    mkdir -p "${TEST_TEMP_DIR}/verify_test/en-US"
+    touch "${TEST_TEMP_DIR}/verify_test/en-US/screen1.png"
+    touch "${TEST_TEMP_DIR}/verify_test/en-US/screen2.png"
+
+    local output
+    output=$(verify_processed_output "TestPlatform" "${TEST_TEMP_DIR}/verify_test" 2>&1)
+    local exit_code=$?
+
+    assert_true "${exit_code}" "verify_processed_output returns 0 for dir with PNGs"
+    assert_contains "${output}" "2 processed screenshots" "verify_processed_output reports correct count"
+
+    echo ""
+}
+
+test_verify_processed_output_missing_dir() {
+    echo -e "${BLUE}Testing verify_processed_output() - missing directory${NC}"
+
+    local output exit_code
+    output=$(verify_processed_output "TestPlatform" "${TEST_TEMP_DIR}/nonexistent_dir" 2>&1) || exit_code=$?
+
+    assert_equals "1" "${exit_code}" "verify_processed_output returns 1 for missing dir"
+    assert_contains "${output}" "Processed output directory missing" "verify_processed_output shows missing dir error"
+
+    echo ""
+}
+
+test_verify_processed_output_empty_dir() {
+    echo -e "${BLUE}Testing verify_processed_output() - empty directory${NC}"
+
+    mkdir -p "${TEST_TEMP_DIR}/verify_empty"
+
+    local output exit_code
+    output=$(verify_processed_output "TestPlatform" "${TEST_TEMP_DIR}/verify_empty" 2>&1) || exit_code=$?
+
+    assert_equals "1" "${exit_code}" "verify_processed_output returns 1 for empty dir"
+    assert_contains "${output}" "Processed output directory is empty" "verify_processed_output shows empty dir error"
+
+    echo ""
+}
+
+# =============================================================================
+# Test Cases: Platform-Specific clean_screenshot_directories
+# =============================================================================
+
+test_clean_screenshot_directories_iphone() {
+    echo -e "${BLUE}Testing clean_screenshot_directories() - iphone platform${NC}"
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_16_Pro_01.png"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPad_Pro_01.png"
+
+    local output
+    output=$(clean_screenshot_directories "iphone" 2>&1)
+
+    assert_file_not_exists "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_16_Pro_01.png" \
+        "iPhone file removed by iphone clean"
+    assert_file_exists "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPad_Pro_01.png" \
+        "iPad file preserved by iphone clean"
+
+    echo ""
+}
+
+test_clean_screenshot_directories_ipad() {
+    echo -e "${BLUE}Testing clean_screenshot_directories() - ipad platform${NC}"
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_16_Pro_01.png"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPad_Pro_01.png"
+
+    local output
+    output=$(clean_screenshot_directories "ipad" 2>&1)
+
+    assert_file_not_exists "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPad_Pro_01.png" \
+        "iPad file removed by ipad clean"
+    assert_file_exists "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_16_Pro_01.png" \
+        "iPhone file preserved by ipad clean"
+
+    echo ""
+}
+
+test_clean_screenshot_directories_watch() {
+    echo -e "${BLUE}Testing clean_screenshot_directories() - watch platform${NC}"
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/watch"
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/watch_normalized"
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots/watch/watch1.png"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots/watch_normalized/watch1.png"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_01.png"
+
+    local output
+    output=$(clean_screenshot_directories "watch" 2>&1)
+
+    assert_dir_not_exists "${TEST_TEMP_DIR}/fastlane/screenshots/watch" \
+        "watch dir removed by watch clean"
+    assert_dir_not_exists "${TEST_TEMP_DIR}/fastlane/screenshots/watch_normalized" \
+        "watch_normalized dir removed by watch clean"
+    assert_file_exists "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_01.png" \
+        "screenshots_compat untouched by watch clean"
+
+    echo ""
+}
+
+test_clean_screenshot_directories_macos() {
+    echo -e "${BLUE}Testing clean_screenshot_directories() - macos platform${NC}"
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/mac/processed"
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots/mac/processed/01_MainWindow.png"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_01.png"
+
+    local output
+    output=$(clean_screenshot_directories "macos" 2>&1)
+
+    assert_dir_not_exists "${TEST_TEMP_DIR}/fastlane/screenshots/mac" \
+        "mac dir removed by macos clean"
+    assert_file_exists "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/iPhone_01.png" \
+        "screenshots_compat untouched by macos clean"
+
+    echo ""
+}
+
+# =============================================================================
+# Test Cases: frame_ios_screenshots_inplace Device Filter
+# =============================================================================
+
+test_frame_ios_screenshots_iphone_filter() {
+    echo -e "${BLUE}Testing frame_ios_screenshots_inplace() - iphone device filter${NC}"
+
+    mock_magick_exists
+
+    # Mock bundle to capture args
+    bundle() {
+        echo "$*" > "${TEST_TEMP_DIR}/bundle_args"
+        # Create framed output so the function succeeds
+        mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
+        touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/iPhone_01.png"
+        return 0
+    }
+    export -f bundle
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
+
+    frame_ios_screenshots_inplace "iphone" > /dev/null 2>&1
+
+    local captured_args
+    captured_args=$(cat "${TEST_TEMP_DIR}/bundle_args")
+    assert_contains "${captured_args}" "device_filter:^iPhone" \
+        "iphone filter passes device_filter:^iPhone to bundle"
+
+    echo ""
+}
+
+test_frame_ios_screenshots_ipad_filter() {
+    echo -e "${BLUE}Testing frame_ios_screenshots_inplace() - ipad device filter${NC}"
+
+    mock_magick_exists
+
+    # Mock bundle to capture args
+    bundle() {
+        echo "$*" > "${TEST_TEMP_DIR}/bundle_args"
+        # Create framed output so the function succeeds
+        mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US"
+        touch "${TEST_TEMP_DIR}/fastlane/screenshots_framed/ios/en-US/iPad_01.png"
+        return 0
+    }
+    export -f bundle
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
+
+    frame_ios_screenshots_inplace "ipad" > /dev/null 2>&1
+
+    local captured_args
+    captured_args=$(cat "${TEST_TEMP_DIR}/bundle_args")
+    assert_contains "${captured_args}" "device_filter:^iPad" \
+        "ipad filter passes device_filter:^iPad to bundle"
+
+    echo ""
+}
+
+test_frame_ios_screenshots_invalid_filter() {
+    echo -e "${BLUE}Testing frame_ios_screenshots_inplace() - invalid device filter${NC}"
+
+    mock_magick_exists
+    mock_bundle_success
+
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots_compat/en-US/screen1.png"
+
+    local output exit_code
+    output=$(frame_ios_screenshots_inplace "invalid" 2>&1) || exit_code=$?
+
+    assert_equals "2" "${exit_code}" "invalid filter returns EXIT_GENERATION_FAILED"
+    assert_contains "${output}" "Unknown device filter" \
+        "invalid filter shows error message"
+
+    echo ""
+}
+
+# =============================================================================
+# Test Cases: generate_macos_screenshots Retry Logic
+# =============================================================================
+
+test_generate_macos_screenshots_retry_success() {
+    echo -e "${BLUE}Testing generate_macos_screenshots() - retry succeeds on second attempt${NC}"
+
+    mock_sleep
+
+    # Mock hide_and_quit_background_apps_macos as no-op
+    hide_and_quit_background_apps_macos() { return 0; }
+    export -f hide_and_quit_background_apps_macos
+
+    # Mock process-macos-screenshots.sh (SCRIPT_DIR is readonly, points to tests dir)
+    printf '#!/usr/bin/env bash\nexit 0\n' > "${SCRIPT_DIR}/process-macos-screenshots.sh"
+    chmod +x "${SCRIPT_DIR}/process-macos-screenshots.sh"
+
+    # Mock git as no-op
+    git() { return 0; }
+    export -f git
+
+    # Stateful bundle mock: fails first call, succeeds second
+    echo "0" > "${TEST_TEMP_DIR}/call_count"
+    bundle() {
+        local count
+        count=$(cat "${TEST_TEMP_DIR}/call_count")
+        echo $((count + 1)) > "${TEST_TEMP_DIR}/call_count"
+        if [[ $count -eq 0 ]]; then return 1; fi
+        return 0
+    }
+    export -f bundle
+
+    # Create mac/processed dir
+    mkdir -p "${TEST_TEMP_DIR}/fastlane/screenshots/mac/processed/en-US"
+    touch "${TEST_TEMP_DIR}/fastlane/screenshots/mac/processed/en-US/01_MainWindow.png"
+
+    local output
+    output=$(generate_macos_screenshots 2>&1)
+    local exit_code=$?
+
+    assert_true "${exit_code}" "generate_macos_screenshots succeeds after retry"
+    assert_contains "${output}" "macOS screenshot attempt 1/2 failed" \
+        "generate_macos_screenshots logs first failure"
+
+    # Cleanup mocks
+    unset -f git 2>/dev/null || true
+    rm -f "${SCRIPT_DIR}/process-macos-screenshots.sh"
+
+    echo ""
+}
+
+test_generate_macos_screenshots_all_retries_fail() {
+    echo -e "${BLUE}Testing generate_macos_screenshots() - all retries fail${NC}"
+
+    mock_sleep
+
+    # Mock hide_and_quit_background_apps_macos as no-op
+    hide_and_quit_background_apps_macos() { return 0; }
+    export -f hide_and_quit_background_apps_macos
+
+    # Mock git as no-op
+    git() { return 0; }
+    export -f git
+
+    # Bundle always fails
+    mock_bundle_failure
+
+    local output exit_code
+    output=$(generate_macos_screenshots 2>&1) || exit_code=$?
+
+    assert_equals "2" "${exit_code}" "generate_macos_screenshots returns EXIT_GENERATION_FAILED"
+    assert_contains "${output}" "failed after" \
+        "generate_macos_screenshots shows retry exhaustion message"
+
+    # Cleanup mocks
+    unset -f git 2>/dev/null || true
+
+    echo ""
+}
+
+# =============================================================================
 # Test Runner
 # =============================================================================
 
@@ -1792,6 +2142,10 @@ run_all_tests() {
     test_cleanup_simulators_grep_no_match
     test_clean_screenshot_directories_nonexistent_dirs
     test_clean_screenshot_directories_permission_resilience
+    test_clean_screenshot_directories_iphone
+    test_clean_screenshot_directories_ipad
+    test_clean_screenshot_directories_watch
+    test_clean_screenshot_directories_macos
 
     # Run framing tests
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -1807,6 +2161,9 @@ run_all_tests() {
     test_frame_ios_screenshots_empty_locale_dirs
     test_frame_ios_screenshots_no_framed_output
     test_frame_ios_screenshots_partial_framed_output
+    test_frame_ios_screenshots_iphone_filter
+    test_frame_ios_screenshots_ipad_filter
+    test_frame_ios_screenshots_invalid_filter
 
     # Run generation tests
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -1828,6 +2185,8 @@ run_all_tests() {
     test_generate_framed_screenshots_success
     test_generate_framed_screenshots_no_screenshots
     test_generate_framed_screenshots_framing_failure
+    test_generate_macos_screenshots_retry_success
+    test_generate_macos_screenshots_all_retries_fail
 
     # Run validation tests
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -1837,6 +2196,9 @@ run_all_tests() {
 
     test_validate_screenshots_success
     test_validate_screenshots_failure
+    test_verify_processed_output_success
+    test_verify_processed_output_missing_dir
+    test_verify_processed_output_empty_dir
 
     # Run help/summary tests
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
