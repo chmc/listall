@@ -1,233 +1,96 @@
-# Plan: Add Call Graph MCP Tool via SourceKit-LSP
+# Plan: Diagnose and Fix ASC Screenshot Upload "Display Type Not Allowed" Error
 
 ## Context
 
-Claude Code's Explore agents consume tokens scanning the codebase. The project already has:
-- `swift-lsp@claude-plugins-official` plugin (symbol search, find references, jump-to-definition)
-- `listall-mcp` server (UI testing/verification)
+The `publish-to-appstore` workflow fails to upload iOS/iPadOS/watchOS screenshots with "Display Type Not Allowed!" at `POST /v1/appScreenshotSets`. macOS screenshots (`APP_DESKTOP`) work fine. Nobody else reports this exact error publicly, suggesting it's specific to the ListAll app's configuration.
 
-The **gap**: no call graph or impact analysis. "Who calls this function?" and "What does this function call?" require manual grep exploration.
+**Most likely root cause (from critic review):** Apple may have introduced NEW display type enum values (e.g., `APP_IPHONE_69` for 6.9" screens, `APP_IPAD_13` for 13" iPad) that Fastlane doesn't know about. The old `APP_IPHONE_67` and `APP_IPAD_PRO_3GEN_129` may no longer be accepted. Fastlane PR #29760 only expanded dimension mappings, NOT display type strings.
 
-**What changed from the previous plan**: Critic and technical reviews found that 3 of 4 proposed tools duplicate existing plugin functionality, the effort was underestimated 2x, and sourcekit-lsp doesn't work with .xcodeproj without a bridge. The plan is now scoped to the one tool that adds genuine value.
+**Goal:** Use direct API calls to determine what display types ASC actually accepts, then fix the upload pipeline.
 
-## Approach: Two-Phase
+## Steps
 
-### Phase 1: Prototype & Validate (1-2 days)
+### 1. Create feature branch
+- `git checkout -b fix/asc-screenshot-upload`
 
-Build a standalone CLI tool that sends `callHierarchy` requests to SourceKit-LSP and prints results. This validates that:
-- SourceKit-LSP returns useful call hierarchy data for this Xcode project
-- The xcode-build-server bridge works correctly
-- The data quality justifies further investment
+### 2. Query existing screenshot sets from ASC (5 min)
 
-If the prototype shows poor results (empty call graphs, missing relationships), **stop here**.
-
-### Phase 2: MCP Integration (3-5 days)
-
-If the prototype validates, add 1-2 tools to the **existing** `listall-mcp` server (no second server):
-
-**`swift_call_graph`** — Who calls this function? What does this function call?
-- Input: file path + line + column
-- Output: incoming callers and outgoing callees
-- LSP methods: `prepareCallHierarchy` → `incomingCalls` / `outgoingCalls`
-
-**`swift_impact`** (stretch goal) — Multi-level call graph traversal
-- Input: file path + line + column + depth
-- Output: transitive callers up to N levels deep
-
-## Prerequisites
-
-### xcode-build-server (required for .xcodeproj projects)
-
-SourceKit-LSP does NOT understand `.xcodeproj` directly. It needs a Build Server Protocol bridge:
-
+If screenshots were manually uploaded via ASC web UI, query what display types those sets use:
 ```bash
-brew install xcode-build-server
-cd /Users/aleksi/source/listall
-xcode-build-server config -project ListAll/ListAll.xcodeproj -scheme ListAll
+# Get app store version localizations
+curl -H "Authorization: Bearer $JWT" \
+  "https://api.appstoreconnect.apple.com/v1/apps/{appId}/appStoreVersions?filter[platform]=IOS"
+
+# Get screenshot sets for a localization
+curl -H "Authorization: Bearer $JWT" \
+  "https://api.appstoreconnect.apple.com/v1/appStoreVersionLocalizations/{locId}/appScreenshotSets"
 ```
 
-This creates `buildServer.json` in the project root, which tells sourcekit-lsp where to find compilation flags and the index store.
+**This is the most informative step.** If the web UI created sets with `APP_IPHONE_69` instead of `APP_IPHONE_67`, that's the answer.
 
-### Xcode build (one-time)
-
-The index store at `~/Library/Developer/Xcode/DerivedData/ListAll-*/Index.noindex/` must exist. Building in Xcode populates it. Background indexing (Swift 6.1+) keeps it fresh.
-
-## Implementation Details
-
-### Phase 1: CLI Prototype
-
-Create `Tools/swift-call-graph/` as a simple Swift script or package:
-
-```swift
-// Spawn sourcekit-lsp, send initialize, open a document,
-// send prepareCallHierarchy, then incomingCalls/outgoingCalls
-// Print results and exit
-```
-
-Test with a known function in the ListAll codebase to verify data quality.
-
-### Phase 2: Integration into listall-mcp
-
-Add to the existing MCP server (`Tools/listall-mcp/`):
-
-**New files:**
-- `Sources/listall-mcp/Services/LSPClient.swift` — Minimal JSON-RPC client (~200-300 lines)
-  - Content-Length framing
-  - Request/response ID correlation
-  - Process spawn via `xcrun sourcekit-lsp`
-  - Lazy initialization on first tool call
-  - Health check + auto-restart on crash
-- `Sources/listall-mcp/Tools/CallGraphTool.swift` — MCP tool definition and handler
-
-**Modified files:**
-- `Sources/listall-mcp/main.swift` — Register new tool
-- `CLAUDE.md` — Add usage instructions
-- `.gitignore` — Add `buildServer.json` (machine-specific)
-
-**No SQLite cache** — LSP responses are fast enough. Add caching later if profiling shows need.
-
-**No separate MCP server** — Adding to listall-mcp avoids a second process, second build, and user confusion.
-
-### LSP Client Architecture
-
-```swift
-actor LSPClient {
-    private var process: Process?
-    private var stdin: FileHandle
-    private var stdout: FileHandle
-    private var requestId: Int = 0
-    private var pending: [Int: CheckedContinuation<Data, Error>]
-
-    func send<T: Decodable>(_ method: String, params: Encodable) async throws -> T
-    // JSON-RPC: "Content-Length: N\r\n\r\n{json}"
+We can use Fastlane's `spaceship` Ruby API instead of raw curl since we already have API key configuration:
+```ruby
+# Quick Ruby script using spaceship
+require 'spaceship'
+Spaceship::ConnectAPI.token = ... # from existing API key
+app = Spaceship::ConnectAPI::App.find("io.github.chmc.ListAll")
+version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+localizations = version.get_app_store_version_localizations
+localizations.each { |loc|
+  sets = loc.get_app_screenshot_sets
+  sets.each { |s| puts "#{loc.locale}: #{s.screenshot_display_type}" }
 }
 ```
 
-Reuse process management patterns from `XCUITestBridge.swift` (spawn, timeout, health check).
+### 3. Test new display type strings via direct API (15 min)
 
-## Files Modified/Created
+Try `POST /v1/appScreenshotSets` with hypothetical new display types:
+- `APP_IPHONE_69` (6.9" iPhone)
+- `APP_IPAD_13` (13" iPad)
+- `APP_IPAD_PRO_M4_13` (alternative naming)
+- `APP_WATCH_SERIES_10` (may already be correct)
 
-| File | Action |
-|------|--------|
-| `Tools/listall-mcp/Sources/listall-mcp/Services/LSPClient.swift` | New (~300 lines) |
-| `Tools/listall-mcp/Sources/listall-mcp/Tools/CallGraphTool.swift` | New (~200 lines) |
-| `Tools/listall-mcp/Sources/listall-mcp/main.swift` | Edit — register new tool |
-| `CLAUDE.md` | Edit — add call graph usage instructions |
-| `.gitignore` | Edit — add `buildServer.json` |
+Also re-test `APP_IPHONE_67` as control to confirm it's still rejected.
 
-## Auto-Setup for Repo Cloners
+### 4. Check Apple's ScreenshotDisplayType documentation
 
-Honest assessment: **This cannot be fully automatic.** Setup requires:
+Open https://developer.apple.com/documentation/appstoreconnectapi/screenshotdisplaytype in browser (requires JavaScript) to check if Apple has added new enum values not visible in the text-only API docs.
 
-1. `brew install xcode-build-server` (one-time)
-2. `xcode-build-server config -project ListAll/ListAll.xcodeproj -scheme ListAll` (one-time, generates `buildServer.json`)
-3. Build the project in Xcode (populates index store)
-4. `swift build` in `Tools/listall-mcp/` (rebuild MCP server with new tool)
-5. Restart Claude Code
+### 5. Fix based on findings
 
-Steps 1-2 could be automated in a setup script. Steps 3-5 are standard dev workflow.
+**If new display type strings are needed:**
+- Monkey-patch Fastlane locally to use the correct strings
+- Update `prepare_screenshots_for_delivery` if filename-to-type mapping needs changes
+- Generate correct dimension screenshots (1320x2868 for 6.9" iPhone) if needed
+- Submit upstream Fastlane PR
 
-## TDD & Verification Protocol
+**If version/app corruption:**
+- Document the recovery steps
+- Test creating a clean version
 
-**STRICT RULE**: Every step must be verified working before moving to the next. If verification fails, fix and re-verify. Do not proceed with broken state.
+**If truly an Apple issue:**
+- File Feedback Assistant with full API request/response logs
 
-### Phase 0: Prerequisites Verification
+### 6. Update learnings documentation
 
-| Step | Action | Verify | If Fails |
-|------|--------|--------|----------|
-| 0.1 | `brew install xcode-build-server` | `which xcode-build-server` returns path | Fix Homebrew, retry |
-| 0.2 | `xcode-build-server config -project ListAll/ListAll.xcodeproj -scheme ListAll` | `buildServer.json` exists in project root | Check scheme name, retry with correct scheme |
-| 0.3 | Check Xcode index exists | `ls ~/Library/Developer/Xcode/DerivedData/ListAll-*/Index.noindex/` shows `DataStore/` | Build project in Xcode first, retry |
-| 0.4 | Test sourcekit-lsp launches | `xcrun sourcekit-lsp --help` prints usage | Check Xcode installation |
+Update `documentation/learnings/asc-ios-screenshot-api-bug-2026-02.md` with actual findings — either correcting the "Apple bug" conclusion or confirming it with better evidence.
 
-### Phase 1: CLI Prototype — TDD
+## Key Files
 
-**Step 1.1: JSON-RPC framing**
-- Write test: send a raw JSON-RPC `initialize` request to sourcekit-lsp, verify response contains `capabilities`
-- Implementation: minimal Content-Length framing over Process stdin/stdout
-- **Verify**: Run test, print response JSON. Must contain `"capabilities"`. Stop if it doesn't.
+- `fastlane/Fastfile` — release lane (lines 694-733), may need display type updates
+- `fastlane/screenshots_compat/en-US/` — current screenshots (1290x2796 iPhone, 2064x2752 iPad)
+- `documentation/learnings/asc-ios-screenshot-api-bug-2026-02.md` — update with findings
+- `documentation/learnings/asc-watch-screenshot-display-type.md` — original corruption report
 
-**Step 1.2: Document open + call hierarchy prepare**
-- Write test: open a known Swift file, send `textDocument/prepareCallHierarchy` for a known function
-- Pick a concrete function: find a ViewModel method in the codebase that is called from multiple places
-- **Verify**: Response contains at least 1 `CallHierarchyItem` with correct name and file path. If empty, debug:
-  - Is the document URI correct? (must be `file:///absolute/path`)
-  - Is the position (line/column) correct? (0-indexed in LSP)
-  - Is the index populated? Re-build in Xcode if needed
-  - Fix and retry until non-empty response
+## Verification
 
-**Step 1.3: Incoming callers**
-- Write test: take the `CallHierarchyItem` from 1.2, send `callHierarchy/incomingCalls`
-- **Verify**: Response contains caller functions with file paths and ranges. If empty:
-  - The function may have no callers (pick a different test function)
-  - The index may be stale
-  - Fix and retry
+1. API query reveals which display types ASC currently uses/accepts
+2. If fix found: test full screenshot upload via `bundle exec fastlane release version:X.X.X`
+3. Confirm screenshots appear in App Store Connect web UI
+4. All existing tests pass (`bundle exec rspec`)
 
-**Step 1.4: Outgoing callees**
-- Write test: send `callHierarchy/outgoingCalls` for the same function
-- **Verify**: Response contains called functions. If empty, pick a function that clearly calls other functions.
+## Risk Assessment
 
-**Step 1.5: End-to-end quality check**
-- Run all 4 tests against 3 different functions in the codebase:
-  1. A ViewModel method (should have callers from Views)
-  2. A Core Data method (should have callers from ViewModels)
-  3. A utility function (should have multiple callers)
-- **Go/No-Go Decision**: If 2+ of 3 return useful call graphs → proceed to Phase 2. Otherwise → stop and report findings.
-
-### Phase 2: MCP Integration — TDD
-
-**Step 2.1: LSPClient compiles**
-- Add `LSPClient.swift` to `Tools/listall-mcp/`
-- **Verify**: `swift build` in `Tools/listall-mcp/` succeeds with zero errors
-
-**Step 2.2: LSPClient connects**
-- Add a diagnostic tool `swift_lsp_status` that just tests the LSP connection
-- **Verify**: Rebuild MCP server, restart Claude Code, call `swift_lsp_status` → returns "connected" with sourcekit-lsp version
-
-**Step 2.3: CallGraphTool compiles and registers**
-- Add `CallGraphTool.swift`, register in `main.swift`
-- **Verify**: `swift build` succeeds, restart Claude Code, tool `swift_call_graph` appears in tool list
-
-**Step 2.4: CallGraphTool returns data**
-- Call `swift_call_graph` with the same test function from Phase 1
-- **Verify**: Returns formatted callers and callees matching Phase 1 prototype output
-- If empty/error: compare with prototype, debug LSP client, fix and retry
-
-**Step 2.5: Edge cases**
-- Test with invalid file path → verify graceful error message (not crash)
-- Test with position that's not a function → verify meaningful error
-- Kill sourcekit-lsp process mid-request → verify auto-restart and retry
-- Test without `buildServer.json` → verify clear error message
-
-**Step 2.6: Integration test**
-- Use `swift_call_graph` in a real Claude Code exploration task
-- Ask Claude to "find all callers of [function]" and verify it uses the tool
-- Compare token usage with grep-based exploration for the same task
-
-### Verification Checklist (must ALL pass before commit)
-
-- [ ] `swift build` succeeds in `Tools/listall-mcp/`
-- [ ] `swift_lsp_status` tool returns connected
-- [ ] `swift_call_graph` returns non-empty callers for a known function
-- [ ] `swift_call_graph` returns non-empty callees for a known function
-- [ ] Invalid input produces helpful error (not crash)
-- [ ] sourcekit-lsp crash triggers auto-restart
-- [ ] Missing `buildServer.json` produces clear setup instructions
-- [ ] CLAUDE.md updated with usage instructions
-- [ ] `.gitignore` updated for `buildServer.json`
-
-## Risks and Mitigations
-
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| sourcekit-lsp returns empty call hierarchy | Medium | Phase 1 prototype validates this before investing |
-| xcode-build-server not installed | Low | Clear error message with install instructions |
-| sourcekit-lsp crashes | Medium | Auto-restart + timeout (reuse XCUITestBridge pattern) |
-| Stale index | Medium | Background indexing (Swift 6.1+) + diagnostic message |
-| Adding LSP client bloats listall-mcp | Low | ~500 lines total, clean separation in Services/ |
-
-## Effort Estimate
-
-- Phase 1 (prototype): 1-2 days
-- Phase 2 (integration): 3-5 days
-- **Total: 1-2 weeks** (with go/no-go gate after Phase 1)
+- **Low risk**: Direct API queries are read-only, no side effects
+- **Feature branch**: Changes isolated from main
+- **Quick feedback**: Steps 2-3 take ~20 minutes total before committing to any code changes
