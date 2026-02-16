@@ -1,6 +1,7 @@
 ---
 title: App Store Connect API Screenshot Upload Research (February 2026)
 date: 2026-02-01
+resolved: 2026-02-16
 type: guide
 category: fastlane
 tags:

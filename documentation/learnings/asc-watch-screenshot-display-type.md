@@ -1,7 +1,8 @@
 ---
 title: App Store Connect Screenshot Display Type Rejection
 date: 2026-01-29
-severity: HIGH
+resolved: 2026-02-16
+severity: RESOLVED
 category: fastlane
 tags:
   - app-store-connect
@@ -15,8 +16,8 @@ symptoms:
   - Screenshot upload fails after deleting existing screenshots
   - All display types rejected (iPhone, iPad, Watch)
   - Error occurs for en-US locale immediately after deletion
-root_cause: ASC API enters corrupted state after display type switching, rejects ALL screenshot uploads
-solution: Skip ALL screenshots in automated uploads; upload manually via ASC web UI
+root_cause: ASC API entered corrupted state after display type switching (transient Apple bug, resolved 2026-02-16)
+solution: Bug resolved. Fastfile simplified to single deliver call. See asc-ios-screenshot-api-bug-2026-02.md for full resolution.
 files_affected:
   - fastlane/Fastfile
   - .github/workflows/publish-to-appstore.yml

@@ -653,12 +653,7 @@ platform :ios do
     version = options[:version]
     UI.user_error!("Version required. Usage: fastlane release version:1.2.0") unless version
 
-    # Skip watch screenshots if ASC API is rejecting the display type
-    # Watch screenshots can be uploaded manually via App Store Connect web UI
     skip_watch = options[:skip_watch] == true || options[:skip_watch] == "true"
-
-    # Skip ALL screenshots if ASC version is in a corrupted state
-    # All screenshots must be uploaded manually via App Store Connect web UI
     skip_screenshots = options[:skip_screenshots] == true || options[:skip_screenshots] == "true"
 
     api_key = app_store_connect_api_key(
@@ -684,19 +679,18 @@ platform :ios do
     delivery_path = skip_screenshots ? nil : prepare_screenshots_for_delivery(compat_path, skip_watch: skip_watch)
 
     if skip_screenshots
-      UI.important("⚠️ Skipping ALL screenshots (skip_screenshots: true)")
-      UI.message("📱 All screenshots must be uploaded manually via App Store Connect")
+      UI.important("Skipping ALL screenshots (skip_screenshots: true)")
     else
-      UI.message("📸 Using normalized screenshots from: #{delivery_path}")
+      UI.message("Using normalized screenshots from: #{delivery_path}")
     end
-    UI.message("📦 Creating/updating App Store version: #{version}")
+    UI.message("Creating/updating App Store version: #{version}")
 
-    # First upload metadata only to ensure version exists
-    UI.message("📋 Uploading metadata first...")
     deliver(
       api_key: api_key,
       app_version: version,
-      skip_screenshots: true,
+      screenshots_path: skip_screenshots ? nil : delivery_path,
+      skip_screenshots: skip_screenshots,
+      overwrite_screenshots: !skip_screenshots,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,
@@ -704,33 +698,7 @@ platform :ios do
       ignore_language_directory_validation: true
     )
 
-    # Then try screenshots if not skipping
-    unless skip_screenshots
-      UI.message("📸 Attempting screenshot upload...")
-      begin
-        # Use pilot/spaceship directly for more control over screenshot upload
-        # This separates version creation from screenshot upload
-        deliver(
-          api_key: api_key,
-          app_version: version,
-          screenshots_path: delivery_path,
-          skip_screenshots: false,
-          overwrite_screenshots: true,  # Try overwrite since version now exists
-          skip_metadata: true,  # Already uploaded
-          skip_binary_upload: true,
-          submit_for_review: false,
-          precheck_include_in_app_purchases: false,
-          force: true,
-          ignore_language_directory_validation: true
-        )
-        UI.success("✅ Screenshots uploaded successfully!")
-      rescue => e
-        UI.error("⚠️ Screenshot upload failed: #{e.message}")
-        UI.important("📱 Screenshots must be uploaded manually via App Store Connect")
-        UI.message("See: documentation/learnings/asc-watch-screenshot-display-type.md")
-        # Don't fail the lane - metadata was uploaded successfully
-      end
-    end
+    UI.success("Metadata#{skip_screenshots ? '' : ' and screenshots'} uploaded successfully!")
   end
 
   desc "Dry-run: Verify normalized screenshots would be detected by deliver (no upload)"
@@ -792,8 +760,6 @@ platform :ios do
     version = options[:version]
     UI.user_error!("Version required. Usage: fastlane release_macos version:1.2.0") unless version
 
-    # Skip ALL screenshots if ASC version is in a corrupted state
-    # All screenshots must be uploaded manually via App Store Connect web UI
     skip_screenshots = options[:skip_screenshots] == true || options[:skip_screenshots] == "true"
 
     api_key = app_store_connect_api_key(
@@ -804,8 +770,6 @@ platform :ios do
       in_house: false
     )
 
-    # Path to processed macOS screenshots (2880x1800 with gradient background)
-    # macOS screenshots are generated locally via generate-screenshots-local.sh macos
     screenshots_path = File.expand_path("screenshots/mac/processed", __dir__)
 
     # Verify processed screenshots exist (unless skipping all screenshots)
@@ -814,12 +778,11 @@ platform :ios do
     end
 
     if skip_screenshots
-      UI.important("⚠️ Skipping ALL macOS screenshots (skip_screenshots: true)")
-      UI.message("🖥️ macOS screenshots must be uploaded manually via App Store Connect")
+      UI.important("Skipping ALL macOS screenshots (skip_screenshots: true)")
     else
-      UI.message("📸 Using processed macOS screenshots from: #{screenshots_path}")
+      UI.message("Using processed macOS screenshots from: #{screenshots_path}")
     end
-    UI.message("📦 Creating/updating macOS App Store version: #{version}")
+    UI.message("Creating/updating macOS App Store version: #{version}")
 
     # Code signing for macOS App Store distribution
     # Required before deliver to validate app identity
@@ -839,8 +802,6 @@ platform :ios do
       readonly: true  # Read-only for release (certs already exist)
     )
 
-    # First upload metadata only to ensure version exists
-    UI.message("📋 Uploading macOS metadata first...")
     deliver(
       api_key: api_key,
       app_identifier: "io.github.chmc.ListAll",
@@ -850,7 +811,9 @@ platform :ios do
       primary_category: "PRODUCTIVITY",
       secondary_category: "UTILITIES",
       app_rating_config_path: File.expand_path("metadata/macos/rating_config.json", __dir__),
-      skip_screenshots: true,
+      screenshots_path: skip_screenshots ? nil : screenshots_path,
+      skip_screenshots: skip_screenshots,
+      overwrite_screenshots: !skip_screenshots,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,
@@ -858,35 +821,7 @@ platform :ios do
       ignore_language_directory_validation: true
     )
 
-    # Then try screenshots if not skipping
-    unless skip_screenshots
-      UI.message("📸 Attempting macOS screenshot upload...")
-      begin
-        deliver(
-          api_key: api_key,
-          app_identifier: "io.github.chmc.ListAll",
-          app_version: version,
-          platform: "osx",
-          screenshots_path: screenshots_path,
-          skip_screenshots: false,
-          overwrite_screenshots: true,
-          skip_metadata: true,
-          skip_binary_upload: true,
-          submit_for_review: false,
-          precheck_include_in_app_purchases: false,
-          force: true,
-          ignore_language_directory_validation: true
-        )
-        UI.success("✅ macOS screenshots uploaded successfully!")
-      rescue => e
-        UI.error("⚠️ macOS screenshot upload failed: #{e.message}")
-        UI.important("🖥️ macOS screenshots must be uploaded manually via App Store Connect")
-        # Don't fail the lane - metadata was uploaded successfully
-      end
-    end
-
-    UI.success("✅ macOS metadata and screenshots delivered to App Store Connect!")
-    UI.message("💡 Review at: https://appstoreconnect.apple.com")
+    UI.success("macOS metadata#{skip_screenshots ? '' : ' and screenshots'} delivered to App Store Connect!")
   end
 
   desc "Validate App Store Connect auth via API key (no uploads)"
