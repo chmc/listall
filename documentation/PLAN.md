@@ -185,7 +185,7 @@ Run `./generate-screenshots-local.sh ipad en-US` and verify output shows sidebar
 
 Update this document: add ✅ to the Phase 2 heading.
 
-## Phase 3: Context Menus (Commit 4)
+## Phase 3: Context Menus (Commit 4) ✅
 
 ### Step 3.1: Add context menus to ListRowView
 
@@ -209,15 +209,7 @@ Add `.contextMenu`:
 
 ### Step 3.3: Use popovers instead of sheets on iPad
 
-**File**: `MainView.swift`
-
-Convert to `.popover()` on regular width:
-- `CreateListView` — anchor to + button
-- `ShareFormatPickerView` — anchor to share button
-
-Keep as `.sheet()`:
-- `SyncConflictResolutionView` (complex, full-width content needed)
-- `ItemEditView` (rich form with images)
+**Status**: Skipped — both `CreateListView` and `ShareFormatPickerView` contain `NavigationView` + `Form`, which causes iPadOS to adapt `.popover()` to form sheet presentation (identical to `.sheet()`). No visual or behavioral benefit. Kept as `.sheet()` to avoid unnecessary code complexity.
 
 ### Step 3.4: Mark phase complete
 

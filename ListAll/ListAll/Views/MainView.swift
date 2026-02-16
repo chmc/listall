@@ -692,8 +692,11 @@ struct MainView: View {
             }
             .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
         } detail: {
-            detailContent
+            NavigationStack {
+                detailContent
+            }
         }
+        .navigationSplitViewStyle(.balanced)
         .overlay {
             archiveBannerOverlay
         }

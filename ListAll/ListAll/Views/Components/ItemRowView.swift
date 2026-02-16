@@ -139,6 +139,23 @@ struct ItemRowView: View {
         .contentShape(Rectangle())
         .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .if(!isInSelectionMode) { view in
+            view.contextMenu {
+                Button(action: { onToggle?() }) {
+                    Label(item.isCrossedOut ? "Mark Active" : "Cross Out",
+                          systemImage: item.isCrossedOut ? "arrow.uturn.backward" : "checkmark")
+                }
+                Button(action: { onEdit?() }) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                Button(action: { onDuplicate?() }) {
+                    Label("Duplicate", systemImage: "doc.on.doc")
+                }
+                Button(role: .destructive, action: { onDelete?() }) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        .if(!isInSelectionMode) { view in
             view
                 // Task 16.14: Left swipe for non-destructive actions (Edit, Duplicate)
                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
