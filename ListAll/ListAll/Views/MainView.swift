@@ -62,279 +62,310 @@ struct MainView: View {
         }
     }
 
+    // MARK: - Extracted Sub-Views
+
+    /// Main list content: loading state, empty states, and the list of lists
+    @ViewBuilder
+    private var mainListContent: some View {
+        if viewModel.isLoading {
+            ProgressView("Loading lists...")
+                .padding(.top, 16)
+        } else if viewModel.displayedLists.isEmpty {
+            if viewModel.showingArchivedLists {
+                // Simple empty state for archived lists
+                VStack(spacing: Theme.Spacing.lg) {
+                    Image(systemName: "archivebox")
+                        .font(.system(size: 60))
+                        .foregroundColor(Theme.Colors.secondary)
+
+                    Text("No Archived Lists")
+                        .font(Theme.Typography.title)
+
+                    Text("Archived lists will appear here")
+                        .font(Theme.Typography.body)
+                        .emptyStateStyle()
+                }
+                .padding(.top, 40)
+            } else {
+                // Engaging empty state for active lists with sample templates
+                ListsEmptyStateView(
+                    onCreateSampleList: { template in
+                        let createdList = viewModel.createSampleList(from: template)
+                        // Auto-navigate to the newly created list
+                        viewModel.selectedListForNavigation = createdList
+                    },
+                    onCreateCustomList: {
+                        showingCreateList = true
+                    }
+                )
+            }
+        } else {
+            SwiftUI.List {
+                // CRITICAL: Use viewModel.displayedLists computed property (same pattern as ListView.filteredItems)
+                // Computed property forces SwiftUI to re-evaluate from @Published backing storage
+                // This prevents drag animation desync after reordering
+                Section {
+                    ForEach(viewModel.displayedLists) { list in
+                        ListRowView(list: list, mainViewModel: viewModel)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    }
+                    .onDelete { indexSet in
+                        // Archive lists (same as swipe-to-delete)
+                        for index in indexSet {
+                            let list = viewModel.displayedLists[index]
+                            viewModel.archiveList(list)
+                        }
+                    }
+                    .onMove(perform: viewModel.moveList)
+                }
+            }
+            .environment(\.editMode, $editMode)
+            .listStyle(.plain)
+            .id(viewModel.listsReorderTrigger) // CRITICAL: Force rebuild on reorder
+            .padding(.top, 8)
+            .refreshable {
+                // Sync with CloudKit
+                await cloudKitService.sync()
+                // Sync with Apple Watch
+                viewModel.manualSync()
+            }
+        }
+    }
+
+    /// Programmatic navigation for auto-opening newly created list
+    /// Uses deprecated NavigationLink(isActive:) API — will be replaced
+    /// with NavigationSplitView selection binding in Phase 1
+    private var programmaticNavigationLink: some View {
+        NavigationLink(
+            destination: viewModel.selectedListForNavigation.map { list in
+                ListView(list: list, mainViewModel: viewModel)
+                    .onDisappear {
+                        // Only clear stored list ID when user explicitly navigates back
+                        // Don't clear on system-initiated view hierarchy changes
+                        if viewModel.selectedListForNavigation == nil {
+                            selectedListIdString = nil
+                        }
+                    }
+            },
+            isActive: Binding(
+                get: { viewModel.selectedListForNavigation != nil },
+                set: { newValue in
+                    if !newValue {
+                        // User navigated back - clear the view model state
+                        viewModel.selectedListForNavigation = nil
+                        // Don't clear selectedListIdString here - let onDisappear handle it
+                    } else if let list = viewModel.selectedListForNavigation {
+                        // Save list ID for state restoration
+                        selectedListIdString = list.id.uuidString
+                    }
+                }
+            )
+        ) {
+            EmptyView()
+        }
+        .hidden()
+    }
+
+    /// Leading toolbar: archive toggle, share, sync, edit/cancel buttons
+    @ViewBuilder
+    private var leadingToolbarContent: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            if !viewModel.isInSelectionMode {
+                // Archive toggle button
+                Button(action: {
+                    withAnimation {
+                        viewModel.toggleArchivedView()
+                    }
+                }) {
+                    Image(systemName: viewModel.showingArchivedLists ? "tray" : "archivebox")
+                }
+                .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+                .keyboardShortcut("a", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+A
+                .help(viewModel.showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
+
+                // Share all data button (only for active lists)
+                if !viewModel.showingArchivedLists && !viewModel.lists.isEmpty {
+                    Button(action: {
+                        showingShareFormatPicker = true
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+                    .help("Share all data")
+                }
+
+                // Sync button (only for active lists)
+                // Syncs with both CloudKit and Apple Watch
+                // Task 16.11: Enhanced with animation and status feedback
+                if !viewModel.showingArchivedLists {
+                    Button(action: {
+                        // Sync with CloudKit
+                        Task {
+                            await cloudKitService.sync()
+                        }
+                        // Sync with Apple Watch
+                        viewModel.manualSync()
+                    }) {
+                        syncButtonImage
+                    }
+                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+                    .foregroundColor(cloudKitService.syncError != nil ? .red : nil)  // Red if error
+                    .disabled(cloudKitService.isSyncing || viewModel.isSyncingFromWatch)
+                    .keyboardShortcut("r", modifiers: .command)  // Task 15.8: iPad Cmd+R
+                    .accessibilityLabel(syncAccessibilityLabel)
+                    .help("Sync with iCloud and Apple Watch")
+                }
+            }
+
+            if !viewModel.displayedLists.isEmpty {
+                if viewModel.isInSelectionMode {
+                    // Selection mode: Show Cancel button
+                    Button("Cancel") {
+                        withAnimation {
+                            viewModel.exitSelectionMode()
+                            editMode = .inactive
+                        }
+                    }
+                } else {
+                    // Normal mode: Show Edit button (only for active lists)
+                    if !viewModel.showingArchivedLists {
+                        Button(action: {
+                            print("🟢 Edit button pressed in MainView")
+                            print("   Current editMode: \(editMode)")
+                            print("   Current isInSelectionMode: \(viewModel.isInSelectionMode)")
+                            withAnimation {
+                                viewModel.enterSelectionMode()
+                                editMode = .active
+                            }
+                            print("   New editMode: \(editMode)")
+                            print("   New isInSelectionMode: \(viewModel.isInSelectionMode)")
+                        }) {
+                            Image(systemName: "pencil")
+                        }
+                        .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.sm)
+    }
+
+    /// Trailing toolbar: selection mode actions menu or add button
+    @ViewBuilder
+    private var trailingToolbarContent: some View {
+        if viewModel.isInSelectionMode {
+            // Selection mode: Show actions menu (always visible)
+            Menu {
+                Button(action: {
+                    viewModel.selectAll()
+                }) {
+                    Label("Select All", systemImage: "checkmark.circle")
+                }
+
+                Button(action: {
+                    viewModel.deselectAll()
+                }) {
+                    Label("Deselect All", systemImage: "circle")
+                }
+                .disabled(viewModel.selectedLists.isEmpty)
+
+                Divider()
+
+                Button(role: .destructive, action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    Label("Delete Lists", systemImage: "trash")
+                }
+                .disabled(viewModel.selectedLists.isEmpty)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundColor(.primary)
+            }
+            .padding(.horizontal, Theme.Spacing.sm)
+        } else if !viewModel.showingArchivedLists {
+            // Normal mode: Show Add button (only for active lists)
+            Button(action: {
+                showingCreateList = true
+            }) {
+                Image(systemName: Constants.UI.addIcon)
+                    .imageScale(.large)
+                    .aspectRatio(1.0, contentMode: .fit)
+                    .padding(.horizontal, -2)
+            }
+            .buttonStyle(.plain)
+            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
+            .accessibilityIdentifier("AddListButton")
+            .keyboardShortcut("n", modifiers: .command)  // Task 15.8: iPad Cmd+N
+            .padding(.horizontal, Theme.Spacing.sm)
+        }
+    }
+
+    /// Archive notification banner overlay
+    @ViewBuilder
+    private var archiveBannerOverlay: some View {
+        if viewModel.showArchivedNotification, let list = viewModel.recentlyArchivedList {
+            VStack {
+                Spacer()
+                ArchiveBanner(
+                    listName: list.name,
+                    onUndo: {
+                        viewModel.undoArchive()
+                    },
+                    onDismiss: {
+                        viewModel.hideArchiveNotification()
+                    }
+                )
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.bottom, 60) // Space for bottom toolbar
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(Theme.Animation.spring, value: viewModel.showArchivedNotification)
+            }
+        }
+    }
+
+    /// Custom bottom toolbar overlay (tab bar replacement)
+    private var bottomToolbarOverlay: some View {
+        VStack {
+            Spacer()
+            CustomBottomToolbar(
+                onListsTap: {
+                    // Already on lists view - no action needed
+                },
+                onSettingsTap: {
+                    showingSettings = true
+                }
+            )
+            .background(Color(.systemBackground))
+            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -2)
+        }
+        .edgesIgnoringSafeArea(.bottom)
+    }
+
     var body: some View {
         ZStack {
             // Main Content - Lists View with Navigation
             NavigationView {
                 ZStack {
                     VStack(spacing: 0) {
-                        // Main Content
-                        if viewModel.isLoading {
-                            ProgressView("Loading lists...")
-                                .padding(.top, 16)
-                        } else if viewModel.displayedLists.isEmpty {
-                            if viewModel.showingArchivedLists {
-                                // Simple empty state for archived lists
-                                VStack(spacing: Theme.Spacing.lg) {
-                                    Image(systemName: "archivebox")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(Theme.Colors.secondary)
-                                    
-                                    Text("No Archived Lists")
-                                        .font(Theme.Typography.title)
-                                    
-                                    Text("Archived lists will appear here")
-                                        .font(Theme.Typography.body)
-                                        .emptyStateStyle()
-                                }
-                                .padding(.top, 40)
-                            } else {
-                                // Engaging empty state for active lists with sample templates
-                                ListsEmptyStateView(
-                                    onCreateSampleList: { template in
-                                        let createdList = viewModel.createSampleList(from: template)
-                                        // Auto-navigate to the newly created list
-                                        viewModel.selectedListForNavigation = createdList
-                                    },
-                                    onCreateCustomList: {
-                                        showingCreateList = true
-                                    }
-                                )
-                            }
-                        } else {
-                        SwiftUI.List {
-                            // CRITICAL: Use viewModel.displayedLists computed property (same pattern as ListView.filteredItems)
-                            // Computed property forces SwiftUI to re-evaluate from @Published backing storage
-                            // This prevents drag animation desync after reordering
-                            Section {
-                                ForEach(viewModel.displayedLists) { list in
-                                    ListRowView(list: list, mainViewModel: viewModel)
-                                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                }
-                                .onDelete { indexSet in
-                                    // Archive lists (same as swipe-to-delete)
-                                    for index in indexSet {
-                                        let list = viewModel.displayedLists[index]
-                                        viewModel.archiveList(list)
-                                    }
-                                }
-                                .onMove(perform: viewModel.moveList)
-                            }
-                        }
-                        .environment(\.editMode, $editMode)
-                        .listStyle(.plain)
-                        .id(viewModel.listsReorderTrigger) // CRITICAL: Force rebuild on reorder
-                        .padding(.top, 8)
-                        .refreshable {
-                            // Sync with CloudKit
-                            await cloudKitService.sync()
-                            // Sync with Apple Watch
-                            viewModel.manualSync()
-                        }
-                    }
-                    
-                    // Programmatic navigation for auto-opening newly created list
-                    // Using deprecated NavigationLink API to maintain iOS 16 compatibility
-                    // NavigationStack requires iOS 16+, current deployment target is iOS 15
-                    // Warning suppressed until iOS 16 becomes minimum deployment target
-                    NavigationLink(
-                        destination: viewModel.selectedListForNavigation.map { list in
-                            ListView(list: list, mainViewModel: viewModel)
-                                .onDisappear {
-                                    // Only clear stored list ID when user explicitly navigates back
-                                    // Don't clear on system-initiated view hierarchy changes
-                                    if viewModel.selectedListForNavigation == nil {
-                                        selectedListIdString = nil
-                                    }
-                                }
-                        },
-                        isActive: Binding(
-                            get: { viewModel.selectedListForNavigation != nil },
-                            set: { newValue in
-                                if !newValue {
-                                    // User navigated back - clear the view model state
-                                    viewModel.selectedListForNavigation = nil
-                                    // Don't clear selectedListIdString here - let onDisappear handle it
-                                } else if let list = viewModel.selectedListForNavigation {
-                                    // Save list ID for state restoration
-                                    selectedListIdString = list.id.uuidString
-                                }
-                            }
-                        )
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
+                        mainListContent
+
+                    programmaticNavigationLink
                     }
                     .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
                     .navigationBarTitleDisplayMode(.large)
                     .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        HStack(spacing: Theme.Spacing.md) {
-                            if !viewModel.isInSelectionMode {
-                                // Archive toggle button
-                                Button(action: {
-                                    withAnimation {
-                                        viewModel.toggleArchivedView()
-                                    }
-                                }) {
-                                    Image(systemName: viewModel.showingArchivedLists ? "tray" : "archivebox")
-                                }
-                                .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
-                                .keyboardShortcut("a", modifiers: [.command, .shift])  // Task 15.8: iPad Cmd+Shift+A
-                                .help(viewModel.showingArchivedLists ? "Show Active Lists" : "Show Archived Lists")
-                                
-                                // Share all data button (only for active lists)
-                                if !viewModel.showingArchivedLists && !viewModel.lists.isEmpty {
-                                    Button(action: {
-                                        showingShareFormatPicker = true
-                                    }) {
-                                        Image(systemName: "square.and.arrow.up")
-                                    }
-                                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
-                                    .help("Share all data")
-                                }
-                                
-                                // Sync button (only for active lists)
-                                // Syncs with both CloudKit and Apple Watch
-                                // Task 16.11: Enhanced with animation and status feedback
-                                if !viewModel.showingArchivedLists {
-                                    Button(action: {
-                                        // Sync with CloudKit
-                                        Task {
-                                            await cloudKitService.sync()
-                                        }
-                                        // Sync with Apple Watch
-                                        viewModel.manualSync()
-                                    }) {
-                                        syncButtonImage
-                                    }
-                                    .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
-                                    .foregroundColor(cloudKitService.syncError != nil ? .red : nil)  // Red if error
-                                    .disabled(cloudKitService.isSyncing || viewModel.isSyncingFromWatch)
-                                    .keyboardShortcut("r", modifiers: .command)  // Task 15.8: iPad Cmd+R
-                                    .accessibilityLabel(syncAccessibilityLabel)
-                                    .help("Sync with iCloud and Apple Watch")
-                                }
-                            }
-                            
-                            if !viewModel.displayedLists.isEmpty {
-                                if viewModel.isInSelectionMode {
-                                    // Selection mode: Show Cancel button
-                                    Button("Cancel") {
-                                        withAnimation {
-                                            viewModel.exitSelectionMode()
-                                            editMode = .inactive
-                                        }
-                                    }
-                                } else {
-                                    // Normal mode: Show Edit button (only for active lists)
-                                    if !viewModel.showingArchivedLists {
-                                        Button(action: {
-                                            print("🟢 Edit button pressed in MainView")
-                                            print("   Current editMode: \(editMode)")
-                                            print("   Current isInSelectionMode: \(viewModel.isInSelectionMode)")
-                                            withAnimation {
-                                                viewModel.enterSelectionMode()
-                                                editMode = .active
-                                            }
-                                            print("   New editMode: \(editMode)")
-                                            print("   New isInSelectionMode: \(viewModel.isInSelectionMode)")
-                                        }) {
-                                            Image(systemName: "pencil")
-                                        }
-                                        .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, Theme.Spacing.sm)
+                        leadingToolbarContent
                     }
-                    
+
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        if viewModel.isInSelectionMode {
-                            // Selection mode: Show actions menu (always visible)
-                            Menu {
-                                Button(action: {
-                                    viewModel.selectAll()
-                                }) {
-                                    Label("Select All", systemImage: "checkmark.circle")
-                                }
-                                
-                                Button(action: {
-                                    viewModel.deselectAll()
-                                }) {
-                                    Label("Deselect All", systemImage: "circle")
-                                }
-                                .disabled(viewModel.selectedLists.isEmpty)
-                                
-                                Divider()
-                                
-                                Button(role: .destructive, action: {
-                                    showingDeleteConfirmation = true
-                                }) {
-                                    Label("Delete Lists", systemImage: "trash")
-                                }
-                                .disabled(viewModel.selectedLists.isEmpty)
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .foregroundColor(.primary)
-                            }
-                            .padding(.horizontal, Theme.Spacing.sm)
-                        } else if !viewModel.showingArchivedLists {
-                            // Normal mode: Show Add button (only for active lists)
-                            Button(action: {
-                                showingCreateList = true
-                            }) {
-                                Image(systemName: Constants.UI.addIcon)
-                                    .imageScale(.large)
-                                    .aspectRatio(1.0, contentMode: .fit)
-                                    .padding(.horizontal, -2)
-                            }
-                            .buttonStyle(.plain)
-                            .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
-                            .accessibilityIdentifier("AddListButton")
-                            .keyboardShortcut("n", modifiers: .command)  // Task 15.8: iPad Cmd+N
-                            .padding(.horizontal, Theme.Spacing.sm)
-                        }
+                        trailingToolbarContent
                     }
                     }
-                    
-                    // Archive Notification Banner
-                    if viewModel.showArchivedNotification, let list = viewModel.recentlyArchivedList {
-                        VStack {
-                            Spacer()
-                            ArchiveBanner(
-                                listName: list.name,
-                                onUndo: {
-                                    viewModel.undoArchive()
-                                },
-                                onDismiss: {
-                                    viewModel.hideArchiveNotification()
-                                }
-                            )
-                            .padding(.horizontal, Theme.Spacing.md)
-                            .padding(.bottom, 60) // Space for bottom toolbar
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                            .animation(Theme.Animation.spring, value: viewModel.showArchivedNotification)
-                        }
-                    }
-                    
-                    // Custom Bottom Toolbar - Only visible on this main screen
-                    VStack {
-                        Spacer()
-                        CustomBottomToolbar(
-                            onListsTap: {
-                                // Already on lists view - no action needed
-                            },
-                            onSettingsTap: {
-                                showingSettings = true
-                            }
-                        )
-                        .background(Color(.systemBackground))
-                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -2)
-                    }
-                    .edgesIgnoringSafeArea(.bottom)
+
+                    archiveBannerOverlay
+
+                    bottomToolbarOverlay
                 }
             }
             // iPad uses split view by default, but stack for screenshots

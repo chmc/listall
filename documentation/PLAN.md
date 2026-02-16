@@ -44,7 +44,7 @@ On iPhone: unchanged (stack navigation with tab bar).
 - **All phases**: Same branch (`feature/new-ipad-ux`), separate commits per phase. No separate PRs.
 - **Phase order**: Pre-work → Phase 1 (NavigationSplitView) → Phase 2 (Pipeline) → Phase 3 (Context Menus) → Phase 4 (Toolbar + Polish).
 
-## Pre-work: Extract Sub-Views (Commit 1 — No Behavioral Change)
+## Pre-work: Extract Sub-Views (Commit 1 — No Behavioral Change) ✅
 
 Before the navigation rewrite, extract MainView body into sub-views to reduce diff complexity:
 
