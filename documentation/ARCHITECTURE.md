@@ -570,7 +570,7 @@ class UITestDataService {
 // - DISABLE_TOOLTIPS - Disable tooltips during screenshots
 // - SKIP_TEST_DATA - Skip test data population (for empty state)
 // - FORCE_LIGHT_MODE - Force light appearance
-// - UITEST_FORCE_PORTRAIT - Force portrait orientation
+// - UITEST_FORCE_PORTRAIT - Force portrait on iPhone (iPad allows landscape for split view)
 ```
 
 ---

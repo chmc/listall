@@ -158,7 +158,7 @@ Keep `@SceneStorage("selectedListId")` for restoring list selection. The existin
 
 Update this document: add ✅ to the Phase 1 heading.
 
-## Phase 2: Screenshot Pipeline Updates (Commit 3)
+## Phase 2: Screenshot Pipeline Updates (Commit 3) ✅
 
 Pipeline updates before context menus/polish so visual verification is available for later phases.
 

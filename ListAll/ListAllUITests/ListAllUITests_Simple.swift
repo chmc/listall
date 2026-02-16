@@ -14,9 +14,19 @@ final class ListAllUITests_Screenshots: XCTestCase {
     /// iPad simulators need significantly more time, especially with locale switching
     private let elementTimeout: TimeInterval = 30
 
+    /// Whether running on iPad (used for orientation and navigation adjustments)
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+
+        // iPad screenshots should be in landscape to show NavigationSplitView two-column layout
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCUIDevice.shared.orientation = .landscapeLeft
+        }
 
         // Setup Fastlane snapshot
         setupSnapshot(app)
@@ -170,6 +180,25 @@ final class ListAllUITests_Screenshots: XCTestCase {
             }
         }
 
+        // On iPad: select first list to show sidebar + content two-column layout
+        // Without this, iPad screenshot shows sidebar + "Select a List" placeholder
+        if isIPad {
+            let firstCell = app.cells.firstMatch
+            if firstCell.exists {
+                print("📱 iPad: Tapping first list to show two-column layout")
+                firstCell.tap()
+
+                // Wait for detail column to load (look for items or AddItemButton)
+                let addButton = app.buttons["AddItemButton"]
+                if addButton.waitForExistence(timeout: elementTimeout) {
+                    print("✅ iPad: Detail column loaded with list items")
+                } else {
+                    print("⚠️ iPad: Detail column slow to load, adding settle time")
+                    sleep(3)
+                }
+            }
+        }
+
         // Screenshot: Main screen with hardcoded test lists
         print("📸 Capturing main screen screenshot")
         snapshot("02_MainScreen")
@@ -211,6 +240,9 @@ final class ListAllUITests_Screenshots: XCTestCase {
         // Wait for items view to load - use the AddItemButton identifier (locale-independent)
         let addButton = app.buttons["AddItemButton"]
         if addButton.waitForExistence(timeout: elementTimeout) {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                print("📱 iPad: Sidebar + detail layout - list selected in sidebar, items shown in detail column")
+            }
             print("✅ Navigated to grocery list items view (found AddItemButton)")
             sleep(1) // settle time
             return true
