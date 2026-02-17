@@ -3,7 +3,7 @@ description: Use swarm of subagents to implement a plan section
 argument-hint: [what-to-implement] [@plan-file]
 ---
 
-You are executing a plan section using a swarm of subagents. Follow these instructions precisely. Aplly visual verification skill.
+You are executing a plan section using a swarm of subagents. Follow these instructions precisely. Apply visual verification skill.
 
 ## 1. Parse Arguments
 
@@ -26,7 +26,11 @@ Read the referenced plan file. Extract the specific section that matches what th
 
 ## 3. Invoke the Subagent-Driven Development Skill
 
-**MANDATORY:** Invoke the `superpowers:subagent-driven-development` skill and follow its complete process:
+**MANDATORY:** Invoke the `superpowers:subagent-driven-development` skill and follow its process for task dispatch and review loops.
+
+**CRITICAL OVERRIDE:** Follow steps 1–6 of THIS command only. When the `subagent-driven-development` skill's process reaches its final "finishing" step (invoking `finishing-a-development-branch`), **SKIP IT**. Do NOT invoke `superpowers:finishing-a-development-branch`. Instead, proceed to step 6 ("Completion Summary") below.
+
+The parts of the skill you MUST use:
 
 - Read plan once, extract ALL tasks with full text
 - Create TodoWrite with all tasks
@@ -69,3 +73,13 @@ Additional mandatory rules:
 3. Carefully analyze ALL screenshots for correctness (layout, alignment, content, navigation)
 4. Compare screenshots across platforms for consistency
 5. **Cleanup**: Quit macOS app (`listall_quit_macos`) and shutdown simulators (`listall_shutdown_simulator`)
+
+## 6. Completion Summary
+
+After visual verification passes, end the session by:
+
+1. **Summarize** what was implemented: files changed, features added, tests written
+2. **Present changes as unstaged** — do NOT commit, merge, or create PRs automatically
+3. **Ask the user** what they want to do next (e.g., review the diff, commit, run more tests, etc.)
+
+**HARD STOP:** Do NOT invoke `superpowers:finishing-a-development-branch`. Do NOT automatically merge, create PRs, or commit. The user decides what happens next.
