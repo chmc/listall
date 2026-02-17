@@ -108,6 +108,7 @@ struct ListsEmptyStateView: View {
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.bottom, 40)
             }
+            .frame(maxWidth: .infinity)
         }
         .onAppear {
             isAnimating = true
