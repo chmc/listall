@@ -131,6 +131,11 @@ Install via **Xcode → Settings → Components**.
 brew install imagemagick
 ```
 
+**macOS UI test automation** (eliminates password dialog during macOS screenshot generation):
+```bash
+sudo automationmodetool enable-automationmode-without-authentication
+```
+
 ### Generate Screenshots
 
 1. **Generate screenshots locally:**
