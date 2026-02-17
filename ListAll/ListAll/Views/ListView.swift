@@ -25,9 +25,14 @@ struct ListView: View {
     @State private var showingCopyConfirmation = false
     @State private var selectedDestinationList: List?
     @AppStorage(Constants.UserDefaultsKeys.addButtonPosition) private var addButtonPositionRaw: String = Constants.AddButtonPosition.right.rawValue
-    
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     private var addButtonPosition: Constants.AddButtonPosition {
         Constants.AddButtonPosition(rawValue: addButtonPositionRaw) ?? .right
+    }
+
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
     }
     
     /// Use fullScreenCover instead of sheet in screenshot mode to avoid dark dimming bands
@@ -191,7 +196,8 @@ struct ListView: View {
             }
             
             // Add Item Button (floating above tab bar) - only show when list has items
-            if !viewModel.items.isEmpty {
+            // On iPad (regular width), the Add Item button is in the toolbar instead
+            if !viewModel.items.isEmpty && !isRegularWidth {
                 VStack {
                     Spacer()
                     HStack(spacing: 0) {
@@ -312,6 +318,19 @@ struct ListView: View {
                         }
                     }
                     .padding(.horizontal, Theme.Spacing.sm)
+                }
+            }
+
+            // Add Item toolbar button for iPad (regular width)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if isRegularWidth && !viewModel.items.isEmpty && !viewModel.isInSelectionMode {
+                    Button(action: {
+                        showingCreateItem = true
+                    }) {
+                        Label("Add Item", systemImage: "plus")
+                    }
+                    .accessibilityIdentifier("AddItemToolbarButton")
+                    .keyboardShortcut("n", modifiers: [.command, .shift])
                 }
             }
         }

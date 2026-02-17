@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingExportSheet = false
     @State private var showingImportSheet = false
     @State private var showingResetTooltipsAlert = false
@@ -37,10 +38,58 @@ struct SettingsView: View {
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "-"
     }
+    /// Whether this view is embedded in a NavigationSplitView detail column (iPad)
+    /// When true, skip the NavigationView wrapper since navigation context is already provided
+    private var isEmbeddedInSplitView: Bool {
+        horizontalSizeClass == .regular
+    }
+
     var body: some View {
-        NavigationView {
-            SwiftUI.List {
-                Section(header: Text("Language"), footer: Text("Change the app language. You may need to restart the app for all changes to take effect.")) {
+        settingsContent
+            .sheet(isPresented: $showingExportSheet) {
+                ExportView()
+            }
+            .sheet(isPresented: $showingImportSheet) {
+                ImportView()
+            }
+            .sheet(isPresented: $showingAllTips) {
+                AllFeatureTipsView()
+            }
+            .alert("Reset All Tips", isPresented: $showingResetTooltipsAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reset", role: .destructive) {
+                    tooltipManager.resetAllTooltips()
+                }
+            } message: {
+                Text("This will show all feature tips again as if you're using the app for the first time. Tips will appear when you use different features.")
+            }
+            .alert("Language Changed", isPresented: $showingLanguageRestartAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("The language has been changed. Some changes will take effect immediately, but you may need to restart the app for all text to update.")
+            }
+    }
+
+    @ViewBuilder
+    private var settingsContent: some View {
+        if isEmbeddedInSplitView {
+            // iPad: No NavigationView wrapper — detail column provides navigation context
+            settingsList
+                .navigationTitle("Settings")
+                .navigationBarTitleDisplayMode(.large)
+        } else {
+            // iPhone: Wrap in NavigationView for sheet presentation
+            NavigationView {
+                settingsList
+                    .navigationTitle("Settings")
+                    .navigationBarTitleDisplayMode(.large)
+            }
+        }
+    }
+
+    private var settingsList: some View {
+        SwiftUI.List {
+            Section(header: Text("Language"), footer: Text("Change the app language. You may need to restart the app for all changes to take effect.")) {
                     Picker("App Language", selection: Binding(
                         get: { localizationManager.currentLanguage },
                         set: { newLanguage in
@@ -239,34 +288,9 @@ struct SettingsView: View {
                         }
                     }
                 }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
-        }
-        .sheet(isPresented: $showingExportSheet) {
-            ExportView()
-        }
-        .sheet(isPresented: $showingImportSheet) {
-            ImportView()
-        }
-        .sheet(isPresented: $showingAllTips) {
-            AllFeatureTipsView()
-        }
-        .alert("Reset All Tips", isPresented: $showingResetTooltipsAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reset", role: .destructive) {
-                tooltipManager.resetAllTooltips()
-            }
-        } message: {
-            Text("This will show all feature tips again as if you're using the app for the first time. Tips will appear when you use different features.")
-        }
-        .alert("Language Changed", isPresented: $showingLanguageRestartAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("The language has been changed. Some changes will take effect immediately, but you may need to restart the app for all text to update.")
         }
     }
-    
+
     private var helpFooterText: Text {
         return Text(String(localized: "Feature tips help you discover app functionality. Reset to see all tips again."))
     }

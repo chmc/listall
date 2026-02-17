@@ -24,6 +24,7 @@ struct MainView: View {
 
     @State private var showingCreateList = false
     @State private var showingSettings = false
+    @State private var showingSettingsInDetail = false  // iPad: show Settings in detail column
     @State private var editMode: EditMode = .inactive
     @State private var showingDeleteConfirmation = false
 
@@ -238,9 +239,18 @@ struct MainView: View {
 
                 // Settings row in sidebar (replaces bottom toolbar on iPad)
                 Section {
-                    Button(action: { showingSettings = true }) {
+                    Button(action: {
+                        viewModel.selectedListForNavigation = nil
+                        showingSettingsInDetail = true
+                    }) {
                         Label("Settings", systemImage: "gear")
                     }
+                    .accessibilityIdentifier("SidebarSettingsButton")
+                    .listRowBackground(
+                        showingSettingsInDetail
+                            ? Color.accentColor.opacity(0.15)
+                            : Color.clear
+                    )
                 }
             }
             .environment(\.editMode, $editMode)
@@ -256,7 +266,9 @@ struct MainView: View {
     /// Detail column for iPad NavigationSplitView
     @ViewBuilder
     private var detailContent: some View {
-        if let list = viewModel.selectedListForNavigation {
+        if showingSettingsInDetail {
+            SettingsView()
+        } else if let list = viewModel.selectedListForNavigation {
             if list.isArchived {
                 ArchivedListView(list: list, mainViewModel: viewModel)
             } else {
@@ -512,7 +524,14 @@ struct MainView: View {
             // Deterministic auto-opening of Settings for UI screenshot tests
             if ProcessInfo.processInfo.environment["UITEST_OPEN_SETTINGS_ON_LAUNCH"] == "1" {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    showingSettings = true
+                    if isRegularWidth {
+                        // iPad: Show settings in detail column
+                        showingSettingsInDetail = true
+                        viewModel.selectedListForNavigation = nil
+                    } else {
+                        // iPhone: Show settings as sheet
+                        showingSettings = true
+                    }
                 }
             }
             #endif
@@ -564,6 +583,11 @@ struct MainView: View {
         .onChange(of: viewModel.selectedListForNavigation) { newList in
             // State restoration: Save selected list ID when sidebar selection changes
             selectedListIdString = newList?.id.uuidString
+
+            // iPad: Clear settings detail when a list is selected
+            if newList != nil && showingSettingsInDetail {
+                showingSettingsInDetail = false
+            }
         }
         .onReceive(syncPollingTimer) { _ in
             // Only poll when app is active (controlled by scenePhase)

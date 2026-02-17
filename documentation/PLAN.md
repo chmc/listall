@@ -215,7 +215,7 @@ Add `.contextMenu`:
 
 Update this document: add ✅ to the Phase 3 heading.
 
-## Phase 4: Toolbar + Polish (Commit 5)
+## Phase 4: Toolbar + Polish (Commit 5) ✅
 
 ### Step 4.1: Move "Add Item" to toolbar on iPad
 
