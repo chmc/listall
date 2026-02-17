@@ -218,6 +218,56 @@ enum InteractionTools {
         )
     }
 
+    /// Tool definition for listall_long_press
+    static var longPressTool: Tool {
+        Tool(
+            name: "listall_long_press",
+            description: """
+                Long-press a UI element to trigger a context menu.
+
+                For simulators (iOS/watchOS): Performs element.press(forDuration:) via XCUITest bridge.
+                For macOS: Shows context menu via Accessibility API (kAXShowMenuAction), falls back to right-click.
+
+                Use listall_query first to discover available elements.
+                Specify either identifier (preferred) or label to find the element.
+                """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "app_name": .object([
+                        "type": .string("string"),
+                        "description": .string("For macOS: The name of the application (e.g., 'ListAllMac')")
+                    ]),
+                    "bundle_id": .object([
+                        "type": .string("string"),
+                        "description": .string("The bundle identifier (e.g., 'io.github.chmc.ListAllMac' for macOS or 'io.github.chmc.ListAll' for iOS)")
+                    ]),
+                    "simulator_udid": .object([
+                        "type": .string("string"),
+                        "description": .string("For simulators: The UDID of the simulator (use 'booted' for any booted simulator)")
+                    ]),
+                    "identifier": .object([
+                        "type": .string("string"),
+                        "description": .string("The accessibility identifier of the element to long-press")
+                    ]),
+                    "label": .object([
+                        "type": .string("string"),
+                        "description": .string("Alternative: The accessibility label/title of the element to long-press")
+                    ]),
+                    "role": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional (macOS only): Filter by element role (e.g., 'AXButton', 'AXMenuItem')")
+                    ]),
+                    "duration": .object([
+                        "type": .string("number"),
+                        "description": .string("Optional: Long-press duration in seconds (default: 1.0, max: 10.0). Ignored on macOS where context menu is shown immediately.")
+                    ])
+                ]),
+                "required": .array([])
+            ])
+        )
+    }
+
     /// Tool definition for listall_batch
     static var batchTool: Tool {
         Tool(
@@ -252,8 +302,8 @@ enum InteractionTools {
                             "properties": .object([
                                 "action": .object([
                                     "type": .string("string"),
-                                    "enum": .array([.string("click"), .string("type"), .string("swipe")]),
-                                    "description": .string("Action type: click, type, or swipe")
+                                    "enum": .array([.string("click"), .string("type"), .string("swipe"), .string("longPress")]),
+                                    "description": .string("Action type: click, type, swipe, or longPress")
                                 ]),
                                 "identifier": .object([
                                     "type": .string("string"),
@@ -274,6 +324,10 @@ enum InteractionTools {
                                 "clear_first": .object([
                                     "type": .string("boolean"),
                                     "description": .string("Clear text before typing (for type action)")
+                                ]),
+                                "duration": .object([
+                                    "type": .string("number"),
+                                    "description": .string("Long-press duration in seconds (for longPress action, default: 1.0, max: 10.0)")
                                 ])
                             ]),
                             "required": .array([.string("action")])
@@ -294,6 +348,7 @@ enum InteractionTools {
             typeTool,
             swipeTool,
             queryTool,
+            longPressTool,
             batchTool
         ]
     }
@@ -349,6 +404,8 @@ enum InteractionTools {
             return try await handleMacOSSwipe(arguments: arguments)
         case "listall_query":
             return try await handleMacOSQuery(arguments: arguments)
+        case "listall_long_press":
+            return try await handleMacOSLongPress(arguments: arguments)
         default:
             throw MCPError.invalidParams("Unknown interaction tool: \(name)")
         }
@@ -378,6 +435,8 @@ enum InteractionTools {
             return try await handleSimulatorSwipe(udid: udid, bundleId: bundleId, arguments: arguments)
         case "listall_query":
             return try await handleSimulatorQuery(udid: udid, bundleId: bundleId, arguments: arguments)
+        case "listall_long_press":
+            return try await handleSimulatorLongPress(udid: udid, bundleId: bundleId, arguments: arguments)
         default:
             throw MCPError.invalidParams("Unknown interaction tool: \(name)")
         }
@@ -545,6 +604,61 @@ enum InteractionTools {
         }
     }
 
+    /// Handle simulator long-press via XCUITest
+    private static func handleSimulatorLongPress(udid: String, bundleId: String, arguments: [String: Value]?) async throws -> CallTool.Result {
+        let identifier = arguments?["identifier"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let label = arguments?["label"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        guard identifier != nil || label != nil else {
+            throw MCPError.invalidParams("Either identifier or label must be provided")
+        }
+
+        let duration = arguments?["duration"].flatMap { value -> Double? in
+            if case .double(let n) = value { return n }
+            if case .int(let n) = value { return Double(n) }
+            return nil
+        } ?? 1.0
+
+        let clampedDuration = min(max(duration, 0.1), 10.0)
+
+        let result = try await XCUITestBridge.longPress(
+            simulatorUDID: udid,
+            bundleId: bundleId,
+            identifier: identifier,
+            label: label,
+            duration: clampedDuration,
+            projectPath: defaultProjectPath
+        )
+
+        if result.success {
+            var message = result.message
+
+            if let elementType = result.elementType {
+                message += "\n  Element type: \(elementType)"
+            }
+            if let frame = result.elementFrame {
+                message += "\n  Position: \(frame)"
+            }
+            if let usedFallback = result.usedCoordinateFallback, usedFallback {
+                message += "\n  Note: Used coordinate-based long press (element was not directly hittable)"
+            }
+            if let hint = result.hint {
+                message += "\n  Hint: \(hint)"
+            }
+
+            return CallTool.Result(content: [.text(message)])
+        } else {
+            throw MCPError.internalError(result.error ?? result.message)
+        }
+    }
+
     /// Handle simulator batch execution via XCUITest
     private static func handleSimulatorBatch(udid: String, bundleId: String, arguments: [String: Value]?) async throws -> CallTool.Result {
         // Parse actions array from arguments
@@ -575,8 +689,8 @@ enum InteractionTools {
             }
 
             // Validate action type
-            guard ["click", "type", "swipe"].contains(actionType) else {
-                throw MCPError.invalidParams("Action at index \(index) has invalid action type '\(actionType)'. Must be click, type, or swipe.")
+            guard ["click", "type", "swipe", "longPress"].contains(actionType) else {
+                throw MCPError.invalidParams("Action at index \(index) has invalid action type '\(actionType)'. Must be click, type, swipe, or longPress.")
             }
 
             // Extract optional fields
@@ -605,6 +719,12 @@ enum InteractionTools {
                 return nil
             }
 
+            let duration = actionDict["duration"].flatMap { value -> Double? in
+                if case .double(let n) = value { return n }
+                if case .int(let n) = value { return Double(n) }
+                return nil
+            }
+
             // Validate action-specific required fields
             switch actionType {
             case "click":
@@ -622,6 +742,13 @@ enum InteractionTools {
                 guard ["up", "down", "left", "right"].contains(direction!) else {
                     throw MCPError.invalidParams("Swipe action at index \(index) has invalid direction '\(direction!)'. Must be up, down, left, or right.")
                 }
+            case "longPress":
+                guard identifier != nil || label != nil else {
+                    throw MCPError.invalidParams("LongPress action at index \(index) requires either 'identifier' or 'label'")
+                }
+                if let d = duration, d > 10.0 {
+                    throw MCPError.invalidParams("LongPress action at index \(index) duration cannot exceed 10.0 seconds")
+                }
             default:
                 break
             }
@@ -635,7 +762,8 @@ enum InteractionTools {
                 timeout: 10,
                 clearFirst: clearFirst,
                 queryRole: nil,
-                queryDepth: nil
+                queryDepth: nil,
+                duration: duration
             )
             actions.append(action)
         }
@@ -995,6 +1123,90 @@ enum InteractionTools {
 
         return CallTool.Result(content: [
             .text("Successfully scrolled \(directionStr) by \(Int(amount)) pixels on '\(targetDesc)'.")
+        ])
+    }
+
+    // MARK: - macOS Long Press Handler
+
+    /// Handle listall_long_press tool call for macOS
+    /// On macOS, this shows the context menu (right-click equivalent)
+    static func handleMacOSLongPress(arguments: [String: Value]?) async throws -> CallTool.Result {
+        log("listall_long_press called (macOS)")
+
+        let appName = arguments?["app_name"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let bundleId = arguments?["bundle_id"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let identifier = arguments?["identifier"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let label = arguments?["label"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let role = arguments?["role"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        // Validate inputs
+        guard appName != nil || bundleId != nil else {
+            throw MCPError.invalidParams("Either app_name or bundle_id must be provided")
+        }
+
+        guard identifier != nil || label != nil else {
+            throw MCPError.invalidParams("Either identifier or label must be provided to find the element")
+        }
+
+        // Get application element
+        guard let appElement = AccessibilityService.getApplicationElement(bundleId: bundleId, appName: appName) else {
+            let appIdentifier = bundleId ?? appName ?? "unknown"
+            throw MCPError.internalError("Application '\(appIdentifier)' not found or not running")
+        }
+
+        log("Found application, searching for element...")
+
+        // Find the target element
+        guard let element = AccessibilityService.findElement(
+            in: appElement,
+            identifier: identifier,
+            label: label,
+            role: role
+        ) else {
+            let searchDesc = identifier ?? label ?? "unknown"
+            throw MCPError.internalError("Element '\(searchDesc)' not found in application")
+        }
+
+        log("Found element, showing context menu...")
+
+        // Activate app before showing context menu
+        do {
+            try await AccessibilityService.ensureAppActivated(bundleId: bundleId, appName: appName)
+        } catch {
+            throw MCPError.internalError("Failed to activate app: \(error.localizedDescription)")
+        }
+
+        // Show context menu
+        do {
+            try AccessibilityService.showContextMenu(element)
+        } catch {
+            throw MCPError.internalError("Failed to show context menu: \(error.localizedDescription)")
+        }
+
+        let targetDesc = identifier ?? label ?? "element"
+        log("Context menu shown on '\(targetDesc)'")
+
+        return CallTool.Result(content: [
+            .text("Successfully showed context menu on '\(targetDesc)'. Use listall_screenshot to verify the menu appeared.")
         ])
     }
 

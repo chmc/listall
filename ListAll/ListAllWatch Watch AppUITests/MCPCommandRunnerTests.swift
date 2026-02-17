@@ -564,7 +564,8 @@ final class MCPCommandModelTests: XCTestCase {
             timeout: 10.0,
             clearFirst: false,
             queryRole: nil,
-            queryDepth: nil
+            queryDepth: nil,
+            duration: nil
         )
 
         // Act
@@ -574,10 +575,10 @@ final class MCPCommandModelTests: XCTestCase {
 
         // Assert
         XCTAssertNotNil(json)
-        XCTAssertEqual(json?["action"] as? String, "click")
-        XCTAssertEqual(json?["identifier"] as? String, "testButton")
-        XCTAssertEqual(json?["label"] as? String, "Test Button")
-        XCTAssertEqual(json?["timeout"] as? Double, 10.0)
+        XCTAssertEqual(json?["action"] as? String, "click" as String)
+        XCTAssertEqual(json?["identifier"] as? String, "testButton" as String)
+        XCTAssertEqual(json?["label"] as? String, "Test Button" as String)
+        XCTAssertEqual(json?["timeout"] as? Double, 10.0 as Double)
     }
 
     /// Test: MCPAction decodes from JSON correctly

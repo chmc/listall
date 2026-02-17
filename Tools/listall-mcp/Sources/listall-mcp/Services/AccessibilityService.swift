@@ -375,6 +375,65 @@ enum AccessibilityService {
         mouseUp?.post(tap: .cghidEventTap)
     }
 
+    /// Show context menu on a UI element (right-click equivalent)
+    /// Uses CGEvent right-click as the primary approach because SwiftUI context menus
+    /// respond to right-click but AXShowMenu often returns .success without effect.
+    /// Falls back to AXShowMenu for non-SwiftUI elements where right-click may not work.
+    /// - Parameter element: Element to show context menu on
+    /// - Throws: AccessibilityError if action fails
+    static func showContextMenu(_ element: AXUIElement) throws {
+        // Right-click is the reliable path for SwiftUI context menus
+        try rightClickUsingMouseEvent(element)
+    }
+
+    /// Right-click an element by simulating mouse events at its center
+    /// - Parameter element: Element to right-click
+    /// - Throws: AccessibilityError if click fails
+    private static func rightClickUsingMouseEvent(_ element: AXUIElement) throws {
+        // Get element position
+        var positionRef: CFTypeRef?
+        let posResult = AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef)
+        guard posResult == .success else {
+            throw AccessibilityError.attributeNotFound("position")
+        }
+
+        var position = CGPoint.zero
+        if let posValue = positionRef {
+            AXValueGetValue(posValue as! AXValue, .cgPoint, &position)
+        }
+
+        // Get element size
+        var sizeRef: CFTypeRef?
+        let sizeResult = AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef)
+        guard sizeResult == .success else {
+            throw AccessibilityError.attributeNotFound("size")
+        }
+
+        var size = CGSize.zero
+        if let sizeValue = sizeRef {
+            AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
+        }
+
+        // Calculate center of element
+        let centerX = position.x + size.width / 2
+        let centerY = position.y + size.height / 2
+        let clickPoint = CGPoint(x: centerX, y: centerY)
+
+        // Simulate right-click (move, right-down, right-up)
+        let moveEvent = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: clickPoint, mouseButton: .left)
+        moveEvent?.post(tap: .cghidEventTap)
+
+        Thread.sleep(forTimeInterval: 0.05)
+
+        let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: clickPoint, mouseButton: .right)
+        mouseDown?.post(tap: .cghidEventTap)
+
+        Thread.sleep(forTimeInterval: 0.05)
+
+        let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .rightMouseUp, mouseCursorPosition: clickPoint, mouseButton: .right)
+        mouseUp?.post(tap: .cghidEventTap)
+    }
+
     /// Set focus on an element
     /// - Parameter element: Element to focus
     /// - Throws: AccessibilityError if action fails

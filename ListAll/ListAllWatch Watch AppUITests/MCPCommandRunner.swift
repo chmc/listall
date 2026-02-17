@@ -14,6 +14,7 @@ struct MCPAction: Codable {
     let clearFirst: Bool?
     let queryRole: String?
     let queryDepth: Int?
+    let duration: TimeInterval?
 
     // Note: continueOnFailure is handled at batch level, not per-action
 }
@@ -36,6 +37,7 @@ struct MCPCommand: Codable {
     let clearFirst: Bool?
     let queryRole: String?
     let queryDepth: Int?
+    let duration: TimeInterval?
 
     // Batch mode: array of actions to execute sequentially
     let commands: [MCPAction]?
@@ -140,6 +142,7 @@ final class MCPCommandRunner: XCTestCase {
         case "click": return 0.5
         case "type": return 0.5
         case "swipe": return 1.0
+        case "longPress": return 0.5
         default: return 0.5
         }
     }
@@ -286,6 +289,8 @@ final class MCPCommandRunner: XCTestCase {
             return try executeSwipe(app: app, command: command)
         case "query":
             return try executeQuery(app: app, command: command)
+        case "longPress":
+            return try executeLongPress(app: app, command: command)
         default:
             throw MCPCommandError.unknownAction(action)
         }
@@ -377,6 +382,8 @@ final class MCPCommandRunner: XCTestCase {
             return try executeSwipeAction(app: app, action: action)
         case "query":
             return try executeQueryAction(app: app, action: action)
+        case "longPress":
+            return try executeLongPressAction(app: app, action: action)
         default:
             throw MCPCommandError.unknownAction(action.action)
         }
@@ -718,6 +725,96 @@ final class MCPCommandRunner: XCTestCase {
             }
             lastFrame = currentFrame
         }
+    }
+
+    // MARK: - Long Press Action
+
+    /// Execute a long-press action
+    private func executeLongPress(app: XCUIApplication, command: MCPCommand) throws -> MCPResult {
+        let element = try findElement(in: app, command: command)
+        let timeout = command.timeout ?? Self.defaultTimeout
+
+        guard element.waitForExistence(timeout: timeout) else {
+            throw MCPCommandError.elementNotFound(command.identifier ?? command.label ?? "unknown")
+        }
+
+        let elementType = String(describing: element.elementType)
+        let frame = element.frame
+        let frameStr = "x:\(Int(frame.origin.x)), y:\(Int(frame.origin.y)), w:\(Int(frame.width)), h:\(Int(frame.height))"
+
+        waitForElementStability(element, timeout: getStabilityTimeout(for: "longPress"))
+
+        let pressDuration = min(command.duration ?? 1.0, 10.0)
+
+        var usedCoordinateFallback = false
+        var hint: String? = nil
+
+        if element.isHittable {
+            element.press(forDuration: pressDuration)
+        } else {
+            usedCoordinateFallback = true
+            let coordinate = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            coordinate.press(forDuration: pressDuration)
+            hint = "Element was not hittable, used coordinate-based long press."
+        }
+
+        Thread.sleep(forTimeInterval: 0.15)
+
+        let targetDesc = command.identifier ?? command.label ?? "element"
+        return MCPResult(
+            success: true,
+            message: "Successfully long-pressed '\(targetDesc)' for \(pressDuration)s",
+            elements: nil,
+            error: nil,
+            elementType: elementType,
+            elementFrame: frameStr,
+            usedCoordinateFallback: usedCoordinateFallback,
+            hint: hint
+        )
+    }
+
+    /// Execute a long-press action from batch
+    private func executeLongPressAction(app: XCUIApplication, action: MCPAction) throws -> MCPResult {
+        let element = try findElementForAction(in: app, action: action)
+        let timeout = action.timeout ?? Self.defaultTimeout
+
+        guard element.waitForExistence(timeout: timeout) else {
+            throw MCPCommandError.elementNotFound(action.identifier ?? action.label ?? "unknown")
+        }
+
+        let elementType = String(describing: element.elementType)
+        let frame = element.frame
+        let frameStr = "x:\(Int(frame.origin.x)), y:\(Int(frame.origin.y)), w:\(Int(frame.width)), h:\(Int(frame.height))"
+
+        waitForElementStability(element, timeout: getStabilityTimeout(for: "longPress"))
+
+        let pressDuration = min(action.duration ?? 1.0, 10.0)
+
+        var usedCoordinateFallback = false
+        var hint: String? = nil
+
+        if element.isHittable {
+            element.press(forDuration: pressDuration)
+        } else {
+            usedCoordinateFallback = true
+            let coordinate = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            coordinate.press(forDuration: pressDuration)
+            hint = "Element was not hittable, used coordinate-based long press."
+        }
+
+        Thread.sleep(forTimeInterval: 0.15)
+
+        let targetDesc = action.identifier ?? action.label ?? "element"
+        return MCPResult(
+            success: true,
+            message: "Successfully long-pressed '\(targetDesc)' for \(pressDuration)s",
+            elements: nil,
+            error: nil,
+            elementType: elementType,
+            elementFrame: frameStr,
+            usedCoordinateFallback: usedCoordinateFallback,
+            hint: hint
+        )
     }
 
     // MARK: - Type Action
@@ -1063,7 +1160,7 @@ enum MCPCommandError: LocalizedError {
             return """
                 Unknown watchOS action: \(action)
 
-                Supported actions: click, type, swipe, query
+                Supported actions: click, type, swipe, query, longPress
                 Note: watchOS has limited UI patterns compared to iOS.
                 Use swipe for Digital Crown-like scrolling.
                 """

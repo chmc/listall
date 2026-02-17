@@ -126,6 +126,7 @@ enum XCUITestBridge {
         let clearFirst: Bool?
         let queryRole: String?
         let queryDepth: Int?
+        let duration: TimeInterval?
     }
 
     /// Command to send to XCUITest
@@ -146,6 +147,7 @@ enum XCUITestBridge {
         let clearFirst: Bool?
         let queryRole: String?
         let queryDepth: Int?
+        let duration: TimeInterval?
 
         // Batch mode: array of actions to execute sequentially
         let commands: [Action]?
@@ -161,7 +163,8 @@ enum XCUITestBridge {
             timeout: TimeInterval?,
             clearFirst: Bool?,
             queryRole: String?,
-            queryDepth: Int?
+            queryDepth: Int?,
+            duration: TimeInterval? = nil
         ) {
             self.bundleId = bundleId
             self.action = action
@@ -173,6 +176,7 @@ enum XCUITestBridge {
             self.clearFirst = clearFirst
             self.queryRole = queryRole
             self.queryDepth = queryDepth
+            self.duration = duration
             self.commands = nil
         }
 
@@ -190,6 +194,7 @@ enum XCUITestBridge {
             self.clearFirst = nil
             self.queryRole = nil
             self.queryDepth = nil
+            self.duration = nil
         }
     }
 
@@ -343,6 +348,39 @@ enum XCUITestBridge {
         return try await executeCommand(command, simulatorUDID: simulatorUDID, projectPath: projectPath)
     }
 
+    /// Execute a long-press action on a simulator
+    /// - Parameters:
+    ///   - simulatorUDID: UDID of the target simulator
+    ///   - bundleId: Bundle ID of the target app
+    ///   - identifier: Accessibility identifier of the element
+    ///   - label: Optional label to find element by
+    ///   - duration: Long-press duration in seconds (default 1.0, max 10.0)
+    ///   - projectPath: Path to the Xcode project
+    /// - Returns: Result from XCUITest
+    static func longPress(
+        simulatorUDID: String,
+        bundleId: String,
+        identifier: String?,
+        label: String?,
+        duration: TimeInterval,
+        projectPath: String
+    ) async throws -> Result {
+        let command = Command(
+            action: "longPress",
+            identifier: identifier,
+            label: label,
+            text: nil,
+            direction: nil,
+            bundleId: bundleId,
+            timeout: 10,
+            clearFirst: nil,
+            queryRole: nil,
+            queryDepth: nil,
+            duration: duration
+        )
+        return try await executeCommand(command, simulatorUDID: simulatorUDID, projectPath: projectPath)
+    }
+
     /// Execute multiple actions in a single XCUITest run
     ///
     /// This method reduces spawn overhead by batching multiple actions into one xcodebuild invocation.
@@ -442,11 +480,12 @@ enum XCUITestBridge {
     ///   - action: The action type (click, type, query, swipe)
     ///   - platform: The simulator platform
     /// - Returns: Timeout in seconds
-    private static func getActionTimeout(action: String, platform: SimulatorPlatform) -> TimeInterval {
+    private static func getActionTimeout(action: String, platform: SimulatorPlatform, duration: TimeInterval? = nil) -> TimeInterval {
         guard XCUITestBridgeConfig.useWatchOSOptimizations else {
             // Fall back to original behavior when optimizations disabled
             let baseTimeout = action == "query" ? queryTimeout : xcuiTestTimeout
-            return platform == .watchOS ? baseTimeout * 1.5 : baseTimeout
+            let total = platform == .watchOS ? baseTimeout * 1.5 : baseTimeout
+            return total + (duration ?? 0)
         }
 
         let base: TimeInterval
@@ -459,6 +498,8 @@ enum XCUITestBridge {
             base = 90
         case "swipe":
             base = 60
+        case "longPress":
+            base = 60 + (duration ?? 1.0)
         default:
             base = 90
         }
@@ -560,7 +601,7 @@ enum XCUITestBridge {
         log("XCUITestBridge: Command: \(command.action ?? "batch")")
 
         // Determine timeout based on action type and platform
-        let timeout = getActionTimeout(action: command.action ?? "unknown", platform: platform)
+        let timeout = getActionTimeout(action: command.action ?? "unknown", platform: platform, duration: command.duration)
 
         // Run xcodebuild with catch-and-retry pattern for SDK mismatch (exit code 70)
         log("XCUITestBridge: Running xcodebuild (timeout: \(Int(timeout))s)")
