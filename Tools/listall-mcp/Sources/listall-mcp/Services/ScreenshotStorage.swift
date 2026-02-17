@@ -1,6 +1,17 @@
 import Foundation
 import AppKit
+import CoreGraphics
+import ImageIO
 import MCPHelpers
+
+// MARK: - Simulator Orientation
+
+enum SimulatorOrientation: Int {
+    case portrait = 1
+    case portraitUpsideDown = 2
+    case landscapeRight = 3  // Home button left, rotate 90 CCW
+    case landscapeLeft = 4   // Home button right, rotate 90 CW
+}
 
 // MARK: - Screenshot Storage
 
@@ -180,5 +191,123 @@ enum ScreenshotStorage {
         log("Saved screenshot to: \(filePath.path)")
 
         return filePath.path
+    }
+
+    // MARK: - Simulator Orientation Fix
+
+    /// Detect simulator orientation and rotate screenshot if needed
+    static func fixSimulatorOrientation(_ imageData: Data, udid: String) async -> Data {
+        let orientation = await getSimulatorOrientation(udid: udid)
+        guard orientation != .portrait else {
+            return imageData
+        }
+        log("Simulator orientation: \(orientation) — rotating screenshot")
+        return rotateImage(imageData, orientation: orientation)
+    }
+
+    /// Query backboardd for the simulator's current graphics orientation
+    private static func getSimulatorOrientation(udid: String) async -> SimulatorOrientation {
+        do {
+            let result = try await ShellCommand.simctl([
+                "spawn", udid, "defaults", "read", "com.apple.backboardd"
+            ])
+            guard result.exitCode == 0 else {
+                log("Failed to read backboardd defaults: \(result.stderr)")
+                return .portrait
+            }
+            // Parse plist-style output for GraphicsOrientation = <number>;
+            let output = result.stdout
+            guard let range = output.range(of: "GraphicsOrientation = ") else {
+                log("GraphicsOrientation key not found in backboardd defaults")
+                return .portrait
+            }
+            let afterKey = output[range.upperBound...]
+            let numberStr = afterKey.prefix(while: { $0.isNumber })
+            guard let value = Int(numberStr),
+                  let orientation = SimulatorOrientation(rawValue: value) else {
+                log("Could not parse GraphicsOrientation value")
+                return .portrait
+            }
+            log("Detected GraphicsOrientation = \(value)")
+            return orientation
+        } catch {
+            log("Error querying simulator orientation: \(error)")
+            return .portrait
+        }
+    }
+
+    /// Rotate PNG image data based on simulator orientation
+    private static func rotateImage(_ imageData: Data, orientation: SimulatorOrientation) -> Data {
+        guard let nsImage = NSImage(data: imageData),
+              let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            log("Failed to create CGImage for rotation, returning original")
+            return imageData
+        }
+
+        let width = cgImage.width
+        let height = cgImage.height
+
+        // For landscape orientations, swap dimensions
+        let (outputWidth, outputHeight): (Int, Int)
+        let transform: CGAffineTransform
+
+        switch orientation {
+        case .portrait:
+            return imageData
+        case .portraitUpsideDown:
+            outputWidth = width
+            outputHeight = height
+            transform = CGAffineTransform(translationX: CGFloat(width), y: CGFloat(height))
+                .rotated(by: .pi)
+        case .landscapeRight:
+            // 90 degrees CCW
+            outputWidth = height
+            outputHeight = width
+            transform = CGAffineTransform(translationX: 0, y: CGFloat(width))
+                .rotated(by: -.pi / 2)
+        case .landscapeLeft:
+            // 90 degrees CW
+            outputWidth = height
+            outputHeight = width
+            transform = CGAffineTransform(translationX: CGFloat(height), y: 0)
+                .rotated(by: .pi / 2)
+        }
+
+        // Use standard RGBA format — source bitmapInfo may not be supported by CGContext
+        guard let context = CGContext(
+                  data: nil,
+                  width: outputWidth,
+                  height: outputHeight,
+                  bitsPerComponent: 8,
+                  bytesPerRow: 0,
+                  space: CGColorSpaceCreateDeviceRGB(),
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            log("Failed to create CGContext for rotation, returning original")
+            return imageData
+        }
+
+        context.concatenate(transform)
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        guard let rotatedImage = context.makeImage() else {
+            log("Failed to create rotated image, returning original")
+            return imageData
+        }
+
+        // Encode back to PNG
+        let mutableData = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(mutableData as CFMutableData, "public.png" as CFString, 1, nil) else {
+            log("Failed to create PNG destination, returning original")
+            return imageData
+        }
+        CGImageDestinationAddImage(destination, rotatedImage, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            log("Failed to finalize PNG, returning original")
+            return imageData
+        }
+
+        log("Rotated image from \(width)x\(height) to \(outputWidth)x\(outputHeight)")
+        return mutableData as Data
     }
 }

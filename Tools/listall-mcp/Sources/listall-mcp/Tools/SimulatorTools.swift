@@ -644,13 +644,7 @@ enum SimulatorTools {
             throw MCPError.internalError("Failed to read screenshot file")
         }
 
-        // Resize image if needed to stay under Claude API limits (2000px)
-        let imageData = ScreenshotStorage.resizeImageIfNeeded(rawImageData)
-
-        // Determine platform from UDID (get device info)
-        var platform = "iphone"  // Default to iPhone (not generic "ios")
-
-        // Resolve "booted" to actual UDID first
+        // Resolve "booted" to actual UDID first (needed for orientation detection)
         var resolvedUdid = udid
         if udid == "booted" {
             let bootedResult = try? await ShellCommand.simctl(["list", "devices", "booted", "-j"])
@@ -658,7 +652,6 @@ enum SimulatorTools {
                let jsonData = stdout.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                let devices = json["devices"] as? [String: [[String: Any]]] {
-                // Get first booted device UDID
                 for (_, deviceList) in devices {
                     if let firstDevice = deviceList.first,
                        let deviceUdid = firstDevice["udid"] as? String {
@@ -669,13 +662,13 @@ enum SimulatorTools {
             }
         }
 
-        // Now determine platform from resolved UDID
+        // Determine platform from resolved UDID
+        var platform = "iphone"  // Default to iPhone (not generic "ios")
         let listResult = try? await ShellCommand.simctl(["list", "devices", "-j"])
         if let stdout = listResult?.stdout,
            let jsonData = stdout.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
            let devices = json["devices"] as? [String: [[String: Any]]] {
-            // Find which runtime contains this UDID
             for (runtime, deviceList) in devices {
                 if let device = deviceList.first(where: { ($0["udid"] as? String) == resolvedUdid }) {
                     if runtime.contains("watchOS") {
@@ -683,17 +676,26 @@ enum SimulatorTools {
                     } else if runtime.contains("tvOS") {
                         platform = "tvos"
                     } else if runtime.contains("iOS") {
-                        // Differentiate iPhone vs iPad by device name
                         if let deviceName = device["name"] as? String,
                            deviceName.lowercased().contains("ipad") {
                             platform = "ipad"
                         }
-                        // else: stays "iphone" (default)
                     }
                     break
                 }
             }
         }
+
+        // Fix orientation for non-watch simulators (simctl captures raw framebuffer in portrait)
+        let orientedImageData: Data
+        if platform != "watch" {
+            orientedImageData = await ScreenshotStorage.fixSimulatorOrientation(rawImageData, udid: resolvedUdid)
+        } else {
+            orientedImageData = rawImageData
+        }
+
+        // Resize image if needed to stay under Claude API limits (2000px)
+        let imageData = ScreenshotStorage.resizeImageIfNeeded(orientedImageData)
 
         // Save screenshot to project folder (DO NOT delete - history is valuable)
         let savedPath = try ScreenshotStorage.saveScreenshot(
