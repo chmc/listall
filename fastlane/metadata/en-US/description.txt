@@ -24,6 +24,13 @@ APPLE WATCH COMPANION
 • Real-time sync between iPhone and Watch
 • Works independently - no phone required
 
+IPAD EXPERIENCE
+• Two-column split view - browse lists and items side by side
+• Sidebar always visible for quick list switching
+• Context menus - long-press or right-click for quick actions
+• Trackpad and mouse support with hover effects
+• Optimized toolbar layout for larger screens
+
 PRIVACY & SECURITY
 • Optional Face ID/Touch ID protection
 • Biometric authentication to keep lists private
@@ -63,7 +70,7 @@ WHAT USERS LOVE:
 • Privacy-focused
 • Regular updates and improvements
 
-Whether you're planning a trip, managing household chores, or keeping track of your shopping, ListAll is your perfect companion. Download now and experience the most flexible list management app on iOS!
+Whether you're planning a trip, managing household chores, or keeping track of your shopping, ListAll is your perfect companion. Download now and experience the most flexible list management app on iPhone and iPad!
 
 OPEN SOURCE
 ListAll is open source and free. You can view the code, contribute, or fork it for your own projects at https://github.com/chmc/listall

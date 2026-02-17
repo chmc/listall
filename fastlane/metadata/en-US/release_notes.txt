@@ -1,11 +1,18 @@
-
 Thank you for using ListAll!
 
-This update includes minor fixes and improvements for a smoother experience.
+NEW IN THIS UPDATE:
 
-HIGHLIGHTS:
+REDESIGNED IPAD EXPERIENCE
+• New two-column split view layout optimized for iPad
+• Sidebar for quick list switching without navigating back
+• Settings accessible directly from the sidebar
+• Toolbar-integrated actions for a cleaner layout
 
-• Minor bug fixes and performance enhancements
+CONTEXT MENUS
+• Long-press any list or item for quick actions
+• Right-click support with trackpad or mouse
+• Edit, share, duplicate, archive and more
 
-If you enjoy ListAll, please consider leaving a review. For questions or feedback, contact us at the support URL.
+• Additional bug fixes and performance improvements
 
+If you enjoy ListAll, please consider leaving a review!

@@ -24,6 +24,13 @@ APPLE WATCH -KUMPPANISOVELLUS
 • Reaaliaikainen synkronointi iPhonen ja Watchin välillä
 • Toimii itsenäisesti - puhelinta ei tarvita
 
+IPAD-KOKEMUS
+• Kahden sarakkeen jaettu näkymä - selaa listoja ja kohteita vierekkäin
+• Sivupalkki aina näkyvissä nopeaan listan vaihtoon
+• Pikavalikot - paina pitkään tai oikea-klikkaa pikatoimintoihin
+• Ohjauslevyn ja hiiren tuki visuaalisilla korostuksilla
+• Optimoitu työkalupalkin asettelu suuremmille näytöille
+
 YKSITYISYYS JA TURVALLISUUS
 • Valinnainen Face ID/Touch ID -suojaus
 • Biometrinen tunnistautuminen listojen yksityisyyden turvaamiseen
@@ -63,7 +70,7 @@ MITÄ KÄYTTÄJÄT RAKASTAVAT:
 • Yksityisyyteen keskittyvä
 • Säännölliset päivitykset ja parannukset
 
-Olitpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe joustavin listojen hallintasovellus iOS:lle!
+Olitpa suunnittelemassa matkaa, hallitset kotitöitä tai pidät kirjaa ostoksistasi, ListAll on täydellinen kumppanisi. Lataa nyt ja koe joustavin listojen hallintasovellus iPhonelle ja iPadille!
 
 AVOIN LÄHDEKOODI
 ListAll on avoimen lähdekoodin sovellus ja ilmainen. Voit tarkastella koodia, osallistua kehitykseen tai luoda oman versiosi osoitteessa https://github.com/chmc/listall

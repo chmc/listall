@@ -1,1 +1,1 @@
-lista,ostokset,tehtävät,järjestä,tarkistus,ruoka,kello,synk,älykäs,ehdotus,kuvat,kohteet,todo
+lista,ostokset,tehtävät,järjestä,tarkistus,ruoka,kello,synk,älykäs,ehdotus,kuvat,iPad,todo

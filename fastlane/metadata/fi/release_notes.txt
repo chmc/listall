@@ -1,12 +1,18 @@
 Kiitos kun käytät ListAllia!
 
-Tämä päivitys sisältää pieniä korjauksia ja parannuksia sujuvampaan käyttökokemukseen.
+UUTTA TÄSSÄ PÄIVITYKSESSÄ:
 
-KOHOKOHDAT:
+UUDISTETTU IPAD-KOKEMUS
+• Uusi kahden sarakkeen jaettu näkymä iPadille
+• Sivupalkki nopeaan listan vaihtoon ilman takaisin navigointia
+• Asetukset suoraan sivupalkista
+• Työkalupalkkiin integroidut toiminnot siistimmälle ulkoasulle
 
-• Pieniä virhekorjauksia ja suorituskyvyn parannuksia
+PIKAVALIKOT
+• Paina pitkään listaa tai kohdetta avataksesi pikatoiminnot
+• Hiiren oikean painikkeen tuki ohjauslevyllä tai hiirellä
+• Muokkaa, jaa, kopioi, arkistoi ja paljon muuta
 
-Jos pidät ListAllistä, harkitse arvostelun jättämistä. Kysymyksiä tai palautetta varten ota yhteyttä tukiosoitteen kautta.
+• Lisäksi bugikorjauksia ja suorituskykyparannuksia
 
-Nauti järjestyneemmästä elämästä ListAllin kanssa!
-
+Jos pidät ListAllistä, harkitse arvostelun jättämistä!
