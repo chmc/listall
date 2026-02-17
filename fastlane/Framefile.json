@@ -47,7 +47,41 @@
       }
     },
     {
+      "filter": "03_SortFilter",
+      "title": {
+        "en-US": "Sort & Filter Your Way",
+        "fi": "Lajittele ja Suodata Helposti"
+      },
+      "subtitle": {
+        "en-US": "Organize by name, date, or status",
+        "fi": "Järjestä nimen, päivän tai tilan mukaan"
+      }
+    },
+    {
+      "filter": "04_SortFilter",
+      "title": {
+        "en-US": "Sort & Filter Your Way",
+        "fi": "Lajittele ja Suodata Helposti"
+      },
+      "subtitle": {
+        "en-US": "Organize by name, date, or status",
+        "fi": "Järjestä nimen, päivän tai tilan mukaan"
+      }
+    },
+    {
       "filter": "04_AddItem",
+      "screen_fill_color": "#EFEFF3",
+      "title": {
+        "en-US": "Add Items in Seconds",
+        "fi": "Lisää Kohteita Sekunneissa"
+      },
+      "subtitle": {
+        "en-US": "Quick and easy entry",
+        "fi": "Nopea ja helppo lisäys"
+      }
+    },
+    {
+      "filter": "05_AddItem",
       "screen_fill_color": "#EFEFF3",
       "title": {
         "en-US": "Add Items in Seconds",

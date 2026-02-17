@@ -182,6 +182,7 @@ struct ItemOrganizationView: View {
                     Button(String(localized: "Done")) {
                         dismiss()
                     }
+                    .accessibilityIdentifier("OrganizationDoneButton")
                 }
             }
         }

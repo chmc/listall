@@ -294,6 +294,7 @@ struct ListView: View {
                                 Image(systemName: "arrow.up.arrow.down")
                                     .foregroundColor(.primary)
                             }
+                            .accessibilityIdentifier("SortFilterButton")
                             .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .help(String(localized: "Sort and filter options"))
 
@@ -348,7 +349,10 @@ struct ListView: View {
         .sheet(isPresented: $showingEditList) {
             EditListView(list: list, mainViewModel: mainViewModel)
         }
-        .sheet(isPresented: $viewModel.showingOrganizationOptions) {
+        .sheet(isPresented: isScreenshotMode ? .constant(false) : $viewModel.showingOrganizationOptions) {
+            ItemOrganizationView(viewModel: viewModel)
+        }
+        .fullScreenCover(isPresented: isScreenshotMode ? $viewModel.showingOrganizationOptions : .constant(false)) {
             ItemOrganizationView(viewModel: viewModel)
         }
         .sheet(isPresented: $showingShareFormatPicker) {

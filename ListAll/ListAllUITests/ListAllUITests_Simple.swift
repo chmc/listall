@@ -14,7 +14,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
     /// iPad simulators need significantly more time, especially with locale switching
     private let elementTimeout: TimeInterval = 30
 
-    /// Whether running on iPad (used for orientation and navigation adjustments)
+    /// Whether running on iPad (used for navigation adjustments)
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }
@@ -22,11 +22,6 @@ final class ListAllUITests_Screenshots: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-
-        // iPad screenshots should be in landscape to show NavigationSplitView two-column layout
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            XCUIDevice.shared.orientation = .landscapeLeft
-        }
 
         // Setup Fastlane snapshot
         setupSnapshot(app)
@@ -190,8 +185,11 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
                 // Wait for detail column to load (look for items or AddItemButton)
                 let addButton = app.buttons["AddItemButton"]
+                let addButtonToolbar = app.buttons["AddItemToolbarButton"]
                 if addButton.waitForExistence(timeout: elementTimeout) {
                     print("✅ iPad: Detail column loaded with list items")
+                } else if addButtonToolbar.waitForExistence(timeout: elementTimeout) {
+                    print("✅ iPad: Detail column loaded with list items (toolbar button)")
                 } else {
                     print("⚠️ iPad: Detail column slow to load, adding settle time")
                     sleep(3)
@@ -239,11 +237,16 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         // Wait for items view to load - use the AddItemButton identifier (locale-independent)
         let addButton = app.buttons["AddItemButton"]
+        let addButtonToolbar = app.buttons["AddItemToolbarButton"]
         if addButton.waitForExistence(timeout: elementTimeout) {
             if UIDevice.current.userInterfaceIdiom == .pad {
                 print("📱 iPad: Sidebar + detail layout - list selected in sidebar, items shown in detail column")
             }
             print("✅ Navigated to grocery list items view (found AddItemButton)")
+            sleep(1) // settle time
+            return true
+        } else if addButtonToolbar.waitForExistence(timeout: elementTimeout) {
+            print("✅ Navigated to grocery list items view (found AddItemToolbarButton - iPad)")
             sleep(1) // settle time
             return true
         }
@@ -254,19 +257,43 @@ final class ListAllUITests_Screenshots: XCTestCase {
         if milkEN.waitForExistence(timeout: 5) || milkFI.waitForExistence(timeout: 3) {
             print("✅ Navigated to grocery list items view (found item text)")
             sleep(1) // settle time
-            return true
+        } else {
+            // Last fallback: the navigation may have worked but items are slow to render
+            print("⚠️ Items view elements not detected, proceeding with extended wait")
+            sleep(5)
         }
 
-        // Last fallback: the navigation may have worked but items are slow to render
-        print("⚠️ Items view elements not detected, proceeding with extended wait")
-        sleep(5)
+        // Confirm toolbar is fully rendered before returning
+        let sortFilterButton = app.buttons["SortFilterButton"]
+        if !sortFilterButton.waitForExistence(timeout: 5) {
+            print("⚠️ SortFilterButton not yet visible, waiting for toolbar...")
+            sleep(2)
+            if !sortFilterButton.waitForExistence(timeout: 5) {
+                print("⚠️ Toolbar not ready even after extended wait")
+            }
+        } else {
+            print("✅ Toolbar ready (SortFilterButton visible)")
+        }
+
         return true
     }
 
-    /// Test: Capture grocery shopping list items
+    /// Test: Capture grocery items list (iPhone only — iPad shows this in 02 via split view)
     func testScreenshots03_GroceryItems() throws {
+        try XCTSkipIf(isIPad, "iPad two-column layout already shows items in screenshot 02")
+
+        guard launchAndNavigateToGroceryList() else {
+            XCTFail("Failed to navigate to grocery list")
+            return
+        }
+
+        snapshot("03_GroceryItems")
+    }
+
+    /// Test: Capture sort/filter organization sheet on grocery list
+    func testScreenshots04_SortFilter() throws {
         print("========================================")
-        print("📱 Starting Grocery Items Screenshot Test")
+        print("📱 Starting Sort/Filter Screenshot Test")
         print("========================================")
 
         guard launchAndNavigateToGroceryList() else {
@@ -274,14 +301,49 @@ final class ListAllUITests_Screenshots: XCTestCase {
             return
         }
 
-        print("📸 Capturing grocery items screenshot")
-        snapshot("03_GroceryItems")
-        print("✅ Grocery items screenshot captured")
+        // Tap the sort/filter button to open the Organization sheet
+        let sortFilterButton = app.buttons["SortFilterButton"]
+        guard sortFilterButton.waitForExistence(timeout: elementTimeout) else {
+            XCTFail("SortFilterButton not found")
+            return
+        }
+
+        let doneButton = app.buttons["OrganizationDoneButton"]
+        var sheetAppeared = false
+
+        // Retry up to 3 times — button action uses `= true` (not toggle), so re-tap is safe
+        for attempt in 1...3 {
+            print("👆 Tapping sort/filter button (attempt \(attempt))")
+            if sortFilterButton.isHittable {
+                sortFilterButton.tap()
+            } else {
+                print("⚠️ Button exists but not hittable, waiting...")
+                sleep(2)
+                sortFilterButton.tap()
+            }
+
+            if doneButton.waitForExistence(timeout: 10) {
+                print("✅ Organization sheet appeared")
+                sheetAppeared = true
+                break
+            }
+            print("⚠️ Sheet not detected after attempt \(attempt), retrying...")
+            sleep(1)
+        }
+
+        guard sheetAppeared else {
+            XCTFail("Organization sheet did not appear after 3 attempts")
+            return
+        }
+
+        print("📸 Capturing sort/filter screenshot")
+        snapshot(isIPad ? "03_SortFilter" : "04_SortFilter")
+        print("✅ Sort/filter screenshot captured")
         print("========================================")
     }
 
     /// Test: Capture add new item sheet on grocery list
-    func testScreenshots04_AddItem() throws {
+    func testScreenshots05_AddItem() throws {
         print("========================================")
         print("📱 Starting Add Item Screenshot Test")
         print("========================================")
@@ -293,6 +355,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
 
         // Tap the floating add item button - primary: identifier (locale-independent)
         let addButtonByID = app.buttons["AddItemButton"]
+        let addButtonToolbar = app.buttons["AddItemToolbarButton"]  // iPad toolbar
         let addButtonEN = app.buttons["Add new item"]
         let addButtonFI = app.buttons["Lisää uusi tuote"]
         var addButtonFound = false
@@ -300,6 +363,10 @@ final class ListAllUITests_Screenshots: XCTestCase {
         if addButtonByID.waitForExistence(timeout: elementTimeout) {
             print("👆 Tapping add item button (by identifier)")
             addButtonByID.tap()
+            addButtonFound = true
+        } else if addButtonToolbar.waitForExistence(timeout: elementTimeout) {
+            print("👆 Tapping add item button (iPad toolbar)")
+            addButtonToolbar.tap()
             addButtonFound = true
         } else if addButtonEN.waitForExistence(timeout: 5) {
             print("👆 Tapping add item button (EN label fallback)")
@@ -356,7 +423,7 @@ final class ListAllUITests_Screenshots: XCTestCase {
         sleep(1)
 
         print("📸 Capturing add item screenshot")
-        snapshot("04_AddItem")
+        snapshot(isIPad ? "04_AddItem" : "05_AddItem")
         print("✅ Add item screenshot captured")
         print("========================================")
     }

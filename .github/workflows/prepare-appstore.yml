@@ -317,7 +317,7 @@ jobs:
           echo "## 🎉 App Store Preparation Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Screenshots Generated & Uploaded" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ iPhone (EN + FI): 4 screenshots (1290x2796)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ iPhone (EN + FI): 5 screenshots (1290x2796)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ iPad 13\" (EN + FI): 4 screenshots (2064x2752)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Watch (EN + FI): 10 screenshots (396x484)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

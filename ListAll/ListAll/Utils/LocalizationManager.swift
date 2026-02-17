@@ -34,7 +34,7 @@ class LocalizationManager: ObservableObject {
         
         var flagEmoji: String {
             switch self {
-            case .english: return "🇺🇸"
+            case .english: return "🇬🇧"
             case .finnish: return "🇫🇮"
             }
         }

@@ -112,7 +112,7 @@ Examples:
 Platform Details:
     iphone  - iPhone 16 Pro Max (6.7" display, 1290x2796)
               Fastlane lane: screenshots_iphone + framing
-              Screenshots: 4 per locale (framed with device bezel)
+              Screenshots: 5 per locale (framed with device bezel)
               Estimated time: ~25 minutes
 
     ipad    - iPad Pro 13" M4 (13" display, 2064x2752)
@@ -131,7 +131,7 @@ Platform Details:
               Estimated time: ~5 minutes
 
     all     - All platforms (iPhone + iPad + Watch + macOS)
-              Screenshots: 17 per locale (34 total)
+              Screenshots: 18 per locale (36 total)
               iPhone/iPad: framed with device bezels
               Watch/macOS: unframed
               Estimated time: ~70-100 minutes
@@ -705,7 +705,7 @@ trap cleanup_restore_apps EXIT
 generate_iphone_screenshots() {
     log_info "Platform: iPhone 16 Pro Max (6.7\" display)"
     log_info "Expected output: 1290x2796 pixels"
-    log_info "Screenshots: 4 per locale"
+    log_info "Screenshots: 5 per locale"
     log_info "Estimated time: ~20 minutes"
     echo ""
 
@@ -801,7 +801,7 @@ generate_macos_screenshots() {
 
 generate_all_screenshots() {
     log_info "Platform: All (iPhone + iPad + Watch + macOS)"
-    log_info "Screenshots: 17 per locale (34 total)"
+    log_info "Screenshots: 18 per locale (36 total)"
     log_info "Estimated time: ~70-100 minutes"
     log_info "Mode: iPhone/iPad with device frames, Watch/macOS unframed"
     echo ""

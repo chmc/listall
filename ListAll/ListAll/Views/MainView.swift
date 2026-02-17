@@ -205,15 +205,18 @@ struct MainView: View {
                 }
                 .padding(.top, 40)
             } else {
-                ListsEmptyStateView(
-                    onCreateSampleList: { template in
-                        let createdList = viewModel.createSampleList(from: template)
-                        viewModel.selectedListForNavigation = createdList
-                    },
-                    onCreateCustomList: {
-                        showingCreateList = true
-                    }
-                )
+                // Compact empty state for iPad sidebar
+                VStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: Constants.UI.listIcon)
+                        .font(.system(size: 50))
+                        .foregroundColor(Theme.Colors.secondary)
+                    Text(String(localized: "No Lists"))
+                        .font(Theme.Typography.title)
+                    Text(String(localized: "Tap + to create your first list"))
+                        .font(Theme.Typography.body)
+                        .emptyStateStyle()
+                }
+                .padding(.top, 40)
             }
         } else {
             SwiftUI.List {
@@ -276,7 +279,17 @@ struct MainView: View {
                     .id(list.id)  // Force recreation when selection changes
             }
         } else {
-            if #available(iOS 17.0, *) {
+            if viewModel.displayedLists.isEmpty && !viewModel.showingArchivedLists {
+                ListsEmptyStateView(
+                    onCreateSampleList: { template in
+                        let createdList = viewModel.createSampleList(from: template)
+                        viewModel.selectedListForNavigation = createdList
+                    },
+                    onCreateCustomList: {
+                        showingCreateList = true
+                    }
+                )
+            } else if #available(iOS 17.0, *) {
                 ContentUnavailableView("Select a List", systemImage: "list.bullet")
             } else {
                 VStack(spacing: Theme.Spacing.lg) {

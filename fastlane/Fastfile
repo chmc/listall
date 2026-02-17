@@ -159,7 +159,8 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
   derived = File.join(project_root, "fastlane", "derivedDataSnapshot")
 
   # Expected screenshots per device/locale combination
-  expected_per_combination = 4  # 01_Welcome, 02_MainScreen, 03_GroceryItems, 04_AddItem
+  # iPhone gets 5 (03_GroceryItems is iPhone-only), iPad gets 4
+  expected_per_combination = device.include?("iPhone") ? 5 : 4
 
   # Set environment variables
   ENV['SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT'] = '30'
@@ -225,7 +226,8 @@ def generate_screenshots_for_device(device, locales: %w[en-US fi], clear_previou
         "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
         "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow",
         "ListAllUITests/ListAllUITests_Screenshots/testScreenshots03_GroceryItems",
-        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_AddItem"
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_SortFilter",
+        "ListAllUITests/ListAllUITests_Screenshots/testScreenshots05_AddItem"
       ],
       skip_testing: ["ListAllTests"],
       xcodebuild_formatter: "",
@@ -1121,8 +1123,10 @@ platform :ios do
     devices = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"]
     locales = %w[en-US fi]
     
-    # Track expected screenshots (5 per test method × 2 test methods = 10 per device/locale)
-    expected_per_combination = 10
+    # Track expected screenshots per device/locale combination
+    # iPhone gets 5 (03_GroceryItems is iPhone-only), iPad gets 4
+    # Used for per-device verification in the loop below and total estimate
+    expected_per_device = { "iPhone" => 5, "iPad" => 4 }
     
     # Set environment variable to reduce simulator boot wait time (default is 120s)
     # This significantly speeds up failure detection - fail fast if simulators are slow
@@ -1136,6 +1140,8 @@ platform :ios do
     UI.message("🔧 Setting SIMULATOR_HOST_HOME=#{simulator_host_home} for SnapshotHelper")
     
     devices.each_with_index do |device, device_idx|
+      device_type = device.include?("iPhone") ? "iPhone" : "iPad"
+      expected_per_combination = expected_per_device[device_type]
       locales.each_with_index do |locale, locale_idx|
         is_first = device_idx == 0 && locale_idx == 0
         UI.header("📸 Generating screenshots for #{device} (#{locale})")
@@ -1334,7 +1340,8 @@ platform :ios do
             "ListAllUITests/ListAllUITests_Screenshots/testScreenshots01_WelcomeScreen",
             "ListAllUITests/ListAllUITests_Screenshots/testScreenshots02_MainFlow",
             "ListAllUITests/ListAllUITests_Screenshots/testScreenshots03_GroceryItems",
-            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_AddItem"
+            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots04_SortFilter",
+            "ListAllUITests/ListAllUITests_Screenshots/testScreenshots05_AddItem"
           ],
           skip_testing: ["ListAllTests"],  # Skip unit tests
           xcodebuild_formatter: "",  # Empty string disables formatter, allowing Fastlane to parse logs
@@ -3659,7 +3666,7 @@ platform :ios do
     # Final verification: ensure all expected screenshots exist
     UI.header("Final verification: Checking all screenshots")
     raw_shots = Dir.glob(File.join(screenshots_dir, "**/*.png"))
-    expected_total = devices.count * locales.count * expected_per_combination
+    expected_total = devices.sum { |d| expected_per_device[d.include?("iPhone") ? "iPhone" : "iPad"] } * locales.count
     if raw_shots.empty?
       UI.user_error!("🚨 iOS screenshot generation failed: No screenshots found in #{screenshots_dir}")
     elsif raw_shots.count < expected_total * 0.8  # Allow 20% tolerance
@@ -4174,8 +4181,8 @@ platform :ios do
 
         if %w[iphone all].include?(platform)
           iphone_shots = Dir.glob(File.join(locale_dir, "iPhone*.png")).reject { |f| f.include?("_framed") }
-          if iphone_shots.count != 4
-            warnings << "#{locale}: Expected 4 iPhone screenshots, found #{iphone_shots.count}"
+          if iphone_shots.count != 5
+            warnings << "#{locale}: Expected 5 iPhone screenshots, found #{iphone_shots.count}"
           end
 
           iphone_shots.each do |shot|
