@@ -59,6 +59,7 @@
     },
     {
       "filter": "04_SortFilter",
+      "screen_fill_color": "#EFEFF3",
       "title": {
         "en-US": "Sort & Filter Your Way",
         "fi": "Lajittele ja Suodata Helposti"
