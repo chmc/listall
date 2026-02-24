@@ -124,7 +124,9 @@ run_ios() {
     echo "    Activated config with resolved iOS destination"
 
     cd "${PROJECT_ROOT}"
-    muter run "$@"
+    local exit_code=0
+    muter run --skip-coverage "$@" || exit_code=$?
+    return "${exit_code}"
 }
 
 run_macos() {
@@ -136,7 +138,9 @@ run_macos() {
     echo "    Activated config: muter.macos.conf.yml"
 
     cd "${PROJECT_ROOT}"
-    muter run "$@"
+    local exit_code=0
+    muter run --skip-coverage "$@" || exit_code=$?
+    return "${exit_code}"
 }
 
 run_watchos() {
@@ -173,7 +177,7 @@ run_watchos() {
     # Run muter
     cd "${PROJECT_ROOT}"
     local exit_code=0
-    muter run "$@" || exit_code=$?
+    muter run --skip-coverage "$@" || exit_code=$?
 
     # Shutdown simulator (config cleanup handled by trap)
     echo "    Shutting down watchOS simulator..."

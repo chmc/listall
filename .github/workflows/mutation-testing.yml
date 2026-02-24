@@ -87,7 +87,8 @@ jobs:
     - name: Run Muter (iOS)
       run: |
         chmod +x scripts/run-muter.sh
-        ./scripts/run-muter.sh ios
+        ./scripts/run-muter.sh ios 2>&1 | tee muter-output.log
+        exit ${PIPESTATUS[0]}
 
     - name: Upload mutation report
       if: always()
@@ -97,6 +98,7 @@ jobs:
         path: |
           muter-report.json
           muter-report.html
+          muter-output.log
         retention-days: 90
 
   #############################################################################
@@ -131,7 +133,8 @@ jobs:
     - name: Run Muter (macOS)
       run: |
         chmod +x scripts/run-muter.sh
-        ./scripts/run-muter.sh macos
+        ./scripts/run-muter.sh macos 2>&1 | tee muter-output.log
+        exit ${PIPESTATUS[0]}
 
     - name: Upload mutation report
       if: always()
@@ -141,6 +144,7 @@ jobs:
         path: |
           muter-report.json
           muter-report.html
+          muter-output.log
         retention-days: 90
 
   #############################################################################
@@ -180,7 +184,8 @@ jobs:
     - name: Run Muter (watchOS)
       run: |
         chmod +x scripts/run-muter.sh
-        ./scripts/run-muter.sh watchos
+        ./scripts/run-muter.sh watchos 2>&1 | tee muter-output.log
+        exit ${PIPESTATUS[0]}
 
     - name: Upload mutation report
       if: always()
@@ -190,4 +195,5 @@ jobs:
         path: |
           muter-report.json
           muter-report.html
+          muter-output.log
         retention-days: 90

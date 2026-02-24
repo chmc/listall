@@ -52,3 +52,28 @@ Three issues discovered setting up Muter v16 for mutation testing:
 ## Key Insight
 
 > Muter's Homebrew distribution is broken — always build from source and use UDID-based simulator destinations instead of name+OS for reliable mutation testing.
+
+---
+
+## First CI Run Failures (2026-02-24)
+
+### Problem
+
+First real CI run failed on all 3 platforms. Multiple distinct issues:
+
+1. **Tools/ pollution**: Muter discovered 300+ mutants in `Tools/listall-mcp/` (MCP server code not compiled by app targets). Mutating these causes build failures in the `listall_mutated/` copy.
+2. **Error handling asymmetry**: `run_ios()` and `run_macos()` called bare `muter run` — non-zero exit kills script under `set -euo pipefail`. `run_watchos()` already captured exit codes correctly. In "all" mode, iOS failure kills before macOS/watchOS start.
+3. **Coverage overhead**: macOS showed "Gathering coverage failed". Coverage is unnecessary for mutation testing.
+4. **watchOS hang**: Muter hung for 49+ minutes with zero output during watchOS `muter run`. Likely build/discovery phase issue.
+5. **No diagnostics on failure**: When Muter exits 255, no report is generated. Only raw CI logs available.
+
+### Solution
+
+- Add `- Tools/` to all config `exclude:` lists
+- Fix `run_ios()`/`run_macos()` to capture exit codes: `muter run --skip-coverage "$@" || exit_code=$?`
+- Add `--skip-coverage` to all `muter run` invocations
+- Add `tee muter-output.log` + `PIPESTATUS[0]` in CI workflow for log capture as artifact
+
+### Key Insight
+
+> Muter scans all Swift files under the project root regardless of Xcode target membership — always explicitly exclude directories containing non-app code.

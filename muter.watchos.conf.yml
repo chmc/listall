@@ -48,6 +48,8 @@ exclude:
   - Entity+Extensions
   - +CoreDataProperties
   - .xcdatamodeld
+  # Developer tooling (MCP server, not app code)
+  - Tools/
   # Build artifacts / generated code
   - build/
   - DerivedData
