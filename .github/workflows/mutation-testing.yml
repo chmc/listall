@@ -40,7 +40,8 @@ jobs:
         git clone https://github.com/muter-mutation-testing/muter.git /tmp/muter
         cd /tmp/muter
         git checkout ${{ env.MUTER_COMMIT }}
-        swift build -c release
+        # --product muter: skip test targets that fail with @testable import in release mode
+        swift build -c release --product muter
 
     - name: Upload Muter binary
       uses: actions/upload-artifact@v4

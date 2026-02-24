@@ -39,7 +39,7 @@ Three issues discovered setting up Muter v16 for mutation testing:
 
 ## Solution
 
-1. Build from source: `git clone ... && swift build -c release && cp .build/release/muter ~/bin/`
+1. Build from source: `git clone ... && swift build -c release --product muter && cp .build/release/muter ~/bin/` (the `--product muter` flag is required to skip test targets that use `@testable import` and fail in release mode)
 2. Use platform-specific configs with destination placeholders (`IOS_DESTINATION_PLACEHOLDER`, `WATCHOS_DESTINATION_PLACEHOLDER`) resolved by `scripts/run-muter.sh` using `xcrun simctl list devices available -j` + UDID lookup
 3. Wrapper script copies the resolved config to `muter.conf.yml` before each run, with cleanup via trap
 
