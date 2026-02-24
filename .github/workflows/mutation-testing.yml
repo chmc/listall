@@ -13,6 +13,11 @@ on:
           - ios
           - macos
           - watchos
+      muter_args:
+        description: 'Extra args for muter run (e.g. --files-to-mutate "path/to/File.swift")'
+        required: false
+        default: ''
+        type: string
   schedule:
     # Weekly: Sunday 2am UTC
     - cron: '0 2 * * 0'
@@ -87,8 +92,8 @@ jobs:
     - name: Run Muter (iOS)
       run: |
         chmod +x scripts/run-muter.sh
-        ./scripts/run-muter.sh ios 2>&1 | tee muter-output.log
-        exit ${PIPESTATUS[0]}
+        # script -q wraps in pseudo-tty to prevent stdout buffering
+        script -q muter-output.log ./scripts/run-muter.sh ios ${{ github.event.inputs.muter_args }}
 
     - name: Upload mutation report
       if: always()
@@ -133,8 +138,7 @@ jobs:
     - name: Run Muter (macOS)
       run: |
         chmod +x scripts/run-muter.sh
-        ./scripts/run-muter.sh macos 2>&1 | tee muter-output.log
-        exit ${PIPESTATUS[0]}
+        script -q muter-output.log ./scripts/run-muter.sh macos ${{ github.event.inputs.muter_args }}
 
     - name: Upload mutation report
       if: always()
@@ -184,8 +188,7 @@ jobs:
     - name: Run Muter (watchOS)
       run: |
         chmod +x scripts/run-muter.sh
-        ./scripts/run-muter.sh watchos 2>&1 | tee muter-output.log
-        exit ${PIPESTATUS[0]}
+        script -q muter-output.log ./scripts/run-muter.sh watchos ${{ github.event.inputs.muter_args }}
 
     - name: Upload mutation report
       if: always()
