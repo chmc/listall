@@ -288,3 +288,9 @@ coordination/
 hive-mind-prompt-*.txt
 # Framed screenshot output (generated files)
 fastlane/screenshots_framed/
+
+# --- Muter Mutation Testing ---
+muter.conf.yml
+muter-report*
+_mutationTesting/
+muter-mappings.json

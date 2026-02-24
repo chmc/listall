@@ -1,0 +1,71 @@
+executable: /usr/bin/xcodebuild
+arguments:
+  - -project
+  - ListAll/ListAll.xcodeproj
+  - -scheme
+  - ListAll
+  - -destination
+  - "IOS_DESTINATION_PLACEHOLDER"
+  - -skip-testing:ListAllTests/AppGroupsTests
+  - -skip-testing:ListAllTests/CloudKitTests
+  - -skip-testing:ListAllTests/ServicesTests/testGetSuggestionsWithLimit
+  - -skip-testing:ListAllTests/ServicesTests/testGetSuggestionsWithoutLimit
+  - -skip-testing:ListAllTests/ServicesTests/testSuggestionDetailsIncluded
+  - -skip-testing:ListAllTests/ServicesTests/testSuggestionServiceIndividualItems
+  - -skip-testing:ListAllTests/ServicesTests/testSuggestionServiceRecentItems
+  - -skip-testing:ListAllTests/ListOrderingTests/testReorder_modifiedAtPersistsToDatabase
+  - -skip-testing:ListAllTests/CoreDataRemoteChangeTests/testRemoteChangeThreadSafety
+  - -skip-testing:ListAllTests/SyncBugFixTests/testBatchedReloadPerformance
+  - -skip-testing:ListAllTests/ServicesTests/testDataRepositoryHandlesSyncNotification
+  - -skip-testing:ListAllUITests
+  - -skip-testing:ListAllUITestsLaunchTests
+  - "SWIFT_TREAT_WARNINGS_AS_ERRORS=NO"
+  - "CODE_SIGN_IDENTITY="
+  - "CODE_SIGNING_REQUIRED=NO"
+  - "CODE_SIGNING_ALLOWED=NO"
+  - test
+exclude:
+  # Test files
+  - ListAllTests
+  - ListAllUITests
+  - ListAllMacTests
+  - ListAllMacUITests
+  - "ListAllWatch Watch AppTests"
+  - "ListAllWatch Watch AppUITests"
+  - TestHelpers
+  # Platform-specific (not iOS)
+  - ListAllMac/
+  - "ListAllWatch Watch App/"
+  # Views (SwiftUI, not business logic)
+  - Views/
+  - ContentView
+  # Infrastructure services (side-effects, not logic)
+  - CloudKitService
+  - WatchConnectivityService
+  - HapticManager
+  - SampleDataService
+  - UITestDataService
+  - SharingService
+  - AppDelegate
+  - SceneDelegate
+  - FeatureTip
+  - AnimationManager
+  - CoreDataManager
+  - HandoffService
+  - BiometricAuthService
+  - DataMigrationService
+  - ImageService
+  - Transferable
+  # CoreData entity extensions (crash without managed object context)
+  - Entity+Extensions
+  - +CoreDataProperties
+  - .xcdatamodeld
+  # Build artifacts / generated code
+  - build/
+  - DerivedData
+  # App entry points
+  - ListAllApp.swift
+  - ListAllMacApp.swift
+  # Shared sync models (infrastructure)
+  - SyncModels
+mutationTestTimeout: 900

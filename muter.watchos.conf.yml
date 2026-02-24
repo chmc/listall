@@ -1,0 +1,60 @@
+executable: /usr/bin/xcodebuild
+arguments:
+  - -project
+  - ListAll/ListAll.xcodeproj
+  - -scheme
+  - "ListAllWatch Watch App"
+  - -destination
+  - "WATCHOS_DESTINATION_PLACEHOLDER"
+  - -skip-testing:ListAllWatch Watch AppUITests
+  - "SWIFT_TREAT_WARNINGS_AS_ERRORS=NO"
+  - "CODE_SIGN_IDENTITY="
+  - "CODE_SIGNING_REQUIRED=NO"
+  - "CODE_SIGNING_ALLOWED=NO"
+  - test
+exclude:
+  # Test files
+  - ListAllTests
+  - ListAllUITests
+  - ListAllMacTests
+  - ListAllMacUITests
+  - "ListAllWatch Watch AppTests"
+  - "ListAllWatch Watch AppUITests"
+  - TestHelpers
+  # Non-watchOS platforms
+  - ListAllMac/
+  # iOS-only code
+  - ListAll/ListAll/Services/
+  - ListAll/ListAll/ViewModels/
+  # Views
+  - Views/
+  - ContentView
+  # Infrastructure
+  - CloudKitService
+  - WatchConnectivityService
+  - HapticManager
+  - SampleDataService
+  - UITestDataService
+  - SharingService
+  - AppDelegate
+  - SceneDelegate
+  - FeatureTip
+  - AnimationManager
+  - CoreDataManager
+  - WatchUITestDataService
+  - WatchScreenshotConfiguration
+  - Transferable
+  # CoreData
+  - Entity+Extensions
+  - +CoreDataProperties
+  - .xcdatamodeld
+  # Build artifacts / generated code
+  - build/
+  - DerivedData
+  # App entry points
+  - ListAllApp.swift
+  - ListAllMacApp.swift
+  - ListAllWatchApp.swift
+  # Shared sync models
+  - SyncModels
+mutationTestTimeout: 600

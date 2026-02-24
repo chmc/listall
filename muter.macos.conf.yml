@@ -1,0 +1,63 @@
+executable: /usr/bin/xcodebuild
+arguments:
+  - -project
+  - ListAll/ListAll.xcodeproj
+  - -scheme
+  - ListAllMac
+  - -destination
+  - "platform=macOS"
+  - -skip-testing:ListAllMacUITests
+  - -skip-testing:MacKeyboardNavigationTests
+  - "SWIFT_TREAT_WARNINGS_AS_ERRORS=NO"
+  - "CODE_SIGN_IDENTITY="
+  - "CODE_SIGNING_REQUIRED=NO"
+  - "CODE_SIGNING_ALLOWED=NO"
+  - test
+exclude:
+  # Test files
+  - ListAllTests
+  - ListAllUITests
+  - ListAllMacTests
+  - ListAllMacUITests
+  - "ListAllWatch Watch AppTests"
+  - "ListAllWatch Watch AppUITests"
+  - TestHelpers
+  # Platform-specific (not macOS)
+  - "ListAllWatch Watch App/"
+  # Note: ListAll/ListAll/ contains shared code compiled into macOS target — do NOT exclude
+  # Note: ListAllMac/ has macOS-specific services — include those
+  # Views (SwiftUI, not business logic)
+  - Views/
+  - ContentView
+  # Infrastructure services
+  - CloudKitService
+  - WatchConnectivityService
+  - HapticManager
+  - SampleDataService
+  - UITestDataService
+  - SharingService
+  - AppDelegate
+  - SceneDelegate
+  - FeatureTip
+  - AnimationManager
+  - CoreDataManager
+  - HandoffService
+  - BiometricAuthService
+  - DataMigrationService
+  - ImageService
+  - Transferable
+  # Screenshot orchestration (macOS-specific infra)
+  - Screenshots/
+  # CoreData entity extensions
+  - Entity+Extensions
+  - +CoreDataProperties
+  - .xcdatamodeld
+  # Build artifacts / generated code
+  - build/
+  - DerivedData
+  # App entry points
+  - ListAllApp.swift
+  - ListAllMacApp.swift
+  # Shared sync models
+  - SyncModels
+mutationTestTimeout: 1200

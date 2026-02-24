@@ -1,0 +1,192 @@
+name: Mutation Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - macos
+          - watchos
+  schedule:
+    # Weekly: Sunday 2am UTC
+    - cron: '0 2 * * 0'
+
+# Muter commit to build from (Homebrew version is broken).
+# Update this when a new stable Muter release is verified.
+env:
+  MUTER_COMMIT: 28f31592fc2779fa69a7c373aaa765106782d70a
+
+jobs:
+  #############################################################################
+  # Build Muter from source (shared across platform jobs)
+  #############################################################################
+  build-muter:
+    name: Build Muter
+    runs-on: macos-14
+    timeout-minutes: 15
+
+    steps:
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Clone and build Muter
+      run: |
+        git clone https://github.com/muter-mutation-testing/muter.git /tmp/muter
+        cd /tmp/muter
+        git checkout ${{ env.MUTER_COMMIT }}
+        swift build -c release
+
+    - name: Upload Muter binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: muter-binary
+        path: /tmp/muter/.build/release/muter
+        retention-days: 1
+
+  #############################################################################
+  # iOS Mutation Testing
+  #############################################################################
+  mutation-ios:
+    name: Mutate iOS
+    runs-on: macos-14
+    needs: build-muter
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == 'ios'
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Download Muter binary
+      uses: actions/download-artifact@v4
+      with:
+        name: muter-binary
+        path: /usr/local/bin
+
+    - name: Make Muter executable
+      run: chmod +x /usr/local/bin/muter
+
+    - name: Clean simulator state
+      run: |
+        xcrun simctl shutdown all || true
+        xcrun simctl delete unavailable || true
+
+    - name: Run Muter (iOS)
+      run: |
+        chmod +x scripts/run-muter.sh
+        ./scripts/run-muter.sh ios
+
+    - name: Upload mutation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mutation-report-ios-${{ github.run_id }}
+        path: |
+          muter-report.json
+          muter-report.html
+        retention-days: 90
+
+  #############################################################################
+  # macOS Mutation Testing
+  #############################################################################
+  mutation-macos:
+    name: Mutate macOS
+    runs-on: macos-14
+    needs: build-muter
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == 'macos'
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Download Muter binary
+      uses: actions/download-artifact@v4
+      with:
+        name: muter-binary
+        path: /usr/local/bin
+
+    - name: Make Muter executable
+      run: chmod +x /usr/local/bin/muter
+
+    - name: Run Muter (macOS)
+      run: |
+        chmod +x scripts/run-muter.sh
+        ./scripts/run-muter.sh macos
+
+    - name: Upload mutation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mutation-report-macos-${{ github.run_id }}
+        path: |
+          muter-report.json
+          muter-report.html
+        retention-days: 90
+
+  #############################################################################
+  # watchOS Mutation Testing
+  #############################################################################
+  mutation-watchos:
+    name: Mutate watchOS
+    runs-on: macos-14
+    needs: build-muter
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == 'watchos'
+    timeout-minutes: 180
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Download Muter binary
+      uses: actions/download-artifact@v4
+      with:
+        name: muter-binary
+        path: /usr/local/bin
+
+    - name: Make Muter executable
+      run: chmod +x /usr/local/bin/muter
+
+    - name: Clean simulator state
+      run: |
+        xcrun simctl shutdown all || true
+        xcrun simctl delete unavailable || true
+
+    - name: Run Muter (watchOS)
+      run: |
+        chmod +x scripts/run-muter.sh
+        ./scripts/run-muter.sh watchos
+
+    - name: Upload mutation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mutation-report-watchos-${{ github.run_id }}
+        path: |
+          muter-report.json
+          muter-report.html
+        retention-days: 90
