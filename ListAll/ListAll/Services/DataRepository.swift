@@ -469,20 +469,20 @@ class DataRepository: ObservableObject {
     func createOrUpdateUser(userID: String) -> UserData {
         let request: NSFetchRequest<UserDataEntity> = UserDataEntity.fetchRequest()
         request.predicate = NSPredicate(format: "userID == %@", userID)
-        
+
         do {
             let results = try coreDataManager.viewContext.fetch(request)
             if let existingUser = results.first {
                 return existingUser.toUserData()
-            } else {
-                let newUser = UserData(userID: userID)
-                _ = UserDataEntity.fromUserData(newUser, context: coreDataManager.viewContext)
-                coreDataManager.save()
-                return newUser
             }
+            let newUser = UserData(userID: userID)
+            _ = UserDataEntity.fromUserData(newUser, context: coreDataManager.viewContext)
+            coreDataManager.save()
+            return newUser
         } catch {
-            return UserData(userID: userID)
+            // fall through to default return
         }
+        return UserData(userID: userID)
     }
     
     func updateUserPreferences(_ userData: UserData) {

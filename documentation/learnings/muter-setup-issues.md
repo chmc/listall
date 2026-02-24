@@ -77,3 +77,37 @@ First real CI run failed on all 3 platforms. Multiple distinct issues:
 ### Key Insight
 
 > Muter scans all Swift files under the project root regardless of Xcode target membership — always explicitly exclude directories containing non-app code.
+
+---
+
+## Schemata Baseline Build Failure (2026-02-24)
+
+### Problem
+
+After fixing Tools/ exclusion and script error handling, iOS and macOS still fail with baseline build error:
+```
+DataRepository.swift:1342:5: error: missing return in instance method expected to return 'UserData'
+```
+The file is only 624 lines — line 1342 is inside Muter's expanded copy.
+
+### Root Cause
+
+Muter v16 uses **schemata-based mutation**: instead of applying one mutation at a time, it inserts ALL mutation variants into the file at once using conditional branches (`if ProcessInfo.processInfo.environment["MUTER_RUNNING_MUTANT"] == "id-N" { mutated } else { original }`). This expands DataRepository.swift from 624 to 1342+ lines.
+
+The function `createOrUpdateUser(userID:) -> UserData` had returns inside both branches of an `if/else` within a `do` block, plus a return in `catch`. When Muter wraps these returns with conditional mutation switches, Swift's compiler can no longer prove all code paths return a value.
+
+### Solution
+
+Restructure functions that return non-optional values from do/catch blocks to have a guaranteed return OUTSIDE the do/catch:
+```swift
+do {
+    // returns inside here
+} catch {
+    // fall through
+}
+return fallbackValue  // guaranteed return the compiler can always see
+```
+
+### Key Insight
+
+> Muter v16 schemata mutations expand source files significantly. Functions with returns only inside do/catch branches can break. Always ensure a return exists at the function level outside do/catch for non-optional return types.
