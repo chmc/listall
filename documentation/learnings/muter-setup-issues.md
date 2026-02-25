@@ -111,3 +111,59 @@ return fallbackValue  // guaranteed return the compiler can always see
 ### Key Insight
 
 > Muter v16 schemata mutations expand source files significantly. Functions with returns only inside do/catch branches can break. Always ensure a return exists at the function level outside do/catch for non-optional return types.
+
+---
+
+## stdout Buffering and Timeout Issues (2026-02-24)
+
+### Problem
+
+1. **No visible output**: `tee` piping (`muter run 2>&1 | tee muter-output.log`) causes Muter to buffer stdout because the pipe is not a tty. CI shows no Muter output for hours, making it impossible to tell if the run is progressing or hung.
+2. **Timeout bypass**: `script -q` (used to fix buffering) wraps the command in a pseudo-tty that catches SIGTERM differently. GitHub Actions' `timeout-minutes: 360` failed to kill the process even after 6+ hours.
+
+### Root Cause
+
+Muter uses terminal escape codes for progress display (cursor movement with `[1A[1A[K`). When stdout is not a tty, it buffers output in large chunks. `tee` creates a pipe, not a tty. `script -q` creates a pseudo-tty (fixing buffering) but intercepts signals, preventing timeout.
+
+### Solution
+
+Use `script -q` for log capture (keeps output unbuffered) but add explicit timeout protection:
+```yaml
+- name: Run Muter (iOS)
+  timeout-minutes: 360
+  run: |
+    chmod +x scripts/run-muter.sh
+    script -q muter-output.log ./scripts/run-muter.sh ios ${{ github.event.inputs.muter_args }}
+```
+
+Note: The step-level `timeout-minutes` may also need a `timeout` command wrapper as backup.
+
+### Key Insight
+
+> Muter buffers stdout when not writing to a tty. Use `script -q` for pseudo-tty output, but be aware it may interfere with process signal handling.
+
+---
+
+## Performance on Free GitHub Runners (2026-02-25)
+
+### Problem
+
+Mutation testing is extremely slow on free GitHub macOS runners:
+- **macOS**: ~10 min per mutant (29 mutants = ~280 min for 1 file)
+- **iOS**: ~19 min per mutant (29 mutants = ~450+ min for 1 file, simulator overhead)
+- **Full iOS run**: 24 files, ~486 mutants → estimated 160+ hours (impossible on single runner)
+
+### Root Cause
+
+Each mutant requires a full `xcodebuild test` invocation. On free GitHub runners (macos-14, likely 3-core M1), each test run takes 5-19 minutes depending on platform. The schemata approach still runs tests per-mutant via environment variable switching.
+
+### Solution
+
+Parallelization is essential. Split mutant files across multiple concurrent GitHub Actions jobs using Muter's `--files-to-mutate` flag. Each job independently:
+1. Builds Muter (shared via artifact)
+2. Runs a subset of files
+3. Uploads its own report
+
+### Key Insight
+
+> Single-runner mutation testing is infeasible for projects with 400+ mutants on free GitHub runners. Must parallelize across multiple jobs using `--files-to-mutate`.

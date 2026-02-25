@@ -56,16 +56,120 @@ jobs:
         retention-days: 1
 
   #############################################################################
-  # iOS Mutation Testing
+  # iOS Mutation Testing — Parallel Shards (one file per shard)
   #############################################################################
   mutation-ios:
-    name: Mutate iOS
+    name: Mutate iOS (${{ matrix.file_name }})
     runs-on: macos-14
     needs: build-muter
     if: >-
-      github.event_name == 'schedule' ||
+      github.event.inputs.muter_args == '' &&
+      (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
-      github.event.inputs.platform == 'ios'
+      github.event.inputs.platform == 'ios')
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        include:
+          - file: "ListAll/ListAll/Models/Item.swift"
+            file_name: "Item"
+          - file: "ListAll/ListAll/Models/ItemImage.swift"
+            file_name: "ItemImage"
+          - file: "ListAll/ListAll/Models/List.swift"
+            file_name: "List"
+          - file: "ListAll/ListAll/Models/UserData.swift"
+            file_name: "UserData"
+          - file: "ListAll/ListAll/Protocols/CloudSyncProviding.swift"
+            file_name: "CloudSyncProviding"
+          - file: "ListAll/ListAll/Protocols/CoreDataManaging.swift"
+            file_name: "CoreDataManaging"
+          - file: "ListAll/ListAll/Protocols/DataManaging.swift"
+            file_name: "DataManaging"
+          - file: "ListAll/ListAll/Services/ExportService.swift"
+            file_name: "ExportService"
+          - file: "ListAll/ListAll/Services/ImportService.swift"
+            file_name: "ImportService"
+          - file: "ListAll/ListAll/Services/SuggestionService.swift"
+            file_name: "SuggestionService"
+          - file: "ListAll/ListAll/Utils/ActivityItemSource.swift"
+            file_name: "ActivityItemSource"
+          - file: "ListAll/ListAll/Utils/Constants.swift"
+            file_name: "Constants"
+          - file: "ListAll/ListAll/Utils/Extensions/Date+Extensions.swift"
+            file_name: "Date+Extensions"
+          - file: "ListAll/ListAll/Utils/Extensions/String+Extensions.swift"
+            file_name: "String+Extensions"
+          - file: "ListAll/ListAll/Utils/Helpers/URLHelper.swift"
+            file_name: "URLHelper"
+          - file: "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
+            file_name: "ValidationHelper"
+          - file: "ListAll/ListAll/Utils/LocalizationManager.swift"
+            file_name: "LocalizationManager"
+          - file: "ListAll/ListAll/Utils/Theme.swift"
+            file_name: "Theme"
+          - file: "ListAll/ListAll/Utils/TooltipManager.swift"
+            file_name: "TooltipManager"
+          - file: "ListAll/ListAll/ViewModels/ExportViewModel.swift"
+            file_name: "ExportViewModel"
+          - file: "ListAll/ListAll/ViewModels/ImportViewModel.swift"
+            file_name: "ImportViewModel"
+          - file: "ListAll/ListAll/ViewModels/ItemViewModel.swift"
+            file_name: "ItemViewModel"
+          - file: "ListAll/ListAll/ViewModels/ListViewModel.swift"
+            file_name: "ListViewModel"
+          - file: "ListAll/ListAll/ViewModels/MainViewModel.swift"
+            file_name: "MainViewModel"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Download Muter binary
+      uses: actions/download-artifact@v4
+      with:
+        name: muter-binary
+        path: /usr/local/bin
+
+    - name: Make Muter executable
+      run: chmod +x /usr/local/bin/muter
+
+    - name: Clean simulator state
+      run: |
+        xcrun simctl shutdown all || true
+        xcrun simctl delete unavailable || true
+
+    - name: Run Muter (iOS)
+      run: |
+        chmod +x scripts/run-muter.sh
+        script -q muter-output.log ./scripts/run-muter.sh ios --files-to-mutate "${{ matrix.file }}"
+
+    - name: Upload mutation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mutation-report-ios-${{ matrix.file_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          muter-report.json
+          muter-report.html
+          muter-output.log
+        retention-days: 90
+
+  #############################################################################
+  # iOS Mutation Testing — Manual Override (single job, custom muter_args)
+  #############################################################################
+  mutation-ios-manual:
+    name: Mutate iOS (manual)
+    runs-on: macos-14
+    needs: build-muter
+    if: >-
+      github.event.inputs.muter_args != '' &&
+      (github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == 'ios')
     timeout-minutes: 360
 
     steps:
@@ -92,14 +196,13 @@ jobs:
     - name: Run Muter (iOS)
       run: |
         chmod +x scripts/run-muter.sh
-        # script -q wraps in pseudo-tty to prevent stdout buffering
-        script -q muter-output.log ./scripts/run-muter.sh ios ${{ github.event.inputs.muter_args }}
+        script -q muter-output.log ./scripts/run-muter.sh ios "${{ github.event.inputs.muter_args }}"
 
     - name: Upload mutation report
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: mutation-report-ios-${{ github.run_id }}
+        name: mutation-report-ios-manual-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
           muter-report.json
           muter-report.html
@@ -107,16 +210,123 @@ jobs:
         retention-days: 90
 
   #############################################################################
-  # macOS Mutation Testing
+  # macOS Mutation Testing — Parallel Shards (one file per shard)
   #############################################################################
   mutation-macos:
-    name: Mutate macOS
+    name: Mutate macOS (${{ matrix.file_name }})
     runs-on: macos-14
     needs: build-muter
     if: >-
-      github.event_name == 'schedule' ||
+      github.event.inputs.muter_args == '' &&
+      (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
-      github.event.inputs.platform == 'macos'
+      github.event.inputs.platform == 'macos')
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        include:
+          # Shared files (same as iOS)
+          - file: "ListAll/ListAll/Models/Item.swift"
+            file_name: "Item"
+          - file: "ListAll/ListAll/Models/ItemImage.swift"
+            file_name: "ItemImage"
+          - file: "ListAll/ListAll/Models/List.swift"
+            file_name: "List"
+          - file: "ListAll/ListAll/Models/UserData.swift"
+            file_name: "UserData"
+          - file: "ListAll/ListAll/Protocols/CloudSyncProviding.swift"
+            file_name: "CloudSyncProviding"
+          - file: "ListAll/ListAll/Protocols/CoreDataManaging.swift"
+            file_name: "CoreDataManaging"
+          - file: "ListAll/ListAll/Protocols/DataManaging.swift"
+            file_name: "DataManaging"
+          - file: "ListAll/ListAll/Services/ExportService.swift"
+            file_name: "ExportService"
+          - file: "ListAll/ListAll/Services/ImportService.swift"
+            file_name: "ImportService"
+          - file: "ListAll/ListAll/Services/SuggestionService.swift"
+            file_name: "SuggestionService"
+          - file: "ListAll/ListAll/Utils/ActivityItemSource.swift"
+            file_name: "ActivityItemSource"
+          - file: "ListAll/ListAll/Utils/Constants.swift"
+            file_name: "Constants"
+          - file: "ListAll/ListAll/Utils/Extensions/Date+Extensions.swift"
+            file_name: "Date+Extensions"
+          - file: "ListAll/ListAll/Utils/Extensions/String+Extensions.swift"
+            file_name: "String+Extensions"
+          - file: "ListAll/ListAll/Utils/Helpers/URLHelper.swift"
+            file_name: "URLHelper"
+          - file: "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
+            file_name: "ValidationHelper"
+          - file: "ListAll/ListAll/Utils/LocalizationManager.swift"
+            file_name: "LocalizationManager"
+          - file: "ListAll/ListAll/Utils/Theme.swift"
+            file_name: "Theme"
+          - file: "ListAll/ListAll/Utils/TooltipManager.swift"
+            file_name: "TooltipManager"
+          - file: "ListAll/ListAll/ViewModels/ExportViewModel.swift"
+            file_name: "ExportViewModel"
+          - file: "ListAll/ListAll/ViewModels/ImportViewModel.swift"
+            file_name: "ImportViewModel"
+          - file: "ListAll/ListAll/ViewModels/ItemViewModel.swift"
+            file_name: "ItemViewModel"
+          - file: "ListAll/ListAll/ViewModels/ListViewModel.swift"
+            file_name: "ListViewModel"
+          - file: "ListAll/ListAll/ViewModels/MainViewModel.swift"
+            file_name: "MainViewModel"
+          # macOS-specific files
+          - file: "ListAll/ListAllMac/Commands/AppCommands.swift"
+            file_name: "AppCommands"
+          - file: "ListAll/ListAllMac/Services/ServicesProvider.swift"
+            file_name: "ServicesProvider"
+          - file: "ListAll/ListAllMac/Utils/MacTooltipManager.swift"
+            file_name: "MacTooltipManager"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Download Muter binary
+      uses: actions/download-artifact@v4
+      with:
+        name: muter-binary
+        path: /usr/local/bin
+
+    - name: Make Muter executable
+      run: chmod +x /usr/local/bin/muter
+
+    - name: Run Muter (macOS)
+      run: |
+        chmod +x scripts/run-muter.sh
+        script -q muter-output.log ./scripts/run-muter.sh macos --files-to-mutate "${{ matrix.file }}"
+
+    - name: Upload mutation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mutation-report-macos-${{ matrix.file_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          muter-report.json
+          muter-report.html
+          muter-output.log
+        retention-days: 90
+
+  #############################################################################
+  # macOS Mutation Testing — Manual Override (single job, custom muter_args)
+  #############################################################################
+  mutation-macos-manual:
+    name: Mutate macOS (manual)
+    runs-on: macos-14
+    needs: build-muter
+    if: >-
+      github.event.inputs.muter_args != '' &&
+      (github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == 'macos')
     timeout-minutes: 360
 
     steps:
@@ -138,13 +348,13 @@ jobs:
     - name: Run Muter (macOS)
       run: |
         chmod +x scripts/run-muter.sh
-        script -q muter-output.log ./scripts/run-muter.sh macos ${{ github.event.inputs.muter_args }}
+        script -q muter-output.log ./scripts/run-muter.sh macos "${{ github.event.inputs.muter_args }}"
 
     - name: Upload mutation report
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: mutation-report-macos-${{ github.run_id }}
+        name: mutation-report-macos-manual-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
           muter-report.json
           muter-report.html
@@ -152,7 +362,7 @@ jobs:
         retention-days: 90
 
   #############################################################################
-  # watchOS Mutation Testing
+  # watchOS Mutation Testing (single job — fewer files)
   #############################################################################
   mutation-watchos:
     name: Mutate watchOS
@@ -188,13 +398,13 @@ jobs:
     - name: Run Muter (watchOS)
       run: |
         chmod +x scripts/run-muter.sh
-        script -q muter-output.log ./scripts/run-muter.sh watchos ${{ github.event.inputs.muter_args }}
+        script -q muter-output.log ./scripts/run-muter.sh watchos "${{ github.event.inputs.muter_args }}"
 
     - name: Upload mutation report
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: mutation-report-watchos-${{ github.run_id }}
+        name: mutation-report-watchos-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
           muter-report.json
           muter-report.html
