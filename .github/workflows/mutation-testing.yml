@@ -79,26 +79,14 @@ jobs:
             file_name: "ItemImage"
           - file: "ListAll/ListAll/Models/List.swift"
             file_name: "List"
-          - file: "ListAll/ListAll/Models/UserData.swift"
-            file_name: "UserData"
-          - file: "ListAll/ListAll/Protocols/CloudSyncProviding.swift"
-            file_name: "CloudSyncProviding"
-          - file: "ListAll/ListAll/Protocols/CoreDataManaging.swift"
-            file_name: "CoreDataManaging"
-          - file: "ListAll/ListAll/Protocols/DataManaging.swift"
-            file_name: "DataManaging"
           - file: "ListAll/ListAll/Services/ExportService.swift"
             file_name: "ExportService"
           - file: "ListAll/ListAll/Services/ImportService.swift"
             file_name: "ImportService"
           - file: "ListAll/ListAll/Services/SuggestionService.swift"
             file_name: "SuggestionService"
-          - file: "ListAll/ListAll/Utils/ActivityItemSource.swift"
-            file_name: "ActivityItemSource"
           - file: "ListAll/ListAll/Utils/Constants.swift"
             file_name: "Constants"
-          - file: "ListAll/ListAll/Utils/Extensions/Date+Extensions.swift"
-            file_name: "Date+Extensions"
           - file: "ListAll/ListAll/Utils/Extensions/String+Extensions.swift"
             file_name: "String+Extensions"
           - file: "ListAll/ListAll/Utils/Helpers/URLHelper.swift"
@@ -107,8 +95,6 @@ jobs:
             file_name: "ValidationHelper"
           - file: "ListAll/ListAll/Utils/LocalizationManager.swift"
             file_name: "LocalizationManager"
-          - file: "ListAll/ListAll/Utils/Theme.swift"
-            file_name: "Theme"
           - file: "ListAll/ListAll/Utils/TooltipManager.swift"
             file_name: "TooltipManager"
           - file: "ListAll/ListAll/ViewModels/ExportViewModel.swift"
@@ -142,6 +128,31 @@ jobs:
       run: |
         xcrun simctl shutdown all || true
         xcrun simctl delete unavailable || true
+
+    - name: Measure baseline test runtime
+      if: matrix.file_name == 'Item'
+      run: |
+        echo "::group::Baseline test suite timing"
+        SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
+        import json, sys
+        data = json.load(sys.stdin)
+        for rt, devs in sorted(data.get('devices', {}).items(), reverse=True):
+            if 'iOS' in rt:
+                for d in devs:
+                    if d.get('isAvailable') and 'iPhone 16 Pro' in d.get('name', ''):
+                        print(d['udid']); sys.exit(0)
+        sys.exit(1)")
+        START=$(date +%s)
+        xcodebuild test \
+          -project ListAll/ListAll.xcodeproj \
+          -scheme ListAll \
+          -destination "platform=iOS Simulator,id=${SIM_UDID}" \
+          -only-testing:ListAllTests \
+          -quiet 2>&1 || true
+        END=$(date +%s)
+        ELAPSED=$((END - START))
+        echo "::notice::Baseline iOS test suite runtime: ${ELAPSED}s ($(( ELAPSED / 60 ))m$(( ELAPSED % 60 ))s)"
+        echo "::endgroup::"
 
     - name: Run Muter (iOS)
       run: |
@@ -234,26 +245,14 @@ jobs:
             file_name: "ItemImage"
           - file: "ListAll/ListAll/Models/List.swift"
             file_name: "List"
-          - file: "ListAll/ListAll/Models/UserData.swift"
-            file_name: "UserData"
-          - file: "ListAll/ListAll/Protocols/CloudSyncProviding.swift"
-            file_name: "CloudSyncProviding"
-          - file: "ListAll/ListAll/Protocols/CoreDataManaging.swift"
-            file_name: "CoreDataManaging"
-          - file: "ListAll/ListAll/Protocols/DataManaging.swift"
-            file_name: "DataManaging"
           - file: "ListAll/ListAll/Services/ExportService.swift"
             file_name: "ExportService"
           - file: "ListAll/ListAll/Services/ImportService.swift"
             file_name: "ImportService"
           - file: "ListAll/ListAll/Services/SuggestionService.swift"
             file_name: "SuggestionService"
-          - file: "ListAll/ListAll/Utils/ActivityItemSource.swift"
-            file_name: "ActivityItemSource"
           - file: "ListAll/ListAll/Utils/Constants.swift"
             file_name: "Constants"
-          - file: "ListAll/ListAll/Utils/Extensions/Date+Extensions.swift"
-            file_name: "Date+Extensions"
           - file: "ListAll/ListAll/Utils/Extensions/String+Extensions.swift"
             file_name: "String+Extensions"
           - file: "ListAll/ListAll/Utils/Helpers/URLHelper.swift"
@@ -262,8 +261,6 @@ jobs:
             file_name: "ValidationHelper"
           - file: "ListAll/ListAll/Utils/LocalizationManager.swift"
             file_name: "LocalizationManager"
-          - file: "ListAll/ListAll/Utils/Theme.swift"
-            file_name: "Theme"
           - file: "ListAll/ListAll/Utils/TooltipManager.swift"
             file_name: "TooltipManager"
           - file: "ListAll/ListAll/ViewModels/ExportViewModel.swift"

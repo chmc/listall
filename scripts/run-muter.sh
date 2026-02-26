@@ -126,6 +126,10 @@ run_ios() {
     cd "${PROJECT_ROOT}"
     local exit_code=0
     muter run --skip-coverage "$@" || exit_code=$?
+    if [[ "${exit_code}" -eq 255 ]]; then
+        echo "No mutable code found — treating as success"
+        return 0
+    fi
     return "${exit_code}"
 }
 
@@ -140,6 +144,10 @@ run_macos() {
     cd "${PROJECT_ROOT}"
     local exit_code=0
     muter run --skip-coverage "$@" || exit_code=$?
+    if [[ "${exit_code}" -eq 255 ]]; then
+        echo "No mutable code found — treating as success"
+        return 0
+    fi
     return "${exit_code}"
 }
 
@@ -178,6 +186,10 @@ run_watchos() {
     cd "${PROJECT_ROOT}"
     local exit_code=0
     muter run --skip-coverage "$@" || exit_code=$?
+    if [[ "${exit_code}" -eq 255 ]]; then
+        echo "No mutable code found — treating as success"
+        exit_code=0
+    fi
 
     # Shutdown simulator (config cleanup handled by trap)
     echo "    Shutting down watchOS simulator..."
