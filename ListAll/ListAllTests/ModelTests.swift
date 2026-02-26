@@ -160,22 +160,26 @@ struct ModelTests {
     }
     
     @Test func testListSortedItems() async throws {
-        
+
         var list = List(name: "Test List")
-        
+
         var item1 = Item(title: "Item 1")
         item1.orderNumber = 3
         var item2 = Item(title: "Item 2")
         item2.orderNumber = 1
         var item3 = Item(title: "Item 3")
         item3.orderNumber = 2
-        
+
         list.items = [item1, item2, item3]
-        
+
         let sortedItems = list.sortedItems
+        // Verify ascending order explicitly
         #expect(sortedItems[0].orderNumber == 1)
         #expect(sortedItems[1].orderNumber == 2)
         #expect(sortedItems[2].orderNumber == 3)
+        #expect(sortedItems[0].title == "Item 2")
+        #expect(sortedItems[1].title == "Item 3")
+        #expect(sortedItems[2].title == "Item 1")
     }
     
     @Test func testListItemCounts() async throws {
@@ -222,29 +226,69 @@ struct ModelTests {
         #expect(invalidList.validate() == false)
     }
     
+    @Test func testListHashEquatable() async throws {
+
+        var list1 = List(name: "List A")
+        var list2 = List(name: "List B")
+        // Different lists are not equal
+        #expect(list1 != list2)
+
+        // Same ID, different properties — should be equal (ID-only equality)
+        list2.id = list1.id
+        list2.name = "Different Name"
+        list2.orderNumber = 99
+        #expect(list1 == list2)
+        #expect(list1.hashValue == list2.hashValue)
+    }
+
     @Test func testListAddItem() async throws {
-        
+
         var list = List(name: "Test List")
         let item = Item(title: "Test Item")
-        
+
         list.addItem(item)
-        
+
         #expect(list.items.count == 1)
         #expect(list.items[0].listId == list.id)
         #expect(list.items[0].orderNumber == 0)
         #expect(list.modifiedAt > list.createdAt)
     }
-    
+
+    @Test func testListAddSecondItem() async throws {
+
+        var list = List(name: "Test List")
+        list.addItem(Item(title: "First"))
+        list.addItem(Item(title: "Second"))
+
+        #expect(list.items.count == 2)
+        #expect(list.items[0].orderNumber == 0)
+        #expect(list.items[1].orderNumber == 1)
+    }
+
     @Test func testListRemoveItem() async throws {
-        
+
         var list = List(name: "Test List")
         let item = Item(title: "Test Item")
         list.addItem(item)
-        
+
         let itemId = item.id
         list.removeItem(withId: itemId)
-        
+
         #expect(list.items.isEmpty)
+    }
+
+    @Test func testListRemoveItemUpdatesModifiedDate() async throws {
+
+        var list = List(name: "Test List")
+        list.addItem(Item(title: "Test Item"))
+        let itemId = list.items[0].id
+        let dateAfterAdd = list.modifiedAt
+
+        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
+
+        list.removeItem(withId: itemId)
+
+        #expect(list.modifiedAt > dateAfterAdd)
     }
     
     @Test func testListUpdateItem() async throws {
@@ -281,12 +325,14 @@ struct ModelTests {
     }
     
     @Test func testItemImageHasImageData() async throws {
-        
+
         let imageWithData = ItemImage(imageData: Data("test".utf8))
         let imageWithoutData = ItemImage()
-        
+        let imageWithEmptyData = ItemImage(imageData: Data())
+
         #expect(imageWithData.hasImageData == true)
         #expect(imageWithoutData.hasImageData == false)
+        #expect(imageWithEmptyData.hasImageData == false)
     }
     
     @Test func testItemImageSize() async throws {
@@ -298,18 +344,29 @@ struct ModelTests {
     }
     
     @Test func testItemImageFormattedSize() async throws {
-        
-        let smallData = Data(count: 500)
-        let mediumData = Data(count: 1500)
-        let largeData = Data(count: 1_500_000)
-        
-        let smallImage = ItemImage(imageData: smallData)
-        let mediumImage = ItemImage(imageData: mediumData)
-        let largeImage = ItemImage(imageData: largeData)
-        
-        #expect(smallImage.formattedSize.contains("B"))
-        #expect(mediumImage.formattedSize.contains("KB"))
-        #expect(largeImage.formattedSize.contains("MB"))
+
+        let smallImage = ItemImage(imageData: Data(count: 500))
+        let mediumImage = ItemImage(imageData: Data(count: 1500))
+        let largeImage = ItemImage(imageData: Data(count: 1_500_000))
+
+        #expect(smallImage.formattedSize == "500 B")
+        #expect(mediumImage.formattedSize == "1.5 KB")
+        #expect(largeImage.formattedSize == "1.4 MB")
+    }
+
+    @Test func testItemImageFormattedSizeBoundaries() async throws {
+
+        let zeroImage = ItemImage(imageData: Data())
+        let justUnderKB = ItemImage(imageData: Data(count: 1023))
+        let exactKB = ItemImage(imageData: Data(count: 1024))
+        let justUnderMB = ItemImage(imageData: Data(count: 1024 * 1024 - 1))
+        let exactMB = ItemImage(imageData: Data(count: 1024 * 1024))
+
+        #expect(zeroImage.formattedSize == "0 B")
+        #expect(justUnderKB.formattedSize == "1023 B")
+        #expect(exactKB.formattedSize == "1.0 KB")
+        #expect(justUnderMB.formattedSize.hasSuffix("KB"))
+        #expect(exactMB.formattedSize == "1.0 MB")
     }
     
     @Test func testItemImageValidation() async throws {

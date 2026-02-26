@@ -183,8 +183,35 @@ struct UtilsTests {
         #expect("no spaces".trimmed == "no spaces")
     }
     
-    // Note: testStringAsURL removed due to persistent test issues
-    // The String.asURL extension is working correctly in the app
+    @Test func testStringAsURL() async throws {
+
+        // Strings with explicit scheme should return URL
+        let httpsURL = "https://example.com".asURL
+        #expect(httpsURL != nil)
+        #expect(httpsURL?.absoluteString == "https://example.com")
+
+        let httpURL = "http://example.com".asURL
+        #expect(httpURL != nil)
+
+        // www-prefix should auto-add https
+        let wwwURL = "www.example.com".asURL
+        #expect(wwwURL != nil)
+        #expect(wwwURL?.scheme == "https")
+
+        // Domain-like strings should auto-add https
+        let domainURL = "example.com".asURL
+        #expect(domainURL != nil)
+        #expect(domainURL?.scheme == "https")
+
+        // Non-URL strings should return nil
+        #expect("".asURL == nil)
+        #expect("   ".asURL == nil)
+        #expect("just a word".asURL == nil)
+        #expect("no".asURL == nil)
+
+        // Path-like strings starting with / should not match
+        #expect("/usr/local/bin".asURL == nil)
+    }
     
     @Test func testStringCapitalizedFirst() async throws {
         
