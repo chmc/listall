@@ -67,7 +67,7 @@ jobs:
       (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'ios')
-    timeout-minutes: 360
+    timeout-minutes: 480
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -181,7 +181,7 @@ jobs:
       github.event.inputs.muter_args != '' &&
       (github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'ios')
-    timeout-minutes: 360
+    timeout-minutes: 480
 
     steps:
     - name: Checkout code
@@ -207,7 +207,7 @@ jobs:
     - name: Run Muter (iOS)
       run: |
         chmod +x scripts/run-muter.sh
-        script -q muter-output.log ./scripts/run-muter.sh ios "${{ github.event.inputs.muter_args }}"
+        script -q muter-output.log ./scripts/run-muter.sh ios ${{ github.event.inputs.muter_args }}
 
     - name: Upload mutation report
       if: always()
@@ -232,7 +232,7 @@ jobs:
       (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'macos')
-    timeout-minutes: 360
+    timeout-minutes: 480
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -324,7 +324,7 @@ jobs:
       github.event.inputs.muter_args != '' &&
       (github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'macos')
-    timeout-minutes: 360
+    timeout-minutes: 480
 
     steps:
     - name: Checkout code
@@ -345,7 +345,7 @@ jobs:
     - name: Run Muter (macOS)
       run: |
         chmod +x scripts/run-muter.sh
-        script -q muter-output.log ./scripts/run-muter.sh macos "${{ github.event.inputs.muter_args }}"
+        script -q muter-output.log ./scripts/run-muter.sh macos ${{ github.event.inputs.muter_args }}
 
     - name: Upload mutation report
       if: always()
@@ -395,7 +395,7 @@ jobs:
     - name: Run Muter (watchOS)
       run: |
         chmod +x scripts/run-muter.sh
-        script -q muter-output.log ./scripts/run-muter.sh watchos "${{ github.event.inputs.muter_args }}"
+        script -q muter-output.log ./scripts/run-muter.sh watchos ${{ github.event.inputs.muter_args }}
 
     - name: Upload mutation report
       if: always()

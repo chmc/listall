@@ -207,6 +207,17 @@ fi
 PLATFORM="$1"
 shift
 
+# Filter out empty arguments (GitHub Actions passes "" for unset inputs)
+ARGS=()
+for arg in "$@"; do
+    [[ -n "$arg" ]] && ARGS+=("$arg")
+done
+if (( ${#ARGS[@]} > 0 )); then
+    set -- "${ARGS[@]}"
+else
+    set --
+fi
+
 check_muter
 
 case "${PLATFORM}" in

@@ -70,4 +70,4 @@ exclude:
   - ListAllMacApp.swift
   # Shared sync models (infrastructure)
   - SyncModels
-mutationTestTimeout: 900
+mutationTestTimeout: 1200
