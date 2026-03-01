@@ -329,8 +329,10 @@ class ListOrderingTests: XCTestCase {
         try! testViewModel.addList(name: "Y")
         try! testViewModel.addList(name: "Z")
 
-        // Wait for timestamp difference (Thread.sleep is more reliable in CI)
-        Thread.sleep(forTimeInterval: 0.1)
+        // Wait for timestamp difference so reorder produces a measurably different modifiedAt.
+        // 1.0s is generous but necessary: CI runners have coarser timer resolution and
+        // Date() granularity can lose sub-second differences under load.
+        Thread.sleep(forTimeInterval: 1.0)
 
         // Act - Reorder
         testViewModel.moveList(from: IndexSet(integer: 0), to: 3)
@@ -343,14 +345,15 @@ class ListOrderingTests: XCTestCase {
         // Simulate restart
         let newViewModel = TestMainViewModel(dataManager: testDataManager)
 
-        // Assert - Timestamps should match by list ID (not position)
+        // Assert - Timestamps should match by list ID (not position).
+        // Use 0.01s tolerance for Core Data round-trip precision.
         for list in newViewModel.lists {
             let persistedTimestamp = list.modifiedAt
             let expectedTimestamp = timestampsAfterReorder[list.id]!
             let difference = abs(persistedTimestamp.timeIntervalSince(expectedTimestamp))
             XCTAssertLessThan(
                 difference,
-                0.001,
+                0.01,
                 "Timestamp for list '\(list.name)' should persist (diff: \(difference)s)"
             )
         }

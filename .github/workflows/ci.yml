@@ -45,6 +45,8 @@ jobs:
         xcrun simctl shutdown all || true
         xcrun simctl delete unavailable || true
 
+    # Note: enabling Swift 6 strict concurrency will require disabling
+    # SWIFT_TREAT_WARNINGS_AS_ERRORS temporarily until migration is complete.
     - name: Build iOS app
       run: |
         set -o pipefail
@@ -57,6 +59,8 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          RUN_CLANG_STATIC_ANALYZER=YES \
           | xcpretty
 
     - name: Run iOS tests
@@ -68,22 +72,16 @@ jobs:
           -scheme ListAll \
           -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
           -resultBundlePath TestResults.xcresult \
+          -enableCodeCoverage YES \
           -skip-testing:ListAllTests/AppGroupsTests \
           -skip-testing:ListAllTests/CloudKitTests \
-          -skip-testing:ListAllTests/ServicesTests/testGetSuggestionsWithLimit \
-          -skip-testing:ListAllTests/ServicesTests/testGetSuggestionsWithoutLimit \
-          -skip-testing:ListAllTests/ServicesTests/testSuggestionDetailsIncluded \
-          -skip-testing:ListAllTests/ServicesTests/testSuggestionServiceIndividualItems \
-          -skip-testing:ListAllTests/ServicesTests/testSuggestionServiceRecentItems \
-          -skip-testing:ListAllTests/ListOrderingTests/testReorder_modifiedAtPersistsToDatabase \
-          -skip-testing:ListAllTests/CoreDataRemoteChangeTests/testRemoteChangeThreadSafety \
-          -skip-testing:ListAllTests/SyncBugFixTests/testBatchedReloadPerformance \
-          -skip-testing:ListAllTests/ServicesTests/testDataRepositoryHandlesSyncNotification \
           -skip-testing:ListAllUITests \
           -skip-testing:ListAllUITestsLaunchTests \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          RUN_CLANG_STATIC_ANALYZER=YES \
           | xcpretty
 
     # Always upload test results for debugging, even on success
@@ -93,6 +91,20 @@ jobs:
       with:
         name: ios-test-results
         path: ListAll/TestResults.xcresult
+        retention-days: 30
+
+    - name: Extract iOS code coverage
+      if: always()
+      run: |
+        cd ListAll
+        ../scripts/extract-coverage.sh TestResults.xcresult coverage-ios.json
+
+    - name: Upload iOS coverage JSON
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-coverage
+        path: ListAll/coverage-ios.json
         retention-days: 30
 
     # Upload diagnostic logs only on failure to reduce artifact storage
@@ -181,6 +193,8 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          RUN_CLANG_STATIC_ANALYZER=YES \
           | xcpretty
 
     - name: Run watchOS tests
@@ -195,10 +209,13 @@ jobs:
           -scheme "ListAllWatch Watch App" \
           -destination "platform=watchOS Simulator,id=${{ steps.watch-sim.outputs.udid }}" \
           -resultBundlePath TestResults-Watch.xcresult \
+          -enableCodeCoverage YES \
           -skip-testing:"ListAllWatch Watch AppUITests" \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          RUN_CLANG_STATIC_ANALYZER=YES \
           | xcpretty
 
     # Always upload test results for debugging, even on success
@@ -208,6 +225,20 @@ jobs:
       with:
         name: watchos-test-results
         path: ListAll/TestResults-Watch.xcresult
+        retention-days: 30
+
+    - name: Extract watchOS code coverage
+      if: always()
+      run: |
+        cd ListAll
+        ../scripts/extract-coverage.sh TestResults-Watch.xcresult coverage-watchos.json
+
+    - name: Upload watchOS coverage JSON
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: watchos-coverage
+        path: ListAll/coverage-watchos.json
         retention-days: 30
 
     # Upload diagnostic logs only on failure to reduce artifact storage
@@ -260,6 +291,8 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          RUN_CLANG_STATIC_ANALYZER=YES \
           | xcpretty
 
     - name: Run macOS tests
@@ -271,11 +304,14 @@ jobs:
           -scheme ListAllMac \
           -destination 'platform=macOS' \
           -resultBundlePath TestResults-Mac.xcresult \
+          -enableCodeCoverage YES \
           -skip-testing:ListAllMacUITests \
           -skip-testing:MacKeyboardNavigationTests \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          RUN_CLANG_STATIC_ANALYZER=YES \
           | xcpretty
 
     # Always upload test results for debugging, even on success
@@ -285,6 +321,20 @@ jobs:
       with:
         name: macos-test-results
         path: ListAll/TestResults-Mac.xcresult
+        retention-days: 30
+
+    - name: Extract macOS code coverage
+      if: always()
+      run: |
+        cd ListAll
+        ../scripts/extract-coverage.sh TestResults-Mac.xcresult coverage-macos.json
+
+    - name: Upload macOS coverage JSON
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-coverage
+        path: ListAll/coverage-macos.json
         retention-days: 30
 
     # Upload diagnostic logs only on failure to reduce artifact storage

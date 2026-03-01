@@ -1,0 +1,232 @@
+name: Weekly Quality
+
+on:
+  schedule:
+    # Sunday 8am UTC
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+
+# Only one quality run at a time
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  #############################################################################
+  # Job 1: Address Sanitizer on stress tests (45 min)
+  # Catches use-after-free in Core Data ObjC bridging
+  # Cannot combine with TSan — must be a separate job
+  #############################################################################
+  asan-stress:
+    name: ASan Stress Tests
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-asan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-asan-
+
+    - name: Run macOS stress tests with ASan
+      run: |
+        set -o pipefail
+        cd ListAll
+        xcodebuild test \
+          -project ListAll.xcodeproj \
+          -scheme ListAllMac \
+          -destination 'platform=macOS' \
+          -enableAddressSanitizer YES \
+          -only-testing:ListAllMacTests/MacStressTests \
+          -resultBundlePath TestResults-ASan-Mac.xcresult \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty
+
+    - name: Run iOS stress + concurrency tests with ASan
+      run: |
+        set -o pipefail
+        xcrun simctl shutdown all || true
+        cd ListAll
+        xcodebuild test \
+          -project ListAll.xcodeproj \
+          -scheme ListAll \
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -enableAddressSanitizer YES \
+          -only-testing:ListAllTests/StressTests \
+          -only-testing:ListAllTests/ConcurrencyTests \
+          -only-testing:ListAllTests/CoreDataRecoveryTests \
+          -resultBundlePath TestResults-ASan-iOS.xcresult \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty
+
+    - name: Upload ASan test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: asan-test-results
+        path: |
+          ListAll/TestResults-ASan-Mac.xcresult
+          ListAll/TestResults-ASan-iOS.xcresult
+        retention-days: 14
+
+  #############################################################################
+  # Job 2: Thread Sanitizer on macOS (60 min)
+  # No simulator overhead — runs natively on macOS
+  # Validated locally: passes clean with no false positives
+  #############################################################################
+  tsan-macos:
+    name: TSan macOS
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-tsan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-tsan-
+
+    - name: Run macOS tests with TSan
+      run: |
+        set -o pipefail
+        cd ListAll
+        xcodebuild test \
+          -project ListAll.xcodeproj \
+          -scheme ListAllMac \
+          -destination 'platform=macOS' \
+          -enableThreadSanitizer YES \
+          -resultBundlePath TestResults-TSan.xcresult \
+          -skip-testing:ListAllMacUITests \
+          -skip-testing:MacKeyboardNavigationTests \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          | xcpretty
+
+    - name: Upload TSan test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: tsan-test-results
+        path: ListAll/TestResults-TSan.xcresult
+        retention-days: 14
+
+  #############################################################################
+  # Job 3: Periphery dead code detection (30 min)
+  # Scans all 3 schemes for unused code
+  #############################################################################
+  periphery:
+    name: Periphery Dead Code
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Install Periphery
+      run: brew install peripheryapp/periphery/periphery
+
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-derived-data-periphery-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        restore-keys: |
+          ${{ runner.os }}-derived-data-periphery-
+
+    - name: Clean simulator state
+      run: |
+        xcrun simctl shutdown all || true
+        xcrun simctl delete unavailable || true
+
+    - name: Run Periphery scan
+      run: |
+        cd ListAll
+        periphery scan \
+          --project ListAll.xcodeproj \
+          --format markdown \
+          2>&1 | tee periphery-report.md
+
+    - name: Post Periphery report to summary
+      if: always()
+      run: |
+        echo "## Periphery Dead Code Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f ListAll/periphery-report.md ]; then
+          cat ListAll/periphery-report.md >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No report generated." >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload Periphery report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: periphery-report
+        path: ListAll/periphery-report.md
+        retention-days: 14
+
+  #############################################################################
+  # Summary
+  #############################################################################
+  quality-summary:
+    name: Quality Summary
+    needs: [asan-stress, tsan-macos, periphery]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check results
+      run: |
+        echo "## Weekly Quality Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| ASan Stress | ${{ needs.asan-stress.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| TSan macOS | ${{ needs.tsan-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Periphery | ${{ needs.periphery.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [[ "${{ needs.asan-stress.result }}" != "success" ]] || \
+           [[ "${{ needs.tsan-macos.result }}" != "success" ]] || \
+           [[ "${{ needs.periphery.result }}" != "success" ]]; then
+          echo "::warning::One or more quality jobs failed — review artifacts"
+          echo "**Status: ISSUES FOUND** - Review individual job results" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "**Status: ALL CLEAN**" >> $GITHUB_STEP_SUMMARY

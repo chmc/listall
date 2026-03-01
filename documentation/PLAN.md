@@ -1,94 +1,164 @@
-# Plan: Replace duplicate iPad screenshot 3 with Sort/Filter sheet
+# Quality Arsenal: Break Everything
 
 ## Context
 
-With the iPad two-column layout, screenshots 02 (MainScreen) and 03 (GroceryItems) became identical — both show sidebar + Grocery Shopping items. We need screenshot 3 to show the **ItemOrganizationView** (sort/filter sheet) instead. The screenshot name also needs to change from `03_GroceryItems` to `03_SortFilter` everywhere, and marketing titles need updating.
+ListAll has ~1,750 tests and weekly mutation testing, but no sanitizers, no code coverage, and several real tests skipped in CI with documented root causes sitting unfixed. The actual recurring bugs are race conditions (`perform` vs `performAndWait`), sync ordering, and concurrency timing — not memory safety or input validation. This plan targets those real bug patterns.
 
-Note: On iPhone, screenshot 2 shows the list of lists and screenshot 3 navigates into grocery items — so the old flow was already fine for iPhone. But showing the sort/filter sheet is a good improvement for both platforms, since it highlights an additional feature.
+**CI model:** Push directly to `main`. CI triggers on every push. Expensive jobs run weekly.
 
-## Files to modify
+---
 
-### 1. Add accessibility identifier to sort/filter button
-**File:** `ListAll/ListAll/Views/ListView.swift:291-298`
+## Phase 1: Compiler Strictness + Static Analyzer (every push, ~1 hour)
 
-Add `.accessibilityIdentifier("SortFilterButton")` to the `arrow.up.arrow.down` button that triggers `showingOrganizationOptions`.
+### 1A. Warnings as errors in CI
+- Add `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` to all 3 `xcodebuild` commands in CI only
+- First: run local build on all 3 schemes, fix any existing warnings
+- Add comment in ci.yml: "Note: enabling Swift 6 strict concurrency will require disabling this temporarily"
 
-### 2. Add accessibility identifier to Done button in ItemOrganizationView
-**File:** `ListAll/ListAll/Views/Components/ItemOrganizationView.swift:182`
+### 1B. Xcode Static Analyzer
+- Add `RUN_CLANG_STATIC_ANALYZER=YES` to CI build steps
+- Free, runs during existing build — no additional job or time
 
-Add `.accessibilityIdentifier("OrganizationDoneButton")` to the "Done" button. This provides a locale-independent wait target for the test (the button text is `String(localized: "Done")` which becomes "Valmis" in Finnish).
+**Files:** `.github/workflows/ci.yml`, any source files with warnings
 
-### 3. Handle iPad sheet presentation for screenshots
-**File:** `ListAll/ListAll/Views/ListView.swift:351-353`
+---
 
-On iPad, `.sheet()` presents as a centered floating card (~60% of screen), not full-screen. This may look cramped in a marketing screenshot. Follow the same pattern used for the AddItem sheet (lines 337-342): use `fullScreenCover` when `isScreenshotMode` is true. **Verify visually first** — if the floating card actually looks good (showing the two-column layout behind it), this step can be skipped.
+## Phase 2: Code Coverage Reporting (every push, ~2 hours)
 
-### 4. Rename and update the UI test
-**File:** `ListAll/ListAllUITests/ListAllUITests_Simple.swift`
+### 2A. Enable coverage
+- Add `-enableCodeCoverage YES` to all 3 `xcodebuild test` commands
 
-- Rename `testScreenshots03_GroceryItems()` → `testScreenshots03_SortFilter()`
-- After `launchAndNavigateToGroceryList()`, tap the sort/filter button via `app.buttons["SortFilterButton"]`
-- Wait for the Organization sheet to appear using `app.buttons["OrganizationDoneButton"]` (locale-independent)
-- Capture `snapshot("03_SortFilter")`
+### 2B. Coverage extraction script: `scripts/extract-coverage.sh`
+- Extract using `xcrun xccov view --report --json TestResults.xcresult` (note: path argument required)
+- Filter to project source files, write markdown to `$GITHUB_STEP_SUMMARY`
+- No hard threshold — visibility only
 
-### 5. Update Snapfile
-**File:** `fastlane/Snapfile:88`
+### 2C. Post-test step in each platform job
+- iOS: `TestResults.xcresult`, macOS: `TestResults-Mac.xcresult`, watchOS: `TestResults-Watch.xcresult`
+- Upload coverage JSON as artifact alongside existing xcresult
 
-Change: `testScreenshots03_GroceryItems` → `testScreenshots03_SortFilter`
+**Files:** `.github/workflows/ci.yml`, `scripts/extract-coverage.sh` (new)
 
-### 6. Update Fastfile (3 locations)
-**File:** `fastlane/Fastfile`
+---
 
-- **Line 162**: Comment — update `03_GroceryItems` → `03_SortFilter`
-- **Line 227**: `only_testing` — update test method name
-- **Line 1336**: `only_testing` — update test method name
+## Phase 3: Fix Skipped CI Tests (~3 hours)
 
-### 7. Update Framefile.json
-**File:** `fastlane/Framefile.json:38-48`
+These are real tests being wasted. Root causes are documented in `documentation/learnings/`.
 
-Change filter and marketing text:
-```json
-{
-  "filter": "03_SortFilter",
-  "title": {
-    "en-US": "Sort & Filter Your Way",
-    "fi": "Lajittele ja Suodata Helposti"
-  },
-  "subtitle": {
-    "en-US": "Organize by name, date, or status",
-    "fi": "Järjestä nimen, päivän tai tilan mukaan"
-  }
-}
+### 3A. `testRemoteChangeThreadSafety` (CoreDataRemoteChangeTests)
+- **Root cause:** Timer debouncing + CI run loop timing (see `documentation/learnings/coredata-notification-test-ci-flakiness.md`)
+- **Fix:** Longer timeout + `RunLoop.current.run()` pumping
+
+### 3B. `testBatchedReloadPerformance` (SyncBugFixTests)
+- **Root cause:** Hard 5-second threshold too tight for CI runners
+- **Fix:** Increase to 15s or use XCTest `measure {}` with baselines
+
+### 3C. `testDataRepositoryHandlesSyncNotification` (ServicesTests)
+- **Root cause:** 0.1s async delay with 1.0s timeout
+- **Fix:** Increase timeout, use `expectation(forNotification:)`
+
+### 3D. `testReorder_modifiedAtPersistsToDatabase` (ListOrderingTests)
+- **Root cause:** Timestamp comparison with 0.1s sleep
+- **Fix:** Increase sleep or use date comparison with tolerance
+
+### 3E. 5 SuggestionService tests
+- `testGetSuggestionsWithLimit`, `testGetSuggestionsWithoutLimit`, `testSuggestionDetailsIncluded`, `testSuggestionServiceIndividualItems`, `testSuggestionServiceRecentItems`
+- **Root cause:** Unknown — needs actual investigation
+- **Action:** Run locally, diagnose failure, fix or document why they must stay skipped
+
+### 3F. Update ci.yml
+- Remove `-skip-testing:` lines for each fixed test
+
+**Files:** `.github/workflows/ci.yml`, test source files as needed, `documentation/learnings/` (update if new findings)
+
+---
+
+## Phase 4: Stress & Concurrency Tests (every push, ~3 hours)
+
+New test files in existing targets. Fast (<5s each), in-memory stores.
+
+### 4A. `ListAllTests/StressTests.swift` — Volume + rapid state changes
+- 500+ items in one list → verify sorting and export work
+- 500 lists → reorder first-to-last → verify no duplicate order numbers
+- Rapid add/delete/reorder cycle (200 iterations) on `MainViewModel` → verify clean state
+- Test `validateDataIntegrity(lists:)` and `validateListBusinessRules(_:existingLists:)` (complex logic, NOT covered in existing UtilsTests)
+- Order number collision recovery: manually corrupt order numbers → call reorder → verify recovery
+- Use `@Suite(.serialized)` to prevent cross-test contamination
+
+### 4B. `ListAllTests/ConcurrencyTests.swift` — Race condition reproduction
+**These target the #1 actual bug pattern: `perform` vs `performAndWait` races.**
+- Two background contexts saving to same entity simultaneously → verify no `NSMergeConflict` crash
+- Notification handler firing on background queue while main thread reads `@Published` property → verify thread safety
+- Debounce timer + concurrent save → verify timer doesn't fire stale data
+- `synchronizeLists(_:)` called from two threads simultaneously → verify data integrity
+
+### 4C. `ListAllTests/CoreDataRecoveryTests.swift` — Recoverable error paths
+**Not fault injection (singleton prevents it). Instead, test the recovery code directly.**
+- Test `deleteAndRecreateStore()` path (CoreDataManager.swift lines 217-221) — verify store is recreated successfully
+- Test error codes that trigger recovery: 134110, 256, 134060, 513, 4
+- Test that after store recreation, data operations work normally
+- Note: the `fatalError` path (line 224) is intentionally untestable — it's Apple's recommended crash-on-corruption pattern
+
+### 4D. `ListAllWatch Watch AppTests/WatchSyncChaosTests.swift`
+- 256KB size limit enforcement (100 items × 990-char descriptions)
+- Empty sync from Watch side
+- Sync ordering: Watch sends update while phone is mid-save
+
+### 4E. `ListAllMacTests/MacStressTests.swift`
+- Same stress patterns (4A) adapted for macOS TestHelpers
+
+**Files:**
+- `ListAll/ListAllTests/StressTests.swift` (new)
+- `ListAll/ListAllTests/ConcurrencyTests.swift` (new)
+- `ListAll/ListAllTests/CoreDataRecoveryTests.swift` (new)
+- `ListAll/ListAllWatch Watch AppTests/WatchSyncChaosTests.swift` (new)
+- `ListAll/ListAllMacTests/MacStressTests.swift` (new)
+- `ListAll/ListAll.xcodeproj/project.pbxproj` (register new files in test targets)
+
+---
+
+## Phase 5: Weekly Quality Workflow (~3 hours)
+
+### 5A. Thread Sanitizer — validate locally first
+- Run `xcodebuild test -enableThreadSanitizer YES` locally on macOS scheme
+- If clean: add weekly job for macOS (no simulator overhead)
+- If noisy with actor false positives: defer until Swift 6 migration
+- Do NOT skip `testRemoteChangeThreadSafety` (should be fixed in Phase 3)
+
+### 5B. Address Sanitizer for stress tests
+- Run Phase 4 stress tests with `-enableAddressSanitizer YES`
+- Catches use-after-free in Core Data ObjC bridging (cheap insurance, even if no historical bugs)
+- Cannot combine with TSan — separate job
+
+### 5C. Periphery dead code detection
+- `.periphery.yml` — MUST list all 3 schemes, build ALL 3 for indexing
+- Validate locally first before adding to CI
+- `retain_obj_c_accessible: true`
+
+### 5D. `quality.yml` workflow
+```
+quality.yml (schedule: Sunday 8am UTC, workflow_dispatch)
+  ├── asan-stress     [macos-14, 45 min]
+  ├── tsan-macos      [macos-14, 60 min]  (only if local validation passes)
+  └── periphery       [macos-14, 30 min]
 ```
 
-### 8. Update documentation
-**File:** `documentation/PLAN.md:177`
+**Files:** `.periphery.yml` (new), `.github/workflows/quality.yml` (new)
 
-Update the test description from GroceryItems to SortFilter.
+---
 
-### 9. Delete old screenshot files
-Remove the old `03_GroceryItems` files from `fastlane/screenshots_compat/` (both locales, iPad only). New files with `03_SortFilter` name will be generated.
+## Implementation Order
 
-**Files to delete:**
-- `fastlane/screenshots_compat/en-US/iPad Pro 13-inch (M4)-03_GroceryItems.png`
-- `fastlane/screenshots_compat/fi/iPad Pro 13-inch (M4)-03_GroceryItems.png`
-- `fastlane/screenshots_compat/en-US/iPhone 16 Pro Max-03_GroceryItems.png`
-- `fastlane/screenshots_compat/fi/iPhone 16 Pro Max-03_GroceryItems.png`
+1. Phase 1 — warnings-as-errors + static analyzer (instant wins)
+2. Phase 3 — fix skipped tests (highest value: real tests being wasted)
+3. Phase 4 — stress + concurrency tests (targets actual bug patterns)
+4. Phase 2 — coverage reporting (visibility)
+5. Phase 5 — weekly quality workflow (TSan/ASan/Periphery)
 
-### 11. Change English language flag from US to UK
-**File:** `ListAll/ListAll/Utils/LocalizationManager.swift:37`
-
-Change `case .english: return "🇺🇸"` → `case .english: return "🇬🇧"`. This is used in the Settings language picker. Only one location in the codebase.
-
-### 12. No changes needed
-- `.github/scripts/generate-screenshots-local.sh` — doesn't reference screenshot names
-- `.github/workflows/publish-to-appstore.yml` — validates by count (4 per locale), not by name
-- `screenshots.html` — auto-generated by Fastlane, will be regenerated
+---
 
 ## Verification
 
-1. Build the app to pick up the new accessibility identifier
-2. Boot iPad simulator, launch with UITEST_MODE, navigate to grocery list, tap sort/filter button — take screenshot to verify the sheet looks good
-3. Boot iPhone simulator, do the same — verify sort/filter sheet appears
-4. Run the UI test `testScreenshots03_SortFilter` on both iPhone and iPad simulators to confirm it passes
-5. Verify Fastlane config is consistent (test names match across Snapfile, Fastfile)
+- Push to main → warnings-as-errors passes, static analyzer runs, coverage in job summary, all new tests pass, previously-skipped tests now run
+- `quality.yml` manual dispatch → ASan passes, Periphery report uploads
+- TSan: validate locally first, decide whether to add to weekly

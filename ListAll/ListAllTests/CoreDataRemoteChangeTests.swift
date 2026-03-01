@@ -14,11 +14,18 @@ final class CoreDataRemoteChangeTests: XCTestCase {
         // Ensure Core Data stack is fully initialized before tests run
         // Access persistentStoreCoordinator to trigger lazy initialization
         _ = CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
+
+        // Drain the main run loop to process any pending dispatches/timers
+        // from previous tests. Without this, leftover DispatchQueue.main.async
+        // blocks or Timer callbacks can fire during the next test and interfere.
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.2))
     }
 
     override func tearDown() {
         // Reset again after test to clean up any state changes
         CoreDataManager.resetForTesting()
+        // Drain any pending timers/dispatches so they don't leak into the next test
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.2))
         super.tearDown()
     }
 
@@ -141,35 +148,56 @@ final class CoreDataRemoteChangeTests: XCTestCase {
     }
     
     // MARK: - Test 4: Thread Safety - Main Thread Execution
-    
+
     func testRemoteChangeThreadSafety() throws {
-        let expectation = XCTestExpectation(description: "Notification handled on main thread")
         var wasMainThread = false
-        
-        // Observe the custom notification
+        var notificationReceived = false
+
+        // Observe the debounced notification
         let observer = NotificationCenter.default.addObserver(
             forName: .coreDataRemoteChange,
             object: nil,
-            queue: .main
+            queue: nil  // Deliver on posting thread (should be main)
         ) { _ in
             wasMainThread = Thread.isMainThread
-            expectation.fulfill()
+            notificationReceived = true
         }
-        
-        // Post notification from background thread
+
+        // Let the run loop fully settle before triggering async work.
+        // This drains any pending DispatchQueue.main.async blocks and timers
+        // left over from previous tests in the suite. 1.0s is necessary because
+        // the debounce timer from previous tests is 500ms, and we need margin
+        // for the timer callback + any resulting async work to complete.
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 1.0))
+
+        // Capture coordinator reference on main thread before dispatching to background.
+        // This avoids any potential race accessing the singleton from background.
+        let coordinator = CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
+
+        // Post notification from background thread — this exercises the
+        // background→main dispatch path in handlePersistentStoreRemoteChange
         DispatchQueue.global(qos: .background).async {
             NotificationCenter.default.post(
                 name: .NSPersistentStoreRemoteChange,
-                object: CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
+                object: coordinator
             )
         }
-        
-        // Wait for notification (increased timeout for debounce + async dispatch)
-        wait(for: [expectation], timeout: 5.0)
-        
-        // Verify it was handled on main thread
-        XCTAssertTrue(wasMainThread)
-        
+
+        // Manually pump the run loop to process:
+        // 1. The DispatchQueue.main.async from handlePersistentStoreRemoteChange (background→main)
+        // 2. The Timer.scheduledTimer (500ms debounce)
+        // 3. The notification post from processRemoteChange
+        // XCTest's wait(for:) does not reliably pump Timer events in all scenarios,
+        // so we use explicit RunLoop pumping with a polling check.
+        let deadline = Date(timeIntervalSinceNow: 10.0)
+        while !notificationReceived && Date() < deadline {
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05))
+        }
+
+        // Verify the notification was received and handled on main thread
+        XCTAssertTrue(notificationReceived, "Debounced .coreDataRemoteChange notification should have been posted")
+        XCTAssertTrue(wasMainThread, "Notification should be handled on main thread")
+
         // Cleanup
         NotificationCenter.default.removeObserver(observer)
     }

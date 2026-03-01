@@ -286,6 +286,11 @@ class TestDataManager: ObservableObject {
         }
     }
     
+    /// Mirrors CoreDataManager.synchronizeLists(_:) — sets the internal lists array
+    func synchronizeLists(_ newOrder: [List]) {
+        lists = newOrder
+    }
+
     func clearAll() {
         let context = coreDataManager.viewContext
         

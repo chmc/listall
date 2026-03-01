@@ -147,38 +147,37 @@ struct MainView: View {
         }
     }
 
-    /// Programmatic navigation for auto-opening newly created list (iPhone only)
-    /// Uses deprecated NavigationLink(isActive:) API -- kept for iPhone NavigationStack path
+    /// Binding that drives programmatic navigation for auto-opening newly created list (iPhone only)
     /// iPad uses NavigationSplitView detail column instead
-    private var programmaticNavigationLink: some View {
-        NavigationLink(
-            destination: viewModel.selectedListForNavigation.map { list in
-                ListView(list: list, mainViewModel: viewModel)
-                    .onDisappear {
-                        // Only clear stored list ID when user explicitly navigates back
-                        // Don't clear on system-initiated view hierarchy changes
-                        if viewModel.selectedListForNavigation == nil {
-                            selectedListIdString = nil
-                        }
-                    }
-            },
-            isActive: Binding(
-                get: { viewModel.selectedListForNavigation != nil },
-                set: { newValue in
-                    if !newValue {
-                        // User navigated back - clear the view model state
-                        viewModel.selectedListForNavigation = nil
-                        // Don't clear selectedListIdString here - let onDisappear handle it
-                    } else if let list = viewModel.selectedListForNavigation {
-                        // Save list ID for state restoration
-                        selectedListIdString = list.id.uuidString
+    private var isNavigatingToList: Binding<Bool> {
+        Binding(
+            get: { viewModel.selectedListForNavigation != nil },
+            set: { newValue in
+                if !newValue {
+                    // User navigated back - clear the view model state
+                    viewModel.selectedListForNavigation = nil
+                    // Don't clear selectedListIdString here - let onDisappear handle it
+                } else if let list = viewModel.selectedListForNavigation {
+                    // Save list ID for state restoration
+                    selectedListIdString = list.id.uuidString
+                }
+            }
+        )
+    }
+
+    /// Navigation destination view for the selected list
+    @ViewBuilder
+    private var navigationDestinationView: some View {
+        if let list = viewModel.selectedListForNavigation {
+            ListView(list: list, mainViewModel: viewModel)
+                .onDisappear {
+                    // Only clear stored list ID when user explicitly navigates back
+                    // Don't clear on system-initiated view hierarchy changes
+                    if viewModel.selectedListForNavigation == nil {
+                        selectedListIdString = nil
                     }
                 }
-            )
-        ) {
-            EmptyView()
         }
-        .hidden()
     }
 
     // MARK: - iPad Sidebar Content
@@ -747,9 +746,15 @@ struct MainView: View {
             ZStack {
                 VStack(spacing: 0) {
                     mainListContent
-
-                    programmaticNavigationLink
                 }
+                .background(
+                    // NavigationView requires NavigationLink(isActive:) for programmatic navigation.
+                    // navigationDestination(isPresented:) is NavigationStack-only and silently no-ops here.
+                    DeprecatedNavigationLink(
+                        isActive: isNavigatingToList,
+                        destination: { navigationDestinationView }
+                    )
+                )
                 .navigationTitle(viewModel.isInSelectionMode ? "\(viewModel.selectedLists.count) Selected" : (viewModel.showingArchivedLists ? "Archived Lists" : "Lists"))
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
@@ -894,6 +899,30 @@ struct CustomBottomToolbar: View {
         }
         .frame(height: 50)
         .padding(.bottom, 8)
+    }
+}
+
+// MARK: - Deprecated NavigationLink Wrapper
+/// Wraps `NavigationLink(destination:isActive:label:)` to isolate its deprecation warning.
+///
+/// `NavigationView` requires the old `NavigationLink(isActive:)` API for programmatic
+/// navigation. The newer `navigationDestination(isPresented:)` is a NavigationStack-only
+/// modifier that silently does nothing inside NavigationView.
+///
+/// By placing the deprecated call inside this struct's `body` (which is a protocol
+/// requirement), the deprecation warning is contained and does not propagate to callers.
+struct DeprecatedNavigationLink<Destination: View>: View {
+    let isActive: Binding<Bool>
+    @ViewBuilder let destination: () -> Destination
+
+    @available(iOS, deprecated: 16.0, message: "Migrate to NavigationStack when minimum deployment target is iOS 16+")
+    var body: some View {
+        NavigationLink(
+            destination: destination(),
+            isActive: isActive,
+            label: { EmptyView() }
+        )
+        .hidden()
     }
 }
 

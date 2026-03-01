@@ -493,6 +493,7 @@ class SharingService: ObservableObject {
     /// Returns available sharing services for the given content
     /// - Parameter content: The content to share (String or URL)
     /// - Returns: Array of available NSSharingService instances
+    @available(macOS, deprecated: 13.0, message: "Migrate to NSSharingServicePicker.standardShareMenuItem when minimum deployment target is macOS 13+")
     func availableSharingServices(for content: Any) -> [NSSharingService] {
         var items: [Any] = []
 

@@ -1,0 +1,30 @@
+# Periphery dead code detection configuration
+# https://github.com/peripheryapp/periphery
+#
+# Run locally: periphery scan
+# Requires all 3 schemes to be built for complete indexing.
+
+schemes:
+  - ListAll
+  - ListAllMac
+  - ListAllWatch Watch App
+
+targets:
+  - ListAll
+  - ListAllMac
+  - ListAllWatch Watch App
+
+# Keep @objc-accessible declarations (Core Data entities, ObjC bridging)
+retain_objc_accessible: true
+
+# Retain public declarations since schemes share code across targets
+retain_public: true
+
+# Exclude test targets from dead code analysis
+exclude_targets:
+  - ListAllTests
+  - ListAllUITests
+  - ListAllMacTests
+  - ListAllMacUITests
+  - ListAllWatch Watch AppTests
+  - ListAllWatch Watch AppUITests

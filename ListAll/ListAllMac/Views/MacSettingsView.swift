@@ -363,8 +363,8 @@ private struct DataSettingsTab: View {
         ) { result in
             handleFileImportResult(result)
         }
-        .onChange(of: importViewModel.showPreview) { showPreview in
-            if showPreview, let preview = importViewModel.importPreview {
+        .onChange(of: importViewModel.showPreview) {
+            if importViewModel.showPreview, let preview = importViewModel.importPreview {
                 presentImportPreview(preview)
             }
         }

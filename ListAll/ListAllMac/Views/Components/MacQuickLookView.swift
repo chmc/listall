@@ -279,7 +279,7 @@ private struct ImageThumbnail: View {
     VStack(spacing: 20) {
         // Create test item with mock image
         let item = {
-            var testItem = Item(title: "Test Item")
+            let testItem = Item(title: "Test Item")
             // In preview, we don't have actual image data
             return testItem
         }()

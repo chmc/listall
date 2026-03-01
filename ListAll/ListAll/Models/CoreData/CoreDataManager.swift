@@ -303,6 +303,10 @@ class CoreDataManager: ObservableObject {
         shared.remoteChangeDebounceTimer?.invalidate()
         shared.remoteChangeDebounceTimer = nil
 
+        // Reset local save flag to prevent previous test's save() from causing
+        // the next test's remote change notification to be incorrectly ignored
+        shared.isLocalSave = false
+
         // Reset Core Data context to clear cached objects
         shared.viewContext.reset()
 
@@ -1254,7 +1258,7 @@ class DataManager: ObservableObject {
                     imageCheck.predicate = NSPredicate(format: "id == %@", itemImage.id as CVarArg)
                     
                     let existingImages = try context.fetch(imageCheck)
-                    if let existingImage = existingImages.first {
+                    if existingImages.first != nil {
                         // Image ID already exists - create a new one with a different ID
                         // This can happen if the same item is added to multiple lists
                         var newImageData = itemImage
@@ -1459,7 +1463,7 @@ class DataManager: ObservableObject {
                 if items.count > 1 {
                     // Sort by modifiedAt, keep most recent
                     let sorted = items.sorted { ($0.modifiedAt ?? Date.distantPast) > ($1.modifiedAt ?? Date.distantPast) }
-                    let toKeep = sorted.first!
+                    // Keep the most recent, remove the rest
                     let toRemove = sorted.dropFirst()
                     
                     for duplicate in toRemove {

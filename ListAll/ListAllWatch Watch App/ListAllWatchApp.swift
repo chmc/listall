@@ -33,7 +33,7 @@ struct ListAllWatch_Watch_AppApp: App {
         let args = ProcessInfo.processInfo.arguments
         if let index = args.firstIndex(of: "-AppleLanguages"),
            index + 1 < args.count {
-            var langArg = args[index + 1]
+            let langArg = args[index + 1]
             // langArg may be in the form "(fi)" or "(en)". Strip non-letters and lowercased
             let parsed = langArg.lowercased().filter { $0.isLetter }
             let languageCode = String(parsed.prefix(2))

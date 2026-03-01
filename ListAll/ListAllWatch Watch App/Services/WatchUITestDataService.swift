@@ -46,7 +46,7 @@ class WatchUITestDataService {
         }
         // 3. Fallback to localization manager
         else {
-            languageCode = WatchLocalizationManager.shared.currentLocale.languageCode ?? "en"
+            languageCode = WatchLocalizationManager.shared.currentLocale.language.languageCode?.identifier ?? "en"
             print("🧪 Language from LocalizationManager: \(languageCode)")
         }
         

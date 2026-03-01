@@ -3027,29 +3027,30 @@ final class ServicesTests: XCTestCase {
         // Test that DataRepository responds to sync notifications
         let testDataManager = TestHelpers.createTestDataManager()
         let repository = TestDataRepository(dataManager: testDataManager)
-        
+
         // Create a test list
         let testList = List(name: "Test List")
         testDataManager.addList(testList)
-        
+
         // Add an item directly to Core Data (simulating change from watch)
         let externalItem = Item(title: "External Item")
         testDataManager.addItem(externalItem, to: testList.id)
-        
+
+        // Set up expectation to observe the notification directly before posting it
+        let syncExpectation = expectation(
+            forNotification: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+
         // Post sync notification (simulating notification from Watch)
         NotificationCenter.default.post(
             name: NSNotification.Name("WatchConnectivitySyncReceived"),
             object: nil,
             userInfo: ["syncNotification": true]
         )
-        
-        // Give the notification time to be processed
-        let expectation = XCTestExpectation(description: "Sync processed")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-        
+
+        wait(for: [syncExpectation], timeout: 5.0)
+
         // Verify data was reloaded by checking if lists are up to date
         let lists = repository.getAllLists()
         XCTAssertFalse(lists.isEmpty, "Lists should be reloaded after sync notification")
