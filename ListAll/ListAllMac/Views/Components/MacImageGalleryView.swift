@@ -7,10 +7,14 @@
 //
 
 import SwiftUI
-// TODO: Remove @preconcurrency once MacImageGalleryView is migrated to proper Swift 6 concurrency
-@preconcurrency import AppKit
+import AppKit
 import UniformTypeIdentifiers
 import Quartz
+
+/// Thread-safe wrapper to pass NSImage across isolation boundaries
+private struct SendableImage: @unchecked Sendable {
+    let image: NSImage?
+}
 
 // MARK: - Thumbnail Size Presets
 
@@ -724,12 +728,14 @@ private struct MacImageThumbnailCell: View {
         let thumbnailSize = CGSize(width: size * 2, height: size * 2) // 2x for retina
 
         // Run image processing off the main thread
+        // Use SendableImage wrapper to avoid NSImage crossing isolation boundaries
         let loadedThumbnail = await Task.detached(priority: .userInitiated) {
-            guard let data = imageData else { return nil as NSImage? }
+            guard let data = imageData else { return SendableImage(image: nil) }
 
             // Use ImageService's async thumbnail creation for better performance
-            return await ImageService.shared.createThumbnailAsync(from: data, size: thumbnailSize)
-        }.value
+            let result = await ImageService.shared.createThumbnailAsync(from: data, size: thumbnailSize)
+            return SendableImage(image: result)
+        }.value.image
 
         // Update UI on main thread with no implicit animation
         // Using withTransaction prevents layout recursion by ensuring

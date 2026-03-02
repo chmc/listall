@@ -7,8 +7,7 @@
 //
 
 import Foundation
-// TODO: Remove @preconcurrency once MacImageDropHandler is migrated to proper Swift 6 concurrency
-@preconcurrency import AppKit
+import AppKit
 import UniformTypeIdentifiers
 
 /// Handles drag-and-drop operations for images in macOS
@@ -90,17 +89,12 @@ class MacImageDropHandler {
         // Load images concurrently
         var loadedImages: [NSImage] = []
 
-        await withTaskGroup(of: NSImage?.self) { group in
-            for (index, provider) in limitedProviders.enumerated() {
-                group.addTask {
-                    return await self.loadImage(from: provider, index: index)
-                }
-            }
-
-            for await image in group {
-                if let image = image {
-                    loadedImages.append(image)
-                }
+        // Load images sequentially to avoid NSImage/NSItemProvider Sendable issues
+        // with TaskGroup crossing @MainActor isolation boundaries.
+        // Sequential loading is acceptable since providers are already limited by maxImagesPerDrop.
+        for (index, provider) in limitedProviders.enumerated() {
+            if let image = await loadImage(from: provider, index: index) {
+                loadedImages.append(image)
             }
         }
 
