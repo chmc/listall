@@ -12198,14 +12198,14 @@ final class CmdFGlobalSearchTests: XCTestCase {
     func testNotificationHasNoUserInfo() {
         // Arrange
         let expectation = XCTestExpectation(description: "Notification received")
-        var receivedUserInfo: [AnyHashable: Any]? = ["placeholder": true]
 
         let observer = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("FocusSearchField"),
             object: nil,
             queue: .main
         ) { notification in
-            receivedUserInfo = notification.userInfo
+            XCTAssertNil(notification.userInfo,
+                         "FocusSearchField notification should not contain userInfo")
             expectation.fulfill()
         }
 
@@ -12218,8 +12218,6 @@ final class CmdFGlobalSearchTests: XCTestCase {
 
         // Assert
         wait(for: [expectation], timeout: 1.0)
-        XCTAssertNil(receivedUserInfo,
-                     "FocusSearchField notification should not contain userInfo")
 
         // Cleanup
         NotificationCenter.default.removeObserver(observer)
