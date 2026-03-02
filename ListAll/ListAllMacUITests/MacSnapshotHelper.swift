@@ -190,7 +190,7 @@ open class Snapshot: NSObject {
         NSLog("snapshot: \(name)")
 
         // Verify setupSnapshot was called
-        guard let app = self.app else {
+        guard let _ = self.app else {
             NSLog("[macOS] ERROR: XCUIApplication not set. Call setupSnapshot(app) first.")
             XCTFail("XCUIApplication is not set")
             return

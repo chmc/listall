@@ -46,11 +46,8 @@ final class RealAppleScriptExecutor: AppleScriptExecuting {
 
         // Wait with timeout using a background thread
         let semaphore = DispatchSemaphore(value: 0)
-        var processTerminated = false
-
         DispatchQueue.global(qos: .userInitiated).async {
             process.waitUntilExit()
-            processTerminated = true
             semaphore.signal()
         }
 
