@@ -522,31 +522,11 @@ final class ListAllMacUITests: MacUITestCase {
     func testLaunchPerformance() throws {
         // Skip performance test during UI test runs
         throw XCTSkip("Performance tests should be run separately")
-
-        // Measure app launch time
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            let testApp = XCUIApplication()
-            testApp.launchForUITest()
-            testApp.terminate()
-        }
     }
 
     func testListScrollPerformance() throws {
         // Skip performance test during UI test runs
         throw XCTSkip("Performance tests should be run separately")
-
-        // Select list with many items
-        let firstListName = XCUIApplication.englishTestLists[0]
-        app.selectList(named: firstListName)
-
-        // Measure scroll performance
-        let table = app.tables.firstMatch
-        XCTAssertTrue(table.exists, "Table should exist")
-
-        measure {
-            table.swipeUp()
-            table.swipeDown()
-        }
     }
 
     // MARK: - Screenshot Tests

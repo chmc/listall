@@ -99,9 +99,6 @@ final class MacScreenshotTests: MacUITestCase {
             let previousContinueAfterFailure = continueAfterFailure
             continueAfterFailure = true
 
-            // Store XCTest expectation failure flag
-            var launchDidTimeout = false
-
             // NOTE: XCTest errors are recorded via test failure API, not Swift exceptions
             // So we can't catch them with try-catch. Instead, we let launch() fail
             // and then check the app state to see if it's actually running.
@@ -258,7 +255,7 @@ final class MacScreenshotTests: MacUITestCase {
         if let listAllApp = NSWorkspace.shared.runningApplications.first(where: {
             $0.bundleIdentifier == "io.github.chmc.ListAllMac"
         }) {
-            listAllApp.activate(options: [.activateIgnoringOtherApps])
+            listAllApp.activate()
             print("  ✓ Activated ListAll via NSWorkspace")
         }
 

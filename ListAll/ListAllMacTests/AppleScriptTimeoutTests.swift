@@ -152,7 +152,7 @@ final class AppleScriptTimeoutTests: XCTestCase {
                 // Expected if TCC not granted
                 XCTAssertTrue(error.userMessage.contains("System Settings"),
                             "TCC error should have actionable message")
-            } else if case .executionFailed(let exitCode, let stderr) = error {
+            } else if case .executionFailed(exitCode: _, stderr: let stderr) = error {
                 // Check if stderr contains TCC patterns
                 let detection = TCCErrorDetector.detectTCCError(stderr: stderr)
                 if detection.isTCCError {

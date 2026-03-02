@@ -361,7 +361,8 @@ final class CloudKitSyncIntegrationTests: XCTestCase {
         try XCTSkipIf(TestHelpers.shouldSkipAppGroupsTest(),
                       "Skipping: unsigned build would trigger permission dialogs")
         let service = CloudKitService()
-        XCTAssertTrue(service is any ObservableObject)
+        // Verify CloudKitService conforms to ObservableObject (compile-time check)
+        let _: any ObservableObject = service
     }
 
     func testSyncStatusEnumValues() {

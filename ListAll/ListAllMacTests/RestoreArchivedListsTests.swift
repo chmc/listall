@@ -124,7 +124,7 @@ struct RestoreArchivedListsTests {
         // Create and archive a list
         try viewModel.addList(name: "Timestamp Test List")
         let listToArchive = viewModel.lists.first!
-        let originalModifiedAt = listToArchive.modifiedAt
+        _ = listToArchive.modifiedAt
         viewModel.archiveList(listToArchive)
 
         // Wait a small amount to ensure timestamp difference
@@ -263,7 +263,7 @@ struct RestoreArchivedListsDataManagerTests {
         let testDataManager = TestHelpers.createTestDataManager()
 
         // Create and archive a list
-        var list = RestoreTestListModel(name: "Core Data Test List")
+        let list = RestoreTestListModel(name: "Core Data Test List")
         testDataManager.addList(list)
 
         // Get the list and archive it directly in Core Data
@@ -586,7 +586,7 @@ struct ArchivedListsReadOnlyTests {
     @Test("ListViewModel should indicate when drag reorder is disabled for archived list")
     func testDragReorderDisabledForArchivedList() async throws {
         // Arrange: Create test environment
-        let testDataManager = TestHelpers.createTestDataManager()
+        _ = TestHelpers.createTestDataManager()
 
         // Create an archived list directly for testing
         var archivedList = RestoreTestListModel(name: "Reorder Test List")

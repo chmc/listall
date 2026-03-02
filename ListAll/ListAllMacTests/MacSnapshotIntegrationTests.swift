@@ -341,7 +341,6 @@ final class MacSnapshotIntegrationTests: XCTestCase {
     /// Test 12: Orchestrator retries transient failures
     func test_orchestrator_retriesTransientFailures() throws {
         // Arrange: First call fails, second succeeds
-        var callCount = 0
         mockExecutor.errorToThrow = AppleScriptError.executionFailed(exitCode: 1, stderr: "Transient error")
 
         let orchestrator = ScreenshotOrchestrator(
@@ -572,7 +571,7 @@ final class MacSnapshotIntegrationTests: XCTestCase {
         // Act: Capture, then reset mocks, capture again
         _ = try orchestrator.captureAndValidate(named: "First", window: mockWindow)
 
-        let firstCallCount = mockExecutor.executeCallCount
+        _ = mockExecutor.executeCallCount
         mockExecutor.reset()
         mockCapture.reset()
 

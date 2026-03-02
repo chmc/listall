@@ -13,6 +13,13 @@ import AppKit
 #endif
 @testable import ListAll
 
+// MARK: - Helper to prevent compiler constant-folding warnings
+
+/// Returns the value unchanged but prevents the compiler from treating it as a compile-time constant.
+/// This avoids "will never be executed" warnings in tests that verify control-flow logic with known values.
+@inline(never)
+private func runtime<T>(_ value: T) -> T { value }
+
 /// Unit tests for Core Data model extensions on macOS
 /// Verifies that all entity extensions (ListEntity, ItemEntity, ItemImageEntity, UserDataEntity)
 /// compile and function correctly on the macOS platform.
@@ -824,7 +831,7 @@ final class DataModelTests: XCTestCase {
 
     /// Test List Hashable and Equatable
     func testListHashableAndEquatable() {
-        var list1 = List(name: "List 1")
+        let list1 = List(name: "List 1")
         var list2 = List(name: "List 2")
 
         // Different lists should not be equal
@@ -3035,7 +3042,7 @@ final class ExportServiceMacTests: XCTestCase {
         #if os(macOS)
         let type = ExportService.self
         // ExportService must conform to ObservableObject for SwiftUI integration
-        XCTAssertTrue(type is any ObservableObject.Type, "ExportService should conform to ObservableObject")
+        let _: any ObservableObject.Type = type // Compile-time check: ExportService conforms to ObservableObject
         #else
         XCTFail("This test should only run on macOS")
         #endif
@@ -3884,6 +3891,7 @@ final class SharingServiceMacTests: XCTestCase {
 
     // MARK: - NSSharingService Tests
 
+    @available(macOS, deprecated: 13.0)
     func testNSSharingServiceAvailability() {
         #if os(macOS)
         // Test that sharing services are available for text content
@@ -3898,6 +3906,7 @@ final class SharingServiceMacTests: XCTestCase {
         #endif
     }
 
+    @available(macOS, deprecated: 13.0)
     func testNSSharingServiceForURL() {
         #if os(macOS)
         let testURL = URL(fileURLWithPath: "/tmp/test.txt")
@@ -4197,7 +4206,7 @@ final class MainViewModelMacTests: XCTestCase {
         // Create test infrastructure
         let testDataManager = TestHelpers.createTestDataManager()
         let vm = MainViewModel(dataManager: testDataManager)
-        XCTAssertTrue(vm is any ObservableObject, "MainViewModel should conform to ObservableObject")
+        let _: any ObservableObject = vm // Compile-time check: MainViewModel conforms to ObservableObject
     }
 
     // MARK: - Published Properties Tests
@@ -4205,7 +4214,7 @@ final class MainViewModelMacTests: XCTestCase {
     /// Test that MainViewModel has expected published properties
     func testMainViewModelHasListsProperty() {
         // Using mirror to verify the property exists
-        let mirror = Mirror(reflecting: MainViewModel.self)
+        _ = Mirror(reflecting: MainViewModel.self)
         // The property should be defined in the class
         XCTAssertTrue(true, "MainViewModel should have lists property")
     }
@@ -4227,7 +4236,7 @@ final class MainViewModelMacTests: XCTestCase {
     /// Test ValidationError conforms to LocalizedError
     func testValidationErrorIsLocalizedError() {
         let error = ValidationError.emptyName
-        XCTAssertTrue(error is LocalizedError)
+        let _: LocalizedError = error // Compile-time check: ValidationError conforms to LocalizedError
     }
 
     // MARK: - List Model Validation Tests (No Core Data)
@@ -4553,7 +4562,7 @@ final class ListViewModelMacTests: XCTestCase {
         let testDataManager = TestHelpers.createTestDataManager()
         let testList = ListAll.List(name: "Test List")
         let vm = ListViewModel(list: testList, dataManager: testDataManager)
-        XCTAssertTrue(vm is any ObservableObject, "ListViewModel should conform to ObservableObject")
+        let _: any ObservableObject = vm // Compile-time check: ListViewModel conforms to ObservableObject
     }
 
     // MARK: - Published Properties Verification
@@ -4895,7 +4904,7 @@ final class ListViewModelMacTests: XCTestCase {
             createTestItem()
         ]
 
-        var selectedItems: Set<UUID> = Set(items.map { $0.id })
+        let selectedItems: Set<UUID> = Set(items.map { $0.id })
         XCTAssertEqual(selectedItems.count, 3)
     }
 
@@ -5317,7 +5326,7 @@ final class ItemViewModelMacTests: XCTestCase {
 
     func testItemDisplayProperties() {
         // Test Item computed properties
-        var item = createTestItem(title: "Test Item", description: "Description", quantity: 3)
+        let item = createTestItem(title: "Test Item", description: "Description", quantity: 3)
 
         XCTAssertEqual(item.displayTitle, "Test Item")
         XCTAssertEqual(item.displayDescription, "Description")
@@ -5621,7 +5630,7 @@ final class ImportViewModelMacTests: XCTestCase {
     func testImportViewModelIsObservableObject() {
         // Verify ImportViewModel conforms to ObservableObject
         let vm = ImportViewModel()
-        XCTAssertTrue(vm is any ObservableObject, "ImportViewModel should conform to ObservableObject")
+        let _: any ObservableObject = vm // Compile-time check: ImportViewModel conforms to ObservableObject
     }
 
     // MARK: - Published Properties Tests
@@ -5932,7 +5941,7 @@ final class ExportViewModelMacTests: XCTestCase {
     func testExportViewModelIsObservableObject() {
         // Verify ExportViewModel conforms to ObservableObject
         let vm = TestHelpers.createTestExportViewModel()
-        XCTAssertTrue(vm is any ObservableObject, "ExportViewModel should conform to ObservableObject")
+        let _: any ObservableObject = vm // Compile-time check: ExportViewModel conforms to ObservableObject
     }
 
     // MARK: - Published Properties Tests
@@ -6637,7 +6646,7 @@ final class ServicesMenuMacTests: XCTestCase {
 
     func testServicesProviderIsNSObject() {
         let provider = ServicesProvider.shared
-        XCTAssertTrue(provider is NSObject, "ServicesProvider must inherit from NSObject for services")
+        let _: NSObject = provider // Compile-time check: ServicesProvider inherits from NSObject
     }
 
     // MARK: - Text Parsing Tests
@@ -8199,7 +8208,7 @@ final class MacItemOrganizationViewTests: XCTestCase {
 
         let filteredItems = viewModel.filteredItems
         XCTAssertNotNil(filteredItems)
-        XCTAssertTrue(filteredItems is [Item])
+        let _: [Item] = filteredItems // Compile-time check: filteredItems is [Item]
     }
 
     func testListViewModelUpdateFilterOption() {
@@ -8775,11 +8784,11 @@ final class ItemReorderingMacTests: XCTestCase {
 
     func testReorderPreservesItemProperties() {
         // Test that reordering preserves all item properties except orderNumber
-        var item1 = createTestItem(title: "Item 1", description: "Desc 1",
+        let item1 = createTestItem(title: "Item 1", description: "Desc 1",
                                    quantity: 5, isCrossedOut: false, orderNumber: 0)
-        var item2 = createTestItem(title: "Item 2", description: "Desc 2",
+        let item2 = createTestItem(title: "Item 2", description: "Desc 2",
                                    quantity: 10, isCrossedOut: true, orderNumber: 1)
-        var item3 = createTestItem(title: "Item 3", description: "Desc 3",
+        let item3 = createTestItem(title: "Item 3", description: "Desc 3",
                                    quantity: 15, isCrossedOut: false, orderNumber: 2)
 
         var items = [item1, item2, item3]
@@ -9290,15 +9299,17 @@ final class ListSharingMacTests: XCTestCase {
     // MARK: - macOS-Specific Sharing Service Methods
 
     #if os(macOS)
+    @available(macOS, deprecated: 13.0)
     func testAvailableSharingServicesForText() {
         let service = SharingService()
         let services = service.availableSharingServices(for: "Test text")
 
         // Should return some services (Mail, Messages, etc.)
         // The exact count depends on system configuration
-        XCTAssertTrue(services is [NSSharingService])
+        let _: [NSSharingService] = services // Compile-time check: return type is [NSSharingService]
     }
 
+    @available(macOS, deprecated: 13.0)
     func testAvailableSharingServicesForEmptyItems() {
         let service = SharingService()
         let services = service.availableSharingServices(for: NSNull())
@@ -9376,7 +9387,7 @@ final class ListSharingMacTests: XCTestCase {
     func testShareWorkflowJSON() {
         // This test verifies the JSON share workflow without DataRepository access
         let options = ShareOptions.default
-        options.includeImages  // Verify images option is available for JSON
+        _ = options.includeImages  // Verify images option is available for JSON
         XCTAssertTrue(options.includeImages)
     }
 
@@ -9692,15 +9703,14 @@ struct MemoryLeakTests {
         // ItemViewModel is the class we want to test for leaks
         // This test verifies the class is available on macOS
         let viewModelType = ItemViewModel.self
-        #expect(viewModelType != nil, "ItemViewModel should exist on macOS")
+        #expect(viewModelType == ItemViewModel.self, "ItemViewModel should exist on macOS")
     }
 
     @Test("ItemViewModel is an ObservableObject")
     func itemViewModelIsObservableObject() {
         // Verify ItemViewModel conforms to ObservableObject
         // This is critical for SwiftUI memory management
-        #expect(ItemViewModel.self is any ObservableObject.Type,
-               "ItemViewModel should conform to ObservableObject")
+        let _: any ObservableObject.Type = ItemViewModel.self // Compile-time check
     }
 
     // MARK: - ListViewModel Memory Tests
@@ -9708,13 +9718,12 @@ struct MemoryLeakTests {
     @Test("ListViewModel class exists on macOS")
     func listViewModelExists() {
         let viewModelType = ListViewModel.self
-        #expect(viewModelType != nil, "ListViewModel should exist on macOS")
+        #expect(viewModelType == ListViewModel.self, "ListViewModel should exist on macOS")
     }
 
     @Test("ListViewModel is an ObservableObject")
     func listViewModelIsObservableObject() {
-        #expect(ListViewModel.self is any ObservableObject.Type,
-               "ListViewModel should conform to ObservableObject")
+        let _: any ObservableObject.Type = ListViewModel.self // Compile-time check
     }
 
     // MARK: - MainViewModel Memory Tests
@@ -9722,13 +9731,12 @@ struct MemoryLeakTests {
     @Test("MainViewModel class exists on macOS")
     func mainViewModelExists() {
         let viewModelType = MainViewModel.self
-        #expect(viewModelType != nil, "MainViewModel should exist on macOS")
+        #expect(viewModelType == MainViewModel.self, "MainViewModel should exist on macOS")
     }
 
     @Test("MainViewModel is an ObservableObject")
     func mainViewModelIsObservableObject() {
-        #expect(MainViewModel.self is any ObservableObject.Type,
-               "MainViewModel should conform to ObservableObject")
+        let _: any ObservableObject.Type = MainViewModel.self // Compile-time check
     }
 
     // MARK: - Closure Capture Pattern Tests
@@ -9773,11 +9781,10 @@ struct MemoryLeakTests {
         // This test verifies the correct pattern for timer cleanup
         // The actual Timer cleanup in MacMainView uses [weak self] which prevents leaks
 
-        var timerFired = false
         var timer: Timer?
 
         timer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: false) { _ in
-            timerFired = true
+            // Timer would fire here
         }
 
         // Invalidate timer before it fires
@@ -9923,7 +9930,7 @@ struct MemoryLeakTests {
         let imageService = ImageService.shared
 
         // Create some test image data
-        let testImageData = Data(repeating: 0xFF, count: 1000)
+        _ = Data(repeating: 0xFF, count: 1000)
 
         // Clear cache
         imageService.clearThumbnailCache()
@@ -9938,13 +9945,13 @@ struct MemoryLeakTests {
     @Test("ExportViewModel class exists on macOS")
     func exportViewModelExists() {
         let viewModelType = ExportViewModel.self
-        #expect(viewModelType != nil, "ExportViewModel should exist on macOS")
+        #expect(viewModelType == ExportViewModel.self, "ExportViewModel should exist on macOS")
     }
 
     @Test("ImportViewModel class exists on macOS")
     func importViewModelExists() {
         let viewModelType = ImportViewModel.self
-        #expect(viewModelType != nil, "ImportViewModel should exist on macOS")
+        #expect(viewModelType == ImportViewModel.self, "ImportViewModel should exist on macOS")
     }
 
     // MARK: - Service Singleton Pattern Tests
@@ -10738,7 +10745,7 @@ final class BulkListOperationsMacTests: XCTestCase {
     func testActiveListsViewShowsArchiveAction() {
         // When viewing active lists (showingArchivedLists = false),
         // the action should be "Archive Lists" (recoverable)
-        let showingArchivedLists = false
+        let showingArchivedLists = runtime(false)
 
         if showingArchivedLists {
             XCTFail("Should show archive action for active lists")
@@ -10750,7 +10757,7 @@ final class BulkListOperationsMacTests: XCTestCase {
     func testArchivedListsViewShowsDeletePermanentlyAction() {
         // When viewing archived lists (showingArchivedLists = true),
         // the action should be "Delete Permanently" (irreversible)
-        let showingArchivedLists = true
+        let showingArchivedLists = runtime(true)
 
         if showingArchivedLists {
             XCTAssertTrue(true, "Archived lists view shows Delete Permanently action")
@@ -10845,7 +10852,7 @@ final class BulkListOperationsMacTests: XCTestCase {
         // When pressing Delete key in selection mode on active lists view,
         // should show archive confirmation
         let isInSelectionMode = true
-        let showingArchivedLists = false
+        let showingArchivedLists = runtime(false)
         var showingArchiveConfirmation = false
         var showingPermanentDeleteConfirmation = false
         let selectedLists: Set<UUID> = [UUID()]
@@ -10867,7 +10874,7 @@ final class BulkListOperationsMacTests: XCTestCase {
         // When pressing Delete key in selection mode on archived lists view,
         // should show permanent delete confirmation
         let isInSelectionMode = true
-        let showingArchivedLists = true
+        let showingArchivedLists = runtime(true)
         var showingArchiveConfirmation = false
         var showingPermanentDeleteConfirmation = false
         let selectedLists: Set<UUID> = [UUID()]
@@ -10889,7 +10896,7 @@ final class BulkListOperationsMacTests: XCTestCase {
         // When pressing Delete key with no lists selected, nothing should happen
         let isInSelectionMode = true
         var showingArchiveConfirmation = false
-        var showingPermanentDeleteConfirmation = false
+        let showingPermanentDeleteConfirmation = false
         let selectedLists: Set<UUID> = [] // Empty selection
 
         // Simulate onKeyPress(.delete)
@@ -11538,7 +11545,7 @@ final class CmdClickMultiSelectTests: XCTestCase {
     /// Expected: Selection should work without explicit mode toggle
     func testCmdClickDoesNotRequireSelectionMode() {
         // Arrange
-        var isInSelectionMode = false
+        let isInSelectionMode = false
         var selectedItems: Set<UUID> = []
         let item1 = createTestItem(title: "Item 1", orderNumber: 0)
         let item2 = createTestItem(title: "Item 2", orderNumber: 1)
@@ -11632,7 +11639,7 @@ final class CmdClickMultiSelectTests: XCTestCase {
         // Arrange - Define expected behavior
         let items = createTestItems(count: 5)
         var selectedItems: Set<UUID> = []
-        var lastSelectedItemID: UUID? = items[1].id // Anchor at item 1
+        let lastSelectedItemID: UUID? = items[1].id // Anchor at item 1
         selectedItems.insert(items[1].id)
 
         // Act - Simulate selectRange(to: item 4)
@@ -11664,7 +11671,7 @@ final class CmdClickMultiSelectTests: XCTestCase {
     /// Expected: Multiple items can be selected without entering selection mode
     func testSelectionPersistsWithoutExplicitMode() {
         // Arrange
-        var isInSelectionMode = false
+        let isInSelectionMode = false
         var selectedItems: Set<UUID> = []
         let items = createTestItems(count: 5)
 
@@ -11719,7 +11726,7 @@ final class CmdClickMultiSelectTests: XCTestCase {
     /// Test that empty selection works correctly
     func testEmptySelectionState() {
         // Arrange
-        var selectedItems: Set<UUID> = []
+        let selectedItems: Set<UUID> = []
 
         // Assert initial state
         XCTAssertTrue(selectedItems.isEmpty, "Selection should be empty initially")
@@ -11994,8 +12001,8 @@ final class CmdFGlobalSearchTests: XCTestCase {
     func testCmdFFromSidebar_postsNotification() {
         // Arrange
         // Simulate sidebar having focus (a list is selected but detail is not focused)
-        var selectedListID: UUID? = UUID() // A list is selected in sidebar
-        var isDetailViewFocused = false    // Detail view does NOT have focus
+        let selectedListID: UUID? = UUID() // A list is selected in sidebar
+        let isDetailViewFocused = false    // Detail view does NOT have focus
         var searchFocusNotificationReceived = false
 
         let expectation = XCTestExpectation(description: "FocusSearchField from sidebar")
@@ -12035,8 +12042,8 @@ final class CmdFGlobalSearchTests: XCTestCase {
     /// Expected: Notification should be posted when detail view has focus
     func testCmdFFromDetailView_postsNotification() {
         // Arrange
-        var selectedListID: UUID? = UUID() // A list is selected
-        var isDetailViewFocused = true     // Detail view HAS focus
+        let selectedListID: UUID? = UUID() // A list is selected
+        let isDetailViewFocused = true     // Detail view HAS focus
         var searchFocusNotificationReceived = false
 
         let expectation = XCTestExpectation(description: "FocusSearchField from detail")
@@ -12120,9 +12127,9 @@ final class CmdFGlobalSearchTests: XCTestCase {
     /// Expected: Should show empty state or do nothing gracefully
     func testCmdFWithNoListsAvailable_handlesGracefully() {
         // Arrange
-        var selectedListID: UUID? = nil
+        let selectedListID: UUID? = nil
         let availableLists: [ListModel] = []  // No lists exist
-        var errorOccurred = false
+        let errorOccurred = false
         var handledGracefully = false
 
         // Act - Simulate Cmd+F with no lists
@@ -12638,7 +12645,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
                        "Multiple selection should show 'N selected'")
 
         // Test zero items selected (edge case)
-        let zeroCount = 0
+        let zeroCount = runtime(0)
         let zeroText = zeroCount > 0 ? "\(zeroCount) selected" : nil
         XCTAssertNil(zeroText,
                      "Zero selection should not display count text")
@@ -12650,7 +12657,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
     /// Expected: "Select" when not in selection mode, "Done" when in selection mode
     func testButtonLabelChangesWithSelectionMode() {
         // Arrange
-        var isInSelectionMode = false
+        var isInSelectionMode = runtime(false)
 
         // Act & Assert - Not in selection mode
         let labelNotInMode = isInSelectionMode ? "Done" : "Select"
@@ -12658,7 +12665,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
                        "Button should show 'Select' when not in selection mode")
 
         // Act & Assert - In selection mode
-        isInSelectionMode = true
+        isInSelectionMode = runtime(true)
         let labelInMode = isInSelectionMode ? "Done" : "Select"
         XCTAssertEqual(labelInMode, "Done",
                        "Button should show 'Done' when in selection mode")
@@ -12670,7 +12677,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
     /// Expected: Different icons for entering vs exiting selection mode
     func testIconChangesWhenEnteringSelectionMode() {
         // Arrange
-        var isInSelectionMode = false
+        var isInSelectionMode = runtime(false)
 
         // Expected icons (per TODO.md Task 12.3 implementation spec)
         let enterIcon = "checklist"
@@ -12682,7 +12689,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
                        "Should show 'checklist' icon when not in selection mode (to enter)")
 
         // Act & Assert - Icon when in selection mode
-        isInSelectionMode = true
+        isInSelectionMode = runtime(true)
         let iconInMode = isInSelectionMode ? exitIcon : enterIcon
         XCTAssertEqual(iconInMode, "checkmark",
                        "Should show 'checkmark' icon when in selection mode (to exit/confirm)")
@@ -12694,7 +12701,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
     /// Expected: Different tooltip for enter vs exit action
     func testTooltipChangesWithSelectionModeState() {
         // Arrange
-        var isInSelectionMode = false
+        var isInSelectionMode = runtime(false)
 
         // Expected tooltips (per TODO.md Task 12.3 implementation spec)
         let enterTooltip = "Select multiple lists"
@@ -12706,7 +12713,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
                        "Tooltip should indicate entering selection mode")
 
         // Act & Assert - Tooltip when in selection mode
-        isInSelectionMode = true
+        isInSelectionMode = runtime(true)
         let tooltipInMode = isInSelectionMode ? exitTooltip : enterTooltip
         XCTAssertEqual(tooltipInMode, "Exit selection mode",
                        "Tooltip should indicate exiting selection mode")
@@ -12807,7 +12814,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
     /// Expected: Clear accessibility labels for VoiceOver support
     func testSelectionModeButtonAccessibilityLabels() {
         // Arrange
-        var isInSelectionMode = false
+        var isInSelectionMode = runtime(false)
 
         // Expected accessibility labels (per existing implementation)
         let enterLabel = "Enter selection mode"
@@ -12819,7 +12826,7 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
                        "Accessibility label should indicate entering selection mode")
 
         // Act & Assert - In selection mode
-        isInSelectionMode = true
+        isInSelectionMode = runtime(true)
         let labelInMode = isInSelectionMode ? exitLabel : enterLabel
         XCTAssertEqual(labelInMode, "Exit selection mode",
                        "Accessibility label should indicate exiting selection mode")
@@ -12867,12 +12874,10 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
     /// Expected: Sidebar should show selection UI when in selection mode
     func testSidebarSelectionModeIntegration() {
         // Arrange
-        var isInSelectionMode = false
         var selectedLists: Set<UUID> = []
         let testLists = [createTestList(name: "List 1"), createTestList(name: "List 2")]
 
-        // Act - Enter selection mode
-        isInSelectionMode = true
+        // Act - Enter selection mode (simulated)
 
         // Assert - Can select lists
         selectedLists.insert(testLists[0].id)
@@ -12883,7 +12888,6 @@ final class SelectionModeDiscoverabilityTests: XCTestCase {
         XCTAssertEqual(selectedLists.count, 2, "Should be able to select multiple lists")
 
         // Act - Exit selection mode clears selection
-        isInSelectionMode = false
         // In actual implementation, exitSelectionMode() clears selectedLists
         selectedLists.removeAll()
         XCTAssertTrue(selectedLists.isEmpty, "Selection should be cleared when exiting selection mode")
@@ -13204,7 +13208,7 @@ final class FilterUIRedesignTests: XCTestCase {
     /// Expected: Active segment should be visually indicated without clicking
     func testCurrentFilterVisibleInToolbar() {
         // Arrange
-        let currentFilterOption: ItemFilterOption = .active
+        let currentFilterOption: ItemFilterOption = runtime(.active)
 
         // The segmented control should show the current selection
         // This is a key difference from popover: filter state is ALWAYS visible
@@ -13813,13 +13817,9 @@ final class ProactiveFeatureTipsTests: XCTestCase {
     func testTipAppearsAfterTwoSecondDelay() {
         // Arrange
         let tipDisplayDelay: TimeInterval = 2.0 // As specified in TODO.md
-        var showTip = false
-        var elapsedTime: TimeInterval = 0
-
         // Act - Simulate delay logic
         // This tests the expected behavior of the delay mechanism
         func checkTipDisplay(at time: TimeInterval) -> Bool {
-            elapsedTime = time
             return time >= tipDisplayDelay
         }
 
@@ -14756,7 +14756,7 @@ final class SyncStatusIndicatorTests: XCTestCase {
     /// Expected: Button should have descriptive accessibility label
     func testSyncButtonHasAccessibilityLabel() {
         // Arrange
-        let service = createMockService(isSyncing: false, lastSyncDate: Date())
+        _ = createMockService(isSyncing: false, lastSyncDate: Date())
         let expectedLabelContains = ["Sync", "iCloud"]
 
         // Act - Generate expected accessibility label
@@ -16050,8 +16050,7 @@ final class QuickEntryWindowTests: XCTestCase {
 
     /// Test that QuickEntryViewModel is an ObservableObject
     func testQuickEntryViewModelIsObservableObject() {
-        XCTAssertTrue(QuickEntryViewModel.self is any ObservableObject.Type,
-            "QuickEntryViewModel should conform to ObservableObject")
+        let _: any ObservableObject.Type = QuickEntryViewModel.self // Compile-time check
     }
 
     /// Test that QuickEntryViewModel has itemTitle property
@@ -16063,7 +16062,7 @@ final class QuickEntryWindowTests: XCTestCase {
 
     /// Test that QuickEntryViewModel has selectedListId property
     func testQuickEntryViewModelHasSelectedListIdProperty() {
-        let viewModel = QuickEntryViewModel(dataManager: testDataManager)
+        _ = QuickEntryViewModel(dataManager: testDataManager)
         // selectedListId should exist (can be nil if no lists)
         XCTAssertTrue(true, "QuickEntryViewModel should have selectedListId property")
     }
@@ -17614,7 +17613,7 @@ final class ArchivedListsTests: XCTestCase {
     func testRestoreListUpdatesArchivedLists() {
         // Given: An archived list exists
         let archivedList = createAndArchiveList(name: "List to Restore")
-        var archivedListsBefore = testDataManager.loadArchivedLists()
+        let archivedListsBefore = testDataManager.loadArchivedLists()
         XCTAssertEqual(archivedListsBefore.count, 1, "Should have 1 archived list before restore")
 
         // When: Restore the list
@@ -17637,7 +17636,7 @@ final class ArchivedListsTests: XCTestCase {
     func testPermanentlyDeleteListUpdatesArchivedLists() {
         // Given: An archived list exists
         let archivedList = createAndArchiveList(name: "List to Delete")
-        var archivedListsBefore = testDataManager.loadArchivedLists()
+        let archivedListsBefore = testDataManager.loadArchivedLists()
         XCTAssertEqual(archivedListsBefore.count, 1, "Should have 1 archived list before deletion")
 
         // When: Permanently delete the list
@@ -17710,7 +17709,7 @@ final class ArchivedListsTests: XCTestCase {
         var list2 = createTestList(name: "List 2", orderNumber: 1)
         testDataManager.addList(list2)
 
-        var list3 = createTestList(name: "List 3", orderNumber: 2)
+        let list3 = createTestList(name: "List 3", orderNumber: 2)
         testDataManager.addList(list3)
 
         // Archive list1
@@ -17922,7 +17921,7 @@ final class ArchivedListsTests: XCTestCase {
     func testRestoreConfirmationMessageIncludesListName() {
         // Given: An archived list with a specific name
         let listName = "My Important Shopping List"
-        let archivedList = createAndArchiveList(name: listName)
+        _ = createAndArchiveList(name: listName)
 
         // When: Building confirmation message (simulating iOS ArchivedListView pattern)
         let confirmationTitle = "Restore List"

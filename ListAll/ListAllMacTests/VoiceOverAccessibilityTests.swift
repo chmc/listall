@@ -111,7 +111,6 @@ struct AccessibilityLabelTests {
         // The accessibility label should describe the list name and item count
         // Expected format: "Grocery Shopping, 5 items" or "Grocery Shopping, 4 of 5 items"
         let expectedLabel = "Grocery Shopping"
-        let expectedContains = ["items", "5"] // Should mention item count
 
         // Test will verify that sidebar list rows have:
         // - .accessibilityLabel() containing the list name
