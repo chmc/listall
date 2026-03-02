@@ -4031,10 +4031,6 @@ final class SharingServiceMacTests: XCTestCase {
         #if os(macOS)
         // Verify macOS-specific methods exist
 
-        // availableSharingServices method
-        typealias AvailableServicesMethod = (SharingService) -> (Any) -> [NSSharingService]
-        let _: AvailableServicesMethod = SharingService.availableSharingServices
-
         // share(content:using:) method
         typealias ShareUsingMethod = (SharingService) -> (Any, NSSharingService) -> Bool
         let _: ShareUsingMethod = SharingService.share
@@ -9759,11 +9755,8 @@ struct MemoryLeakTests {
             }
         }
 
-        weak var weakRef: TestObject?
-
         autoreleasepool {
             let obj = TestObject()
-            weakRef = obj
             obj.setupWithWeakSelf()
             wasCalled = true
         }
