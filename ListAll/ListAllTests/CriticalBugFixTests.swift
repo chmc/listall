@@ -124,7 +124,7 @@ final class CriticalBugFixTests: XCTestCase {
     func testSmartDuplicateDetectionUncrossesExisting() {
         // Given: A list with a crossed-out item
         let list = dataRepository.createList(name: "Shopping")
-        var item = dataRepository.createItem(
+        let item = dataRepository.createItem(
             in: list,
             title: "Milk",
             description: "Whole milk",
@@ -211,7 +211,7 @@ final class CriticalBugFixTests: XCTestCase {
         dataRepository.toggleItemCrossedOut(item1)
         
         // When: We add "Milk" qty 2
-        let item2 = dataRepository.createItem(
+        _ = dataRepository.createItem(
             in: list,
             title: "Milk",
             description: "",
@@ -300,8 +300,8 @@ final class CriticalBugFixTests: XCTestCase {
         // Given: A list with 3 items
         let list = dataRepository.createList(name: "Test List")
         let item1 = dataRepository.createItem(in: list, title: "Item 1")
-        let item2 = dataRepository.createItem(in: list, title: "Item 2")
-        let item3 = dataRepository.createItem(in: list, title: "Item 3")
+        _ = dataRepository.createItem(in: list, title: "Item 2")
+        _ = dataRepository.createItem(in: list, title: "Item 3")
         
         dataManager.loadData()
         let listBefore = dataManager.lists.first { $0.id == list.id }
@@ -344,7 +344,7 @@ final class CriticalBugFixTests: XCTestCase {
         // Given: Two lists, item in first list
         let sourceList = dataRepository.createList(name: "Source")
         let destList = dataRepository.createList(name: "Destination")
-        var item = dataRepository.createItem(in: sourceList, title: "Item")
+        let item = dataRepository.createItem(in: sourceList, title: "Item")
         
         dataManager.loadData()
         let sourceBefore = dataManager.lists.first { $0.id == sourceList.id }
@@ -436,7 +436,7 @@ final class CriticalBugFixTests: XCTestCase {
         dataRepository.toggleItemCrossedOut(item1)
         
         // Try to add with empty description again
-        let item2 = dataRepository.createItem(in: list, title: "Item", description: "", quantity: 1)
+        _ = dataRepository.createItem(in: list, title: "Item", description: "", quantity: 1)
         
         // Should uncross existing (empty string = nil = same metadata)
         dataManager.loadData()
@@ -466,7 +466,7 @@ final class CriticalBugFixTests: XCTestCase {
     func testSuggestedItemAddedAsUncrossedEvenIfSourceCrossed() {
         // Given: A source list with a CROSSED OUT item
         let sourceList = dataRepository.createList(name: "Groceries")
-        var sourceItem = dataRepository.createItem(
+        let sourceItem = dataRepository.createItem(
             in: sourceList,
             title: "Milk",
             description: "Already bought",

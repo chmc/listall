@@ -13,7 +13,7 @@ final class ItemEditViewModelTests: XCTestCase {
         let listB = repo.createList(name: "List B")
         
         // Create item with image in list A
-        var itemInListA = repo.createItem(in: listA, title: "Test Item", description: "Test Description", quantity: 1)
+        let itemInListA = repo.createItem(in: listA, title: "Test Item", description: "Test Description", quantity: 1)
         let imageData = UIImage(systemName: "star")!.pngData()!
         let originalImage = repo.addImage(to: itemInListA, imageData: imageData)
         

@@ -235,7 +235,7 @@ final class SyncDataIntegrityTests: XCTestCase {
         var item1 = Item(title: "Emoji 😀🎉✨", listId: list.id)
         var item2 = Item(title: "Umlauts: äöüÄÖÜß", listId: list.id)
         var item3 = Item(title: "Symbols: €£¥©®™", listId: list.id)
-        var item4 = Item(title: "Math: π≈3.14 ∑∫∂", listId: list.id)
+        let item4 = Item(title: "Math: π≈3.14 ∑∫∂", listId: list.id)
         
         item1.itemDescription = "Description with 🔥"
         item2.itemDescription = "Grüße aus München"

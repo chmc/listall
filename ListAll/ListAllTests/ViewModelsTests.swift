@@ -871,7 +871,7 @@ class ViewModelsTests: XCTestCase {
         let viewModel = TestListViewModel(list: list, dataManager: dataManager)
         viewModel.createItem(title: "Test Item", description: "Test description", quantity: 5)
         
-        guard var item = viewModel.items.first else {
+        guard let item = viewModel.items.first else {
             XCTFail("Item should exist")
             return
         }
@@ -2068,7 +2068,7 @@ class ViewModelsTests: XCTestCase {
         
         // Add image to item
         let testImageData = Data(count: 100)
-        var image = ItemImage(imageData: testImageData, itemId: item.id)
+        let image = ItemImage(imageData: testImageData, itemId: item.id)
         item.images.append(image)
         sourceViewModel.updateItem(item, title: item.title, description: item.itemDescription ?? "", quantity: item.quantity)
         

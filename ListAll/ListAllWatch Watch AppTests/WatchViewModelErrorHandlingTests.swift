@@ -27,7 +27,6 @@ class WatchViewModelErrorHandlingTests: XCTestCase {
     
     func testWatchMainViewModelErrorHandling() {
         // Test that WatchMainViewModel has error handling properties
-        let testList = List(name: "Test List")
         let viewModel = WatchMainViewModel()
         
         // Initially should have no error

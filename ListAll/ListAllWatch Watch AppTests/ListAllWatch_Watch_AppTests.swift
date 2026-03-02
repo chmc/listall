@@ -93,8 +93,6 @@ final class ListAllWatch_Watch_AppTests: XCTestCase {
     func testRefreshFromiOSUpdatesLists() throws {
         // Given: A WatchMainViewModel instance
         let viewModel = WatchMainViewModel()
-        let initialListCount = viewModel.lists.count
-        
         // When: Calling refreshFromiOS explicitly
         viewModel.refreshFromiOS()
         

@@ -45,9 +45,7 @@ class WatchPerformanceManagerTests: XCTestCase {
         let manager = WatchPerformanceManager.shared
         
         let lowPowerRate = manager.getRefreshRate()
-        let normalRate = manager.getRefreshRate()
-        let highPerformanceRate = manager.getRefreshRate()
-        
+
         XCTAssertGreaterThan(lowPowerRate, 0, "Refresh rate should be positive")
         XCTAssertLessThanOrEqual(lowPowerRate, 1.0, "Refresh rate should be reasonable")
     }
@@ -56,9 +54,7 @@ class WatchPerformanceManagerTests: XCTestCase {
         let manager = WatchPerformanceManager.shared
         
         let lowPowerBatch = manager.getOptimalBatchSize()
-        let normalBatch = manager.getOptimalBatchSize()
-        let highPerformanceBatch = manager.getOptimalBatchSize()
-        
+
         XCTAssertGreaterThan(lowPowerBatch, 0, "Batch size should be positive")
         XCTAssertLessThanOrEqual(lowPowerBatch, 100, "Batch size should be reasonable")
     }

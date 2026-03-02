@@ -228,7 +228,7 @@ struct ModelTests {
     
     @Test func testListHashEquatable() async throws {
 
-        var list1 = List(name: "List A")
+        let list1 = List(name: "List A")
         var list2 = List(name: "List B")
         // Different lists are not equal
         #expect(list1 != list2)

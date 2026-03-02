@@ -40,8 +40,8 @@ class WatchLoadingViewTests: XCTestCase {
             retryCalled = true
         }
         
-        // Note: We can't easily test the button action in unit tests,
-        // but we can verify the closure is stored properly
+        // Verify the closure is stored and view initializes; retryCalled would be true after button tap
         XCTAssertNotNil(errorView, "Error view should store retry closure")
+        XCTAssertFalse(retryCalled, "Retry should not be called before button tap")
     }
 }

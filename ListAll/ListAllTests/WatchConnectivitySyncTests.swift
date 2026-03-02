@@ -111,7 +111,7 @@ class WatchConnectivitySyncTests: XCTestCase {
                 item.quantity = j % 5 + 1
                 
                 // Add images (simulating realistic data)
-                for k in 1...2 {
+                for _ in 1...2 {
                     let imageData = Data(repeating: 0xFF, count: 50_000) // 50KB per image
                     let itemImage = ItemImage(imageData: imageData, itemId: item.id)
                     item.images.append(itemImage)

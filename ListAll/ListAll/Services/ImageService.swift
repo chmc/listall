@@ -3,7 +3,6 @@ import Foundation
 import UIKit
 import SwiftUI
 import PhotosUI
-
 // MARK: - Image Processing Service (iOS)
 // Note: This service is iOS-only due to UIKit and PhotosUI dependencies
 // watchOS does not support image capture, picking, or complex image processing
@@ -479,7 +478,8 @@ extension ImageService {
     }
 }
 #elseif os(macOS)
-import AppKit
+// TODO: Remove @preconcurrency once ImageService is migrated to proper Swift 6 concurrency
+@preconcurrency import AppKit
 import SwiftUI
 import Combine
 

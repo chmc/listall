@@ -257,7 +257,7 @@ final class WatchSyncChaosTests: XCTestCase {
     // MARK: - Sync Ordering: Concurrent Updates
 
     /// Verify that sync data preserves item ordering through encode/decode cycle
-    func testSyncOrdering_itemOrderPreserved_afterEncodeDecode() throws {
+    @MainActor func testSyncOrdering_itemOrderPreserved_afterEncodeDecode() throws {
         // Arrange: Create a list with specifically ordered items
         let listId = UUID()
         var list = List(name: "Ordered List")
@@ -294,7 +294,7 @@ final class WatchSyncChaosTests: XCTestCase {
 
     /// Verify that Watch update during mid-save scenario preserves data integrity.
     /// Simulates: Watch sends an update while phone is processing a save.
-    func testSyncOrdering_watchUpdateDuringPhoneSave_dataIntegrity() throws {
+    @MainActor func testSyncOrdering_watchUpdateDuringPhoneSave_dataIntegrity() throws {
         // Arrange: Create initial state (what phone has)
         let listId = UUID()
         let phoneTimestamp = Date(timeIntervalSince1970: 1700000000)

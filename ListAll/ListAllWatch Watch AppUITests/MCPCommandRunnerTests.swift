@@ -370,7 +370,9 @@ final class MCPCommandRunnerTests: XCTestCase {
 
         // Assert - Elements should have expected properties
         XCTAssertEqual(elementType, .cell, "Element type should be cell")
-        // Note: identifier and label may be empty depending on implementation
+        // identifier and label are String (never nil), but verify they're accessible
+        XCTAssertNotNil(identifier, "Cell should have an accessible identifier property")
+        XCTAssertNotNil(label, "Cell should have an accessible label property")
         XCTAssertTrue(isEnabled, "Cell should be enabled")
         XCTAssertTrue(isHittable, "Cell should be hittable")
     }

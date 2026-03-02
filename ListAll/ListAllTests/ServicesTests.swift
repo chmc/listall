@@ -653,9 +653,9 @@ final class ServicesTests: XCTestCase {
         // Create items with different crossed out states
         let list = List(name: "Test List")
         testDataManager.addList(list)
-        let item1 = repository.createItem(in: list, title: "Active Item", description: "", quantity: 1)
+        _ = repository.createItem(in: list, title: "Active Item", description: "", quantity: 1)
         let item2 = repository.createItem(in: list, title: "Completed Item", description: "", quantity: 1)
-        
+
         // Cross out second item
         repository.toggleItemCrossedOut(item2)
         
@@ -765,10 +765,10 @@ final class ServicesTests: XCTestCase {
         // Create test data with mixed crossed out states
         let list = List(name: "Test List")
         testDataManager.addList(list)
-        let item1 = repository.createItem(in: list, title: "Active Item", description: "", quantity: 1)
+        _ = repository.createItem(in: list, title: "Active Item", description: "", quantity: 1)
         let item2 = repository.createItem(in: list, title: "Completed Item", description: "", quantity: 1)
         repository.toggleItemCrossedOut(item2)
-        
+
         // Export to plain text
         let plainText = exportService.exportToPlainText()
         XCTAssertNotNil(plainText, "Should export data to plain text")
@@ -804,7 +804,7 @@ final class ServicesTests: XCTestCase {
         // Create test data with crossed out item
         let list = List(name: "Test List")
         testDataManager.addList(list)
-        let item1 = repository.createItem(in: list, title: "Active Item", description: "Active description", quantity: 1)
+        _ = repository.createItem(in: list, title: "Active Item", description: "Active description", quantity: 1)
         let item2 = repository.createItem(in: list, title: "Completed Item", description: "Completed description", quantity: 1)
         repository.toggleItemCrossedOut(item2)
         
@@ -831,7 +831,7 @@ final class ServicesTests: XCTestCase {
         // Create test data with crossed out item
         let list = List(name: "Test List")
         testDataManager.addList(list)
-        let item1 = repository.createItem(in: list, title: "Active Item", description: "", quantity: 1)
+        _ = repository.createItem(in: list, title: "Active Item", description: "", quantity: 1)
         let item2 = repository.createItem(in: list, title: "Completed Item", description: "", quantity: 1)
         repository.toggleItemCrossedOut(item2)
         
@@ -851,7 +851,7 @@ final class ServicesTests: XCTestCase {
         let exportService = ExportService(dataRepository: repository)
         
         // Create test data with archived list
-        var activeList = List(name: "Active List")
+        let activeList = List(name: "Active List")
         var archivedList = List(name: "Archived List")
         archivedList.isArchived = true
         testDataManager.addList(activeList)
