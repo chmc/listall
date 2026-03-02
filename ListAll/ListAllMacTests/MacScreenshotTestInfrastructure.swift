@@ -8,7 +8,7 @@
 
 import Foundation
 import XCTest
-import AppKit
+@preconcurrency import AppKit
 @testable import ListAll
 
 // Note: Production types (ScreenshotWindow, ScreenshotImage, CaptureMethod, etc.) are defined in

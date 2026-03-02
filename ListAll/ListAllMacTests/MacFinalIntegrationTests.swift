@@ -11,7 +11,7 @@ import Foundation
 import SwiftUI
 import Combine
 #if canImport(AppKit)
-import AppKit
+@preconcurrency import AppKit
 #endif
 @testable import ListAll
 

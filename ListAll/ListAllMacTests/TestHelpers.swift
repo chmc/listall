@@ -11,7 +11,7 @@ import Combine
 import SwiftUI
 import CloudKit
 #if os(macOS)
-import AppKit
+@preconcurrency import AppKit
 #endif
 @testable import ListAll
 

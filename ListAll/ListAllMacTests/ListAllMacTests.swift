@@ -9,7 +9,7 @@ import XCTest
 import CoreData
 import Combine
 #if os(macOS)
-import AppKit
+@preconcurrency import AppKit
 #endif
 @testable import ListAll
 
