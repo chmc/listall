@@ -6,10 +6,16 @@
 //
 
 import SwiftUI
+import AppKit
 import CoreData
 import UniformTypeIdentifiers
 import Quartz
 import Combine
+
+/// Thread-safe wrapper to pass NSImage across isolation boundaries
+private struct SendableImage: @unchecked Sendable {
+    let image: NSImage?
+}
 
 /// Main view for macOS app with sidebar navigation.
 /// This is the macOS equivalent of iOS ContentView, using NavigationSplitView
@@ -3351,9 +3357,11 @@ private struct CollapsedThumbnailView: View {
 
         // Generate small thumbnail on background thread
         let thumbnailSize = CGSize(width: size * 2, height: size * 2) // 2x for retina
+        // Use SendableImage wrapper to avoid NSImage crossing isolation boundaries
         let loadedThumbnail = await Task.detached(priority: .userInitiated) {
-            await ImageService.shared.createThumbnailAsync(from: imageData, size: thumbnailSize)
-        }.value
+            let result = await ImageService.shared.createThumbnailAsync(from: imageData, size: thumbnailSize)
+            return SendableImage(image: result)
+        }.value.image
 
         await MainActor.run {
             withTransaction(Transaction(animation: nil)) {
