@@ -7,7 +7,8 @@
 //
 
 import Foundation
-import AppKit
+// TODO: Remove @preconcurrency once MacImageDropHandler is migrated to proper Swift 6 concurrency
+@preconcurrency import AppKit
 import UniformTypeIdentifiers
 
 /// Handles drag-and-drop operations for images in macOS

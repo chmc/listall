@@ -7,7 +7,8 @@
 //
 
 import SwiftUI
-import AppKit
+// TODO: Remove @preconcurrency once MacImageGalleryView is migrated to proper Swift 6 concurrency
+@preconcurrency import AppKit
 import UniformTypeIdentifiers
 import Quartz
 
