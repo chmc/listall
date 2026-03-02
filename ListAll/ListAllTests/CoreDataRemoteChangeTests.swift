@@ -151,7 +151,8 @@ final class CoreDataRemoteChangeTests: XCTestCase {
 
     func testRemoteChangeThreadSafety() throws {
         var wasMainThread = false
-        var notificationReceived = false
+
+        let expectation = XCTestExpectation(description: "Debounced notification received on main thread")
 
         // Observe the debounced notification
         let observer = NotificationCenter.default.addObserver(
@@ -160,18 +161,15 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             queue: nil  // Deliver on posting thread (should be main)
         ) { _ in
             wasMainThread = Thread.isMainThread
-            notificationReceived = true
+            expectation.fulfill()
         }
 
         // Let the run loop fully settle before triggering async work.
         // This drains any pending DispatchQueue.main.async blocks and timers
-        // left over from previous tests in the suite. 1.0s is necessary because
-        // the debounce timer from previous tests is 500ms, and we need margin
-        // for the timer callback + any resulting async work to complete.
+        // left over from previous tests in the suite.
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 1.0))
 
         // Capture coordinator reference on main thread before dispatching to background.
-        // This avoids any potential race accessing the singleton from background.
         let coordinator = CoreDataManager.shared.persistentContainer.persistentStoreCoordinator
 
         // Post notification from background thread — this exercises the
@@ -183,19 +181,12 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             )
         }
 
-        // Manually pump the run loop to process:
-        // 1. The DispatchQueue.main.async from handlePersistentStoreRemoteChange (background→main)
-        // 2. The Timer.scheduledTimer (500ms debounce)
-        // 3. The notification post from processRemoteChange
-        // XCTest's wait(for:) does not reliably pump Timer events in all scenarios,
-        // so we use explicit RunLoop pumping with a polling check.
-        let deadline = Date(timeIntervalSinceNow: 10.0)
-        while !notificationReceived && Date() < deadline {
-            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05))
-        }
+        // XCTest's wait(for:) reliably pumps both GCD and Timer events
+        // (confirmed by tests 1 and 3 in this file using the same debounce mechanism)
+        // 500ms debounce + generous CI buffer
+        wait(for: [expectation], timeout: 10.0)
 
         // Verify the notification was received and handled on main thread
-        XCTAssertTrue(notificationReceived, "Debounced .coreDataRemoteChange notification should have been posted")
         XCTAssertTrue(wasMainThread, "Notification should be handled on main thread")
 
         // Cleanup

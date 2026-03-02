@@ -483,6 +483,11 @@ extension ImageService {
 import SwiftUI
 import Combine
 
+/// Thread-safe wrapper to pass NSImage across isolation boundaries
+private struct SendableImage: @unchecked Sendable {
+    let image: NSImage?
+}
+
 // MARK: - Image Processing Service (macOS)
 // macOS-specific implementation using NSImage instead of UIImage
 class ImageService: ObservableObject {
@@ -673,16 +678,29 @@ class ImageService: ObservableObject {
             return cachedThumbnail
         }
 
+        // Capture cache reference to avoid capturing `self` across isolation boundary
+        let cache = thumbnailCache
+
         // Generate thumbnail on background thread
-        return await Task.detached(priority: .userInitiated) { [self] in
-            guard let image = NSImage(data: data) else { return nil }
-            let thumbnail = createThumbnail(from: image, size: size)
+        // Use SendableImage wrapper to avoid NSImage crossing isolation boundaries
+        let wrapped = await Task.detached(priority: .userInitiated) {
+            guard let image = NSImage(data: data) else { return SendableImage(image: nil) }
+            let newImage = NSImage(size: size)
+            newImage.lockFocus()
+            NSGraphicsContext.current?.imageInterpolation = .medium
+            image.draw(in: NSRect(origin: .zero, size: size),
+                       from: NSRect(origin: .zero, size: image.size),
+                       operation: .copy,
+                       fraction: 1.0)
+            newImage.unlockFocus()
 
             // Store in cache (NSCache is thread-safe)
-            thumbnailCache.setObject(thumbnail, forKey: cacheKey)
+            cache.setObject(newImage, forKey: cacheKey)
 
-            return thumbnail
+            return SendableImage(image: newImage)
         }.value
+
+        return wrapped.image
     }
 
     /// Clears the thumbnail cache
