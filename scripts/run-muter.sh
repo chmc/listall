@@ -3,9 +3,15 @@
 # run-muter.sh — Run Muter mutation testing for ListAll
 #
 # Usage:
-#   ./scripts/run-muter.sh <platform> [extra-muter-args...]
+#   ./scripts/run-muter.sh <platform> [--test-targets "T1,T2"] [extra-muter-args...]
 #
 # Platforms: ios, macos, watchos, all
+#
+# Options:
+#   --test-targets "T1,T2"  Inject -only-testing flags into the muter config
+#                           to run targeted test subsets per mutant.
+#                           Comma-separated list of test bundle/suite paths.
+#                           Example: --test-targets "ListAllTests/ServicesTests"
 #
 # Muter v16 always reads muter.conf.yml from the current directory.
 # This script copies the platform-specific config into place before running,
@@ -18,7 +24,7 @@
 #
 # Examples:
 #   ./scripts/run-muter.sh ios
-#   ./scripts/run-muter.sh ios --skip-coverage --files-to-mutate "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
+#   ./scripts/run-muter.sh ios --test-targets "ListAllTests/ServicesTests" --files-to-mutate "ListAll/ListAll/Services/ImportService.swift"
 #   ./scripts/run-muter.sh all
 #
 
@@ -31,7 +37,7 @@ ACTIVE_CONFIG="${PROJECT_ROOT}/muter.conf.yml"
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 usage() {
-    echo "Usage: $0 <platform> [extra-muter-args...]"
+    echo "Usage: $0 <platform> [--test-targets \"T1,T2\"] [extra-muter-args...]"
     echo ""
     echo "Platforms:"
     echo "  ios      Run mutation testing for iOS"
@@ -39,11 +45,14 @@ usage() {
     echo "  watchos  Run mutation testing for watchOS"
     echo "  all      Run all platforms sequentially"
     echo ""
+    echo "Options:"
+    echo "  --test-targets \"T1,T2\"  Run only specified test targets per mutant"
+    echo ""
     echo "Extra arguments are passed directly to muter run."
     echo ""
     echo "Examples:"
     echo "  $0 ios --skip-coverage"
-    echo "  $0 ios --files-to-mutate \"ListAll/ListAll/Utils/Helpers/ValidationHelper.swift\""
+    echo "  $0 ios --test-targets \"ListAllTests/ServicesTests\" --files-to-mutate \"path/File.swift\""
     exit 1
 }
 
@@ -61,6 +70,36 @@ check_muter() {
         exit 1
     fi
     echo "Using muter: $(command -v muter) (version $(muter --version 2>&1))"
+}
+
+# Inject -only-testing flags into the active muter config.
+# Inserts entries before the final "- test" line in the arguments array.
+# Usage: inject_test_targets "Target1/Suite1,Target2/Suite2"
+inject_test_targets() {
+    local targets="$1"
+    local config="${ACTIVE_CONFIG}"
+
+    if [[ -z "${targets}" ]]; then
+        return 0
+    fi
+
+    echo "    Injecting -only-testing targets: ${targets}"
+
+    # Build sed insertion text: one "  - -only-testing:Target" line per target
+    local sed_insert=""
+    IFS=',' read -ra TARGET_ARRAY <<< "${targets}"
+    for target in "${TARGET_ARRAY[@]}"; do
+        target="$(echo "${target}" | xargs)"  # trim whitespace
+        if [[ -n "${target}" ]]; then
+            # Escape forward slashes for sed
+            local escaped="${target//\//\\/}"
+            sed_insert="${sed_insert}  - -only-testing:${escaped}\\
+"
+        fi
+    done
+
+    # Insert before the "  - test" line (last entry in arguments array)
+    sed -i '' "s|^  - test$|${sed_insert}  - test|" "${config}"
 }
 
 # Resolve a simulator UDID by platform and device name pattern
@@ -122,6 +161,7 @@ run_ios() {
     sed "s|IOS_DESTINATION_PLACEHOLDER|platform=iOS Simulator,id=${sim_udid}|g" \
         "${source_config}" > "${ACTIVE_CONFIG}"
     echo "    Activated config with resolved iOS destination"
+    inject_test_targets "${TEST_TARGETS}"
 
     cd "${PROJECT_ROOT}"
     local exit_code=0
@@ -140,6 +180,7 @@ run_macos() {
     # macOS needs no simulator resolution
     cp "${source_config}" "${ACTIVE_CONFIG}"
     echo "    Activated config: muter.macos.conf.yml"
+    inject_test_targets "${TEST_TARGETS}"
 
     cd "${PROJECT_ROOT}"
     local exit_code=0
@@ -173,6 +214,7 @@ run_watchos() {
     sed "s|WATCHOS_DESTINATION_PLACEHOLDER|platform=watchOS Simulator,id=${sim_udid}|g" \
         "${source_config}" > "${ACTIVE_CONFIG}"
     echo "    Activated config with resolved watchOS destination"
+    inject_test_targets "${TEST_TARGETS}"
 
     # Boot simulator
     echo "    Booting watchOS simulator..."
@@ -207,9 +249,25 @@ fi
 PLATFORM="$1"
 shift
 
+# Parse --test-targets (consumed here, not passed to muter)
+TEST_TARGETS=""
+REMAINING_ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --test-targets)
+            TEST_TARGETS="${2:-}"
+            shift 2
+            ;;
+        *)
+            REMAINING_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
 # Filter out empty arguments (GitHub Actions passes "" for unset inputs)
 ARGS=()
-for arg in "$@"; do
+for arg in "${REMAINING_ARGS[@]+"${REMAINING_ARGS[@]}"}"; do
     [[ -n "$arg" ]] && ARGS+=("$arg")
 done
 if (( ${#ARGS[@]} > 0 )); then
