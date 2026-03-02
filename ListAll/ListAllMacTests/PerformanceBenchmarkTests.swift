@@ -418,12 +418,12 @@ final class PerformanceBenchmarkTests: XCTestCase {
     func testAsyncThumbnailCreationPattern() async throws {
         let imageData = createTestImageData(size: 500)
 
-        // Simulate async thumbnail creation
-        let thumbnail = await Task.detached(priority: .userInitiated) {
-            return self.imageService.createThumbnail(from: imageData, size: CGSize(width: 100, height: 100))
+        // Simulate async thumbnail creation — return Bool to avoid NSImage crossing concurrency boundary
+        let success = await Task.detached(priority: .userInitiated) {
+            return self.imageService.createThumbnail(from: imageData, size: CGSize(width: 100, height: 100)) != nil
         }.value
 
-        XCTAssertNotNil(thumbnail)
+        XCTAssertTrue(success)
     }
 
     /// Tests concurrent thumbnail creation
@@ -441,17 +441,17 @@ final class PerformanceBenchmarkTests: XCTestCase {
 
         imageService.clearThumbnailCache()
 
-        // Create thumbnails concurrently
-        await withTaskGroup(of: NSImage?.self) { group in
+        // Create thumbnails concurrently — return Bool to avoid NSImage crossing concurrency boundary
+        await withTaskGroup(of: Bool.self) { group in
             for data in imageDataArray {
                 group.addTask {
-                    return self.imageService.createThumbnail(from: data, size: CGSize(width: 100, height: 100))
+                    return self.imageService.createThumbnail(from: data, size: CGSize(width: 100, height: 100)) != nil
                 }
             }
 
             var count = 0
-            for await thumbnail in group {
-                if thumbnail != nil {
+            for await success in group {
+                if success {
                     count += 1
                 }
             }
@@ -555,14 +555,14 @@ final class AsyncThumbnailPatternTests: XCTestCase {
         // Clear cache again
         imageService.clearThumbnailCache()
 
-        // Create async thumbnail
-        let asyncThumbnail = await Task.detached {
-            return self.imageService.createThumbnail(from: imageData, size: size)
+        // Create async thumbnail — capture size result as Sendable to avoid NSImage crossing boundary
+        let asyncSize = await Task.detached {
+            return self.imageService.createThumbnail(from: imageData, size: size)?.size
         }.value
-        XCTAssertNotNil(asyncThumbnail)
+        XCTAssertNotNil(asyncSize)
 
-        // Both should produce valid thumbnails
-        XCTAssertEqual(syncThumbnail?.size, asyncThumbnail?.size)
+        // Both should produce valid thumbnails of the same size
+        XCTAssertEqual(syncThumbnail?.size, asyncSize)
     }
 
     /// Tests cache is thread-safe for async operations
