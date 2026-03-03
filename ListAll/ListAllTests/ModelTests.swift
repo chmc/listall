@@ -241,6 +241,15 @@ struct ModelTests {
         #expect(list1.hashValue == list2.hashValue)
     }
 
+    @Test func testListHashInequality() async throws {
+        let list1 = List(name: "List A")
+        let list2 = List(name: "List B")
+
+        // Two distinct lists must be distinguishable in a Set
+        let set: Set<List> = [list1, list2]
+        #expect(set.count == 2, "Two lists with different IDs must be distinct in a Set")
+    }
+
     @Test func testListAddItem() async throws {
 
         var list = List(name: "Test List")
@@ -252,6 +261,17 @@ struct ModelTests {
         #expect(list.items[0].listId == list.id)
         #expect(list.items[0].orderNumber == 0)
         #expect(list.modifiedAt > list.createdAt)
+    }
+
+    @Test func testListAddItemUpdatesModifiedDate() async throws {
+        var list = List(name: "Test List")
+        let dateBeforeAdd = list.modifiedAt
+
+        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
+
+        list.addItem(Item(title: "New Item"))
+
+        #expect(list.modifiedAt > dateBeforeAdd, "modifiedAt should advance after addItem")
     }
 
     @Test func testListAddSecondItem() async throws {
