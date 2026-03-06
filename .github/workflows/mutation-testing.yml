@@ -67,7 +67,7 @@ jobs:
       (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'ios')
-    timeout-minutes: 400
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -178,11 +178,11 @@ jobs:
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
-        TEST_ARGS=""
         if [ -n "${{ matrix.test_targets }}" ]; then
-          TEST_ARGS="--test-targets ${{ matrix.test_targets }}"
+          script -q muter-output.log ./scripts/run-muter.sh ios --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+        else
+          script -q muter-output.log ./scripts/run-muter.sh ios --files-to-mutate "${{ matrix.file }}"
         fi
-        script -q muter-output.log ./scripts/run-muter.sh ios $TEST_ARGS --files-to-mutate "${{ matrix.file }}"
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
         echo "::notice::Muter iOS ${{ matrix.file_name }}: ${ELAPSED}s ($(( ELAPSED / 60 ))m$(( ELAPSED % 60 ))s)"
@@ -209,7 +209,7 @@ jobs:
       github.event.inputs.muter_args != '' &&
       (github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'ios')
-    timeout-minutes: 400
+    timeout-minutes: 360
 
     steps:
     - name: Checkout code
@@ -260,7 +260,7 @@ jobs:
       (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'macos')
-    timeout-minutes: 400
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -352,11 +352,11 @@ jobs:
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
-        TEST_ARGS=""
         if [ -n "${{ matrix.test_targets }}" ]; then
-          TEST_ARGS="--test-targets ${{ matrix.test_targets }}"
+          script -q muter-output.log ./scripts/run-muter.sh macos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+        else
+          script -q muter-output.log ./scripts/run-muter.sh macos --files-to-mutate "${{ matrix.file }}"
         fi
-        script -q muter-output.log ./scripts/run-muter.sh macos $TEST_ARGS --files-to-mutate "${{ matrix.file }}"
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
         echo "::notice::Muter macOS ${{ matrix.file_name }}: ${ELAPSED}s ($(( ELAPSED / 60 ))m$(( ELAPSED % 60 ))s)"
@@ -383,7 +383,7 @@ jobs:
       github.event.inputs.muter_args != '' &&
       (github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'macos')
-    timeout-minutes: 400
+    timeout-minutes: 360
 
     steps:
     - name: Checkout code
@@ -429,7 +429,7 @@ jobs:
       (github.event_name == 'schedule' ||
       github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'watchos')
-    timeout-minutes: 400
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -489,11 +489,11 @@ jobs:
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
-        TEST_ARGS=""
         if [ -n "${{ matrix.test_targets }}" ]; then
-          TEST_ARGS="--test-targets ${{ matrix.test_targets }}"
+          script -q muter-output.log ./scripts/run-muter.sh watchos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+        else
+          script -q muter-output.log ./scripts/run-muter.sh watchos --files-to-mutate "${{ matrix.file }}"
         fi
-        script -q muter-output.log ./scripts/run-muter.sh watchos $TEST_ARGS --files-to-mutate "${{ matrix.file }}"
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
         echo "::notice::Muter watchOS ${{ matrix.file_name }}: ${ELAPSED}s ($(( ELAPSED / 60 ))m$(( ELAPSED % 60 ))s)"
@@ -520,7 +520,7 @@ jobs:
       github.event.inputs.muter_args != '' &&
       (github.event.inputs.platform == 'all' ||
       github.event.inputs.platform == 'watchos')
-    timeout-minutes: 400
+    timeout-minutes: 360
 
     steps:
     - name: Checkout code
