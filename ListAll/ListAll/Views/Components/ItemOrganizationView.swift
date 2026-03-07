@@ -24,6 +24,8 @@ struct ItemOrganizationView: View {
                                     HStack {
                                         Image(systemName: option.systemImage)
                                         Text(option.displayName)
+                                            .lineLimit(2)
+                                            .minimumScaleFactor(0.8)
                                         Spacer()
                                         if viewModel.currentSortOption == option {
                                             Image(systemName: "checkmark")
@@ -105,6 +107,8 @@ struct ItemOrganizationView: View {
                                     Image(systemName: option.systemImage)
                                         .frame(width: 20)
                                     Text(option.displayName)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.8)
                                     Spacer()
                                     if viewModel.currentFilterOption == option {
                                         Image(systemName: "checkmark")

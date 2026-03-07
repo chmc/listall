@@ -43,7 +43,7 @@ class WatchMainViewModel: ObservableObject {
     /// Setup listener for data changes from Core Data
     private func setupDataListener() {
         // Listen to data changes from DataManager
-        NotificationCenter.default.publisher(for: NSNotification.Name("DataUpdated"))
+        NotificationCenter.default.publisher(for: NSNotification.Name("ItemDataChanged"))
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.loadLists()

@@ -195,6 +195,11 @@ struct ListAllMacApp: App {
         } else {
             print("🧪 Skipping test data population for empty state screenshot")
         }
+
+        if ProcessInfo.processInfo.arguments.contains("DISABLE_TOOLTIPS") {
+            print("🧪 Disabling feature tips for UI tests")
+            MacTooltipManager.shared.markAllAsViewed()
+        }
     }
 
     /// Clear all existing data from the data store

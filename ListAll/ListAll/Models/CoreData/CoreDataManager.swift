@@ -1273,9 +1273,9 @@ class DataManager: ObservableObject {
                 }
                 
                 saveData()
-                // Don't call loadData() here - let the caller handle batching
-                
-                // Notify after data is saved (but don't reload yet to avoid excessive reloads)
+                loadData()
+
+                // Notify after data is fully loaded (matches updateItem/deleteItem pattern)
                 NotificationCenter.default.post(name: NSNotification.Name("ItemDataChanged"), object: nil)
             }
         } catch {

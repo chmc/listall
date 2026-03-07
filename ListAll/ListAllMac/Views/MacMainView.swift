@@ -1572,18 +1572,15 @@ private struct MacListDetailView: View {
                     if !viewModel.searchText.isEmpty {
                         // First: clear search text
                         viewModel.searchText = ""
-                        viewModel.items = items
                     } else if viewModel.hasActiveFilters {
                         // Second: clear all filters when search is already empty
                         viewModel.clearAllFilters()
-                        viewModel.items = items
                     }
                     isSearchFieldFocused = false
                 }
             if !viewModel.searchText.isEmpty {
                 Button(action: {
                     viewModel.searchText = ""
-                    viewModel.items = items
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
@@ -2750,6 +2747,7 @@ private struct MacAddItemSheet: View {
                     TextField("Item Name", text: $title)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel("Item name")
+                        .accessibilityIdentifier("ItemNameTextField")
                         .onChange(of: title) { _, newValue in
                             handleTitleChange(newValue)
                         }
@@ -2770,6 +2768,7 @@ private struct MacAddItemSheet: View {
                         Text("\(quantity)")
                             .frame(width: 40)
                     }
+                    .accessibilityIdentifier("ItemQuantityStepper")
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -2779,6 +2778,7 @@ private struct MacAddItemSheet: View {
                     TextEditor(text: $description)
                         .frame(height: 60)
                         .border(Color.secondary.opacity(0.3))
+                        .accessibilityIdentifier("ItemDescriptionEditor")
                 }
             }
             .frame(width: 350)
@@ -2789,6 +2789,7 @@ private struct MacAddItemSheet: View {
                 }
                 .keyboardShortcut(.escape)
                 .accessibilityHint("Discards changes")
+                .accessibilityIdentifier("CancelButton")
 
                 Button("Add") {
                     onSave(title, quantity, description.isEmpty ? nil : description)
@@ -2797,10 +2798,12 @@ private struct MacAddItemSheet: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityHint("Saves new item")
+                .accessibilityIdentifier("AddItemButton")
             }
         }
         .padding(30)
         .frame(minWidth: 450)
+        .accessibilityIdentifier("AddItemSheet")
         .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
     }
 
@@ -2898,6 +2901,7 @@ private struct MacEditItemSheet: View {
                     TextField("Item Name", text: $title)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel("Item name")
+                        .accessibilityIdentifier("ItemNameTextField")
                         .onChange(of: title) { _, newValue in
                             handleTitleChange(newValue)
                         }
@@ -2918,6 +2922,7 @@ private struct MacEditItemSheet: View {
                         Text("\(quantity)")
                             .frame(width: 40)
                     }
+                    .accessibilityIdentifier("ItemQuantityStepper")
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -2927,6 +2932,7 @@ private struct MacEditItemSheet: View {
                     TextEditor(text: $description)
                         .frame(minHeight: 80, idealHeight: 120, maxHeight: 200)
                         .border(Color.secondary.opacity(0.3))
+                        .accessibilityIdentifier("ItemDescriptionEditor")
                 }
 
                 // Image Gallery Section - custom expandable with larger click target
@@ -2947,6 +2953,7 @@ private struct MacEditItemSheet: View {
                 }
                 .keyboardShortcut(.escape)
                 .accessibilityHint("Discards changes")
+                .accessibilityIdentifier("CancelButton")
 
                 Button("Save") {
                     onSave(title, quantity, description.isEmpty ? nil : description, images)
@@ -2955,10 +2962,12 @@ private struct MacEditItemSheet: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityHint("Saves changes")
+                .accessibilityIdentifier("SaveButton")
             }
         }
         .padding(30)
         .frame(minWidth: 500)
+        .accessibilityIdentifier("EditItemSheet")
         .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
         .onAppear {
             // Defer gallery loading until after sheet animation completes
@@ -3045,6 +3054,7 @@ private struct MacEditListSheet: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 300)
                 .accessibilityLabel("List name")
+                .accessibilityIdentifier("ListNameTextField")
                 .onSubmit {
                     if !name.isEmpty {
                         onSave(name)
@@ -3057,6 +3067,7 @@ private struct MacEditListSheet: View {
                 }
                 .keyboardShortcut(.escape)
                 .accessibilityHint("Discards changes")
+                .accessibilityIdentifier("CancelButton")
 
                 Button("Save") {
                     onSave(name)
@@ -3065,10 +3076,12 @@ private struct MacEditListSheet: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityHint("Saves changes")
+                .accessibilityIdentifier("SaveButton")
             }
         }
         .padding(30)
         .frame(minWidth: 350)
+        .accessibilityIdentifier("EditListSheet")
     }
 }
 
@@ -3625,6 +3638,7 @@ private struct MacCreateListSheet: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 300)
                     .accessibilityLabel("List name")
+                    .accessibilityIdentifier("ListNameTextField")
                     .onSubmit {
                         if !listName.isEmpty {
                             onSave(listName)
@@ -3679,8 +3693,10 @@ private struct MacCreateListSheet: View {
             .padding(.top, 16)
             .padding(.bottom, 24)
             .accessibilityHint("Discards changes")
+            .accessibilityIdentifier("CancelButton")
         }
         .frame(width: 380)
+        .accessibilityIdentifier("CreateListSheet")
     }
 }
 

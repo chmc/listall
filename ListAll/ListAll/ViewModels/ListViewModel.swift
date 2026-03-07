@@ -71,6 +71,28 @@ class ListViewModel: ObservableObject {
         // CRITICAL: Observe CloudKit remote changes (synced from other devices)
         // This ensures items refresh in real-time when macOS or other devices sync changes
         setupRemoteChangeObserver()
+
+        // Observe local item changes (e.g., item added/updated/deleted on this device)
+        setupLocalItemChangeObserver()
+    }
+
+    private func setupLocalItemChangeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleLocalItemChange(_:)),
+            name: NSNotification.Name("ItemDataChanged"),
+            object: nil
+        )
+    }
+
+    @objc private func handleLocalItemChange(_ notification: Notification) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleLocalItemChange(notification)
+            }
+            return
+        }
+        loadItems()
     }
 
     private func setupRemoteChangeObserver() {

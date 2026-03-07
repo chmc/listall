@@ -20,6 +20,7 @@ struct CreateListView: View {
                         .accessibilityIdentifier("ListNameTextField")
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(String(localized: "New List"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -43,11 +44,6 @@ struct CreateListView: View {
             Button(String(localized: "OK")) { }
         } message: {
             Text(alertMessage)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside text field
-            isListNameFieldFocused = false
         }
         .onAppear {
             // Focus the list name field when the screen appears

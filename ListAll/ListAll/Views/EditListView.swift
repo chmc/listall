@@ -28,6 +28,7 @@ struct EditListView: View {
                         .accessibilityIdentifier("EditListNameTextField")
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(String(localized: "Edit List"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -53,11 +54,6 @@ struct EditListView: View {
             Button(String(localized: "OK")) { }
         } message: {
             Text(alertMessage)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside text field
-            isListNameFieldFocused = false
         }
         .onAppear {
             // Focus the list name field when the screen appears
