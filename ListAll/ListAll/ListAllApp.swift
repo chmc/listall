@@ -109,6 +109,12 @@ struct ListAllApp: App {
             UserDefaults.standard.set(allTooltipKeys, forKey: "shownTooltips")
         }
 
+        // Fake sync error for banner testing
+        if ProcessInfo.processInfo.arguments.contains("FAKE_SYNC_ERROR") {
+            print("🧪 Faking sync error for banner testing")
+            CloudKitService.shared.hasSyncError = true
+        }
+
         // Clear existing data to ensure clean state
         // NOTE: This only clears the UI test database (ListAll-UITests.sqlite), not production data
         // CoreDataManager automatically uses a separate database file when UITEST_MODE is detected

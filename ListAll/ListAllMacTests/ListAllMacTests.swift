@@ -2307,6 +2307,38 @@ final class CloudKitServiceMacTests: XCTestCase {
         print("✅ CloudKit sync status on macOS correctly updated to: \(cloudKitService.syncStatus)")
     }
 
+    // MARK: - Sync Error Banner Tests
+
+    /// Test that hasSyncError defaults to false and banner is not shown
+    func testSyncErrorBannerDefaultState() {
+        XCTAssertFalse(cloudKitService.hasSyncError, "hasSyncError should default to false")
+        XCTAssertFalse(cloudKitService.shouldShowSyncErrorBanner, "Banner should not show by default")
+    }
+
+    /// Test that setting hasSyncError shows the banner
+    func testSyncErrorBannerShowsWhenErrorSet() {
+        cloudKitService.hasSyncError = true
+        XCTAssertTrue(cloudKitService.shouldShowSyncErrorBanner, "Banner should show when hasSyncError is true")
+    }
+
+    /// Test that dismissing hides the banner but hasSyncError remains true
+    func testSyncErrorBannerDismiss() {
+        cloudKitService.hasSyncError = true
+        cloudKitService.dismissSyncErrorBanner()
+        XCTAssertFalse(cloudKitService.shouldShowSyncErrorBanner, "Banner should be hidden after dismiss")
+        XCTAssertTrue(cloudKitService.hasSyncError, "hasSyncError should remain true after dismiss")
+    }
+
+    /// Test that successful export clears the error state
+    func testSyncErrorClearedOnExportSuccess() {
+        cloudKitService.hasSyncError = true
+        XCTAssertTrue(cloudKitService.shouldShowSyncErrorBanner)
+
+        // Simulate export success
+        cloudKitService.hasSyncError = false
+        XCTAssertFalse(cloudKitService.shouldShowSyncErrorBanner, "Banner should be hidden after export success")
+    }
+
     // MARK: - Sync Operation Tests
 
     /// Test CloudKit sync operation handles unavailable account gracefully on macOS
@@ -14438,6 +14470,10 @@ final class SyncStatusIndicatorTests: XCTestCase {
         @Published var lastSyncDate: Date? = nil
         @Published var syncError: String? = nil
         @Published var syncStatus: CloudKitService.SyncStatus = .available
+        @Published var hasSyncError: Bool = false
+
+        var shouldShowSyncErrorBanner: Bool { hasSyncError }
+        func dismissSyncErrorBanner() { hasSyncError = false }
 
         var syncCallCount = 0
 

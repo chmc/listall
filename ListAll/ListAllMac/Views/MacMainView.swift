@@ -218,6 +218,19 @@ struct MacMainView: View {
                 .accessibilityLabel(cloudKitService.isSyncing ? "Syncing with iCloud" : "Sync with iCloud")
             }
         }
+        .overlay(alignment: .top) {
+            if cloudKitService.shouldShowSyncErrorBanner {
+                MacSyncErrorBanner(onDismiss: {
+                    cloudKitService.dismissSyncErrorBanner()
+                })
+                .frame(maxWidth: 500)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7),
+                           value: cloudKitService.shouldShowSyncErrorBanner)
+            }
+        }
         // MARK: - Global Cmd+F Handler (Task 12.2)
         // Handles Cmd+F from ANY focus location (sidebar or detail view)
         // Posts notification to MacListDetailView to focus search field

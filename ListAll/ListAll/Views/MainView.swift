@@ -3,8 +3,8 @@ import Combine
 
 struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
-    @StateObject private var cloudKitService = CloudKitService()
-    @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService())
+    @StateObject private var cloudKitService = CloudKitService.shared
+    @StateObject private var conflictManager = SyncConflictManager(cloudKitService: CloudKitService.shared)
     @StateObject private var sharingService = SharingService()
     @StateObject private var tooltipManager = TooltipManager.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -460,6 +460,24 @@ struct MainView: View {
         }
     }
 
+    /// Sync error banner overlay
+    @ViewBuilder
+    private var syncErrorBannerOverlay: some View {
+        if cloudKitService.shouldShowSyncErrorBanner {
+            VStack {
+                SyncErrorBanner(onDismiss: {
+                    cloudKitService.dismissSyncErrorBanner()
+                })
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7),
+                           value: cloudKitService.shouldShowSyncErrorBanner)
+                Spacer()
+            }
+        }
+    }
+
     /// Custom bottom toolbar overlay (tab bar replacement) - iPhone only
     private var bottomToolbarOverlay: some View {
         VStack {
@@ -736,6 +754,9 @@ struct MainView: View {
         .overlay {
             archiveBannerOverlay
         }
+        .overlay {
+            syncErrorBannerOverlay
+        }
     }
 
     // MARK: - iPhone Body (NavigationView with stack)
@@ -768,6 +789,8 @@ struct MainView: View {
                 }
 
                 archiveBannerOverlay
+
+                syncErrorBannerOverlay
 
                 bottomToolbarOverlay
             }

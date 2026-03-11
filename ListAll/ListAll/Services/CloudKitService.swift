@@ -13,6 +13,22 @@ class CloudKitService: ObservableObject {
     @Published var syncStatus: SyncStatus = .unknown
     @Published var syncProgress: Double = 0.0
     @Published var pendingOperations: Int = 0
+    @Published var hasSyncError: Bool = false
+
+    private var syncErrorDismissedAt: Date?
+    private let bannerCooldown: TimeInterval = 300 // 5 minutes
+
+    var shouldShowSyncErrorBanner: Bool {
+        guard hasSyncError else { return false }
+        if let dismissed = syncErrorDismissedAt {
+            return Date().timeIntervalSince(dismissed) > bannerCooldown
+        }
+        return true
+    }
+
+    func dismissSyncErrorBanner() {
+        syncErrorDismissedAt = Date()
+    }
 
     private let container: CKContainer?
     /// Lazy initialization to prevent App Groups access dialog on unsigned test builds
@@ -252,9 +268,18 @@ class CloudKitService: ObservableObject {
         if let error = event.error {
             syncError = error.localizedDescription
             syncStatus = .error(error.localizedDescription)
+            // Show banner for export failures (data not reaching iCloud)
+            if event.type == .export {
+                hasSyncError = true
+            }
         } else {
             syncError = nil
             lastSyncDate = Date()
+            // Export succeeded — clear the error state
+            if event.type == .export {
+                hasSyncError = false
+                syncErrorDismissedAt = nil
+            }
         }
     }
     

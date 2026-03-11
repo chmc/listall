@@ -200,6 +200,12 @@ struct ListAllMacApp: App {
             print("🧪 Disabling feature tips for UI tests")
             MacTooltipManager.shared.markAllAsViewed()
         }
+
+        // Fake sync error for banner testing
+        if ProcessInfo.processInfo.arguments.contains("FAKE_SYNC_ERROR") {
+            print("🧪 Faking sync error for banner testing")
+            CloudKitService.shared.hasSyncError = true
+        }
     }
 
     /// Clear all existing data from the data store
