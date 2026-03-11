@@ -118,6 +118,19 @@ MCP server binary: `Tools/listall-mcp/.build/debug/listall-mcp`
 
 See `.claude/skills/visual-verification/SKILL.md` for detailed patterns.
 
+## UI Polish Verification
+
+After any UI implementation (new views, layout changes, styling updates), run the `professional-ui-polish` Debug Checklist before considering the task complete:
+
+1. Materials on overlays/floating elements only (not list rows)?
+2. Spacing on 4pt grid, outer > inner?
+3. Dark mode: borders instead of shadows, elevated surfaces?
+4. Content transitions on changing numeric values?
+5. Press feedback on all tappable custom views?
+6. None of the 7 Polish Smell Test items present?
+
+See `.claude/skills/professional-ui-polish/SKILL.md` for full patterns and antipatterns.
+
 ## Semantic Search Tools
 
 `listall_call_graph` queries Xcode's IndexStore for structured code analysis.
@@ -179,8 +192,8 @@ Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.
 
 | Agent | Use For | Skills |
 |-------|---------|--------|
-| `apple-dev-expert` | iOS/watchOS implementation, UX | swift-swiftui, fastlane, xctest, apple-hig, apple-ux-patterns |
-| `apple-dev-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync |
+| `apple-dev-expert` | iOS/watchOS implementation, UX | swift-swiftui, fastlane, xctest, apple-hig, apple-ux-patterns, professional-ui-polish |
+| `apple-dev-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync, professional-ui-polish |
 | `critic` | Review before implementation | code-review |
 | `integration-specialist` | Sync/data flow issues | coredata-sync, watch-connectivity |
 | `pipeline-specialist` | CI/CD failures | github-actions, fastlane |

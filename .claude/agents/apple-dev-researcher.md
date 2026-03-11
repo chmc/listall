@@ -4,7 +4,7 @@ description: Research-focused agent for iOS/Swift architecture problems, SwiftUI
 author: ListAll Team
 version: 2.0.0
 model: sonnet
-skills: swiftui-patterns, coredata-sync
+skills: swiftui-patterns, coredata-sync, professional-ui-polish
 tags:
   - research
   - debugging
