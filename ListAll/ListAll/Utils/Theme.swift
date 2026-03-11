@@ -19,6 +19,11 @@ struct Theme {
         static let groupedBackground = Color(NSColor.controlBackgroundColor)
         #endif
         static let success = Color(red: 0.063, green: 0.725, blue: 0.506)
+        static let completedGreen = Color(red: 0.063, green: 0.725, blue: 0.506) // #10B981
+        static let brandGradient = LinearGradient(
+            colors: [Color("AccentColor"), Color("AccentColor").opacity(0.8)],
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        )
         static let warning = Color.orange
         static let error = Color.red
         static let info = Color.blue
@@ -33,6 +38,9 @@ struct Theme {
         static let callout = Font.callout
         static let caption = Font.caption
         static let caption2 = Font.caption2
+        static let monoDigit = Font.body.monospacedDigit()
+        static let monoDigitCaption = Font.caption.monospacedDigit()
+        static let monoDigitCaption2 = Font.caption2.monospacedDigit()
     }
     
     // MARK: - Spacing
@@ -80,15 +88,59 @@ struct Theme {
     }
 }
 
+// MARK: - Card Row Modifier
+struct CardRowModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                    .strokeBorder(
+                        colorScheme == .dark ? Color.white.opacity(0.08) : Color.clear,
+                        lineWidth: 1
+                    )
+            )
+            .shadow(
+                color: colorScheme == .dark ? .clear : Color.black.opacity(0.04),
+                radius: 2, x: 0, y: 1
+            )
+    }
+}
+
+struct CardStyleModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Theme.Colors.background)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .strokeBorder(
+                        colorScheme == .dark ? Color.white.opacity(0.08) : Color.clear,
+                        lineWidth: 1
+                    )
+            )
+            .shadow(
+                color: colorScheme == .dark ? .clear : Theme.Shadow.smallColor,
+                radius: Theme.Shadow.smallRadius, x: Theme.Shadow.smallX, y: Theme.Shadow.smallY
+            )
+    }
+}
+
 // MARK: - View Modifiers
 extension View {
-    
-    // Card Style
+
+    func cardRowStyle() -> some View { modifier(CardRowModifier()) }
+
+    // Card Style (dark-mode-aware)
     func cardStyle() -> some View {
-        self
-            .background(Theme.Colors.background)
-            .cornerRadius(Theme.CornerRadius.md)
-            .shadow(color: Theme.Shadow.smallColor, radius: Theme.Shadow.smallRadius, x: Theme.Shadow.smallX, y: Theme.Shadow.smallY)
+        modifier(CardStyleModifier())
     }
     
     // Primary Button Style
