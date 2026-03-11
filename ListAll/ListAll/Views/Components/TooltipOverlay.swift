@@ -57,7 +57,7 @@ struct TooltipOverlay: View {
                 .padding(.vertical, Theme.Spacing.md)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                        .fill(Color.blue)
+                        .fill(Color.accentColor)
                         .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 4)
                 )
             }
@@ -69,7 +69,7 @@ struct TooltipOverlay: View {
             }) {
                 Text("Got it!")
                     .font(Theme.Typography.headline)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.accentColor)
                     .padding(.horizontal, Theme.Spacing.xl)
                     .padding(.vertical, Theme.Spacing.sm)
                     .background(

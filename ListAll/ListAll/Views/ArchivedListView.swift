@@ -88,7 +88,7 @@ struct ArchivedListView: View {
                             Image(systemName: "arrow.uturn.backward")
                             Text(String(localized: "Restore"))
                         }
-                        .foregroundColor(.blue)
+                        .foregroundColor(.accentColor)
                     }
                     
                     // Permanent delete button

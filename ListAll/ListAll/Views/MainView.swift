@@ -892,10 +892,10 @@ struct CustomBottomToolbar: View {
                 VStack(spacing: 4) {
                     Image(systemName: Constants.UI.listIcon)
                         .font(.system(size: 24))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.accentColor)
                     Text(String(localized: "Lists"))
                         .font(.system(size: 10))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.accentColor)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)

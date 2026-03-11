@@ -128,8 +128,8 @@ struct AuthenticationView: View {
             // App Icon/Logo
             Image(systemName: "lock.shield.fill")
                 .font(.system(size: 80))
-                .foregroundColor(.blue)
-            
+                .foregroundColor(.accentColor)
+
             VStack(spacing: 12) {
                 Text(String(localized: "ListAll"))
                     .font(.largeTitle)
@@ -158,7 +158,7 @@ struct AuthenticationView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(Color.accentColor)
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }

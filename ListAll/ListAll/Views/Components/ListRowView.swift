@@ -65,10 +65,10 @@ struct ListRowView: View {
                             Text("Restore")
                         }
                         .font(Theme.Typography.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.accentColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.accentColor.opacity(0.1))
                         .cornerRadius(8)
                     }
                     .buttonStyle(BorderlessButtonStyle())
@@ -101,7 +101,7 @@ struct ListRowView: View {
                     mainViewModel.toggleSelection(for: list.id)
                 }) {
                     Image(systemName: mainViewModel.selectedLists.contains(list.id) ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(mainViewModel.selectedLists.contains(list.id) ? .blue : .gray)
+                        .foregroundColor(mainViewModel.selectedLists.contains(list.id) ? Theme.Colors.primary : .gray)
                         .imageScale(.large)
                 }
                 .buttonStyle(BorderlessButtonStyle())

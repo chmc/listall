@@ -47,7 +47,7 @@ struct ItemRowView: View {
                         text: item.displayDescription,
                         font: Theme.Typography.caption,
                         textColor: Theme.Colors.secondary,
-                        linkColor: .blue,
+                        linkColor: Theme.Colors.primary,
                         isCrossedOut: item.isCrossedOut,
                         opacity: item.isCrossedOut ? 0.6 : 1.0
                     )
@@ -98,7 +98,7 @@ struct ItemRowView: View {
                     viewModel?.toggleSelection(for: item.id)
                 }) {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isSelected ? .blue : .gray)
+                        .foregroundColor(isSelected ? Theme.Colors.primary : .gray)
                         .imageScale(.large)
                 }
                 .buttonStyle(BorderlessButtonStyle())

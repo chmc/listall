@@ -77,14 +77,14 @@ struct TooltipView: View {
         .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                .fill(Color.blue)
+                .fill(Color.accentColor)
                 .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
         )
     }
-    
+
     private var arrow: some View {
         Triangle()
-            .fill(Color.blue)
+            .fill(Color.accentColor)
             .frame(width: 20, height: 10)
     }
     

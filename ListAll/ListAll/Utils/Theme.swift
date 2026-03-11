@@ -18,7 +18,7 @@ struct Theme {
         static let background = Color(NSColor.windowBackgroundColor)
         static let groupedBackground = Color(NSColor.controlBackgroundColor)
         #endif
-        static let success = Color.green
+        static let success = Color(red: 0.063, green: 0.725, blue: 0.506)
         static let warning = Color.orange
         static let error = Color.red
         static let info = Color.blue

@@ -9525,12 +9525,12 @@ struct DarkModeColorTests {
 
     // MARK: - Semantic Status Colors Tests (4 tests)
 
-    @Test("Theme.Colors.success (green) is accessible")
+    @Test("Theme.Colors.success (completedGreen) is accessible")
     func themeColorsSuccessExists() {
         let successColor = Theme.Colors.success
         #expect(successColor != nil as SwiftUIColor?, "Theme.Colors.success should be defined")
-        // Verify it equals the expected system color
-        #expect(successColor == SwiftUIColor.green, "Theme.Colors.success should be Color.green")
+        // Verify it equals the expected brand color (#10B981)
+        #expect(successColor == SwiftUIColor(red: 0.063, green: 0.725, blue: 0.506), "Theme.Colors.success should be completedGreen (#10B981)")
     }
 
     @Test("Theme.Colors.warning (orange) is accessible")
