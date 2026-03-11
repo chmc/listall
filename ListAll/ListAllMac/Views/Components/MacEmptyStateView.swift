@@ -25,7 +25,7 @@ struct MacListsEmptyStateView: View {
                 // Icon with subtle animation
                 Image(systemName: Constants.UI.listIcon)
                     .font(.system(size: 60))
-                    .foregroundColor(Theme.Colors.primary.opacity(0.7))
+                    .foregroundColor(Theme.Colors.primary.opacity(0.15))
                     .scaleEffect(isAnimating ? 1.0 : 0.95)
                     .animation(
                         Animation.easeInOut(duration: 2.0)
@@ -89,7 +89,7 @@ struct MacListsEmptyStateView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: 350)
                     .padding(.vertical, 12)
-                    .background(Theme.Colors.primary)
+                    .background(Theme.Colors.brandGradient)
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
@@ -322,12 +322,16 @@ struct MacItemsEmptyStateView: View {
             // Celebration icon
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.success.opacity(0.1))
+                    .fill(LinearGradient(
+                        colors: [Theme.Colors.completedGreen.opacity(0.2), Theme.Colors.completedGreen.opacity(0.1)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                    .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
                     .frame(width: 80, height: 80)
 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
-                    .foregroundColor(Theme.Colors.success)
+                    .foregroundColor(Theme.Colors.completedGreen)
             }
             .accessibilityHidden(true)
 
@@ -348,12 +352,16 @@ struct MacItemsEmptyStateView: View {
             // Celebration icon
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.success.opacity(0.1))
+                    .fill(LinearGradient(
+                        colors: [Theme.Colors.completedGreen.opacity(0.2), Theme.Colors.completedGreen.opacity(0.1)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                    .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
                     .frame(width: 80, height: 80)
 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
-                    .foregroundColor(Theme.Colors.success)
+                    .foregroundColor(Theme.Colors.completedGreen)
             }
             .accessibilityHidden(true)
 

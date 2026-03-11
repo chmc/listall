@@ -13,7 +13,7 @@ struct ListsEmptyStateView: View {
                 // Icon with subtle animation
                 Image(systemName: Constants.UI.listIcon)
                     .font(.system(size: 70))
-                    .foregroundColor(Theme.Colors.primary.opacity(0.7))
+                    .foregroundColor(Theme.Colors.primary.opacity(0.15))
                     .scaleEffect(isAnimating ? 1.0 : 0.95)
                     .animation(
                         Animation.easeInOut(duration: 2.0)
@@ -75,11 +75,11 @@ struct ListsEmptyStateView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Theme.Spacing.md)
-                    .background(Theme.Colors.primary)
+                    .background(Theme.Colors.brandGradient)
                     .cornerRadius(Theme.CornerRadius.md)
                 }
                 .padding(.horizontal, Theme.Spacing.md)
-                
+
                 // Feature highlights
                 VStack(spacing: Theme.Spacing.md) {
                     Text(String(localized: "ListAll Features"))
@@ -226,12 +226,16 @@ struct ItemsEmptyStateView: View {
             // Celebration icon
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.success.opacity(0.1))
+                    .fill(LinearGradient(
+                        colors: [Theme.Colors.completedGreen.opacity(0.2), Theme.Colors.completedGreen.opacity(0.1)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                    .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
                     .frame(width: 100, height: 100)
-                
+
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(Theme.Colors.success)
+                    .foregroundColor(Theme.Colors.completedGreen)
             }
             
             Text(String(localized: "All Done! 🎉"))
@@ -284,10 +288,10 @@ struct ItemsEmptyStateView: View {
                 .font(Theme.Typography.headline)
                 .foregroundColor(.white)
                 .padding()
-                .background(Theme.Colors.primary)
+                .background(Theme.Colors.brandGradient)
                 .cornerRadius(Theme.CornerRadius.md)
             }
-            
+
             // Usage tips
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("💡 Quick Tips")
