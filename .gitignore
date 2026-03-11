@@ -254,6 +254,9 @@ venv.bak/
 buildServer.json
 .compile
 
+# --- Superpowers brainstorm artifacts ---
+.superpowers/
+
 # --- Grep fallback authorization (semantic search enforcement) ---
 .claude/.grep-fallback-authorized
 
