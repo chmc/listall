@@ -151,10 +151,12 @@ struct MacDestinationListPickerSheet: View {
                                     Text("\(activeCount) active (\(totalCount) total)")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
+                                        .numericContentTransition()
                                 } else {
                                     Text("\(totalCount) items")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
+                                        .numericContentTransition()
                                 }
                             }
 

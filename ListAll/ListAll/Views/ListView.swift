@@ -68,7 +68,8 @@ struct ListView: View {
                     Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
-                    
+                        .numericContentTransition()
+
                     // Watch sync indicator (subtle)
                     if viewModel.isSyncingFromWatch {
                         HStack(spacing: 4) {
@@ -136,6 +137,7 @@ struct ListView: View {
                         Text("\(viewModel.activeItems.count)/\(viewModel.items.count) items")
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
+                            .numericContentTransition()
                         Spacer()
                     }
                     .padding(.horizontal, Theme.Spacing.md)
@@ -275,6 +277,7 @@ struct ListView: View {
                                 .disabled(viewModel.selectedItems.isEmpty)
                             } label: {
                                 Image(systemName: "ellipsis.circle")
+                                    .monochromeSymbol()
                                     .foregroundColor(.primary)
                             }
                         } else {
@@ -283,6 +286,7 @@ struct ListView: View {
                                 showingShareFormatPicker = true
                             }) {
                                 Image(systemName: "square.and.arrow.up")
+                                    .monochromeSymbol()
                                     .foregroundColor(.primary)
                             }
                             .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
@@ -292,6 +296,7 @@ struct ListView: View {
                                 viewModel.showingOrganizationOptions = true
                             }) {
                                 Image(systemName: "arrow.up.arrow.down")
+                                    .monochromeSymbol()
                                     .foregroundColor(.primary)
                             }
                             .accessibilityIdentifier("SortFilterButton")
@@ -302,6 +307,7 @@ struct ListView: View {
                                 viewModel.toggleShowCrossedOutItems()
                             }) {
                                 Image(systemName: viewModel.showCrossedOutItems ? "eye" : "eye.slash")
+                                    .monochromeSymbol()
                                     .foregroundColor(viewModel.showCrossedOutItems ? .primary : .secondary)
                             }
                             .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
@@ -313,6 +319,7 @@ struct ListView: View {
                                 }
                             }) {
                                 Image(systemName: "pencil")
+                                    .monochromeSymbol()
                             }
                             .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                             .help("Edit items")

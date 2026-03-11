@@ -814,6 +814,7 @@ private struct MacSidebarView: View {
                 Text(itemCountText(for: list))
                     .foregroundColor(.secondary)
                     .font(.caption)
+                    .numericContentTransition()
             }
             .contentShape(Rectangle())
         }
@@ -838,6 +839,7 @@ private struct MacSidebarView: View {
                 Text(itemCountText(for: list))
                     .foregroundColor(.secondary)
                     .font(.caption)
+                    .numericContentTransition()
             }
         }
         // CRITICAL: Use .activate interactions to allow list drag-drop to work.
@@ -1724,6 +1726,7 @@ private struct MacListDetailView: View {
                 Text("\(viewModel.filteredItems.count) of \(viewModel.items.count) items")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .numericContentTransition()
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
@@ -2531,6 +2534,7 @@ private struct MacItemRowView: View {
                     Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
                         .foregroundColor(item.isCrossedOut ? .green.opacity(0.6) : .secondary.opacity(0.5))
+                        .replaceSymbolTransition()
                         .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active"), read-only")
                 } else {
                     // Interactive completion toggle for active lists
@@ -2538,6 +2542,7 @@ private struct MacItemRowView: View {
                         Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
                             .font(.title2)
                             .foregroundColor(item.isCrossedOut ? .green : .secondary)
+                            .replaceSymbolTransition()
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
@@ -2590,6 +2595,7 @@ private struct MacItemRowView: View {
                     if item.quantity > 1 {
                         Text("×\(item.quantity)")
                             .font(.caption)
+                            .numericContentTransition()
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.2))

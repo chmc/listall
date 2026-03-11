@@ -42,6 +42,7 @@ struct ListRowView: View {
                     Text("\(list.activeItemCount)/\(list.itemCount)")
                         .font(Theme.Typography.monoDigitCaption)
                         .foregroundColor(Theme.Colors.primary)
+                        .numericContentTransition()
                     Text("items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)

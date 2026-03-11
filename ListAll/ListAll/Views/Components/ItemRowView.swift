@@ -67,6 +67,7 @@ struct ItemRowView: View {
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.secondary)
                             .opacity(item.isCrossedOut ? 0.6 : 1.0)
+                            .numericContentTransition()
                     }
                     
                     // Image count indicator (if item has images)
@@ -76,6 +77,7 @@ struct ItemRowView: View {
                                 .font(.caption2)
                             Text("\(item.imageCount)")
                                 .font(Theme.Typography.caption)
+                                .numericContentTransition()
                         }
                         .foregroundColor(Theme.Colors.info)
                         .opacity(item.isCrossedOut ? 0.6 : 1.0)

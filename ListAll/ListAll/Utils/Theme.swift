@@ -170,4 +170,31 @@ extension View {
             .multilineTextAlignment(.center)
             .padding(Theme.Spacing.xl)
     }
+
+    /// Applies `.contentTransition(.numericText())` on iOS 17+/macOS 14+/watchOS 10+.
+    /// Falls back to no transition on older OS versions.
+    @ViewBuilder
+    func numericContentTransition() -> some View {
+        if #available(iOS 17, macOS 14, watchOS 10, *) {
+            self.contentTransition(.numericText())
+        } else {
+            self
+        }
+    }
+
+    /// Applies `.contentTransition(.symbolEffect(.replace))` on iOS 17+/macOS 14+/watchOS 10+.
+    /// Falls back to no transition on older OS versions.
+    @ViewBuilder
+    func replaceSymbolTransition() -> some View {
+        if #available(iOS 17, macOS 14, watchOS 10, *) {
+            self.contentTransition(.symbolEffect(.replace))
+        } else {
+            self
+        }
+    }
+
+    /// Ensures `.symbolRenderingMode(.monochrome)` for Liquid Glass compatibility.
+    func monochromeSymbol() -> some View {
+        self.symbolRenderingMode(.monochrome)
+    }
 }
