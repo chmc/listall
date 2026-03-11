@@ -38,8 +38,11 @@ struct ListRowView: View {
                     .font(Theme.Typography.headline)
                     .foregroundColor(.primary)
                 
-                HStack(spacing: 4) {
-                    Text("\(list.activeItemCount) (\(list.itemCount)) items")
+                HStack(spacing: 2) {
+                    Text("\(list.activeItemCount)/\(list.itemCount)")
+                        .font(Theme.Typography.monoDigitCaption)
+                        .foregroundColor(Theme.Colors.primary)
+                    Text("items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
                     
