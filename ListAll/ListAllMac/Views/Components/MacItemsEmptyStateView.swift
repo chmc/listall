@@ -2,44 +2,11 @@
 //  MacItemsEmptyStateView.swift
 //  ListAllMac
 //
-//  Empty state views for items list and no-list-selected state on macOS.
+//  Empty state views for items list on macOS.
 //
 
 import SwiftUI
 import AppKit
-
-// MARK: - No List Selected Empty State
-
-/// Simple empty state shown when no list is selected in the sidebar.
-/// Used as a placeholder in the detail view.
-struct MacNoListSelectedView: View {
-    let onCreateList: () -> Void
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "list.bullet.clipboard")
-                .font(.system(size: 64))
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
-
-            Text("No List Selected")
-                .font(.title2)
-                .foregroundColor(.secondary)
-                .accessibilityAddTraits(.isHeader)
-
-            Text("Select a list from the sidebar or create a new one.")
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button("Create New List") {
-                onCreateList()
-            }
-            .buttonStyle(.borderedProminent)
-            .accessibilityHint("Opens sheet to create new list")
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
 
 // MARK: - Items Empty State View
 
@@ -97,21 +64,8 @@ struct MacItemsEmptyStateView: View {
     @ViewBuilder
     private var archivedCelebrationState: some View {
         VStack(spacing: 20) {
-            // Celebration icon
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [Theme.Colors.completedGreen.opacity(0.2), Theme.Colors.completedGreen.opacity(0.1)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                    .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
-                    .frame(width: 80, height: 80)
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(Theme.Colors.completedGreen)
-            }
-            .accessibilityHidden(true)
+            celebrationIcon
+                .accessibilityHidden(true)
 
             Text(String(localized: "All Done!"))
                 .font(.title)
@@ -127,21 +81,8 @@ struct MacItemsEmptyStateView: View {
     @ViewBuilder
     private var celebrationState: some View {
         VStack(spacing: 20) {
-            // Celebration icon
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [Theme.Colors.completedGreen.opacity(0.2), Theme.Colors.completedGreen.opacity(0.1)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                    .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
-                    .frame(width: 80, height: 80)
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(Theme.Colors.completedGreen)
-            }
-            .accessibilityHidden(true)
+            celebrationIcon
+                .accessibilityHidden(true)
 
             Text(String(localized: "All Done!"))
                 .font(.title)
@@ -216,6 +157,23 @@ struct MacItemsEmptyStateView: View {
             )
         }
     }
+
+    /// Shared celebration icon used by both active and archived celebration states.
+    private var celebrationIcon: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [Theme.Colors.completedGreen.opacity(0.2), Theme.Colors.completedGreen.opacity(0.1)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+                .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
+                .frame(width: 80, height: 80)
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(Theme.Colors.completedGreen)
+        }
+    }
 }
 
 // MARK: - Tip Row
@@ -244,11 +202,6 @@ struct MacTipRow: View {
 }
 
 // MARK: - Previews
-
-#Preview("No List Selected") {
-    MacNoListSelectedView(onCreateList: { })
-        .frame(width: 600, height: 400)
-}
 
 #Preview("Items Empty State - No Items") {
     MacItemsEmptyStateView(hasItems: false, isArchived: false, onAddItem: { })
