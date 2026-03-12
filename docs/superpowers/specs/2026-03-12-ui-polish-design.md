@@ -394,43 +394,34 @@ VStack(alignment: .leading, spacing: 3) {
 .padding(.vertical, 4)
 ```
 
-### 5b. Item Row: Teal Checkbox + Separated Quantity
+### 5b. Item Row: Left-Aligned, Color Differentiation, Separated Quantity
+
+**Design rationale:** No checkbox circles on watchOS — the screen is too small and circles + text + badge doesn't fit well. Instead, use tap-to-toggle (existing behavior) with teal/green color treatment and strikethrough for completed items. This keeps the layout consistent with the list rows (left-aligned, no leading icons).
 
 ```swift
 Button {
     toggleItem()
 } label: {
-    HStack(spacing: 8) {
-        // Checkbox — teal border (active) or green fill (completed)
-        if item.isCrossedOut {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 20))
-                .foregroundColor(completedGreen)  // inline color, not Theme
-        } else {
-            Circle()
-                .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 2)
-                .frame(width: 18, height: 18)
-        }
-
-        // Title
+    HStack(spacing: 0) {
+        // Title — left-aligned, full width
         Text(item.title)
             .font(.body)
             .strikethrough(item.isCrossedOut)
-            .foregroundColor(item.isCrossedOut ? .secondary : .primary)
+            .foregroundColor(item.isCrossedOut ? completedGreen.opacity(0.6) : .primary)
             .lineLimit(2)
-
-        Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
 
         // Quantity (separated, right-aligned)
         if item.quantity > 1 {
             Text("×\(item.quantity)")
                 .font(.caption2.monospacedDigit().weight(.semibold))
                 .foregroundColor(item.isCrossedOut
-                    ? completedGreen.opacity(0.5)  // inline color, not Theme
+                    ? completedGreen.opacity(0.5)
                     : .accentColor)
+                .padding(.leading, 8)
         }
     }
-    .opacity(item.isCrossedOut ? 0.5 : 1.0)
+    .opacity(item.isCrossedOut ? 0.6 : 1.0)
 }
 .buttonStyle(.plain)
 .padding(.vertical, 4)
@@ -438,34 +429,25 @@ Button {
 
 ### 5c. Status Counts (in WatchListView)
 
+Left-aligned, text-only (no icons — consistent with the rest of watchOS):
+
 ```swift
 HStack(spacing: 8) {
     // Active count — teal
-    HStack(spacing: 2) {
-        Image(systemName: "circle")
-            .font(.caption2)
-        Text("\(activeCount)")
-            .monospacedDigit()
-    }
-    .foregroundColor(.accentColor)
-    .font(.caption2)
+    Text("\(activeCount) active")
+        .foregroundColor(.accentColor)
 
     // Completed count — green
-    HStack(spacing: 2) {
-        Image(systemName: "checkmark")
-            .font(.caption2)
-        Text("\(completedCount)")
-            .monospacedDigit()
-    }
-    .foregroundColor(completedGreen)  // inline color, not Theme
-    .font(.caption2)
+    Text("\(completedCount) done")
+        .foregroundColor(completedGreen)
+
+    Spacer()
 
     // Total — muted
     Text("\(totalCount) total")
-        .font(.caption2)
-        .monospacedDigit()
         .foregroundColor(.secondary.opacity(0.6))
 }
+.font(.caption2.monospacedDigit())
 ```
 
 ### 5d. Dividers
