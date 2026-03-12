@@ -7,27 +7,22 @@ ListAll is a cross-platform checklist app (iOS/iPad/macOS/watchOS). A previous U
 This spec provides **exact SwiftUI code patterns** for each change, eliminating the CSS→SwiftUI translation gap that caused the previous implementation to drift from the designs.
 
 **Visual reference mockups** (HTML) are in `.superpowers/brainstorm/57429-1773298544/` — open directly in browser. These show the target look; this document shows the target code.
-- `design-iphone-full.html` — 11 iPhone views (dark+light)
-- `design-desktop-full.html` — 10 macOS + iPad views
-- `design-watchos-full.html` — 11 watchOS views
+- `design-iphone-full.html` — 13 iPhone views (dark+light): lists overview, items list, item detail, empty states, archived lists overview, archived list view, settings (top/bottom scroll), create list, edit item, sort/filter
+- `design-ipad.html` — 14 iPad views (dark+light): sidebar+items, no list selected, empty states, item detail, archived lists overview, archived list view, settings (top/bottom scroll), create list, edit item, sort/filter
+- `design-desktop-full.html` — 20 macOS + iPad views (dark+light): sidebar states, items, sheets, settings, empty states, search empty
+- `design-watchos-full.html` — 11 watchOS views: lists overview, items, filter, empty states, loading, sync
+
+**Mockups are the visual source of truth.** When implementing, take screenshots and compare against mockups. The spec provides SwiftUI code patterns; the mockups show what it should look like.
 
 ---
 
 ## Scope
 
 ### In Scope (this spec)
-Changes 1–5 below cover the primary visual gaps: sidebar selection, card-based items, watchOS polish.
+Changes 1–12 below cover ALL visual gaps across all platforms. Changes 1–6 are the core visual changes. Changes 7–12 are secondary polish (accent colors, brand consistency).
 
-### Deferred (not in this round)
-These views from VIEW-INVENTORY.md need work but are deferred to avoid scope creep:
-- **View #3** `ItemDetailView.swift` — Card styling, status badge (minor, rarely seen)
-- **View #7** `ArchivedListView.swift` — Brand teal accents (low traffic view)
-- **View #13** iPad sidebar empty state — styling follows from Change 4
-- **View #14** iPad sidebar archived row — styling follows from Change 4
-- **View #23** `MacNoListSelectedView.swift` — Brand styling (low priority)
-- **View #30** `WatchFilterPicker.swift` — Teal active state (minor)
-
-These can be addressed in a follow-up pass after the core changes are verified.
+### Already Done
+Empty states (gradient CTAs, green celebration circles), brand color foundation, count format on iOS lists, content transitions, symbol effects.
 
 ---
 
@@ -66,7 +61,7 @@ Text("\(activeCount)/\(totalCount)")
 
 ### 1b. Selected Row: Teal Left Border
 
-The macOS sidebar currently uses system selection (solid blue). Override with custom selection appearance:
+The macOS sidebar currently uses `List(selection:)` with `NavigationLink(value:)` which provides system selection (solid blue). To override with custom selection: disable the system row background with `.listRowBackground(Color.clear)` on each row, then apply the custom selection appearance below. This prevents double-highlighting from the system selection + custom background:
 
 ```swift
 // For the selected row, wrap content in:
@@ -144,7 +139,7 @@ ListView already uses `.listStyle(.plain)`, so add card styling directly in Item
 .padding(.horizontal, 14)
 .background {
     RoundedRectangle(cornerRadius: 12)
-        .fill(Color.primary.opacity(colorScheme == .dark ? 0.03 : 1.0))
+        .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.white)
         .shadow(color: colorScheme == .dark ? .clear : .black.opacity(0.04), radius: 1, y: 1)
 }
 .overlay {
@@ -186,8 +181,8 @@ ZStack {
 
 ### 2c. Quantity Badge
 
-Current: quantity shown inline via `item.formattedQuantity` (returns `"Nx"` format, e.g. `"3x"`).
-New: teal capsule badge, right-aligned, using `×N` format (multiplication sign prefix):
+Current: quantity shown inline via `item.formattedQuantity` (returns `"3x"` format).
+New: teal capsule badge, right-aligned, using `×3` format (multiplication sign prefix). **Do NOT modify `formattedQuantity` property** — it's used in macOS tests. Build the new format inline:
 
 ```swift
 // Only show when quantity > 1
@@ -226,11 +221,15 @@ if item.quantity > 1 {
 
 ### 2e. Item Row Layout (Complete)
 
-**IMPORTANT:** Preserve existing behavior:
-- Descriptions use `MixedTextView` (from `URLHelper.swift`), NOT plain `Text` — this renders URLs as clickable links
+**IMPORTANT:** Preserve ALL existing behavior:
+- Descriptions use `MixedTextView` (from `URLHelper.swift`), NOT plain `Text` — this renders URLs as clickable links. `MixedTextView` requires named parameters: `MixedTextView(text:font:textColor:...)` — NOT a single positional argument.
 - Use `item.hasDescription` (Bool) and `item.displayDescription` (String) — NOT `item.itemDescription` directly
 - The `isInSelectionMode` layout path must continue to work with the new card styling
 - The existing `.hoverEffect(.lift)` on iPad can be removed since we're adding custom press feedback
+- **PRESERVE the chevron.right navigation button** (right side) — it navigates to item detail/edit
+- **PRESERVE the image count indicator** (`photo` icon with count) when item has images
+- **PRESERVE the secondary info HStack** showing image count and any other metadata
+- Do NOT change `item.formattedQuantity` property — build the `×N` format inline with a new `Text` view
 
 ```swift
 HStack(spacing: 12) {
@@ -246,18 +245,22 @@ HStack(spacing: 12) {
             .foregroundColor(item.isCrossedOut ? .secondary : .primary)
 
         if item.hasDescription {
-            // KEEP existing MixedTextView for URL support
-            MixedTextView(item.displayDescription)
-                .font(Theme.Typography.caption)
-                .foregroundColor(.secondary)
+            // KEEP existing MixedTextView with named parameters:
+            MixedTextView(text: item.displayDescription, font: Theme.Typography.caption, textColor: .secondary)
                 .lineLimit(1)
         }
+
+        // PRESERVE: secondary info row (image count indicator, etc.)
+        // Keep existing HStack that shows photo icon + count when item has images
     }
 
     Spacer()
 
     // Quantity badge (2c above)
     quantityBadge(for: item)
+
+    // PRESERVE: chevron.right navigation button
+    // Keep the existing chevron that navigates to item detail/edit
 }
 .padding(.vertical, 12)
 .padding(.horizontal, 14)
@@ -268,11 +271,25 @@ HStack(spacing: 12) {
 
 ### 2f. Press Feedback
 
+Use a custom `ButtonStyle` to get `isPressed` state. Wrap the card row in a `Button` with this style:
+
 ```swift
-// On the card row, add scale effect:
-.scaleEffect(isPressed ? 0.97 : 1.0)
-.animation(.easeInOut(duration: 0.15), value: isPressed)
+struct CardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// Apply to the card row:
+Button(action: { /* existing tap action */ }) {
+    // ... card row content from 2e
+}
+.buttonStyle(CardPressStyle())
 ```
+
+**Note:** `ItemRowView` currently uses `onTapGesture` and the custom `.if()` modifier (from `ListRowView.swift`) for context menus and swipe actions. Ensure the `ButtonStyle` approach works with these existing gesture handlers — test thoroughly.
 
 ---
 
@@ -294,7 +311,7 @@ Same card styling as iOS Change 2, but with macOS sizing (intentionally tighter 
 }
 .background(
     RoundedRectangle(cornerRadius: 10)
-        .fill(Color.primary.opacity(isHovered ? 0.05 : 0.03))
+        .fill(Color.white.opacity(isHovered ? 0.05 : 0.03))
 )
 ```
 
@@ -305,7 +322,7 @@ Same card styling as iOS Change 2, but with macOS sizing (intentionally tighter 
 **File:** `ListAll/ListAll/Views/MainView.swift` (iPad NavigationSplitView path)
 **Status:** NOT IMPLEMENTED
 
-iPad uses `NavigationSplitView` with a sidebar. Apply the same teal selection treatment as macOS (Change 1b), but with iPad sizing:
+iPad uses `NavigationSplitView` with a sidebar that renders rows via `ListRowView` component (`ListAll/ListAll/Views/Components/ListRowView.swift`). The current sidebar uses `.listRowBackground()` for selection state (MainView.swift ~line 226). **Modify `ListRowView`** (or create an iPad-specific variant) to apply the custom teal selection treatment. Disable system selection bg with `.listRowBackground(Color.clear)`. Apply the same teal selection pattern as macOS (Change 1b), but with iPad sizing:
 - Sidebar rows show `4/6 items` format (like iPhone, not just `4/6`)
 - Selected row gets teal left border + tinted background
 - Unselected rows get standard padding
@@ -397,7 +414,7 @@ VStack(alignment: .leading, spacing: 3) {
 
 ### 5b. Item Row: Left-Aligned Text, No Checkboxes, Separated Quantity
 
-**Design rationale:** No checkbox circles on watchOS — the screen is too small. Use tap-to-toggle (existing behavior) with color differentiation only. Everything left-aligned, consistent with list rows.
+**Design rationale:** **REMOVE** the existing checkbox circles from watchOS item rows (current code has `Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")` in `WatchItemRowView`). The watchOS screen is too small for checkboxes. Use tap-to-toggle (existing behavior) with color differentiation only. Everything left-aligned, consistent with list rows.
 
 ```swift
 Button {
@@ -430,22 +447,24 @@ Button {
 
 ### 5c. Status Counts (in WatchListView)
 
-Left-aligned, text-only (no icons — consistent with the rest of watchOS):
+Left-aligned, text-only (no icons — consistent with the rest of watchOS).
+
+**IMPORTANT:** Use `watchLocalizedString()` or `NSLocalizedString()` for all user-facing strings — the current watchOS code is fully localized and new strings must follow the same pattern.
 
 ```swift
 HStack(spacing: 8) {
     // Active count — teal
-    Text("\(activeCount) active")
+    Text("\(activeCount) \(watchLocalizedString("active"))")
         .foregroundColor(.accentColor)
 
     // Completed count — green
-    Text("\(completedCount) done")
+    Text("\(completedCount) \(watchLocalizedString("done"))")
         .foregroundColor(completedGreen)
 
     Spacer()
 
     // Total — muted
-    Text("\(totalCount) total")
+    Text("\(totalCount) \(watchLocalizedString("total"))")
         .foregroundColor(.secondary.opacity(0.6))
 }
 .font(.caption2.monospacedDigit())
@@ -476,6 +495,266 @@ Apply brand teal to active filter states:
 ```
 
 **Note:** This is a minor accent color change, not a full redesign of the filter UI.
+
+The sort buttons currently use `.blue.opacity(0.1)` background and blue checkmarks. Replace with brand teal:
+
+```swift
+// Selected sort/filter button background:
+Theme.Colors.primary.opacity(0.1)
+// Selected checkmark/icon color:
+Theme.Colors.primary
+// Unselected: keep existing secondary styling
+```
+
+---
+
+## Change 7: Item Detail View — Brand Styling
+
+**File:** `ListAll/ListAll/Views/ItemDetailView.swift`
+**Status:** NOT IMPLEMENTED
+
+The item detail view currently uses a simple HStack with icon+text to show status ("Completed"/"Pending"). **Replace** this with a styled capsule badge using brand colors. Note: "Active" replaces "Pending" as the label for non-crossed-out items.
+
+### 7a. Status Badge (replaces existing icon+text status indicator)
+
+```swift
+// Active status badge
+HStack(spacing: 6) {
+    Circle()
+        .fill(Theme.Colors.primary)
+        .frame(width: 8, height: 8)
+    Text("Active")
+        .font(.caption.weight(.semibold))
+        .foregroundColor(Theme.Colors.primary)
+}
+.padding(.horizontal, 10)
+.padding(.vertical, 5)
+.background(Theme.Colors.primary.opacity(0.1))
+.clipShape(Capsule())
+
+// Completed status badge
+HStack(spacing: 6) {
+    Image(systemName: "checkmark")
+        .font(.caption.weight(.bold))
+        .foregroundColor(Theme.Colors.completedGreen)
+    Text("Completed")
+        .font(.caption.weight(.semibold))
+        .foregroundColor(Theme.Colors.completedGreen)
+}
+.padding(.horizontal, 10)
+.padding(.vertical, 5)
+.background(Theme.Colors.completedGreen.opacity(0.1))
+.clipShape(Capsule())
+```
+
+### 7b. Detail Cards (Quantity, Images)
+
+```swift
+// Use brand teal for detail card icons instead of info/warning colors:
+Image(systemName: "number")
+    .font(.title2)
+    .foregroundColor(Theme.Colors.primary)
+```
+
+### 7c. "Mark as Completed" Button
+
+```swift
+Button(action: toggleCompletion) {
+    HStack {
+        Image(systemName: item.isCrossedOut ? "arrow.uturn.backward" : "checkmark")
+        Text(item.isCrossedOut ? "Mark as Active" : "Mark as Completed")
+    }
+    .font(.body.weight(.semibold))
+    .foregroundColor(.white)
+    .padding(.horizontal, 20)
+    .padding(.vertical, 12)
+    .background(
+        item.isCrossedOut
+            ? Theme.Colors.primary
+            : Theme.Colors.completedGreen
+    )
+    .clipShape(Capsule())
+}
+```
+
+---
+
+## Change 8: Archived List View — Brand Teal Accents
+
+**File:** `ListAll/ListAll/Views/ArchivedListView.swift`
+**Status:** NOT IMPLEMENTED
+
+### 8a. Archived Badge
+
+Replace the current secondary-colored archive indicator with an orange "Archived" badge:
+
+```swift
+HStack(spacing: 4) {
+    Image(systemName: "archivebox")
+        .font(.caption2)
+    Text("Archived")
+        .font(.caption.weight(.semibold))
+}
+.foregroundColor(.orange)
+.padding(.horizontal, 10)
+.padding(.vertical, 4)
+.background(Color.orange.opacity(0.12))
+.clipShape(Capsule())
+```
+
+### 8b. Toolbar Buttons
+
+```swift
+// Restore button — brand teal
+Button(action: { showingRestoreConfirmation = true }) {
+    HStack(spacing: 4) {
+        Image(systemName: "arrow.uturn.backward")
+        Text("Restore")
+    }
+    .foregroundColor(Theme.Colors.primary)
+}
+
+// Delete button — red (already correct)
+```
+
+### 8c. Archived Item Rows — Read-Only Styling
+
+Items in archived lists are strikethrough with muted opacity. No checkboxes. Keep existing `ArchivedItemRowView` but ensure consistent styling:
+
+```swift
+Text(item.displayTitle)
+    .font(Theme.Typography.body)
+    .strikethrough(item.isCrossedOut)
+    .foregroundColor(.secondary)
+    .opacity(0.6)
+```
+
+---
+
+## Change 9: Settings View — Accent Color Consistency
+
+**File:** `ListAll/ListAll/Views/SettingsView.swift`
+**Status:** NOT IMPLEMENTED
+
+Settings is already functional. Apply minor brand accent consistency:
+
+### 9a. Action Buttons (Export/Import)
+
+```swift
+// Data action buttons should use brand teal:
+Button("Export Data") { ... }
+    .foregroundColor(Theme.Colors.primary)
+Button("Import Data") { ... }
+    .foregroundColor(Theme.Colors.primary)
+```
+
+### 9b. Toggle Tint
+
+```swift
+// Ensure all toggles use brand teal:
+Toggle(isOn: $hapticManager.isEnabled) { ... }
+    .tint(Theme.Colors.primary)
+Toggle(isOn: $requiresBiometricAuth) { ... }
+    .tint(Theme.Colors.primary)
+```
+
+### 9c. About Section App Icon
+
+```swift
+// App icon in About section should use brand teal:
+Image(systemName: "list.bullet.clipboard")
+    .font(.system(size: 40))
+    .foregroundColor(Theme.Colors.primary)  // was .accentColor — ensure it's brand teal
+```
+
+**Note:** Settings layout is NOT changing — only accent colors. See mockups sections 8a/8b (iPhone), 9a/9b (iPad), 5 (macOS) for the exact visual target. The mockups show all rows/icons for content reference.
+
+**macOS Settings:** Also apply the same accent color changes to `ListAll/ListAllMac/Views/MacSettingsView.swift` (separate file from iOS SettingsView). Ensure toggle tints and action button colors match.
+
+---
+
+## Change 10: Create List & Edit Item Sheets — Accent Colors
+
+**Files:**
+- `ListAll/ListAll/Views/CreateListView.swift`
+- `ListAll/ListAll/Views/ItemEditView.swift`
+**Status:** NOT IMPLEMENTED
+
+Minor accent color changes only — no layout changes:
+
+### 10a. Create List Sheet
+
+```swift
+// "Create" button should use brand teal:
+Button("Create") { ... }
+    .foregroundColor(Theme.Colors.primary)
+    .fontWeight(.semibold)
+```
+
+### 10b. Edit Item Sheet
+
+```swift
+// "Save" button should use brand teal:
+Button("Save") { ... }
+    .foregroundColor(Theme.Colors.primary)
+    .fontWeight(.semibold)
+
+// Add Photo button — brand teal instead of blue:
+Button(action: addPhoto) {
+    Label("Add Photo", systemImage: "camera.fill")
+}
+.foregroundColor(Theme.Colors.primary)
+```
+
+See mockups sections 9-10 (iPhone), 10-11 (iPad) for visual reference.
+
+---
+
+## Change 11: macOS No List Selected — Brand Styling
+
+**File:** `ListAll/ListAllMac/Views/Components/MacNoListSelectedView.swift`
+**Status:** NOT IMPLEMENTED
+
+```swift
+VStack(spacing: 20) {
+    Image(systemName: "list.bullet.clipboard")
+        .font(.system(size: 64))
+        .foregroundColor(.secondary.opacity(0.4))
+
+    Text("No List Selected")
+        .font(.title2)
+        .foregroundColor(.secondary)
+
+    Text("Select a list from the sidebar or create a new one.")
+        .font(.body)
+        .foregroundColor(.secondary.opacity(0.7))
+        .multilineTextAlignment(.center)
+
+    // CTA button with brand gradient:
+    Button("Create New List") { ... }
+        .buttonStyle(.borderedProminent)
+        .tint(Theme.Colors.primary)
+}
+```
+
+See desktop mockup section 1 for visual reference.
+
+---
+
+## Change 12: watchOS Filter Picker — Teal Active State
+
+**File:** `ListAll/ListAllWatch Watch App/Views/Components/WatchFilterPicker.swift`
+**Status:** NOT IMPLEMENTED
+
+```swift
+// Ensure Picker uses brand teal for selection:
+Picker("Filter", selection: $selectedFilter) {
+    // ... filter options
+}
+.tint(.accentColor)  // watchOS uses .accentColor, which is already brand teal
+```
+
+**Note:** watchOS Picker styling is system-driven with limited customization. The main change is ensuring `.accentColor` (brand teal) is used consistently. See watchOS mockup section 3.
 
 ---
 
@@ -516,13 +795,23 @@ xcodebuild clean build -project ListAll/ListAll.xcodeproj -scheme "ListAllWatch 
 
 ## Implementation Order
 
+**Phase A — Core Visual Changes (Changes 1–5):**
 1. **macOS sidebar** (Change 1) — most visible gap, self-contained
 2. **iOS item rows** (Change 2) — card styling, checkboxes, quantity badges
 3. **macOS item rows** (Change 3) — same patterns as iOS
 4. **iPad sidebar** (Change 4) — selection treatment
 5. **watchOS** (Change 5) — count format, teal colors, progress bars
 
-Each step: implement → build → screenshot → verify → commit → next.
+**Phase B — Secondary Polish (Changes 6–12):**
+6. **Filter/sort accent colors** (Change 6) — teal active states in ItemOrganizationView
+7. **Item detail view** (Change 7) — status badges, detail cards, action button
+8. **Archived list view** (Change 8) — archived badge, toolbar buttons, item styling
+9. **Settings accent colors** (Change 9) — toggles, buttons, about section
+10. **Sheet accent colors** (Change 10) — create list, edit item buttons
+11. **macOS no list selected** (Change 11) — brand styling on empty state
+12. **watchOS filter picker** (Change 12) — teal active state
+
+Each step: implement → build → screenshot (both light+dark) → compare against mockup → fix if needed → commit → next.
 
 ---
 
@@ -535,8 +824,16 @@ Each step: implement → build → screenshot → verify → commit → next.
 | 2 | `ListAll/Views/ListView.swift` | Card row background, list row separator |
 | 3 | `ListAllMac/Views/MacMainView.swift` | Content area item cards, hover states |
 | 4 | `ListAll/Views/MainView.swift` | iPad sidebar selection |
-| 5 | `ListAllWatch/Views/Components/WatchListRowView.swift` | Count format, progress bar |
-| 5 | `ListAllWatch/Views/Components/WatchItemRowView.swift` | Teal checkbox, separated quantity |
-| 5 | `ListAllWatch/Views/WatchListView.swift` | Status counts (5c), divider tint (5d) |
-| 6 | `ListAll/Views/Components/ItemOrganizationView.swift` | Filter accent colors |
+| 5 | `ListAll/ListAllWatch Watch App/Views/Components/WatchListRowView.swift` | Count format, progress bar |
+| 5 | `ListAll/ListAllWatch Watch App/Views/Components/WatchItemRowView.swift` | Left-aligned text, no checkboxes, separated quantity |
+| 5 | `ListAll/ListAllWatch Watch App/Views/WatchListView.swift` | Status counts (5c), divider tint (5d) |
+| 6 | `ListAll/Views/Components/ItemOrganizationView.swift` | Filter/sort teal active states |
+| 7 | `ListAll/Views/ItemDetailView.swift` | Status badge, detail card icons, action button |
+| 8 | `ListAll/Views/ArchivedListView.swift` | Archived badge, toolbar buttons, item styling |
+| 9 | `ListAll/Views/SettingsView.swift` | Toggle tints, button colors, about icon |
+| 9 | `ListAllMac/Views/MacSettingsView.swift` | Toggle tints, button colors (macOS settings) |
+| 10 | `ListAll/Views/CreateListView.swift` | Create button teal accent |
+| 10 | `ListAll/Views/ItemEditView.swift` | Save button, add photo button teal accents |
+| 11 | `ListAllMac/Views/Components/MacNoListSelectedView.swift` | Brand styling, CTA button |
+| 12 | `ListAll/ListAllWatch Watch App/Views/Components/WatchFilterPicker.swift` | Teal accent on picker |
 | — | `ListAll/Utils/Theme.swift` | Any new shared color/modifier additions |
