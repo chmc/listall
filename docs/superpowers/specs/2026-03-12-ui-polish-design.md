@@ -296,7 +296,7 @@ Button(action: { /* existing tap action */ }) {
 ## Change 3: macOS Item Rows — Same Card Treatment
 
 **File:** `ListAll/ListAllMac/Views/MacMainView.swift` (content area)
-**Status:** NOT IMPLEMENTED
+**Status:** COMPLETED
 
 Same card styling as iOS Change 2, but with macOS sizing (intentionally tighter radii per macOS platform convention):
 - Card border-radius: 10px (vs 12px on iOS — deliberate platform difference)

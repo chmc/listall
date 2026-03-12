@@ -1894,6 +1894,8 @@ private struct MacListDetailView: View {
                         }
                     )
                     .accessibilityIdentifier("ItemRow_\(item.title)")
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
             }
             // Task 13.2: Disable drag-to-reorder for archived lists
             .onMove(perform: isCurrentListArchived ? nil : handleMoveItem)
@@ -2543,6 +2545,7 @@ private struct MacItemRowView: View {
     let onToggleSelection: () -> Void
 
     @State private var isHovering = false
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Combined accessibility label for VoiceOver
     private var itemAccessibilityLabel: String {
@@ -2566,14 +2569,86 @@ private struct MacItemRowView: View {
         return label
     }
 
+    // MARK: - Checkbox View (macOS 20px diameter)
+
+    @ViewBuilder
+    private func checkboxView() -> some View {
+        if item.isCrossedOut {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.completedGreen.opacity(0.2))
+                Circle()
+                    .strokeBorder(Theme.Colors.completedGreen.opacity(0.3), lineWidth: 2)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(Theme.Colors.completedGreen)
+            }
+            .frame(width: 20, height: 20)
+            .accessibilityLabel("Completed")
+        } else {
+            Circle()
+                .strokeBorder(Theme.Colors.primary.opacity(0.4), lineWidth: 2)
+                .frame(width: 20, height: 20)
+                .accessibilityLabel("Active")
+        }
+    }
+
+    // MARK: - Selection Mode Checkbox (macOS 20px diameter)
+
+    @ViewBuilder
+    private func selectionCheckboxView() -> some View {
+        if isSelected {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.primary.opacity(0.2))
+                Circle()
+                    .strokeBorder(Theme.Colors.primary.opacity(0.4), lineWidth: 2)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(Theme.Colors.primary)
+            }
+            .frame(width: 20, height: 20)
+        } else {
+            Circle()
+                .strokeBorder(Color.gray.opacity(0.4), lineWidth: 2)
+                .frame(width: 20, height: 20)
+        }
+    }
+
+    // MARK: - Quantity Badge (teal capsule)
+
+    @ViewBuilder
+    private func quantityBadge() -> some View {
+        if item.quantity > 1 {
+            Text("\u{00D7}\(item.quantity)")
+                .font(.caption.monospacedDigit().weight(.semibold))
+                .foregroundColor(item.isCrossedOut
+                    ? Theme.Colors.completedGreen.opacity(0.6)
+                    : Theme.Colors.primary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background {
+                    Capsule()
+                        .fill(item.isCrossedOut
+                            ? Theme.Colors.completedGreen.opacity(0.08)
+                            : Theme.Colors.primary.opacity(0.1))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(item.isCrossedOut
+                                    ? Theme.Colors.completedGreen.opacity(0.15)
+                                    : Theme.Colors.primary.opacity(0.2), lineWidth: 1)
+                        )
+                }
+                .accessibilityLabel("Quantity \(item.quantity)")
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Selection checkbox (shown in selection mode, but NOT for archived lists)
             if isInSelectionMode && !isArchivedList {
                 Button(action: onToggleSelection) {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundColor(isSelected ? .accentColor : .secondary)
+                    selectionCheckboxView()
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(isSelected ? "Selected" : "Not selected")
@@ -2585,18 +2660,13 @@ private struct MacItemRowView: View {
             if !isInSelectionMode {
                 if isArchivedList {
                     // Read-only completion indicator (no button, just visual state)
-                    Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundColor(item.isCrossedOut ? .green.opacity(0.6) : .secondary.opacity(0.5))
-                        .replaceSymbolTransition()
+                    checkboxView()
+                        .opacity(0.6)
                         .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active"), read-only")
                 } else {
                     // Interactive completion toggle for active lists
                     Button(action: onToggle) {
-                        Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                            .font(.title2)
-                            .foregroundColor(item.isCrossedOut ? .green : .secondary)
-                            .replaceSymbolTransition()
+                        checkboxView()
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active")")
@@ -2643,19 +2713,9 @@ private struct MacItemRowView: View {
                 HStack {
                     Text(item.title)
                         .font(.body)
+                        .fontWeight(.medium)
                         .strikethrough(item.isCrossedOut)
                         .foregroundColor(item.isCrossedOut ? .secondary : .primary)
-
-                    if item.quantity > 1 {
-                        Text("×\(item.quantity)")
-                            .font(.caption)
-                            .numericContentTransition()
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.2))
-                            .cornerRadius(4)
-                            .accessibilityHidden(true)
-                    }
 
                     // Show photo icon only when no thumbnail (fallback indicator)
                     if item.hasImages && item.sortedImages.first?.nsImage == nil {
@@ -2675,6 +2735,9 @@ private struct MacItemRowView: View {
             }
 
             Spacer()
+
+            // Quantity badge (moved from inline to right-aligned capsule)
+            quantityBadge()
 
             // Hover actions (hidden in selection mode)
             // Task 13.2: For archived lists, only show Quick Look (no edit/delete)
@@ -2713,7 +2776,22 @@ private struct MacItemRowView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 11)
+        .padding(.horizontal, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(colorScheme == .dark
+                    ? Color.white.opacity(isHovering ? 0.05 : 0.03)
+                    : isHovering ? Color.black.opacity(0.02) : Color.white)
+                .shadow(color: colorScheme == .dark ? .clear : .black.opacity(0.04), radius: 1, y: 1)
+        )
+        .overlay {
+            if colorScheme == .dark {
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+            }
+        }
+        .opacity(item.isCrossedOut ? 0.5 : 1.0)
         .onHover { hovering in
             isHovering = hovering
         }
