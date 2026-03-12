@@ -352,10 +352,13 @@ HStack(spacing: 0) {
 
 **Note:** watchOS does NOT have access to `Theme.swift`. Use `.accentColor` for teal and inline color definitions for green.
 
+**Layout principle:** Everything left-aligned on watchOS. Apple's own apps (Reminders, Weather, Activity) all use left-aligned text. Centered text is only for empty states and modal prompts.
+
 ```swift
 // watchOS green (same as Theme.Colors.completedGreen on iOS)
 private let completedGreen = Color(red: 0.063, green: 0.725, blue: 0.506)
 
+// All content left-aligned
 VStack(alignment: .leading, spacing: 3) {
     Text(list.name)
         .font(.headline)
@@ -369,9 +372,7 @@ VStack(alignment: .leading, spacing: 3) {
             .font(.caption2)
             .foregroundColor(.secondary.opacity(0.5))
 
-        Spacer()
-
-        // Mini progress bar
+        // Mini progress bar — inline with count text
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule()
@@ -394,31 +395,31 @@ VStack(alignment: .leading, spacing: 3) {
 .padding(.vertical, 4)
 ```
 
-### 5b. Item Row: Left-Aligned, Color Differentiation, Separated Quantity
+### 5b. Item Row: Left-Aligned Text, No Checkboxes, Separated Quantity
 
-**Design rationale:** No checkbox circles on watchOS — the screen is too small and circles + text + badge doesn't fit well. Instead, use tap-to-toggle (existing behavior) with teal/green color treatment and strikethrough for completed items. This keeps the layout consistent with the list rows (left-aligned, no leading icons).
+**Design rationale:** No checkbox circles on watchOS — the screen is too small. Use tap-to-toggle (existing behavior) with color differentiation only. Everything left-aligned, consistent with list rows.
 
 ```swift
 Button {
     toggleItem()
 } label: {
-    HStack(spacing: 0) {
-        // Title — left-aligned, full width
+    HStack {
+        // Title — left-aligned
         Text(item.title)
             .font(.body)
             .strikethrough(item.isCrossedOut)
             .foregroundColor(item.isCrossedOut ? completedGreen.opacity(0.6) : .primary)
             .lineLimit(2)
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-        // Quantity (separated, right-aligned)
+        Spacer()
+
+        // Quantity badge (right-aligned, only when > 1)
         if item.quantity > 1 {
             Text("×\(item.quantity)")
                 .font(.caption2.monospacedDigit().weight(.semibold))
                 .foregroundColor(item.isCrossedOut
                     ? completedGreen.opacity(0.5)
                     : .accentColor)
-                .padding(.leading, 8)
         }
     }
     .opacity(item.isCrossedOut ? 0.6 : 1.0)
