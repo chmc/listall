@@ -6,7 +6,28 @@ ListAll is a cross-platform checklist app (iOS/iPad/macOS/watchOS). A previous U
 
 This spec provides **exact SwiftUI code patterns** for each change, eliminating the CSS→SwiftUI translation gap that caused the previous implementation to drift from the designs.
 
-**Visual reference mockups** (HTML) are in `.superpowers/brainstorm/57429-1773298544/` — view through `http://localhost:56963` or open directly in browser. These show the target look; this document shows the target code.
+**Visual reference mockups** (HTML) are in `.superpowers/brainstorm/57429-1773298544/` — open directly in browser. These show the target look; this document shows the target code.
+- `design-iphone-full.html` — 11 iPhone views (dark+light)
+- `design-desktop-full.html` — 10 macOS + iPad views
+- `design-watchos-full.html` — 11 watchOS views
+
+---
+
+## Scope
+
+### In Scope (this spec)
+Changes 1–5 below cover the primary visual gaps: sidebar selection, card-based items, watchOS polish.
+
+### Deferred (not in this round)
+These views from VIEW-INVENTORY.md need work but are deferred to avoid scope creep:
+- **View #3** `ItemDetailView.swift` — Card styling, status badge (minor, rarely seen)
+- **View #7** `ArchivedListView.swift` — Brand teal accents (low traffic view)
+- **View #13** iPad sidebar empty state — styling follows from Change 4
+- **View #14** iPad sidebar archived row — styling follows from Change 4
+- **View #23** `MacNoListSelectedView.swift` — Brand styling (low priority)
+- **View #30** `WatchFilterPicker.swift` — Teal active state (minor)
+
+These can be addressed in a follow-up pass after the core changes are verified.
 
 ---
 
@@ -20,6 +41,8 @@ static let primary = Color("AccentColor")  // #00B4DC light, #7DD8F0 dark
 static let completedGreen = Color(red: 0.063, green: 0.725, blue: 0.506)  // #10B981
 static let brandGradient = LinearGradient(colors: [Color("AccentColor"), ...])
 ```
+
+**Note:** `Theme.swift` is available in iOS and macOS targets only (`#if os(iOS)` / `#elseif os(macOS)`). The watchOS target does NOT have access to Theme — use `.accentColor` and inline color definitions instead (see Change 5).
 
 ---
 
@@ -68,9 +91,8 @@ HStack(spacing: 0) {
     .padding(.horizontal, 12)
 }
 .background(Theme.Colors.primary.opacity(0.08))
-.clipShape(RoundedRectangle(cornerRadius: 8))
-// NOTE: Only right corners should be rounded. If hard to achieve,
-// full 8px radius is acceptable.
+.clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0,
+                                    bottomTrailingRadius: 8, topTrailingRadius: 8))
 ```
 
 For **unselected rows**, keep the same layout but without the left bar and tinted bg:
@@ -112,26 +134,11 @@ Text("LISTS")
 
 ### 2a. Card Background on Item Rows
 
-Add to each item row in ListView (not in ItemRowView itself — use `listRowBackground`):
+ListView already uses `.listStyle(.plain)`, so add card styling directly in ItemRowView (not via `listRowBackground`, which fights with plain lists):
 
 ```swift
-// In ListView, on each item row:
-.listRowBackground(
-    RoundedRectangle(cornerRadius: 12)
-        .fill(Color(.systemBackground).opacity(0.03))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-        )
-)
-.listRowSeparator(.hidden)
-.listRowInsets(EdgeInsets(top: 2, leading: 14, bottom: 2, trailing: 14))
-```
+@Environment(\.colorScheme) private var colorScheme
 
-**Alternative approach** — if `listRowBackground` fights with SwiftUI List:
-Use `.listStyle(.plain)` and add card styling directly in ItemRowView:
-
-```swift
 // Wrap ItemRowView content in:
 .padding(.vertical, 12)
 .padding(.horizontal, 14)
@@ -146,11 +153,17 @@ Use `.listStyle(.plain)` and add card styling directly in ItemRowView:
             .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
     }
 }
+
+// Also in ListView, hide default separators:
+.listRowSeparator(.hidden)
+.listRowInsets(EdgeInsets(top: 2, leading: 14, bottom: 2, trailing: 14))
 ```
 
 ### 2b. Checkbox Circle
 
-Replace the current toggle/checkbox with a visible circle:
+**Context:** The current `ItemRowView` has no visible checkbox in normal mode — it uses a tap gesture on content to toggle. In selection mode (`isInSelectionMode`), it shows circle/checkmark.circle.fill. This change adds a **new visible checkbox** to the left of every item row in normal mode. The existing selection mode checkbox should be updated to match the same visual style.
+
+Add a visible circle checkbox:
 
 ```swift
 // Active item checkbox
@@ -173,8 +186,8 @@ ZStack {
 
 ### 2c. Quantity Badge
 
-Current: quantity shown as plain text below title.
-New: teal capsule badge, right-aligned:
+Current: quantity shown inline via `item.formattedQuantity` (returns `"Nx"` format, e.g. `"3x"`).
+New: teal capsule badge, right-aligned, using `×N` format (multiplication sign prefix):
 
 ```swift
 // Only show when quantity > 1
@@ -206,10 +219,18 @@ if item.quantity > 1 {
 ```swift
 // Wrap the entire completed row with:
 .opacity(item.isCrossedOut ? 0.5 : 1.0)
+// NOTE: Existing code uses 0.7 for title and 0.6 for secondary elements.
+// This change unifies to 0.5 on the entire row for stronger visual differentiation.
 // Title gets strikethrough (already implemented)
 ```
 
 ### 2e. Item Row Layout (Complete)
+
+**IMPORTANT:** Preserve existing behavior:
+- Descriptions use `MixedTextView` (from `URLHelper.swift`), NOT plain `Text` — this renders URLs as clickable links
+- Use `item.hasDescription` (Bool) and `item.displayDescription` (String) — NOT `item.itemDescription` directly
+- The `isInSelectionMode` layout path must continue to work with the new card styling
+- The existing `.hoverEffect(.lift)` on iPad can be removed since we're adding custom press feedback
 
 ```swift
 HStack(spacing: 12) {
@@ -219,13 +240,15 @@ HStack(spacing: 12) {
     // Content
     VStack(alignment: .leading, spacing: 2) {
         Text(item.title)
-            .font(.system(size: 15, weight: .medium))
+            .font(Theme.Typography.body)  // use Theme constant, not hard-coded
+            .fontWeight(.medium)
             .strikethrough(item.isCrossedOut)
             .foregroundColor(item.isCrossedOut ? .secondary : .primary)
 
-        if let desc = item.itemDescription, !desc.isEmpty {
-            Text(desc)
-                .font(.caption)
+        if item.hasDescription {
+            // KEEP existing MixedTextView for URL support
+            MixedTextView(item.displayDescription)
+                .font(Theme.Typography.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
         }
@@ -240,6 +263,7 @@ HStack(spacing: 12) {
 .padding(.horizontal, 14)
 // + card background from 2a
 .opacity(item.isCrossedOut ? 0.5 : 1.0)
+// + accessibility: add labels to new checkbox and badge elements
 ```
 
 ### 2f. Press Feedback
@@ -257,9 +281,9 @@ HStack(spacing: 12) {
 **File:** `ListAll/ListAllMac/Views/MacMainView.swift` (content area)
 **Status:** NOT IMPLEMENTED
 
-Same card styling as iOS Change 2, but with macOS sizing:
-- Card border-radius: 10px (slightly smaller)
-- Checkbox: 20px diameter
+Same card styling as iOS Change 2, but with macOS sizing (intentionally tighter radii per macOS platform convention):
+- Card border-radius: 10px (vs 12px on iOS — deliberate platform difference)
+- Checkbox: 20px diameter (vs 22px on iOS)
 - Padding: 11px vertical, 14px horizontal
 - Quantity badge: same teal capsule pattern
 - Hover state on cards:
@@ -326,7 +350,12 @@ HStack(spacing: 0) {
 
 ### 5a. List Row: Count Format + Progress Bar
 
+**Note:** watchOS does NOT have access to `Theme.swift`. Use `.accentColor` for teal and inline color definitions for green.
+
 ```swift
+// watchOS green (same as Theme.Colors.completedGreen on iOS)
+private let completedGreen = Color(red: 0.063, green: 0.725, blue: 0.506)
+
 VStack(alignment: .leading, spacing: 3) {
     Text(list.name)
         .font(.headline)
@@ -351,7 +380,7 @@ VStack(alignment: .leading, spacing: 3) {
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [.accentColor, Theme.Colors.completedGreen],
+                            colors: [.accentColor, completedGreen],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -376,7 +405,7 @@ Button {
         if item.isCrossedOut {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 20))
-                .foregroundColor(Theme.Colors.completedGreen)
+                .foregroundColor(completedGreen)  // inline color, not Theme
         } else {
             Circle()
                 .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 2)
@@ -397,7 +426,7 @@ Button {
             Text("×\(item.quantity)")
                 .font(.caption2.monospacedDigit().weight(.semibold))
                 .foregroundColor(item.isCrossedOut
-                    ? Theme.Colors.completedGreen.opacity(0.5)
+                    ? completedGreen.opacity(0.5)  // inline color, not Theme
                     : .accentColor)
         }
     }
@@ -428,7 +457,7 @@ HStack(spacing: 8) {
         Text("\(completedCount)")
             .monospacedDigit()
     }
-    .foregroundColor(Theme.Colors.completedGreen)
+    .foregroundColor(completedGreen)  // inline color, not Theme
     .font(.caption2)
 
     // Total — muted
@@ -448,23 +477,22 @@ Reduce divider opacity in watchOS list:
 
 ---
 
-## Change 6: Filter Pills (iOS/macOS)
+## Change 6: Filter/Sort Accent Colors (iOS/macOS)
 
-**Files:** `ListView.swift`, macOS content area
-**Status:** NOT IMPLEMENTED (if filter exists as segmented control)
+**Files:** `ListAll/ListAll/Views/Components/ItemOrganizationView.swift`, macOS content area
+**Status:** NOT IMPLEMENTED
 
-Style the filter/segmented control with brand teal active state:
+The filter is handled via a separate sheet (`ItemOrganizationView`) using `ItemFilterOption` enum (cases: `.all`, `.active`, `.completed`, `.hasDescription`, `.hasImages`). The current filter is stored as `viewModel.currentFilterOption` (default: `.active`).
+
+Apply brand teal to active filter states:
 
 ```swift
-// If using a custom segmented control:
-Picker("Filter", selection: $filter) {
-    Text("All").tag(Filter.all)
-    Text("Active").tag(Filter.active)
-    Text("Done").tag(Filter.done)
-}
-.pickerStyle(.segmented)
+// In ItemOrganizationView, ensure the active filter option uses brand teal:
 .tint(Theme.Colors.primary)
+// Apply to the Picker or any selection controls in the sheet
 ```
+
+**Note:** This is a minor accent color change, not a full redesign of the filter UI.
 
 ---
 
@@ -474,17 +502,27 @@ Picker("Filter", selection: $filter) {
 
 1. `xcodebuild clean build` for the target platform
 2. Launch with `UITEST_MODE`
-3. Screenshot
-4. Compare screenshot against design mockup in `.superpowers/brainstorm/57429-1773298544/`
+3. Screenshot in **both light and dark mode** (dark mode has different card styling — borders vs shadows)
+4. Compare screenshots against design mockup in `.superpowers/brainstorm/57429-1773298544/`
+   - Check: spacing matches, colors correct, layout alignment, text sizing
+   - Card backgrounds: dark = border + 0.03 opacity fill; light = white + shadow
 5. If it doesn't match → fix immediately before moving to next change
 6. If it matches → commit and move to next change
+
+**Simulator discovery:**
+```bash
+# List available simulators to find UDIDs:
+listall_list_simulators
+# Or: xcrun simctl list devices available
+# Recommended: iPhone 16 Pro, iPad Air, Apple Watch Series 10 (46mm)
+```
 
 **Build commands:**
 ```bash
 # macOS
 xcodebuild clean build -project ListAll/ListAll.xcodeproj -scheme "ListAllMac" -destination "generic/platform=macOS" -quiet
 
-# iOS
+# iOS (replace <UDID> with actual simulator UDID from discovery step)
 xcodebuild clean build -project ListAll/ListAll.xcodeproj -scheme "ListAll" -destination "platform=iOS Simulator,id=<UDID>" -quiet
 
 # watchOS
@@ -516,5 +554,6 @@ Each step: implement → build → screenshot → verify → commit → next.
 | 4 | `ListAll/Views/MainView.swift` | iPad sidebar selection |
 | 5 | `ListAllWatch/Views/Components/WatchListRowView.swift` | Count format, progress bar |
 | 5 | `ListAllWatch/Views/Components/WatchItemRowView.swift` | Teal checkbox, separated quantity |
-| 5 | `ListAllWatch/Views/WatchListView.swift` | Status counts, divider tint |
+| 5 | `ListAllWatch/Views/WatchListView.swift` | Status counts (5c), divider tint (5d) |
+| 6 | `ListAll/Views/Components/ItemOrganizationView.swift` | Filter accent colors |
 | — | `ListAll/Utils/Theme.swift` | Any new shared color/modifier additions |
