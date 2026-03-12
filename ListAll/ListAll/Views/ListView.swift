@@ -110,7 +110,9 @@ struct ListView: View {
                             viewModel.deleteItem(item)
                         }
                     )
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 2, leading: 14, bottom: 2, trailing: 14))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
                 .onDelete(perform: viewModel.isInSelectionMode ? nil : deleteItems)
                 .onMove(perform: viewModel.currentSortOption == .orderNumber ? viewModel.moveItems : nil)

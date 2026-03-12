@@ -1,5 +1,15 @@
 import SwiftUI
 
+// MARK: - Card Press Style (2f)
+
+struct CardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 struct ItemRowView: View {
     let item: Item
     var viewModel: ListViewModel? = nil
@@ -7,7 +17,9 @@ struct ItemRowView: View {
     let onEdit: (() -> Void)?
     let onDuplicate: (() -> Void)?
     let onDelete: (() -> Void)?
-    
+
+    @Environment(\.colorScheme) private var colorScheme
+
     init(item: Item,
          viewModel: ListViewModel? = nil,
          onToggle: (() -> Void)? = nil,
@@ -21,108 +33,170 @@ struct ItemRowView: View {
         self.onDuplicate = onDuplicate
         self.onDelete = onDelete
     }
-    
+
     private var isInSelectionMode: Bool {
         viewModel?.isInSelectionMode ?? false
     }
-    
+
     private var isSelected: Bool {
         viewModel?.selectedItems.contains(item.id) ?? false
     }
-    
-    private var itemContent: some View {
-        VStack(alignment: .leading, spacing: 1) {
-                // Title with enhanced strikethrough animation
-                Text(item.displayTitle)
-                    .font(Theme.Typography.body)
-                    .strikethrough(item.isCrossedOut, color: Theme.Colors.secondary)
-                    .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
-                    .scaleEffect(item.isCrossedOut ? 0.98 : 1.0)
-                    .opacity(item.isCrossedOut ? 0.7 : 1.0)
-                    .animation(Theme.Animation.spring, value: item.isCrossedOut)
-                
-                // Description (if available) - with proper mixed text and URL handling
-                if item.hasDescription {
-                    MixedTextView(
-                        text: item.displayDescription,
-                        font: Theme.Typography.caption,
-                        textColor: Theme.Colors.secondary,
-                        linkColor: Theme.Colors.primary,
-                        isCrossedOut: item.isCrossedOut,
-                        opacity: item.isCrossedOut ? 0.6 : 1.0
-                    )
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(nil) // Allow unlimited lines
-                    .fixedSize(horizontal: false, vertical: true)
-                    .allowsHitTesting(true) // Allow URL links to be tapped with higher priority
-                    .scaleEffect(item.isCrossedOut ? 0.98 : 1.0)
-                    .animation(Theme.Animation.spring, value: item.isCrossedOut)
-                }
-                
-                // Secondary info row
-                HStack(spacing: Theme.Spacing.sm) {
-                    // Quantity indicator (only if > 1)
-                    if item.quantity > 1 {
-                        Text(item.formattedQuantity)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondary)
-                            .opacity(item.isCrossedOut ? 0.6 : 1.0)
-                            .numericContentTransition()
-                    }
-                    
-                    // Image count indicator (if item has images)
-                    if item.hasImages {
-                        HStack(spacing: 2) {
-                            Image(systemName: "photo")
-                                .font(.caption2)
-                            Text("\(item.imageCount)")
-                                .font(Theme.Typography.caption)
-                                .numericContentTransition()
-                        }
-                        .foregroundColor(Theme.Colors.info)
-                        .opacity(item.isCrossedOut ? 0.6 : 1.0)
-                    }
-                    
-                    Spacer()
-                }
-                .scaleEffect(item.isCrossedOut ? 0.98 : 1.0)
-                .animation(Theme.Animation.spring, value: item.isCrossedOut)
+
+    // MARK: - Checkbox View (2b)
+
+    @ViewBuilder
+    private func checkboxView() -> some View {
+        if item.isCrossedOut {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.completedGreen.opacity(0.2))
+                Circle()
+                    .strokeBorder(Theme.Colors.completedGreen.opacity(0.3), lineWidth: 2)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Theme.Colors.completedGreen)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            .frame(width: 22, height: 22)
+            .accessibilityLabel("Completed")
+        } else {
+            Circle()
+                .strokeBorder(Theme.Colors.primary.opacity(0.4), lineWidth: 2)
+                .frame(width: 22, height: 22)
+                .accessibilityLabel("Active")
+        }
     }
-    
-    var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            // Selection indicator
-            if isInSelectionMode {
-                Button(action: {
-                    viewModel?.toggleSelection(for: item.id)
-                }) {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isSelected ? Theme.Colors.primary : .gray)
-                        .imageScale(.large)
-                }
-                .buttonStyle(BorderlessButtonStyle())
+
+    // MARK: - Selection Mode Checkbox
+
+    @ViewBuilder
+    private func selectionCheckboxView() -> some View {
+        if isSelected {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.primary.opacity(0.2))
+                Circle()
+                    .strokeBorder(Theme.Colors.primary.opacity(0.4), lineWidth: 2)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Theme.Colors.primary)
             }
-            
-            // Item content
-            if isInSelectionMode {
-                // In selection mode: Make entire row tappable for selection
-                Button(action: {
-                    viewModel?.toggleSelection(for: item.id)
-                }) {
-                    itemContent
+            .frame(width: 22, height: 22)
+        } else {
+            Circle()
+                .strokeBorder(Color.gray.opacity(0.4), lineWidth: 2)
+                .frame(width: 22, height: 22)
+        }
+    }
+
+    // MARK: - Quantity Badge (2c)
+
+    @ViewBuilder
+    private func quantityBadge() -> some View {
+        if item.quantity > 1 {
+            Text("\u{00D7}\(item.quantity)")
+                .font(.caption.monospacedDigit().weight(.semibold))
+                .foregroundColor(item.isCrossedOut
+                    ? Theme.Colors.completedGreen.opacity(0.6)
+                    : Theme.Colors.primary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background {
+                    Capsule()
+                        .fill(item.isCrossedOut
+                            ? Theme.Colors.completedGreen.opacity(0.08)
+                            : Theme.Colors.primary.opacity(0.1))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(item.isCrossedOut
+                                    ? Theme.Colors.completedGreen.opacity(0.15)
+                                    : Theme.Colors.primary.opacity(0.2), lineWidth: 1)
+                        )
                 }
-                .buttonStyle(PlainButtonStyle())
-            } else {
-                // Normal mode: Main content area tappable to complete item
-                itemContent
+                .accessibilityLabel("Quantity \(item.quantity)")
+        }
+    }
+
+    // MARK: - Card Background (2a)
+
+    private func cardBackground<Content: View>(_ content: Content) -> some View {
+        content
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.white)
+                    .shadow(color: colorScheme == .dark ? .clear : .black.opacity(0.04), radius: 1, y: 1)
+            }
+            .overlay {
+                if colorScheme == .dark {
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                }
+            }
+    }
+
+    // MARK: - Item Content (2e)
+
+    private var itemContentView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(item.displayTitle)
+                .font(Theme.Typography.body)
+                .fontWeight(.medium)
+                .strikethrough(item.isCrossedOut)
+                .foregroundColor(item.isCrossedOut ? .secondary : .primary)
+                .animation(Theme.Animation.spring, value: item.isCrossedOut)
+
+            if item.hasDescription {
+                MixedTextView(
+                    text: item.displayDescription,
+                    font: Theme.Typography.caption,
+                    textColor: .secondary,
+                    linkColor: Theme.Colors.primary,
+                    isCrossedOut: item.isCrossedOut,
+                    opacity: 1.0
+                )
+                .lineLimit(1)
+                .allowsHitTesting(true)
+            }
+
+            // Secondary info row (image count)
+            if item.hasImages {
+                HStack(spacing: 2) {
+                    Image(systemName: "photo")
+                        .font(.caption2)
+                    Text("\(item.imageCount)")
+                        .font(Theme.Typography.caption)
+                        .numericContentTransition()
+                }
+                .foregroundColor(Theme.Colors.info)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Normal Mode Row
+
+    private var normalModeRow: some View {
+        cardBackground(
+            HStack(spacing: 12) {
+                Button(action: {
+                    onToggle?()
+                }) {
+                    checkboxView()
+                }
+                .buttonStyle(CardPressStyle())
+
+                itemContentView
+                    .contentShape(Rectangle())
                     .onTapGesture {
                         onToggle?()
                     }
-                
-                // Right-side edit button with larger clickable area
+
+                Spacer()
+
+                quantityBadge()
+
+                // Chevron navigation button
                 Button(action: {
                     onEdit?()
                 }) {
@@ -135,11 +209,42 @@ struct ItemRowView: View {
                 .buttonStyle(PlainButtonStyle())
                 .accessibilityIdentifier("ItemDetailButton")
             }
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, Theme.Spacing.md)
+        )
+        .opacity(item.isCrossedOut ? 0.5 : 1.0)
         .contentShape(Rectangle())
-        .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
+    }
+
+    // MARK: - Selection Mode Row
+
+    private var selectionModeRow: some View {
+        cardBackground(
+            HStack(spacing: 12) {
+                selectionCheckboxView()
+
+                itemContentView
+
+                Spacer()
+
+                quantityBadge()
+            }
+        )
+        .opacity(item.isCrossedOut ? 0.5 : 1.0)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel?.toggleSelection(for: item.id)
+        }
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        Group {
+            if isInSelectionMode {
+                selectionModeRow
+            } else {
+                normalModeRow
+            }
+        }
         .if(!isInSelectionMode) { view in
             view.contextMenu {
                 Button(action: { onToggle?() }) {
@@ -159,7 +264,6 @@ struct ItemRowView: View {
         }
         .if(!isInSelectionMode) { view in
             view
-                // Task 16.14: Left swipe for non-destructive actions (Edit, Duplicate)
                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
                     Button(action: {
                         onEdit?()
@@ -175,7 +279,6 @@ struct ItemRowView: View {
                     }
                     .tint(.green)
                 }
-                // Right swipe for destructive action (Delete)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(action: {
                         onDelete?()

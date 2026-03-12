@@ -125,7 +125,7 @@ Text("LISTS")
 **Files:**
 - `ListAll/ListAll/Views/Components/ItemRowView.swift`
 - `ListAll/ListAll/Views/ListView.swift`
-**Status:** ~20% IMPLEMENTED (has opacity on completed, needs card styling)
+**Status:** COMPLETED
 
 ### 2a. Card Background on Item Rows
 
