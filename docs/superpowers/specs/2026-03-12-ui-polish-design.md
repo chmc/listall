@@ -44,7 +44,7 @@ static let brandGradient = LinearGradient(colors: [Color("AccentColor"), ...])
 ## Change 1: macOS Sidebar — Selection State & Count Format
 
 **File:** `ListAll/ListAllMac/Views/MacMainView.swift` (MacSidebarView, ~line 602+)
-**Status:** NOT IMPLEMENTED
+**Status:** COMPLETED
 
 ### 1a. Count Format: `4 (6)` → `4/6`
 

@@ -791,18 +791,24 @@ private struct MacSidebarView: View {
 
     /// Helper to format item count display
     private func itemCountText(for list: List) -> String {
+        MacSidebarFormatting.itemCountText(for: list)
+    }
+
+    /// Returns active and total counts for a list
+    private func itemCounts(for list: List) -> (active: Int, total: Int) {
         let activeCount = list.items.filter { !$0.isCrossedOut }.count
-        let totalCount = list.items.count
-        if activeCount < totalCount {
-            return "\(activeCount) (\(totalCount))"
-        } else {
-            return "\(totalCount)"
-        }
+        return (activeCount, list.items.count)
+    }
+
+    /// Whether a list is currently selected
+    private func isSelected(_ list: List) -> Bool {
+        selectedList?.id == list.id
     }
 
     /// Builds a list row for selection mode
     @ViewBuilder
     private func selectionModeRow(for list: List) -> some View {
+        let counts = itemCounts(for: list)
         Button(action: { toggleSelection(for: list.id) }) {
             HStack(spacing: 8) {
                 Image(systemName: selectedLists.contains(list.id) ? "checkmark.circle.fill" : "circle")
@@ -811,9 +817,10 @@ private struct MacSidebarView: View {
                 Text(list.name)
                     .foregroundColor(.primary)
                 Spacer()
-                Text(itemCountText(for: list))
+                Text("\(counts.active)/\(counts.total)")
                     .foregroundColor(.secondary)
                     .font(.caption)
+                    .monospacedDigit()
                     .numericContentTransition()
             }
             .contentShape(Rectangle())
@@ -829,19 +836,62 @@ private struct MacSidebarView: View {
         .accessibilityHint("Double-tap to toggle selection")
     }
 
+    /// Builds the row content for a sidebar list (selected or unselected)
+    @ViewBuilder
+    private func sidebarRowContent(for list: List) -> some View {
+        let counts = itemCounts(for: list)
+        let selected = isSelected(list)
+
+        if selected {
+            HStack(spacing: 0) {
+                // Teal left accent bar
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Theme.Colors.primary)
+                    .frame(width: 3)
+
+                // Row content with tinted background
+                HStack {
+                    Text(list.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primary)
+                    Spacer()
+                    Text("\(counts.active)/\(counts.total)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundColor(Theme.Colors.primary.opacity(0.5))
+                        .numericContentTransition()
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+            }
+            .background(Theme.Colors.primary.opacity(0.08))
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0,
+                                              bottomTrailingRadius: 8, topTrailingRadius: 8))
+        } else {
+            HStack {
+                Text(list.name)
+                    .font(.system(size: 13))
+                    .foregroundColor(.primary.opacity(0.7))
+                Spacer()
+                Text("\(counts.active)/\(counts.total)")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .numericContentTransition()
+            }
+            .padding(.vertical, 10)
+            .padding(.leading, 15)  // 12 + 3 (align with selected content after border)
+            .padding(.trailing, 12)
+        }
+    }
+
     /// Builds a list row for normal navigation mode
     @ViewBuilder
     private func normalModeRow(for list: List) -> some View {
         NavigationLink(value: list) {
-            HStack {
-                Text(list.name)
-                Spacer()
-                Text(itemCountText(for: list))
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-                    .numericContentTransition()
-            }
+            sidebarRowContent(for: list)
         }
+        .listRowBackground(Color.clear)
         // CRITICAL: Use .activate interactions to allow list drag-drop to work.
         // Default .focusable() on macOS Sonoma+ captures mouse clicks, blocking drag.
         .focusable(interactions: .activate)
@@ -911,7 +961,11 @@ private struct MacSidebarView: View {
                 }
                 .onMove(perform: isInSelectionMode ? nil : moveList)
             } header: {
-                Text("Lists")
+                Text("LISTS")
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .textCase(.uppercase)
             }
             .collapsible(false)
 
@@ -4241,6 +4295,18 @@ extension View {
             onCommandClick: command,
             onShiftClick: shift
         ))
+    }
+}
+
+// MARK: - Sidebar Formatting (extracted for testability)
+
+/// Formatting helpers for macOS sidebar display
+enum MacSidebarFormatting {
+    /// Formats item count as "active/total" (e.g., "4/6")
+    static func itemCountText(for list: List) -> String {
+        let activeCount = list.items.filter { !$0.isCrossedOut }.count
+        let totalCount = list.items.count
+        return "\(activeCount)/\(totalCount)"
     }
 }
 
