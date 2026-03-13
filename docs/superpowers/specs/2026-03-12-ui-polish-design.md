@@ -744,7 +744,7 @@ See desktop mockup section 1 for visual reference.
 ## Change 12: watchOS Filter Picker — Teal Active State
 
 **File:** `ListAll/ListAllWatch Watch App/Views/Components/WatchFilterPicker.swift`
-**Status:** NOT IMPLEMENTED
+**Status:** COMPLETED
 
 ```swift
 // Ensure Picker uses brand teal for selection:
