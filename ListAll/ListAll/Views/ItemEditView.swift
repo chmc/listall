@@ -271,6 +271,8 @@ struct ItemEditView: View {
                             }
                         }
                     }
+                    .foregroundColor(Theme.Colors.primary)
+                    .fontWeight(.semibold)
                     .disabled(!viewModel.isValid || viewModel.isSaving)
                     .accessibilityIdentifier(viewModel.isEditing ? "SaveButton" : "CreateButton")
                 }

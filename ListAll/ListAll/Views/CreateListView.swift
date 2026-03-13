@@ -35,6 +35,8 @@ struct CreateListView: View {
                     Button(String(localized: "Create")) {
                         createList()
                     }
+                    .foregroundColor(Theme.Colors.primary)
+                    .fontWeight(.semibold)
                     .disabled(listName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
                     .accessibilityIdentifier("CreateButton")
                 }
