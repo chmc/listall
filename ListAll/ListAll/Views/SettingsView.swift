@@ -131,6 +131,7 @@ struct SettingsView: View {
                             Text("Haptic Feedback")
                         }
                     }
+                    .tint(Theme.Colors.primary)
                 }
                 
                 Section(header: Text("Help & Tips"), footer: helpFooterText) {
@@ -185,7 +186,8 @@ struct SettingsView: View {
                                 Text("Require \(biometricType.displayName)")
                             }
                         }
-                        
+                        .tint(Theme.Colors.primary)
+
                         // Show timeout setting only when biometric auth is enabled
                         if requiresBiometricAuth {
                             VStack(alignment: .leading, spacing: 8) {
@@ -227,11 +229,13 @@ struct SettingsView: View {
                     Button("Export Data") {
                         showingExportSheet = true
                     }
+                    .foregroundColor(Theme.Colors.primary)
                     .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
 
                     Button("Import Data") {
                         showingImportSheet = true
                     }
+                    .foregroundColor(Theme.Colors.primary)
                     .hoverEffect(.highlight)  // Task 16.16: iPad trackpad hover effect
                 }
                 
@@ -240,7 +244,7 @@ struct SettingsView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "list.bullet.clipboard")
                             .font(.system(size: 40))
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(Theme.Colors.primary)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(Constants.App.name)

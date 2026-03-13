@@ -210,6 +210,7 @@ private struct SecuritySettingsTab: View {
                             Text("Require \(biometricType.displayName)")
                         }
                     }
+                    .tint(Theme.Colors.primary)
                     .accessibilityHint("When enabled, requires \(biometricType.displayName) to unlock the app")
 
                     if requiresBiometricAuth {
@@ -300,11 +301,13 @@ private struct DataSettingsTab: View {
                         object: nil
                     )
                 }
+                .foregroundColor(Theme.Colors.primary)
                 .accessibilityHint("Opens export options")
 
                 Button("Import Data...") {
                     showingFilePicker = true
                 }
+                .foregroundColor(Theme.Colors.primary)
                 .accessibilityHint("Opens file picker to import data")
                 .disabled(importViewModel.isImporting)
             } header: {
@@ -418,7 +421,7 @@ private struct AboutSettingsTab: View {
         VStack(spacing: 16) {
             Image(systemName: "list.bullet.clipboard")
                 .font(.system(size: 64))
-                .foregroundColor(.accentColor)
+                .foregroundColor(Theme.Colors.primary)
                 .accessibilityHidden(true)
 
             Text("ListAll")
