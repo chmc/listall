@@ -18,6 +18,13 @@ import CloudKit
 // Resolve ambiguity between SwiftUI.List and ListAll.List
 typealias ListModel = ListAll.List
 
+// MARK: - Helper to prevent compiler constant-folding warnings
+
+/// Returns the value unchanged but prevents the compiler from treating it as a compile-time constant.
+/// This avoids "will never be executed" warnings in tests that verify control-flow logic with known values.
+@inline(never)
+func runtime<T>(_ value: T) -> T { value }
+
 /// Test helper for setting up isolated test environments
 class TestHelpers {
 
