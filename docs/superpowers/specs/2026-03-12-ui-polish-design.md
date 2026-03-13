@@ -582,7 +582,7 @@ Button(action: toggleCompletion) {
 ## Change 8: Archived List View — Brand Teal Accents
 
 **File:** `ListAll/ListAll/Views/ArchivedListView.swift`
-**Status:** NOT IMPLEMENTED
+**Status:** COMPLETED
 
 ### 8a. Archived Badge
 

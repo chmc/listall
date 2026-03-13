@@ -18,12 +18,15 @@ struct ArchivedListView: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "archivebox")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondary)
+                            .font(.caption2)
                         Text(String(localized: "Archived"))
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondary)
+                            .font(.caption.weight(.semibold))
                     }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(Capsule())
                 }
                 Spacer()
             }
@@ -88,7 +91,7 @@ struct ArchivedListView: View {
                             Image(systemName: "arrow.uturn.backward")
                             Text(String(localized: "Restore"))
                         }
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(Theme.Colors.primary)
                     }
                     
                     // Permanent delete button
@@ -133,8 +136,9 @@ struct ArchivedItemRowView: View {
                 // Title
                 Text(item.displayTitle)
                     .font(Theme.Typography.body)
-                    .foregroundColor(item.isCrossedOut ? Theme.Colors.secondary : .primary)
                     .strikethrough(item.isCrossedOut)
+                    .foregroundColor(.secondary)
+                    .opacity(0.6)
                 
                 // Description
                 if item.hasDescription {
