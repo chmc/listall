@@ -713,7 +713,7 @@ See mockups sections 9-10 (iPhone), 10-11 (iPad) for visual reference.
 ## Change 11: macOS No List Selected — Brand Styling
 
 **File:** `ListAll/ListAllMac/Views/Components/MacNoListSelectedView.swift`
-**Status:** NOT IMPLEMENTED
+**Status:** COMPLETED
 
 ```swift
 VStack(spacing: 20) {
