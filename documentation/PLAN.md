@@ -82,7 +82,7 @@ Replace system `List(selection:)` highlight with custom selection: 3px teal left
 
 **Note:** `ItemRowView` is SHARED between iPhone and iPad. Every task in this phase must verify on BOTH iPhone and iPad simulators.
 
-### Task B.1: Card Background on Item Rows
+### Task B.1: Card Background on Item Rows ✅ completed
 
 Add card background to `ItemRowView`: rounded rect (12px radius), dark mode = `white.opacity(0.03)` fill + `primary.opacity(0.06)` stroke border, light mode = white fill + shadow. In `ListView`: `.listRowSeparator(.hidden)`, `.listRowInsets(EdgeInsets(top: 2, leading: 14, bottom: 2, trailing: 14))`.
 
