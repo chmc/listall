@@ -9,11 +9,6 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// Thread-safe wrapper to pass NSImage across isolation boundaries
-private struct SendableImage: @unchecked Sendable {
-    let image: NSImage?
-}
-
 /// Custom expandable image section with larger click target and thumbnail preview
 /// Shows thumbnail strip when collapsed for better UX
 struct MacEditItemImageSection: View {
@@ -35,11 +30,9 @@ struct MacEditItemImageSection: View {
 
     private var headerRow: some View {
         HStack(spacing: 8) {
-            // Toggle button for expand/collapse - main clickable area
             headerButton
 
             // Add button - show when collapsed OR when expanded but empty
-            // When expanded with images, the gallery toolbar has its own Add button
             if !isExpanded || images.isEmpty {
                 addButton
             }
@@ -55,7 +48,7 @@ struct MacEditItemImageSection: View {
             headerContent
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle()) // Ensure entire area is clickable
+        .contentShape(Rectangle())
         .onHover { hovering in
             isHovering = hovering
         }
@@ -84,7 +77,6 @@ struct MacEditItemImageSection: View {
 
     private var headerContent: some View {
         HStack(spacing: 8) {
-            // Rotating chevron
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -92,7 +84,6 @@ struct MacEditItemImageSection: View {
                 .animation(.easeInOut(duration: 0.2), value: isExpanded)
                 .frame(width: 12)
 
-            // Label with count
             Text("Images")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -135,7 +126,6 @@ struct MacEditItemImageSection: View {
                     images.append(newImage)
                 }
             }
-            // Auto-expand section after adding images
             if !images.isEmpty && !isExpanded {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isExpanded = true
@@ -177,10 +167,8 @@ struct MacEditItemImageSection: View {
         if isExpanded {
             if isGalleryReady {
                 if images.isEmpty {
-                    // Compact empty state - no large placeholder
                     compactEmptyState
                 } else {
-                    // Show gallery only when there are images
                     MacImageGalleryView(
                         images: $images,
                         itemId: itemId,
@@ -190,7 +178,6 @@ struct MacEditItemImageSection: View {
                     .padding(.top, 16)
                 }
             } else {
-                // Loading state
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.7)
@@ -243,71 +230,5 @@ struct MacEditItemImageSection: View {
             }
         }
         return true
-    }
-}
-
-// MARK: - Collapsed Thumbnail View
-
-/// Small thumbnail view for the collapsed image section header
-/// Shows a 36x36pt preview of an image with async loading
-struct CollapsedThumbnailView: View {
-    let image: ItemImage
-    @State private var thumbnail: NSImage?
-    @State private var isLoading = true
-
-    private let size: CGFloat = 36
-
-    var body: some View {
-        Group {
-            if let thumbnail = thumbnail {
-                Image(nsImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            } else if isLoading {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.secondary.opacity(0.2))
-                    .frame(width: size, height: size)
-                    .overlay(
-                        ProgressView()
-                            .scaleEffect(0.5)
-                    )
-            } else {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.secondary.opacity(0.2))
-                    .frame(width: size, height: size)
-                    .overlay(
-                        Image(systemName: "photo")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    )
-            }
-        }
-        .task {
-            await loadThumbnail()
-        }
-    }
-
-    private func loadThumbnail() async {
-        guard let imageData = image.imageData else {
-            await MainActor.run { isLoading = false }
-            return
-        }
-
-        // Generate small thumbnail on background thread
-        let thumbnailSize = CGSize(width: size * 2, height: size * 2) // 2x for retina
-        // Use SendableImage wrapper to avoid NSImage crossing isolation boundaries
-        let loadedThumbnail = await Task.detached(priority: .userInitiated) {
-            let result = await ImageService.shared.createThumbnailAsync(from: imageData, size: thumbnailSize)
-            return SendableImage(image: result)
-        }.value.image
-
-        await MainActor.run {
-            withTransaction(Transaction(animation: nil)) {
-                self.thumbnail = loadedThumbnail
-                self.isLoading = false
-            }
-        }
     }
 }

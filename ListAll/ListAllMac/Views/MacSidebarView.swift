@@ -57,7 +57,7 @@ struct MacSidebarView: View {
 
     // MARK: - Archived Section Expansion State
     /// Persisted collapsed/expanded state for Archived section (collapsed by default)
-    @AppStorage("archivedSectionExpanded") private var isArchivedSectionExpanded = false
+    @AppStorage("archivedSectionExpanded") var isArchivedSectionExpanded = false
 
     // MARK: - Computed List Properties
 
@@ -122,13 +122,11 @@ struct MacSidebarView: View {
     @ViewBuilder
     private var bulkActionButton: some View {
         if hasArchivedSelection {
-            // Has archived lists selected: permanent deletion only
             Button(role: .destructive, action: { showingPermanentDeleteConfirmation = true }) {
                 Label("Delete Permanently", systemImage: "trash")
             }
             .disabled(selectedLists.isEmpty)
         } else {
-            // Active lists only: archive (recoverable) and delete (permanent)
             Button(action: { showingArchiveConfirmation = true }) {
                 Label("Archive Lists", systemImage: "archivebox")
             }
@@ -143,6 +141,23 @@ struct MacSidebarView: View {
     }
 
     var body: some View {
+        sidebarSheetsAndAlerts(
+            sidebarFocusSyncHandlers(
+                sidebarKeyboardHandlers(
+                    sidebarListContent
+                        .listStyle(.sidebar)
+                        .accessibilityIdentifier("ListsSidebar")
+                )
+            )
+            .toolbar {
+                sidebarToolbarContent
+            }
+        )
+    }
+
+    // MARK: - List Content
+
+    private var sidebarListContent: some View {
         SwiftUI.List(selection: isInSelectionMode ? .constant(nil) : $selectedList) {
             // MARK: - Active Lists Section
             Section {
@@ -166,9 +181,6 @@ struct MacSidebarView: View {
             // MARK: - Archived Lists Section (Collapsible)
             if !archivedLists.isEmpty {
                 Section {
-                    // FIX: Always render ForEach but hide rows when collapsed
-                    // Using conditional `if` breaks SwiftUI's view identity tracking
-                    // when @AppStorage state changes, preventing proper re-render.
                     ForEach(archivedLists) { list in
                         Group {
                             if isInSelectionMode {
@@ -181,32 +193,14 @@ struct MacSidebarView: View {
                         .clipped()
                         .opacity(isArchivedSectionExpanded ? 1 : 0)
                     }
-                    // No .onMove - archived lists cannot be reordered
                 } header: {
-                    // Clickable header with disclosure chevron
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            isArchivedSectionExpanded.toggle()
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .rotationEffect(.degrees(isArchivedSectionExpanded ? 90 : 0))
-                            Text("Archived")
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Archived lists")
-                    .accessibilityHint(isArchivedSectionExpanded ? "Double-tap to collapse" : "Double-tap to expand")
+                    archivedSectionHeader
                 } footer: {
-                    // Only show sync status when expanded, otherwise it looks odd
                     if isArchivedSectionExpanded {
                         syncStatusFooter
                     }
                 }
-                .collapsible(false) // We handle collapsing ourselves
+                .collapsible(false)
             }
 
             // Show sync status at bottom when archived section is collapsed or empty
@@ -219,249 +213,90 @@ struct MacSidebarView: View {
                 .collapsible(false)
             }
         }
-        .listStyle(.sidebar)
-        .accessibilityIdentifier("ListsSidebar")
-        // MARK: - Keyboard Navigation Handlers (Task 11.1)
-        .onKeyPress(.return) {
-            // Enter key selects the focused list (only in normal mode)
-            guard !isInSelectionMode else { return .ignored }
-            if let focusedID = focusedListID,
-               let list = allVisibleLists.first(where: { $0.id == focusedID }) {
-                selectedList = list
-                return .handled
+    }
+
+    // MARK: - Archived Section Header
+
+    private var archivedSectionHeader: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isArchivedSectionExpanded.toggle()
             }
-            return .ignored
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(isArchivedSectionExpanded ? 90 : 0))
+                Text("Archived")
+            }
         }
-        .onKeyPress(.space) {
-            // In selection mode, space toggles selection
-            if isInSelectionMode {
-                if let focusedID = focusedListID {
-                    toggleSelection(for: focusedID)
-                    return .handled
+        .buttonStyle(.plain)
+        .accessibilityLabel("Archived lists")
+        .accessibilityHint(isArchivedSectionExpanded ? "Double-tap to collapse" : "Double-tap to expand")
+    }
+
+    // MARK: - Toolbar Content
+
+    @ToolbarContentBuilder
+    private var sidebarToolbarContent: some ToolbarContent {
+        if isInSelectionMode {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    exitSelectionMode()
                 }
-                return .ignored
+                .accessibilityIdentifier("CancelSelectionButton")
+                .accessibilityHint("Exits selection mode")
             }
-            // In normal mode, space selects the focused list (macOS convention)
-            if let focusedID = focusedListID,
-               let list = allVisibleLists.first(where: { $0.id == focusedID }) {
-                selectedList = list
-                return .handled
-            }
-            return .ignored
-        }
-        .onKeyPress(.delete) {
-            // In selection mode, determine action based on selected lists
-            if isInSelectionMode && !selectedLists.isEmpty {
-                // Check if any selected lists are archived
-                let hasArchivedSelection = selectedLists.contains { id in
-                    allVisibleLists.first(where: { $0.id == id })?.isArchived == true
-                }
-                if hasArchivedSelection {
-                    // Has archived lists: permanently delete
-                    showingPermanentDeleteConfirmation = true
-                } else {
-                    // All active lists: archive (recoverable)
-                    showingArchiveConfirmation = true
-                }
-                return .handled
-            }
-            // In normal mode, delete focused list
-            if let focusedID = focusedListID,
-               let list = allVisibleLists.first(where: { $0.id == focusedID }) {
-                onDeleteList(list)
-                // Move focus to next list or nil
-                moveFocusAfterDeletion(deletedId: focusedID)
-                return .handled
-            }
-            return .ignored
-        }
-        .onKeyPress(.escape) {
-            // Escape exits selection mode
-            if isInSelectionMode {
-                exitSelectionMode()
-                return .handled
-            }
-            return .ignored
-        }
-        // Cmd+A to select all in selection mode
-        .onKeyPress(characters: CharacterSet(charactersIn: "a")) { keyPress in
-            guard keyPress.modifiers.contains(.command), isInSelectionMode else {
-                return .ignored
-            }
-            selectAllLists()
-            return .handled
-        }
-        // Sync focus with selection (bidirectional - Issue #2 fix from Critical Review)
-        .onChange(of: selectedList) { _, newList in
-            if let newList = newList {
-                focusedListID = newList.id
-            }
-        }
-        .onChange(of: focusedListID) { _, newFocusedID in
-            // When arrow keys change focus, update selection (macOS convention) - only in normal mode
-            guard !isInSelectionMode else { return }
-            if let newFocusedID = newFocusedID,
-               let list = allVisibleLists.first(where: { $0.id == newFocusedID }) {
-                selectedList = list
-            }
-        }
-        .toolbar {
-            // Selection mode toolbar items
-            if isInSelectionMode {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        exitSelectionMode()
+
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(action: selectAllLists) {
+                        Label("Select All", systemImage: "checkmark.circle")
                     }
-                    .accessibilityIdentifier("CancelSelectionButton")
-                    .accessibilityHint("Exits selection mode")
-                }
+                    .disabled(allVisibleLists.isEmpty)
 
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button(action: selectAllLists) {
-                            Label("Select All", systemImage: "checkmark.circle")
-                        }
-                        .disabled(allVisibleLists.isEmpty)
-
-                        Button(action: deselectAllLists) {
-                            Label("Deselect All", systemImage: "circle")
-                        }
-                        .disabled(selectedLists.isEmpty)
-
-                        Divider()
-
-                        // Use extracted @ViewBuilder for type-checker performance
-                        bulkActionButton
-                    } label: {
-                        Label("Actions", systemImage: "ellipsis.circle")
+                    Button(action: deselectAllLists) {
+                        Label("Deselect All", systemImage: "circle")
                     }
-                    .accessibilityIdentifier("SelectionActionsMenu")
-                    .accessibilityLabel("Selection actions")
-                    .accessibilityHint("Shows selection actions menu")
-                }
-            } else {
-                // Normal mode toolbar items
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 4) {
-                        // Refresh button with last sync time tooltip
-                        Button(action: {
-                            coreDataManager.forceRefresh()
-                            dataManager.loadData()
-                        }) {
-                            Label("Refresh", systemImage: "arrow.clockwise")
-                        }
-                        .accessibilityIdentifier("RefreshButton")
-                        .accessibilityLabel("Refresh data from iCloud")
-                        .accessibilityHint("Manually syncs data from CloudKit")
-                        .help(lastSyncTooltip)
+                    .disabled(selectedLists.isEmpty)
 
-                        Button(action: enterSelectionMode) {
-                            Label("Select", systemImage: "checklist")
-                        }
-                        .help("Select Multiple Lists")
-                        .accessibilityIdentifier("SelectListsButton")
-                        .accessibilityHint("Enter selection mode to select multiple lists")
+                    Divider()
 
-                        Button(action: onCreateList) {
-                            Label("Add List", systemImage: "plus")
-                        }
-                        .accessibilityIdentifier("AddListButton")
-                        .accessibilityHint("Opens sheet to create new list")
+                    bulkActionButton
+                } label: {
+                    Label("Actions", systemImage: "ellipsis.circle")
+                }
+                .accessibilityIdentifier("SelectionActionsMenu")
+                .accessibilityLabel("Selection actions")
+                .accessibilityHint("Shows selection actions menu")
+            }
+        } else {
+            ToolbarItem(placement: .primaryAction) {
+                HStack(spacing: 4) {
+                    Button(action: {
+                        coreDataManager.forceRefresh()
+                        dataManager.loadData()
+                    }) {
+                        Label("Refresh", systemImage: "arrow.clockwise")
                     }
-                }
-            }
-        }
-        .sheet(isPresented: $showingSharePopover) {
-            if let list = listToShare {
-                MacShareFormatPickerView(
-                    list: list,
-                    onDismiss: {
-                        showingSharePopover = false
-                        listToShare = nil
+                    .accessibilityIdentifier("RefreshButton")
+                    .accessibilityLabel("Refresh data from iCloud")
+                    .accessibilityHint("Manually syncs data from CloudKit")
+                    .help(lastSyncTooltip)
+
+                    Button(action: enterSelectionMode) {
+                        Label("Select", systemImage: "checklist")
                     }
-                )
-            }
-        }
-        // Archive confirmation alert (for active lists)
-        .alert("Archive Lists", isPresented: $showingArchiveConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Archive", role: .destructive) {
-                archiveSelectedLists()
-            }
-        } message: {
-            Text("Archive \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? You can restore them later from archived lists.")
-        }
-        // Permanent delete confirmation alert (for archived lists)
-        .alert("Delete Permanently", isPresented: $showingPermanentDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete Permanently", role: .destructive) {
-                permanentlyDeleteSelectedLists()
-            }
-        } message: {
-            Text("Permanently delete \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? This action cannot be undone. All items and images will be permanently deleted.")
-        }
-        // Task 15.4: Delete active lists confirmation alert
-        .alert("Delete Lists", isPresented: $showingDeleteActiveListsConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                permanentlyDeleteSelectedLists()
-            }
-        } message: {
-            Text("Permanently delete \(selectedLists.count) \(selectedLists.count == 1 ? "list" : "lists")? This action cannot be undone and bypasses archiving.")
-        }
-        // MARK: - Restore Confirmation Alert (Task 13.1)
-        .alert("Restore List", isPresented: $showingRestoreConfirmation) {
-            Button("Cancel", role: .cancel) {
-                listToRestore = nil
-            }
-            Button("Restore") {
-                if let list = listToRestore {
-                    // Use MainViewModel pattern for restore
-                    dataManager.restoreList(withId: list.id)
-                    // Refresh data to update UI
-                    dataManager.loadArchivedData()
-                    dataManager.loadData()
-                    // Clear selection - the restored list moves to active lists
-                    // and the stale struct copy has isArchived = true
-                    selectedList = nil
-                }
-                listToRestore = nil
-            }
-        } message: {
-            if let list = listToRestore {
-                Text("Do you want to restore \"\(list.name)\" to your active lists?")
-            } else {
-                Text("Do you want to restore this list to your active lists?")
-            }
-        }
-        // MARK: - Restore Keyboard Shortcut Handler (Task 13.1)
-        // Responds to Cmd+Shift+R from AppCommands menu
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RestoreSelectedList"))) { _ in
-            // Only process if selected list is archived
-            guard let list = selectedList, list.isArchived else { return }
-            // Trigger restore confirmation
-            listToRestore = list
-            showingRestoreConfirmation = true
-        }
-        // MARK: - Archived Section Collapse Handler
-        // Clear selection when archived section is collapsed to prevent invisible selection
-        .onChange(of: isArchivedSectionExpanded) { _, isExpanded in
-            if !isExpanded {
-                // Clear selection if currently selected list is archived
-                if let current = selectedList, current.isArchived {
-                    selectedList = nil
-                }
-                // Clear focus if on archived list
-                if let focusedID = focusedListID,
-                   archivedLists.contains(where: { $0.id == focusedID }) {
-                    focusedListID = nil
-                }
-                // Exit selection mode and clear multi-select if any archived lists were selected
-                if selectedLists.contains(where: { id in
-                    archivedLists.contains(where: { $0.id == id })
-                }) {
-                    selectedLists.removeAll()
-                    isInSelectionMode = false
+                    .help("Select Multiple Lists")
+                    .accessibilityIdentifier("SelectListsButton")
+                    .accessibilityHint("Enter selection mode to select multiple lists")
+
+                    Button(action: onCreateList) {
+                        Label("Add List", systemImage: "plus")
+                    }
+                    .accessibilityIdentifier("AddListButton")
+                    .accessibilityHint("Opens sheet to create new list")
                 }
             }
         }

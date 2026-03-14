@@ -23,32 +23,10 @@ struct MacItemRowView: View {
     @State private var isHovering = false
     @Environment(\.colorScheme) private var colorScheme
 
-    /// Combined accessibility label for VoiceOver
-    private var itemAccessibilityLabel: String {
-        var label = item.title
-        if isInSelectionMode {
-            label = (isSelected ? "Selected, " : "Unselected, ") + label
-        }
-        if isArchivedList {
-            label += ", archived"
-        }
-        label += ", \(item.isCrossedOut ? "completed" : "active")"
-        if item.quantity > 1 {
-            label += ", quantity \(item.quantity)"
-        }
-        if item.hasImages {
-            label += ", \(item.imageCount) \(item.imageCount == 1 ? "image" : "images")"
-        }
-        if let description = item.itemDescription, !description.isEmpty {
-            label += ", \(description)"
-        }
-        return label
-    }
-
     // MARK: - Checkbox View (macOS 20px diameter)
 
     @ViewBuilder
-    private func checkboxView() -> some View {
+    func checkboxView() -> some View {
         if item.isCrossedOut {
             ZStack {
                 Circle()
@@ -72,7 +50,7 @@ struct MacItemRowView: View {
     // MARK: - Selection Mode Checkbox (macOS 20px diameter)
 
     @ViewBuilder
-    private func selectionCheckboxView() -> some View {
+    func selectionCheckboxView() -> some View {
         if isSelected {
             ZStack {
                 Circle()
@@ -94,7 +72,7 @@ struct MacItemRowView: View {
     // MARK: - Quantity Badge (teal capsule)
 
     @ViewBuilder
-    private func quantityBadge() -> some View {
+    func quantityBadge() -> some View {
         if item.quantity > 1 {
             Text("\u{00D7}\(item.quantity)")
                 .font(.caption.monospacedDigit().weight(.semibold))
@@ -132,15 +110,12 @@ struct MacItemRowView: View {
             }
 
             // Completion checkbox button (hidden in selection mode AND archived lists)
-            // Task 13.2: For archived lists, show read-only completion indicator
             if !isInSelectionMode {
                 if isArchivedList {
-                    // Read-only completion indicator (no button, just visual state)
                     checkboxView()
                         .opacity(0.6)
                         .accessibilityLabel("\(item.title), \(item.isCrossedOut ? "completed" : "active"), read-only")
                 } else {
-                    // Interactive completion toggle for active lists
                     Button(action: onToggle) {
                         checkboxView()
                     }
@@ -164,7 +139,6 @@ struct MacItemRowView: View {
                                     .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
                             )
 
-                        // Badge for multiple images (dark mode compatible)
                         if item.imageCount > 1 {
                             Text("\(item.imageCount)")
                                 .font(.system(size: 8, weight: .bold))
@@ -193,7 +167,6 @@ struct MacItemRowView: View {
                         .strikethrough(item.isCrossedOut)
                         .foregroundColor(item.isCrossedOut ? .secondary : .primary)
 
-                    // Show photo icon only when no thumbnail (fallback indicator)
                     if item.hasImages && item.sortedImages.first?.nsImage == nil {
                         Image(systemName: "photo")
                             .font(.caption)
@@ -212,129 +185,88 @@ struct MacItemRowView: View {
 
             Spacer()
 
-            // Quantity badge (moved from inline to right-aligned capsule)
             quantityBadge()
 
             // Hover actions (hidden in selection mode)
-            // Task 13.2: For archived lists, only show Quick Look (no edit/delete)
             if isHovering && !isInSelectionMode {
-                HStack(spacing: 8) {
-                    // Quick Look button (only if item has images) - ALWAYS visible for archived lists
-                    if item.hasImages {
-                        Button(action: onQuickLook) {
-                            Image(systemName: "eye")
-                        }
-                        .buttonStyle(.plain)
-                        .help("Quick Look (Space)")
-                        .accessibilityLabel("Quick Look")
-                        .accessibilityHint("Opens image preview")
-                    }
-
-                    // Edit and Delete buttons - hidden for archived lists
-                    if !isArchivedList {
-                        Button(action: onEdit) {
-                            Image(systemName: "pencil")
-                        }
-                        .buttonStyle(.plain)
-                        .help("Edit Item")
-                        .accessibilityLabel("Edit item")
-                        .accessibilityHint("Opens edit sheet")
-
-                        Button(action: onDelete) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Delete Item")
-                        .accessibilityLabel("Delete item")
-                        .accessibilityHint("Permanently removes this item")
-                    }
-                }
+                hoverActions
             }
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(colorScheme == .dark
-                    ? Color.white.opacity(isHovering ? 0.05 : 0.03)
-                    : isHovering ? Color.black.opacity(0.02) : Color.white)
-                .shadow(color: colorScheme == .dark ? .clear : .black.opacity(0.04), radius: 1, y: 1)
-        )
-        .overlay {
-            if colorScheme == .dark {
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-            }
-        }
+        .background(rowBackground)
+        .overlay { rowBorderOverlay }
         .opacity(item.isCrossedOut ? 0.5 : 1.0)
         .onHover { hovering in
             isHovering = hovering
         }
-        // CRITICAL: Use native AppKit double-click handler instead of .onTapGesture(count: 2)
-        // SwiftUI's gesture system blocks the run loop on macOS, causing sheets to only
-        // appear after app deactivation. This native handler fires immediately.
-        // In selection mode, double-click toggles selection instead of editing
-        // Task 13.2: For archived lists, double-click does nothing (read-only)
         .onDoubleClick {
-            guard !isArchivedList else { return }  // No editing for archived lists
+            guard !isArchivedList else { return }
             if isInSelectionMode {
                 onToggleSelection()
             } else {
                 onEdit()
             }
         }
-        // NOTE: Do NOT add .onTapGesture or .simultaneousGesture(TapGesture()) here!
-        // Any tap gesture handler captures mouse-down events and blocks drag initiation.
-        // Selection mode uses the checkbox button, double-click, or context menu instead.
-        .contentShape(Rectangle())  // Required for hit testing on entire row area
+        .contentShape(Rectangle())
         .listRowBackground(isInSelectionMode && isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-        // MARK: - Accessibility (Task 11.2)
-        // Combine child elements into a single accessible element for cleaner VoiceOver navigation
         .accessibilityElement(children: .combine)
         .accessibilityLabel(itemAccessibilityLabel)
         .accessibilityHint(archivedAccessibilityHint)
-        .contextMenu {
-            // Task 13.2: Archived lists have read-only context menu (only Quick Look if images exist)
-            if isArchivedList {
-                // Archived list item context menu - only Quick Look allowed
-                if item.hasImages {
-                    Button("Quick Look") {
-                        onQuickLook()
-                    }
-                    .keyboardShortcut(.space, modifiers: [])
-                }
-                // No edit, toggle, or delete options for archived items
-            } else if isInSelectionMode {
-                Button(isSelected ? "Deselect" : "Select") { onToggleSelection() }
-            } else {
-                Button("Edit") { onEdit() }
-                Button("Duplicate") { onDuplicate() }  // Task 16.3: Duplicate item action
-                Button(item.isCrossedOut ? "Mark as Active" : "Mark as Complete") { onToggle() }
+        .contextMenu { itemContextMenu }
+    }
 
-                if item.hasImages {
-                    Divider()
-                    Button("Quick Look") {
-                        onQuickLook()
-                    }
-                    .keyboardShortcut(.space, modifiers: [])
-                }
+    // MARK: - Hover Actions
 
-                Divider()
-                Button("Delete", role: .destructive) { onDelete() }
+    @ViewBuilder
+    private var hoverActions: some View {
+        HStack(spacing: 8) {
+            if item.hasImages {
+                Button(action: onQuickLook) {
+                    Image(systemName: "eye")
+                }
+                .buttonStyle(.plain)
+                .help("Quick Look (Space)")
+                .accessibilityLabel("Quick Look")
+                .accessibilityHint("Opens image preview")
+            }
+
+            if !isArchivedList {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .help("Edit Item")
+                .accessibilityLabel("Edit item")
+                .accessibilityHint("Opens edit sheet")
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .help("Delete Item")
+                .accessibilityLabel("Delete item")
+                .accessibilityHint("Permanently removes this item")
             }
         }
     }
 
-    /// Accessibility hint based on list state
-    private var archivedAccessibilityHint: String {
-        if isArchivedList {
-            return item.hasImages ? "Use Space to view images. This item is read-only." : "This item is read-only."
-        } else if isInSelectionMode {
-            return "Tap to toggle selection"
-        } else {
-            return "Double-tap to edit. Use actions menu for more options."
+    // MARK: - Row Background
+
+    private var rowBackground: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(colorScheme == .dark
+                ? Color.white.opacity(isHovering ? 0.05 : 0.03)
+                : isHovering ? Color.black.opacity(0.02) : Color.white)
+            .shadow(color: colorScheme == .dark ? .clear : .black.opacity(0.04), radius: 1, y: 1)
+    }
+
+    @ViewBuilder
+    private var rowBorderOverlay: some View {
+        if colorScheme == .dark {
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         }
     }
 }
-
