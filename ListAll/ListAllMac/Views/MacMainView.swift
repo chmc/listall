@@ -38,14 +38,14 @@ struct MacMainView: View {
     @FocusState private var focusedSection: FocusSection?
 
     // Menu command observers
-    @State private var showingCreateListSheet = false
+    @State var showingCreateListSheet = false
     @State private var showingArchivedLists = false
     @State private var showingSharePopover = false
     @State private var showingExportAllSheet = false
 
     // MARK: - Restore Confirmation State (Task 13.1 UX improvement)
-    @State private var showingRestoreConfirmation = false
-    @State private var listToRestore: List? = nil
+    @State var showingRestoreConfirmation = false
+    @State var listToRestore: List? = nil
 
     // MARK: - CloudKit Sync Polling (macOS fallback)
     // Apple's CloudKit notifications on macOS can be unreliable when the app is frontmost.
@@ -64,7 +64,7 @@ struct MacMainView: View {
     // MARK: - Edit Item State (for native sheet presenter)
     // NOTE: We use MacNativeSheetPresenter instead of SwiftUI's .sheet() modifier
     // because SwiftUI sheets have RunLoop mode issues that prevent presentation until app deactivation
-    @State private var selectedEditItem: Item?
+    @State var selectedEditItem: Item?
 
     // MARK: - Navigation Path for Animation Fix
     // CRITICAL FIX: Apple-confirmed bug in NavigationSplitView (Xcode 14.3+)
@@ -91,69 +91,7 @@ struct MacMainView: View {
             // Apply column width to NavigationStack wrapper (not inside it)
             .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 400)
         } detail: {
-            // Detail view for selected list
-            if let list = selectedList {
-                MacListDetailView(
-                    list: list,
-                    onEditItem: { item in
-                        // CRITICAL: Use native AppKit sheet presentation (bypasses SwiftUI's RunLoop issues)
-                        // SwiftUI sheets have a known bug where they only present after app deactivation
-                        // This is caused by RunLoop mode conflicts during event handling
-                        print("🎯 MacMainView: Received edit request for item: \(item.title)")
-                        isEditingAnyItem = true
-                        selectedEditItem = item
-
-                        // Define cancel action (used by both Cancel button and ESC key)
-                        let cancelAction = {
-                            MacNativeSheetPresenter.shared.dismissSheet()
-                            selectedEditItem = nil
-                            isEditingAnyItem = false
-                        }
-
-                        // Present using native AppKit sheet (works immediately)
-                        MacNativeSheetPresenter.shared.presentSheet(
-                            MacEditItemSheet(
-                                item: item,
-                                onSave: { title, quantity, description, images in
-                                    updateEditedItem(item, title: title, quantity: quantity, description: description, images: images)
-                                    MacNativeSheetPresenter.shared.dismissSheet()
-                                    selectedEditItem = nil
-                                    isEditingAnyItem = false
-                                },
-                                onCancel: cancelAction
-                            )
-                            .environment(\.managedObjectContext, viewContext),
-                            onCancel: cancelAction  // ESC key support via SheetHostingController
-                        ) {
-                            // Completion handler when sheet dismisses
-                            isEditingAnyItem = false
-                            selectedEditItem = nil
-                            dataManager.loadData()
-                        }
-                        print("✅ MacMainView: Native sheet presenter called")
-                    },
-                    onRestore: {
-                        // Task 13.1 UX improvement: Restore button callback
-                        listToRestore = list
-                        showingRestoreConfirmation = true
-                    }
-                )
-                .id(list.id) // Force refresh when selection changes
-            } else {
-                // Show different empty states based on whether any lists exist
-                if dataManager.lists.isEmpty {
-                    // No lists at all - show welcome with sample templates
-                    MacListsEmptyStateView(
-                        onCreateSampleList: { template in
-                            createSampleList(from: template)
-                        },
-                        onCreateCustomList: { showingCreateListSheet = true }
-                    )
-                } else {
-                    // Lists exist but none selected - simple prompt
-                    MacNoListSelectedView(onCreateList: { showingCreateListSheet = true })
-                }
-            }
+            detailContent
         }
         .frame(minWidth: 800, minHeight: 600)
         // MARK: - Sync Status Indicator in Toolbar (Task 12.6)
