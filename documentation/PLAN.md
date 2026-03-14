@@ -48,7 +48,7 @@ Change `MacSidebarFormatting` (line ~4382) to output `active/total` format with 
 - `desktop--02-1-macos-sidebar-no-list-selected-light-mode.png`
 - Count text should show `4/6` not `4 (6)`
 
-### Task A.2: Section Headers — Uppercase 9px
+### Task A.2: Section Headers — Uppercase 9px ✅ completed
 
 Change "Lists" header to `"LISTS"` with `.font(.system(size: 9, weight: .semibold))`, `.tracking(1.2)`, `.foregroundColor(.secondary.opacity(0.5))`, `.textCase(.uppercase)`.
 
