@@ -92,7 +92,7 @@ Add card background to `ItemRowView`: rounded rect (12px radius), dark mode = `w
 - `ipad--02-2-sidebar-items-list-light.png` (iPad light)
 - Items should appear as discrete cards with rounded corners, no dividers
 
-### Task B.2: Checkbox Circles
+### Task B.2: Checkbox Circles ✅ completed
 
 Update `checkboxView()`: active items get teal circle border (`Theme.Colors.primary.opacity(0.4)`, 22px), completed items get green circle with checkmark (`Theme.Colors.completedGreen`). Ensure both normal mode and selection mode use consistent checkbox styling.
 

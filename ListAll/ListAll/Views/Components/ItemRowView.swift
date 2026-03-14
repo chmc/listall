@@ -49,12 +49,10 @@ struct ItemRowView: View {
         if item.isCrossedOut {
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.completedGreen.opacity(0.2))
-                Circle()
-                    .strokeBorder(Theme.Colors.completedGreen.opacity(0.3), lineWidth: 2)
+                    .fill(Theme.Colors.completedGreen)
                 Image(systemName: "checkmark")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Theme.Colors.completedGreen)
+                    .foregroundColor(.white)
             }
             .frame(width: 22, height: 22)
             .accessibilityLabel("Completed")
@@ -73,12 +71,10 @@ struct ItemRowView: View {
         if isSelected {
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.primary.opacity(0.2))
-                Circle()
-                    .strokeBorder(Theme.Colors.primary.opacity(0.4), lineWidth: 2)
+                    .fill(Theme.Colors.primary)
                 Image(systemName: "checkmark")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Theme.Colors.primary)
+                    .foregroundColor(.white)
             }
             .frame(width: 22, height: 22)
         } else {
