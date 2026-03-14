@@ -34,26 +34,26 @@ struct MacSidebarView: View {
     let onDeleteList: (List) -> Void
 
     // State for share popover from context menu
-    @State private var listToShare: List?
-    @State private var showingSharePopover = false
+    @State var listToShare: List?
+    @State var showingSharePopover = false
 
     // DataRepository for drag-and-drop operations
-    private let dataRepository = DataRepository()
+    let dataRepository = DataRepository()
 
     // MARK: - Multi-Select Mode State
-    @State private var isInSelectionMode = false
-    @State private var selectedLists: Set<UUID> = []
-    @State private var showingArchiveConfirmation = false
-    @State private var showingPermanentDeleteConfirmation = false
-    @State private var showingDeleteActiveListsConfirmation = false  // Task 15.4
+    @State var isInSelectionMode = false
+    @State var selectedLists: Set<UUID> = []
+    @State var showingArchiveConfirmation = false
+    @State var showingPermanentDeleteConfirmation = false
+    @State var showingDeleteActiveListsConfirmation = false  // Task 15.4
 
     // MARK: - Restore Confirmation State (Task 13.1)
-    @State private var showingRestoreConfirmation = false
-    @State private var listToRestore: List? = nil
+    @State var showingRestoreConfirmation = false
+    @State var listToRestore: List? = nil
 
     // MARK: - Keyboard Navigation (Task 11.1)
     /// Focus state for individual list rows - enables arrow key navigation
-    @FocusState private var focusedListID: UUID?
+    @FocusState var focusedListID: UUID?
 
     // MARK: - Archived Section Expansion State
     /// Persisted collapsed/expanded state for Archived section (collapsed by default)
@@ -62,18 +62,18 @@ struct MacSidebarView: View {
     // MARK: - Computed List Properties
 
     /// Active (non-archived) lists sorted by order number
-    private var activeLists: [List] {
+    var activeLists: [List] {
         dataManager.lists.filter { !$0.isArchived }
             .sorted { $0.orderNumber < $1.orderNumber }
     }
 
     /// Archived lists sorted by modification date (most recent first)
-    private var archivedLists: [List] {
+    var archivedLists: [List] {
         dataManager.archivedLists
     }
 
     /// All visible lists for keyboard navigation - only includes archived when section is expanded
-    private var allVisibleLists: [List] {
+    var allVisibleLists: [List] {
         if isArchivedSectionExpanded {
             return activeLists + archivedLists
         } else {
@@ -83,7 +83,7 @@ struct MacSidebarView: View {
 
     /// Legacy computed property for backwards compatibility (selection mode actions)
     /// Now returns only active lists (archived shown in separate section)
-    private var displayedLists: [List] {
+    var displayedLists: [List] {
         activeLists
     }
 
@@ -99,7 +99,7 @@ struct MacSidebarView: View {
     }
 
     /// Formatted last sync time for display in UI
-    private var lastSyncDisplayText: String {
+    var lastSyncDisplayText: String {
         if let lastSync = coreDataManager.lastSyncDate {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .short
@@ -107,73 +107,6 @@ struct MacSidebarView: View {
         } else {
             return "Not synced yet"
         }
-    }
-
-    // MARK: - Selection Mode Methods
-
-    private func enterSelectionMode() {
-        isInSelectionMode = true
-        selectedLists.removeAll()
-    }
-
-    private func exitSelectionMode() {
-        isInSelectionMode = false
-        selectedLists.removeAll()
-    }
-
-    private func toggleSelection(for listId: UUID) {
-        if selectedLists.contains(listId) {
-            selectedLists.remove(listId)
-        } else {
-            selectedLists.insert(listId)
-        }
-    }
-
-    private func selectAllLists() {
-        selectedLists = Set(allVisibleLists.map { $0.id })
-    }
-
-    private func deselectAllLists() {
-        selectedLists.removeAll()
-    }
-
-    /// Archives selected lists (moves to archived, can be restored)
-    private func archiveSelectedLists() {
-        // Store selected IDs before modifying
-        let listsToArchive = selectedLists
-
-        for listId in listsToArchive {
-            // deleteList actually archives (sets isArchived = true)
-            dataManager.deleteList(withId: listId)
-        }
-        dataManager.loadData()
-
-        // Clear detail selection if archived list was selected
-        if let currentSelection = selectedList, listsToArchive.contains(currentSelection.id) {
-            selectedList = nil
-        }
-
-        selectedLists.removeAll()
-        isInSelectionMode = false
-    }
-
-    /// Permanently deletes selected lists (irreversible, for archived lists view)
-    private func permanentlyDeleteSelectedLists() {
-        // Store selected IDs before modifying
-        let listsToDelete = selectedLists
-
-        for listId in listsToDelete {
-            dataManager.permanentlyDeleteList(withId: listId)
-        }
-        dataManager.loadData()
-
-        // Clear detail selection if deleted list was selected
-        if let currentSelection = selectedList, listsToDelete.contains(currentSelection.id) {
-            selectedList = nil
-        }
-
-        selectedLists.removeAll()
-        isInSelectionMode = false
     }
 
     // MARK: - Bulk Action Button (extracted for type-checker performance)
@@ -207,167 +140,6 @@ struct MacSidebarView: View {
             }
             .disabled(selectedLists.isEmpty)
         }
-    }
-
-    // MARK: - List Row Content (extracted for type-checker performance)
-
-    /// Helper to format item count display
-    private func itemCountText(for list: List) -> String {
-        MacSidebarFormatting.itemCountText(for: list)
-    }
-
-    /// Returns active and total counts for a list
-    private func itemCounts(for list: List) -> (active: Int, total: Int) {
-        let activeCount = list.items.filter { !$0.isCrossedOut }.count
-        return (activeCount, list.items.count)
-    }
-
-    /// Whether a list is currently selected
-    private func isSelected(_ list: List) -> Bool {
-        selectedList?.id == list.id
-    }
-
-    /// Builds a list row for selection mode
-    @ViewBuilder
-    private func selectionModeRow(for list: List) -> some View {
-        let counts = itemCounts(for: list)
-        Button(action: { toggleSelection(for: list.id) }) {
-            HStack(spacing: 8) {
-                Image(systemName: selectedLists.contains(list.id) ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(selectedLists.contains(list.id) ? .blue : .gray)
-                    .font(.title3)
-                Text(list.name)
-                    .foregroundColor(.primary)
-                Spacer()
-                Text("\(counts.active)/\(counts.total)")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-                    .monospacedDigit()
-                    .numericContentTransition()
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // CRITICAL: Use .activate interactions to allow sidebar drag-drop to work.
-        // Default .focusable() on macOS Sonoma+ captures mouse clicks.
-        .focusable(interactions: .activate)
-        .focused($focusedListID, equals: list.id)
-        .accessibilityIdentifier("SidebarListCell_\(list.name)")
-        .accessibilityLabel("\(list.name)")
-        .accessibilityValue(selectedLists.contains(list.id) ? "selected" : "not selected")
-        .accessibilityHint("Double-tap to toggle selection")
-    }
-
-    /// Builds the row content for a sidebar list (selected or unselected)
-    @ViewBuilder
-    private func sidebarRowContent(for list: List) -> some View {
-        let counts = itemCounts(for: list)
-        let selected = isSelected(list)
-
-        if selected {
-            HStack(spacing: 0) {
-                // Teal left accent bar
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Theme.Colors.primary)
-                    .frame(width: 3)
-
-                // Row content with tinted background
-                HStack {
-                    Text(list.name)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Theme.Colors.primary)
-                    Spacer()
-                    Text("\(counts.active)/\(counts.total)")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundColor(Theme.Colors.primary.opacity(0.5))
-                        .numericContentTransition()
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-            }
-            .background(Theme.Colors.primary.opacity(0.08))
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0,
-                                              bottomTrailingRadius: 8, topTrailingRadius: 8))
-        } else {
-            HStack {
-                Text(list.name)
-                    .font(.system(size: 13))
-                    .foregroundColor(.primary.opacity(0.7))
-                Spacer()
-                Text("\(counts.active)/\(counts.total)")
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundColor(.secondary.opacity(0.5))
-                    .numericContentTransition()
-            }
-            .padding(.vertical, 10)
-            .padding(.leading, 15)  // 12 + 3 (align with selected content after border)
-            .padding(.trailing, 12)
-        }
-    }
-
-    /// Builds a list row for normal navigation mode
-    @ViewBuilder
-    private func normalModeRow(for list: List) -> some View {
-        NavigationLink(value: list) {
-            sidebarRowContent(for: list)
-        }
-        .listRowBackground(Color.clear)
-        // CRITICAL: Use .activate interactions to allow list drag-drop to work.
-        // Default .focusable() on macOS Sonoma+ captures mouse clicks, blocking drag.
-        .focusable(interactions: .activate)
-        .focused($focusedListID, equals: list.id)
-        .accessibilityIdentifier("SidebarListCell_\(list.name)")
-        .accessibilityLabel("\(list.name)")
-        .accessibilityValue("\(list.items.filter { !$0.isCrossedOut }.count) active, \(list.items.count) total items")
-        .accessibilityHint("Double-tap to view list items")
-        .draggable(list)
-        .dropDestination(for: ItemTransferData.self) { droppedItems, _ in
-            handleItemDrop(droppedItems, to: list)
-        }
-        .contextMenu {
-            if list.isArchived {
-                // Archived list context menu: Restore and Delete Permanently
-                Button {
-                    listToRestore = list
-                    showingRestoreConfirmation = true
-                } label: {
-                    Label("Restore", systemImage: "arrow.uturn.backward")
-                }
-
-                Divider()
-
-                Button(role: .destructive) {
-                    onDeleteList(list)
-                } label: {
-                    Label("Delete Permanently", systemImage: "trash")
-                }
-            } else {
-                // Active list context menu: Share and Delete (archive)
-                Button("Share...") {
-                    shareListFromSidebar(list)
-                }
-                Divider()
-                Button("Delete") {
-                    onDeleteList(list)
-                }
-            }
-        }
-    }
-
-    /// Sync status footer view for reuse
-    private var syncStatusFooter: some View {
-        HStack {
-            Image(systemName: "icloud")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(lastSyncDisplayText)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.top, 8)
-        .accessibilityLabel("Sync status: \(lastSyncDisplayText)")
     }
 
     var body: some View {
@@ -692,97 +464,6 @@ struct MacSidebarView: View {
                     isInSelectionMode = false
                 }
             }
-        }
-    }
-
-    // MARK: - Drag-and-Drop Handlers
-
-    /// Handle item drop on a list in the sidebar (moves item to that list)
-    private func handleItemDrop(_ droppedItems: [ItemTransferData], to targetList: List) -> Bool {
-        print("📦 Sidebar handleItemDrop called with \(droppedItems.count) items to list '\(targetList.name)'")
-        var didMoveAny = false
-
-        for itemData in droppedItems {
-            print("📦 Processing dropped item: \(itemData.itemId), sourceListId: \(String(describing: itemData.sourceListId))")
-
-            // Skip if item is already in the target list
-            guard itemData.sourceListId != targetList.id else {
-                print("📦 Drop skipped: item already in target list")
-                continue
-            }
-
-            // Validate sourceListId exists
-            guard let sourceListId = itemData.sourceListId else {
-                print("❌ Sidebar drop failed: sourceListId is nil for item \(itemData.itemId)")
-                continue
-            }
-
-            // Find the item in DataManager
-            let items = dataManager.getItems(forListId: sourceListId)
-            guard let item = items.first(where: { $0.id == itemData.itemId }) else {
-                print("❌ Sidebar drop failed: could not find item \(itemData.itemId) in source list \(sourceListId)")
-                continue
-            }
-
-            // Move item to the target list
-            dataRepository.moveItem(item, to: targetList)
-            didMoveAny = true
-            print("📦 Moved item '\(item.title)' to list '\(targetList.name)'")
-        }
-
-        if didMoveAny {
-            dataManager.loadData()
-        }
-
-        return didMoveAny
-    }
-
-    /// Handle list reordering via drag-and-drop (only for active lists section)
-    private func moveList(from source: IndexSet, to destination: Int) {
-        // Get current order (displayedLists = activeLists only)
-        var reorderedLists = displayedLists
-
-        // Perform the move
-        reorderedLists.move(fromOffsets: source, toOffset: destination)
-
-        // Update order numbers - must modify array elements directly (value types!)
-        for index in reorderedLists.indices {
-            reorderedLists[index].orderNumber = index
-            reorderedLists[index].modifiedAt = Date()
-        }
-
-        print("📦 Reordering lists: \(reorderedLists.map { "\($0.name):\($0.orderNumber)" })")
-
-        // Persist the new order
-        dataManager.updateListsOrder(reorderedLists)
-        dataManager.loadData()
-
-        print("📦 Reordered lists via drag-and-drop")
-    }
-
-    /// Shows share popover for a list from sidebar context menu
-    private func shareListFromSidebar(_ list: List) {
-        listToShare = list
-        showingSharePopover = true
-    }
-
-    // MARK: - Keyboard Navigation Helpers (Task 11.1)
-
-    /// Moves focus to the next or previous list after deletion
-    private func moveFocusAfterDeletion(deletedId: UUID) {
-        let lists = allVisibleLists
-        guard let currentIndex = lists.firstIndex(where: { $0.id == deletedId }) else {
-            focusedListID = nil
-            return
-        }
-
-        // Try next list first, then previous
-        if currentIndex < lists.count - 1 {
-            focusedListID = lists[currentIndex + 1].id
-        } else if currentIndex > 0 {
-            focusedListID = lists[currentIndex - 1].id
-        } else {
-            focusedListID = nil
         }
     }
 }
