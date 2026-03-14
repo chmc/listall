@@ -57,7 +57,7 @@ Change "Lists" header to `"LISTS"` with `.font(.system(size: 9, weight: .semibol
 - `desktop--02-1-macos-sidebar-no-list-selected-light-mode.png`
 - Header should be small uppercase "LISTS"
 
-### Task A.3: Selection Style — Teal Left Border
+### Task A.3: Selection Style — Teal Left Border ✅ completed
 
 Replace system `List(selection:)` highlight with custom selection: 3px teal left border + `Theme.Colors.primary.opacity(0.08)` background + right-side-only rounding via `UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 8, topTrailingRadius: 8)`. Unselected rows: standard padding aligned with selected content. Use `.listRowBackground(Color.clear)` to suppress system highlight.
 
