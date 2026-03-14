@@ -108,7 +108,7 @@ Update `quantityBadge()`: teal capsule with `×N` format, `Theme.Colors.primary`
 - `iphone--02-2-items-list.png` — teal capsule badge on right side
 - `ipad--01-1-sidebar-items-list.png` — same on iPad
 
-### Task B.4: Completed Row Opacity
+### Task B.4: Completed Row Opacity ✅ completed
 
 Apply `.opacity(0.5)` to entire completed item row (currently uses 0.7/0.6 split).
 
