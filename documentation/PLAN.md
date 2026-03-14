@@ -39,7 +39,7 @@ Design mockup path prefix: `.superpowers/brainstorm/57429-1773298544/screens/`
 
 **File:** `ListAll/ListAllMac/Views/MacMainView.swift` (MacSidebarView ~line 602+)
 
-### Task A.1: Count Format `4 (6)` → `4/6`
+### Task A.1: Count Format `4 (6)` → `4/6` ✅ completed
 
 Change `MacSidebarFormatting` (line ~4382) to output `active/total` format with `.monospacedDigit()` and `.secondary` color.
 
