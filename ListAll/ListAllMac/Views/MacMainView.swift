@@ -14,19 +14,19 @@ import Combine
 /// for the standard macOS three-column layout.
 struct MacMainView: View {
     @EnvironmentObject var dataManager: DataManager
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.managedObjectContext) var viewContext
     @Environment(\.scenePhase) private var scenePhase
 
     // Access CoreDataManager for sync status (lastSyncDate) and manual refresh
-    @ObservedObject private var coreDataManager = CoreDataManager.shared
+    @ObservedObject var coreDataManager = CoreDataManager.shared
 
     // MARK: - Proactive Feature Tips (Task 12.5)
-    @ObservedObject private var tooltipManager = MacTooltipManager.shared
+    @ObservedObject var tooltipManager = MacTooltipManager.shared
 
     // MARK: - CloudKit Sync Status (Task 12.6)
-    @ObservedObject private var cloudKitService = CloudKitService.shared
+    @ObservedObject var cloudKitService = CloudKitService.shared
 
-    @State private var selectedList: List?
+    @State var selectedList: List?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     // MARK: - Focus State for Keyboard Navigation (Task 11.1)
@@ -53,13 +53,13 @@ struct MacMainView: View {
     // Using Timer.publish with .onReceive is the correct SwiftUI pattern (not Timer.scheduledTimer).
     // LEARNING: Timer.scheduledTimer with [self] capture in SwiftUI Views captures a COPY of the struct,
     // causing the timer callback to operate on stale state. Timer.publish integrates with SwiftUI lifecycle.
-    @State private var isSyncPollingActive = false
-    private let syncPollingTimer = Timer.publish(every: 30.0, on: .main, in: .common).autoconnect()
+    @State var isSyncPollingActive = false
+    let syncPollingTimer = Timer.publish(every: 30.0, on: .main, in: .common).autoconnect()
 
     // MARK: - Edit State Protection
     // Flag to prevent background sync from interrupting sheet presentation
     // Set via notification from MacListDetailView when editing starts/stops
-    @State private var isEditingAnyItem = false
+    @State var isEditingAnyItem = false
 
     // MARK: - Edit Item State (for native sheet presenter)
     // NOTE: We use MacNativeSheetPresenter instead of SwiftUI's .sheet() modifier
@@ -72,43 +72,6 @@ struct MacMainView: View {
     // This includes .sheet() presentation - sheets queue but never display until app deactivates.
     // See: https://developer.apple.com/forums/thread/728132
     @State private var navigationPath = NavigationPath()
-
-    // MARK: - Sync Status Indicator (Task 12.6)
-
-    /// Sync button image with rotation animation on macOS 15+, fallback for older versions
-    @ViewBuilder
-    private var syncButtonImage: some View {
-        if #available(macOS 15.0, *) {
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .symbolEffect(.rotate, isActive: cloudKitService.isSyncing)
-        } else {
-            // Fallback for macOS 14: use rotationEffect with animation
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .rotationEffect(.degrees(cloudKitService.isSyncing ? 360 : 0))
-                .animation(
-                    cloudKitService.isSyncing
-                        ? .linear(duration: 1.0).repeatForever(autoreverses: false)
-                        : .default,
-                    value: cloudKitService.isSyncing
-                )
-        }
-    }
-
-    /// Tooltip text for sync status button in toolbar
-    /// Shows syncing state, last sync time, or error message
-    private var syncTooltipText: String {
-        if cloudKitService.isSyncing {
-            return "Syncing with iCloud..."
-        } else if let error = cloudKitService.syncError {
-            return "Sync error: \(error) - Click to retry"
-        } else if let lastSync = coreDataManager.lastSyncDate {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .short
-            return "Last synced \(formatter.localizedString(for: lastSync, relativeTo: Date())) - Click to sync"
-        } else {
-            return "Click to sync with iCloud"
-        }
-    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -423,170 +386,6 @@ struct MacMainView: View {
         }
     }
 
-    // MARK: - Sync Polling Methods
-
-    /// Enables the sync polling timer (when window becomes active)
-    /// Timer.publish runs continuously but we control whether to act via isSyncPollingActive flag
-    private func startSyncPolling() {
-        guard !isSyncPollingActive else { return }
-        isSyncPollingActive = true
-        print("🔄 macOS: Sync polling enabled (every 30s)")
-    }
-
-    /// Disables the sync polling timer (when app goes to background or view disappears)
-    /// Timer continues publishing but the .onReceive handler will skip processing
-    private func stopSyncPolling() {
-        isSyncPollingActive = false
-        print("🔄 macOS: Sync polling disabled")
-    }
-
-    /// Performs the actual sync polling work (called from .onReceive modifier)
-    private func performSyncPoll() {
-        // Skip polling if user is editing - prevents UI interruption during sheet presentation
-        guard !isEditingAnyItem else {
-            print("🛡️ macOS: Skipping poll - user is editing item")
-            return
-        }
-
-        print("🔄 macOS: Polling for CloudKit changes (timer-based fallback)")
-
-        // CRITICAL FIX: Use performAndWait (synchronous) to ensure refreshAllObjects()
-        // completes BEFORE loadData() fetches. This prevents race conditions where
-        // loadData() could fetch stale data before refreshAllObjects() completed.
-        viewContext.performAndWait {
-            viewContext.refreshAllObjects()
-        }
-
-        // ENHANCEMENT: Trigger a background context operation to encourage CloudKit
-        // sync engine to wake up and check for pending operations
-        CoreDataManager.shared.triggerCloudKitSync()
-
-        // Now safe to load data - viewContext has been refreshed
-        // Use async to prevent layout recursion if timer fires during layout pass
-        DispatchQueue.main.async {
-            dataManager.loadData()
-        }
-    }
-
-    // MARK: - Actions
-
-    private func createList(name: String) {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-
-        let newList = List(name: trimmedName)
-        dataManager.addList(newList)
-        dataManager.loadData()
-
-        // Select the newly created list
-        if let createdList = dataManager.lists.first(where: { $0.name == trimmedName }) {
-            selectedList = createdList
-        }
-    }
-
-    private func createSampleList(from template: SampleDataService.SampleListTemplate) {
-        // Use SampleDataService to create and populate the list
-        let createdList = SampleDataService.saveTemplateList(template, using: dataManager)
-
-        // Select the newly created list
-        selectedList = createdList
-    }
-
-    private func deleteList(_ list: List) {
-        if selectedList?.id == list.id {
-            selectedList = nil
-        }
-        dataManager.deleteList(withId: list.id)
-        dataManager.loadData()
-    }
-
-    // MARK: - Duplicate List (Task 16.9)
-    /// Duplicates a list and all its items
-    private func duplicateList(_ list: List) {
-        // Generate duplicate name
-        let baseName = list.name
-        var duplicateNumber = 1
-        var candidateName = "\(baseName) Copy"
-
-        // Check if a list with this name already exists
-        while dataManager.lists.contains(where: { $0.name == candidateName }) {
-            duplicateNumber += 1
-            candidateName = "\(baseName) Copy \(duplicateNumber)"
-        }
-
-        // Create new list with duplicate name
-        var duplicatedList = List(name: candidateName)
-        duplicatedList.orderNumber = (dataManager.lists.map { $0.orderNumber }.max() ?? -1) + 1
-
-        // Get items from the original list
-        let originalItems = dataManager.getItems(forListId: list.id)
-
-        // Add the duplicated list first
-        dataManager.addList(duplicatedList)
-
-        // Duplicate all items from the original list
-        for originalItem in originalItems {
-            var duplicatedItem = originalItem
-            duplicatedItem.id = UUID()
-            duplicatedItem.listId = duplicatedList.id
-            duplicatedItem.createdAt = Date()
-            duplicatedItem.modifiedAt = Date()
-            dataManager.addItem(duplicatedItem, to: duplicatedList.id)
-        }
-
-        // Refresh data to show the new list
-        dataManager.loadData()
-
-        // Select the new duplicated list
-        selectedList = dataManager.lists.first { $0.name == candidateName }
-    }
-
-    /// Update an item from the edit sheet (called from MacMainView-level sheet)
-    private func updateEditedItem(_ item: Item, title: String, quantity: Int, description: String?, images: [ItemImage]? = nil) {
-        var updatedItem = item
-        updatedItem.title = title
-        updatedItem.quantity = quantity
-        updatedItem.itemDescription = description
-        if let images = images {
-            updatedItem.images = images
-        }
-        updatedItem.modifiedAt = Date()
-        dataManager.updateItem(updatedItem)
-    }
-
-    // MARK: - Proactive Feature Tips (Task 12.5)
-
-    /// Triggers proactive feature tips based on current app state
-    /// Tips are shown with delays to avoid overwhelming new users
-    private func triggerProactiveTips() {
-        // Skip if user is editing (don't interrupt workflows)
-        guard !isEditingAnyItem else { return }
-
-        // 0.8s delay: Keyboard shortcuts tip for new users
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            withAnimation(.easeIn(duration: 0.3)) {
-                _ = tooltipManager.showIfNeeded(.keyboardShortcuts)
-            }
-        }
-
-        // 1.2s delay: Add list tip if no lists exist
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            if dataManager.lists.isEmpty {
-                withAnimation(.easeIn(duration: 0.3)) {
-                    _ = tooltipManager.showIfNeeded(.addListButton)
-                }
-            }
-        }
-
-        // 1.5s delay: Archive tip if user has 3+ lists
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            if dataManager.lists.count >= 3 {
-                withAnimation(.easeIn(duration: 0.3)) {
-                    _ = tooltipManager.showIfNeeded(.archiveFunctionality)
-                }
-            }
-        }
-    }
 }
 
 
