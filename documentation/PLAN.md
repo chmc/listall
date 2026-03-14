@@ -100,7 +100,7 @@ Update `checkboxView()`: active items get teal circle border (`Theme.Colors.prim
 - `iphone--02-2-items-list.png` — teal ring (active) or green checkmark circle (completed)
 - `ipad--01-1-sidebar-items-list.png` — same on iPad
 
-### Task B.3: Quantity Badge — Teal Capsule
+### Task B.3: Quantity Badge — Teal Capsule ✅ completed
 
 Update `quantityBadge()`: teal capsule with `×N` format, `Theme.Colors.primary` text/border for active items, `completedGreen` for completed. Do NOT modify `item.formattedQuantity` property — build `×N` format inline.
 
