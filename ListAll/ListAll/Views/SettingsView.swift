@@ -153,7 +153,7 @@ struct SettingsView: View {
                     }) {
                         HStack {
                             Image(systemName: "list.bullet")
-                                .foregroundColor(.blue)
+                                .foregroundColor(Theme.Colors.primary)
                             Text("View All Feature Tips")
                                 .foregroundColor(.primary)
                             Spacer()
@@ -169,7 +169,7 @@ struct SettingsView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.counterclockwise")
-                                .foregroundColor(.blue)
+                                .foregroundColor(Theme.Colors.primary)
                             Text("Show All Tips Again")
                                 .foregroundColor(.primary)
                         }
@@ -182,7 +182,7 @@ struct SettingsView: View {
                         Toggle(isOn: $requiresBiometricAuth) {
                             HStack {
                                 Image(systemName: biometricType.iconName)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(Theme.Colors.primary)
                                 Text("Require \(biometricType.displayName)")
                             }
                         }
@@ -269,7 +269,7 @@ struct SettingsView: View {
                     Link(destination: URL(string: Constants.Creator.websiteURL)!) {
                         HStack {
                             Image(systemName: "globe")
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(Theme.Colors.primary)
                             Text("Visit Website")
                                 .foregroundColor(.primary)
                             Spacer()
@@ -282,7 +282,7 @@ struct SettingsView: View {
                     Link(destination: URL(string: Constants.Creator.githubURL)!) {
                         HStack {
                             Image(systemName: "chevron.left.forwardslash.chevron.right")
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(Theme.Colors.primary)
                             Text("View Source Code")
                                 .foregroundColor(.primary)
                             Spacer()

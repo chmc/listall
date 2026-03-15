@@ -287,7 +287,7 @@ Restore button → `Theme.Colors.primary`. Archived items: strikethrough + `.sec
 
 **Files:** `ListAll/ListAll/Views/SettingsView.swift`, `ListAll/ListAllMac/Views/MacSettingsView.swift`
 
-### Task I.1: iOS/iPad Settings — Toggle Tints + Button Colors
+### Task I.1: iOS/iPad Settings — Toggle Tints + Button Colors ✅ completed
 
 All toggles: `.tint(Theme.Colors.primary)`. Export/Import buttons: `.foregroundColor(Theme.Colors.primary)`. About icon: `Theme.Colors.primary`.
 
