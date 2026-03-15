@@ -87,6 +87,7 @@ struct WatchListView: View {
                         .padding(.horizontal, 4)
 
                         Divider()
+                            .overlay(Color.white.opacity(0.06))
                             .padding(.leading, 36)
                     }
                 }

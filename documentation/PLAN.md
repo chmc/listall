@@ -193,7 +193,7 @@ Replace icon-based status indicators in `WatchListView` with text: "4 active 2 d
 
 **VERIFY against:** `watchos--02-2-items-list-with-filter.png` — status shows text labels not icons
 
-### Task E.4: Dividers + Filter Picker (includes Spec Change 12)
+### Task E.4: Dividers + Filter Picker (includes Spec Change 12) ✅ completed
 
 Apply `.listRowSeparatorTint(Color.white.opacity(0.06))` for subtle dividers. Update `WatchFilterPicker` to use `.tint(.accentColor)` for brand teal selection highlight.
 
