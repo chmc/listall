@@ -207,7 +207,7 @@ Apply `.listRowSeparatorTint(Color.white.opacity(0.06))` for subtle dividers. Up
 
 **Files:** `ListAll/ListAll/Views/Components/ItemOrganizationView.swift`, macOS content area filter
 
-### Task F.1: iOS/iPad Filter Sheet — Teal Accents
+### Task F.1: iOS/iPad Filter Sheet — Teal Accents ✅ completed
 
 Apply `.tint(Theme.Colors.primary)` on picker. Sort buttons: `Theme.Colors.primary.opacity(0.1)` bg, teal checkmarks.
 

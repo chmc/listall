@@ -29,14 +29,14 @@ struct ItemOrganizationView: View {
                                         Spacer()
                                         if viewModel.currentSortOption == option {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
+                                                .foregroundColor(Theme.Colors.primary)
                                         }
                                     }
                                     .padding(Theme.Spacing.sm)
                                     .background(
                                         RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                            .fill(viewModel.currentSortOption == option ? 
-                                                  Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                                            .fill(viewModel.currentSortOption == option ?
+                                                  Theme.Colors.primary.opacity(0.1) : Color.gray.opacity(0.1))
                                     )
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -64,11 +64,11 @@ struct ItemOrganizationView: View {
                                 .padding(.vertical, Theme.Spacing.sm)
                                 .background(
                                     RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(Theme.Colors.primary.opacity(0.1))
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .foregroundColor(.blue)
+                            .foregroundColor(Theme.Colors.primary)
                         }
                         
                         // Manual reordering note
@@ -112,14 +112,14 @@ struct ItemOrganizationView: View {
                                     Spacer()
                                     if viewModel.currentFilterOption == option {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(Theme.Colors.primary)
                                     }
                                 }
                                 .padding(Theme.Spacing.sm)
                                 .background(
                                     RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                        .fill(viewModel.currentFilterOption == option ? 
-                                              Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                                        .fill(viewModel.currentFilterOption == option ?
+                                              Theme.Colors.primary.opacity(0.1) : Color.gray.opacity(0.1))
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -144,7 +144,7 @@ struct ItemOrganizationView: View {
                             Text(String(localized: "Filtered Items:"))
                             Spacer()
                             Text("\(viewModel.filteredItems.count)")
-                                .foregroundColor(.blue)
+                                .foregroundColor(Theme.Colors.primary)
                         }
                         
                         HStack {
@@ -165,6 +165,7 @@ struct ItemOrganizationView: View {
                     Label(String(localized: "Summary"), systemImage: "chart.bar")
                 }
             }
+            .tint(Theme.Colors.primary)
             .navigationTitle(String(localized: "Organization"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
