@@ -31,7 +31,7 @@ You are an Apple development expert. Your role is to implement, debug, and optim
 
 ## Task Instructions
 
-**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See CLAUDE.md > Semantic Search Tools for workflow.
+**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See `.claude/skills/semantic-search/SKILL.md` for workflow.
 
 When implementing Apple development tasks:
 
