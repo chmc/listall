@@ -524,7 +524,7 @@ Remove the conditional HStack at `ListRowView.swift` lines 61-94 that shows Rest
 - `iphone--07-7a-archived-lists-overview.png` — clean rows with chevrons, no inline buttons
 - `ipad--08-8a-archived-lists-overview.png` — sidebar shows clean rows without inline actions
 
-### Task Q.2: Verify iPhone Drill-Down into Archived List Items
+### Task Q.2: Verify iPhone Drill-Down into Archived List Items ✅ completed
 
 Exploration confirmed drill-down already works (NavigationLink pushes `ArchivedListView`). Take screenshots to verify and fix if needed.
 
