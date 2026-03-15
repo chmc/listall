@@ -440,7 +440,7 @@ Add an `HStack` of 3 teal pill capsule buttons in `ListView.swift` between the h
 - `ipad--01-1-sidebar-items-list.png` — pills in detail area (dark)
 - `ipad--02-2-sidebar-items-list-light.png` — pills in detail area (light)
 
-### Task N.2: macOS Inline Filter Pills
+### Task N.2: macOS Inline Filter Pills ✅ completed
 
 Replace the system `Picker(.segmented)` in `MacMainView.swift` (line ~1681, `filterSortControls`) with matching teal pill-style `HStack`. Same 3 options (All/Active/Done), same visual treatment as iOS: teal filled for selected, muted for unselected. Keep the separate Sort button (arrow icon) that opens `MacSortOnlyView` popover — only replace the filter picker.
 

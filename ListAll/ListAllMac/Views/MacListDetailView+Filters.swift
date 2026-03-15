@@ -9,26 +9,48 @@ import SwiftUI
 
 extension MacListDetailView {
 
+    // MARK: - Inline Filter Options
+
+    static var inlineFilterOptions: [(label: String, option: ItemFilterOption)] {
+        [
+            ("All", .all),
+            ("Active", .active),
+            ("Done", .completed)
+        ]
+    }
+
     // MARK: - Filter & Sort Controls (Task 12.4)
 
     @ViewBuilder
     var filterSortControls: some View {
         HStack(spacing: 8) {
-            // Filter segmented control - always visible, single click
-            Picker("Filter", selection: $viewModel.currentFilterOption) {
-                Text("All").tag(ItemFilterOption.all)
-                Text("Active").tag(ItemFilterOption.active)
-                Text("Done").tag(ItemFilterOption.completed)
+            // Filter pills - teal capsule style matching iOS
+            HStack(spacing: Theme.Spacing.sm) {
+                ForEach(Self.inlineFilterOptions, id: \.option) { pill in
+                    let isSelected = viewModel.currentFilterOption == pill.option
+                    Button {
+                        viewModel.updateFilterOption(pill.option)
+                    } label: {
+                        Text(pill.label)
+                            .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                            .foregroundColor(isSelected ? .white : .secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(isSelected ? Theme.Colors.primary : Color.clear)
+                            )
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(isSelected ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 180)
-            .tint(Theme.Colors.primary)
             .help("Filter items by status (Cmd+1/2/3)")
-            .accessibilityIdentifier("FilterSegmentedControl")
-            .onChange(of: viewModel.currentFilterOption) { _, newValue in
-                viewModel.updateFilterOption(newValue)
-            }
+            .accessibilityIdentifier("FilterPillsControl")
 
             // Sort button - keeps popover for less-frequent sort options
             Button(action: { showingOrganizationPopover.toggle() }) {
