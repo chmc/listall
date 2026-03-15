@@ -53,7 +53,7 @@ You are a Testing Specialist. Your role is to write reliable tests, debug failur
 
 ## Task Instructions
 
-**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See CLAUDE.md > Semantic Search Tools for workflow.
+**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See `.claude/skills/semantic-search/SKILL.md` for workflow.
 
 1. **Understand Context**: Read existing tests before adding new ones
 2. **Write Focused Tests**: One assertion per test, AAA pattern

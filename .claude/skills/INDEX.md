@@ -18,3 +18,4 @@ Quick reference for skill selection. Skills load automatically via agent `skills
 | `visual-verification` | Any code change, verify implementation works | MCP tools, feedback loop |
 | `apple-hig` | UI design, navigation, accessibility | HIG compliance, platform patterns |
 | `apple-ux-patterns` | User interactions, feedback, gestures | State communication, haptics, animation |
+| `semantic-search` | Code navigation, call_graph usage | Modes, parameters, bootstrapping, decision matrix |
