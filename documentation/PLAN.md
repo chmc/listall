@@ -516,7 +516,7 @@ Replace HStack summary rows (lines 134-166) with horizontal stat card bar. 4 car
 
 Design mockups show archived lists overview with simple rows + chevrons for drill-down (NO inline Restore/Delete buttons). Current: `ListRowView.swift` lines 61-94 render an `HStack` with Restore pill button (`Color.accentColor.opacity(0.1)` bg, radius 8) and Delete trash icon button when `mainViewModel.showingArchivedLists` is true. These appear inline in every archived row on both iPhone and iPad.
 
-### Task Q.1: Remove Inline Restore/Delete from Archived List Overview
+### Task Q.1: Remove Inline Restore/Delete from Archived List Overview ✅ completed
 
 Remove the conditional HStack at `ListRowView.swift` lines 61-94 that shows Restore/Delete buttons inline in archived rows. Keep the simple row layout: name + count subtitle + chevron for navigation. Restore/Delete remain in `ArchivedListView.swift` toolbar (lines 83-106) where they belong per design.
 

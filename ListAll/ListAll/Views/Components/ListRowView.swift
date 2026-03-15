@@ -34,52 +34,10 @@ struct ListRowView: View {
                     Text("items")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.secondary)
-                    
-                    if mainViewModel.showingArchivedLists {
-                        Image(systemName: "archivebox")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.secondary)
-                    }
                 }
             }
-            
+
             Spacer()
-            
-            // Add restore and delete buttons for archived lists
-            if mainViewModel.showingArchivedLists {
-                HStack(spacing: 8) {
-                    // Restore button
-                    Button(action: {
-                        mainViewModel.restoreList(list)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.uturn.backward")
-                            Text("Restore")
-                        }
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.accentColor.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
-                    
-                    // Delete button
-                    Button(action: {
-                        activeAlert = .permanentDelete
-                    }) {
-                        Image(systemName: "trash")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(.red)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
-                }
-            }
         }
         .padding(.vertical, 8)
         .contentShape(Rectangle())
@@ -183,7 +141,12 @@ struct ListRowView: View {
                     Button(action: {
                         mainViewModel.selectedListForNavigation = list
                     }) {
-                        listContent
+                        HStack {
+                            listContent
+                            Image(systemName: Constants.UI.chevronIcon)
+                                .foregroundColor(Color(.tertiaryLabel))
+                                .font(.system(size: 14, weight: .semibold))
+                        }
                     }
                     .buttonStyle(PlainButtonStyle())
                 } else {
