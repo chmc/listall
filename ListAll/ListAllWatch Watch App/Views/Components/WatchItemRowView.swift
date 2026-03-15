@@ -4,48 +4,51 @@ import SwiftUI
 struct WatchItemRowView: View {
     let item: Item
     let onToggle: () -> Void
-    
+
+    // MARK: - Computed Properties (testable)
+
+    var titleColor: Color {
+        item.isCrossedOut ? .green : .primary
+    }
+
+    var showStrikethrough: Bool {
+        item.isCrossedOut
+    }
+
+    var showQuantity: Bool {
+        item.quantity > 1
+    }
+
+    var quantityText: String {
+        "×\(item.quantity)"
+    }
+
+    var rowOpacity: Double {
+        item.isCrossedOut ? 0.6 : 1.0
+    }
+
     var body: some View {
         Button(action: {
             WatchHapticManager.shared.playItemToggle()
             onToggle()
         }) {
-            HStack(spacing: 8) {
-                // Completion indicator
-                Image(systemName: item.isCrossedOut ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundColor(item.isCrossedOut ? .green : .blue)
-                    .accessibilityIdentifier("WatchItemRow_Checkbox_\(item.id.uuidString)")
-                
-                // Item content
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        // Title
-                        Text(item.displayTitle)
-                            .font(.body)
-                            .foregroundColor(item.isCrossedOut ? .secondary : .primary)
-                            .strikethrough(item.isCrossedOut)
-                        
-                        // Quantity indicator (if > 1)
-                        if item.quantity > 1 {
-                            Text("×\(item.quantity)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    // Description (if available)
-                    if item.hasDescription {
-                        Text(item.displayDescription)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
+            HStack {
+                // Title
+                Text(item.displayTitle)
+                    .font(.body)
+                    .foregroundColor(titleColor)
+                    .strikethrough(showStrikethrough)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Quantity (right-aligned, teal)
+                if showQuantity {
+                    Text(quantityText)
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.vertical, 4)
-            .opacity(item.isCrossedOut ? 0.6 : 1.0)
+            .opacity(rowOpacity)
             .contentShape(Rectangle())
             .itemToggleAnimation()
         }
@@ -89,9 +92,10 @@ struct WatchItemRowView: View {
     }
 }
 
-#Preview("Item with Description") {
-    var item = Item(title: "Cheese")
-    item.itemDescription = "Cheddar or Swiss"
+#Preview("Completed with Quantity") {
+    var item = Item(title: "Chicken")
+    item.isCrossedOut = true
+    item.quantity = 2
     return SwiftUI.List {
         WatchItemRowView(
             item: item,
@@ -99,4 +103,3 @@ struct WatchItemRowView: View {
         )
     }
 }
-

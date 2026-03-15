@@ -177,7 +177,7 @@ Change count from `4 (6) items` to `4/6` teal + "items" muted. Add inline 32x3px
 
 **VERIFY against:** `watchos--01-1-lists-overview.png` — list rows show `4/6 items` with teal count and small progress bar
 
-### Task E.2: Item Row — Remove Checkboxes, Teal Quantity
+### Task E.2: Item Row — Remove Checkboxes, Teal Quantity ✅ completed
 
 Remove checkbox circles from `WatchItemRowView`. Use tap-to-toggle with color differentiation only. Left-aligned title, right-aligned teal `×N` quantity. Completed items use green color + strikethrough.
 
