@@ -5844,6 +5844,23 @@
         }
       }
     },
+    "Sort & Filter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort & Filter"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lajittelu ja suodatus"
+          }
+        }
+      }
+    },
     "Sort By": {
       "extractionState": "manual",
       "localizations": {

@@ -166,7 +166,7 @@ struct ItemOrganizationView: View {
                 }
             }
             .tint(Theme.Colors.primary)
-            .navigationTitle(String(localized: "Organization"))
+            .navigationTitle(String(localized: "Sort & Filter"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -187,6 +187,7 @@ struct ItemOrganizationView: View {
                     Button(String(localized: "Done")) {
                         dismiss()
                     }
+                    .foregroundColor(Theme.Colors.primary)
                     .accessibilityIdentifier("OrganizationDoneButton")
                 }
             }

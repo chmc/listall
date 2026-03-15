@@ -466,7 +466,7 @@ Design: Pill-style buttons throughout, title "Sort & Filter", teal accents, stat
 
 **ViewModel methods:** `viewModel.updateSortOption()`, `viewModel.updateSortDirection()`, `viewModel.updateFilterOption()`, `viewModel.clearAllFilters()`, `viewModel.hasActiveFilters`
 
-### Task O.1: Sheet Title + Toolbar
+### Task O.1: Sheet Title + Toolbar ✅ completed
 
 Change `.navigationTitle("Organization")` → `.navigationTitle("Sort & Filter")`. Toolbar: "Reset" (left, **keep red** — matches mockup and iOS destructive action convention) + "Done" (right, **teal** via `Theme.Colors.primary`). Keep conditional Reset visibility based on `viewModel.hasActiveFilters`.
 
