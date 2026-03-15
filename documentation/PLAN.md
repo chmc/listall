@@ -342,7 +342,7 @@ Same changes in `MacSettingsView.swift`.
 
 **File:** `ListAll/ListAllMac/Views/Components/MacNoListSelectedView.swift` + other empty state views
 
-### Task K.1: No List Selected — Brand Styling
+### Task K.1: No List Selected — Brand Styling `completed`
 
 Icon: `.secondary.opacity(0.4)`. Subtitle: "Select a list from the sidebar or create a new one." CTA button: `.tint(Theme.Colors.primary)`.
 
