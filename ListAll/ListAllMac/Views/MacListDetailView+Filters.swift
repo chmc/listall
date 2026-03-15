@@ -23,6 +23,7 @@ extension MacListDetailView {
             .pickerStyle(.segmented)
             .labelsHidden()
             .frame(width: 180)
+            .tint(Theme.Colors.primary)
             .help("Filter items by status (Cmd+1/2/3)")
             .accessibilityIdentifier("FilterSegmentedControl")
             .onChange(of: viewModel.currentFilterOption) { _, newValue in

@@ -216,7 +216,7 @@ Apply `.tint(Theme.Colors.primary)` on picker. Sort buttons: `Theme.Colors.prima
 - `ipad--14-12-sort-filter-sheet.png` (iPad)
 - Filter/sort controls use teal, not system blue
 
-### Task F.2: macOS Filter Control — Teal Active State
+### Task F.2: macOS Filter Control — Teal Active State 🔄 in-progress
 
 Apply teal accent to macOS segmented control / filter in content area.
 
