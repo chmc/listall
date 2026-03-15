@@ -223,11 +223,7 @@ struct MainView: View {
                     ForEach(viewModel.displayedLists) { list in
                         // ListRowView already handles its own tap (sets selectedListForNavigation)
                         ListRowView(list: list, mainViewModel: viewModel)
-                            .listRowBackground(
-                                viewModel.selectedListForNavigation?.id == list.id
-                                    ? Color.accentColor.opacity(0.15)
-                                    : Color.clear
-                            )
+                            .listRowBackground(Color.clear)
                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     }
                     .onDelete { indexSet in

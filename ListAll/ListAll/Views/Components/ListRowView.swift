@@ -31,6 +31,11 @@ struct ListRowView: View {
     @State private var shareItems: [Any] = []
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
+    /// Whether this row is the selected row in iPad sidebar
+    private var isSelectedInSidebar: Bool {
+        horizontalSizeClass == .regular && mainViewModel.selectedListForNavigation?.id == list.id
+    }
+
     private var listContent: some View {
         HStack {
             VStack(alignment: .leading, spacing: 1) {
@@ -96,7 +101,76 @@ struct ListRowView: View {
         .padding(.vertical, 8)
         .contentShape(Rectangle())
     }
-    
+
+    /// iPad sidebar row content with teal selection styling
+    @ViewBuilder
+    private var iPadSidebarRowContent: some View {
+        if isSelectedInSidebar {
+            HStack(spacing: 0) {
+                // Teal left accent bar
+                RoundedRectangle(cornerRadius: iPadSidebarSelectionSpec.borderCornerRadius)
+                    .fill(Theme.Colors.primary)
+                    .frame(width: iPadSidebarSelectionSpec.borderWidth)
+
+                // Row content with teal text
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(list.name)
+                            .font(Theme.Typography.headline)
+                            .foregroundColor(Theme.Colors.primary)
+
+                        HStack(spacing: 2) {
+                            Text("\(list.activeItemCount)/\(list.itemCount)")
+                                .font(Theme.Typography.monoDigitCaption)
+                                .foregroundColor(Theme.Colors.primary)
+                                .numericContentTransition()
+                            Text("items")
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.primary.opacity(0.5))
+                        }
+                    }
+
+                    Spacer()
+
+                    Image(systemName: Constants.UI.chevronIcon)
+                        .foregroundColor(Theme.Colors.primary.opacity(0.4))
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, iPadSidebarSelectionSpec.contentHorizontalPadding)
+            }
+            .background(Theme.Colors.primary.opacity(iPadSidebarSelectionSpec.backgroundOpacity))
+            .clipShape(RoundedRectangle(cornerRadius: iPadSidebarSelectionSpec.cornerRadius))
+        } else {
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(list.name)
+                        .font(Theme.Typography.headline)
+                        .foregroundColor(.primary)
+
+                    HStack(spacing: 2) {
+                        Text("\(list.activeItemCount)/\(list.itemCount)")
+                            .font(Theme.Typography.monoDigitCaption)
+                            .foregroundColor(Theme.Colors.primary)
+                            .numericContentTransition()
+                        Text("items")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: Constants.UI.chevronIcon)
+                    .foregroundColor(Color(.tertiaryLabel))
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .padding(.vertical, 8)
+            .padding(.leading, iPadSidebarSelectionSpec.borderWidth + iPadSidebarSelectionSpec.contentHorizontalPadding)
+            .padding(.trailing, iPadSidebarSelectionSpec.contentHorizontalPadding)
+        }
+    }
+
     var body: some View {
         HStack {
             // Selection indicator
@@ -135,8 +209,16 @@ struct ListRowView: View {
                         listContent
                     }
                 }
+            } else if horizontalSizeClass == .regular {
+                // iPad normal mode: Custom selection styling
+                Button(action: {
+                    mainViewModel.selectedListForNavigation = list
+                }) {
+                    iPadSidebarRowContent
+                }
+                .buttonStyle(PlainButtonStyle())
             } else {
-                // Normal mode: Use programmatic navigation for state restoration support
+                // iPhone normal mode: Use programmatic navigation for state restoration support
                 Button(action: {
                     mainViewModel.selectedListForNavigation = list
                 }) {
@@ -150,7 +232,7 @@ struct ListRowView: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.horizontal, horizontalSizeClass == .regular && !mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists ? 0 : Theme.Spacing.md)
         .hoverEffect(.lift)  // Task 16.16: iPad trackpad hover effect
         .if(!mainViewModel.isInSelectionMode && !mainViewModel.showingArchivedLists) { view in
             view.contextMenu {

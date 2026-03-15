@@ -148,7 +148,7 @@ Same card pattern as iOS but with macOS sizing: 10px radius, 20px checkbox diame
 
 **Files:** `ListAll/ListAll/Views/MainView.swift`, `ListAll/ListAll/Views/Components/ListRowView.swift`
 
-### Task D.1: iPad Sidebar — Teal Selection
+### Task D.1: iPad Sidebar — Teal Selection ✅ completed
 
 Modify iPad sidebar: selected row gets 3px teal left border + tinted bg + teal text, clipped with `.clipShape(RoundedRectangle(cornerRadius: 10))` (fully rounded, unlike macOS which uses right-side-only rounding). Disable system selection bg with `.listRowBackground(Color.clear)`. Count format already shows `4/6 items` — just fix accent color to teal.
 

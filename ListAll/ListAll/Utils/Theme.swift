@@ -88,6 +88,15 @@ struct Theme {
     }
 }
 
+// MARK: - iPad Sidebar Selection Spec
+enum iPadSidebarSelectionSpec {
+    static let borderWidth: CGFloat = 3
+    static let borderCornerRadius: CGFloat = 2
+    static let backgroundOpacity: Double = 0.08
+    static let cornerRadius: CGFloat = 10
+    static let contentHorizontalPadding: CGFloat = 12
+}
+
 // MARK: - Card Row Modifier
 struct CardRowModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
