@@ -115,6 +115,111 @@ class ListViewModelFilterTests: XCTestCase {
         XCTAssertFalse(viewModel.filteredItems.contains { $0.title == "Crossed Item" })
     }
 
+    // MARK: - Inline Filter Pill Tests
+
+    func testUpdateFilterOptionToAll() throws {
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        try mainViewModel.addList(name: "Test List")
+        guard let list = mainViewModel.lists.first else { XCTFail("List should exist"); return }
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+
+        viewModel.updateFilterOption(.all)
+
+        XCTAssertEqual(viewModel.currentFilterOption, .all)
+        XCTAssertTrue(viewModel.showCrossedOutItems, "All filter should show crossed out items")
+    }
+
+    func testUpdateFilterOptionToActive() throws {
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        try mainViewModel.addList(name: "Test List")
+        guard let list = mainViewModel.lists.first else { XCTFail("List should exist"); return }
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+
+        viewModel.updateFilterOption(.active)
+
+        XCTAssertEqual(viewModel.currentFilterOption, .active)
+        XCTAssertFalse(viewModel.showCrossedOutItems, "Active filter should hide crossed out items")
+    }
+
+    func testUpdateFilterOptionToCompleted() throws {
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        try mainViewModel.addList(name: "Test List")
+        guard let list = mainViewModel.lists.first else { XCTFail("List should exist"); return }
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+
+        viewModel.updateFilterOption(.completed)
+
+        XCTAssertEqual(viewModel.currentFilterOption, .completed)
+        XCTAssertTrue(viewModel.showCrossedOutItems, "Completed filter should show crossed out items")
+    }
+
+    func testInlinePillFilterOptionsAreSubsetOfAllOptions() {
+        // Inline pills only expose .all, .active, .completed
+        let inlinePillOptions: [ItemFilterOption] = [.all, .active, .completed]
+        XCTAssertEqual(inlinePillOptions.count, 3)
+        XCTAssertTrue(inlinePillOptions.contains(.all))
+        XCTAssertTrue(inlinePillOptions.contains(.active))
+        XCTAssertTrue(inlinePillOptions.contains(.completed))
+        XCTAssertFalse(inlinePillOptions.contains(.hasDescription))
+        XCTAssertFalse(inlinePillOptions.contains(.hasImages))
+    }
+
+    func testSheetOnlyFilterOptionHasNoMatchingPill() throws {
+        // When filter is set to .hasImages via sheet, no inline pill should be selected
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        try mainViewModel.addList(name: "Test List")
+        guard let list = mainViewModel.lists.first else { XCTFail("List should exist"); return }
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+
+        viewModel.updateFilterOption(.hasImages)
+
+        let inlinePillOptions: [ItemFilterOption] = [.all, .active, .completed]
+        XCTAssertFalse(inlinePillOptions.contains(viewModel.currentFilterOption),
+                       "Sheet-only filter .hasImages should not match any inline pill")
+    }
+
+    func testTappingPillOverridesSheetFilter() throws {
+        // When .hasImages is active and user taps "Active" pill, it should override
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        try mainViewModel.addList(name: "Test List")
+        guard let list = mainViewModel.lists.first else { XCTFail("List should exist"); return }
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+
+        viewModel.updateFilterOption(.hasImages)
+        XCTAssertEqual(viewModel.currentFilterOption, .hasImages)
+
+        // Simulate tapping "Active" pill
+        viewModel.updateFilterOption(.active)
+        XCTAssertEqual(viewModel.currentFilterOption, .active, "Tapping pill should override sheet filter")
+    }
+
+    func testFilteredItemsWithCompletedFilter() throws {
+        let dataManager = TestHelpers.createTestDataManager()
+        let mainViewModel = TestMainViewModel(dataManager: dataManager)
+        try mainViewModel.addList(name: "Test List")
+        guard let list = mainViewModel.lists.first else { XCTFail("List should exist"); return }
+        let viewModel = TestListViewModel(list: list, dataManager: dataManager)
+
+        viewModel.createItem(title: "Active Item", description: "")
+        viewModel.createItem(title: "Done Item", description: "")
+
+        guard let itemToCross = viewModel.items.first(where: { $0.title == "Done Item" }) else {
+            XCTFail("Should find item"); return
+        }
+        viewModel.toggleItemCrossedOut(itemToCross)
+
+        viewModel.updateFilterOption(.completed)
+        XCTAssertEqual(viewModel.filteredItems.count, 1)
+        XCTAssertEqual(viewModel.filteredItems.first?.title, "Done Item")
+    }
+
+    // MARK: - Show/Hide Crossed Out Items Tests (existing)
+
     func testListViewModelFilteredItemsEmptyWhenAllCrossedOut() throws {
         // Create a shared data manager
         let dataManager = TestHelpers.createTestDataManager()

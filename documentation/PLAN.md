@@ -425,7 +425,7 @@ Design shows a horizontal "All / Active / Done" pill bar inline above items. Cur
 
 **Connection:** Use `viewModel.currentFilterOption` / `viewModel.updateFilterOption()` — same binding the sheet uses.
 
-### Task N.1: iOS/iPad Inline Filter Pills
+### Task N.1: iOS/iPad Inline Filter Pills ✅ completed
 
 Add an `HStack` of 3 teal pill capsule buttons in `ListView.swift` between the header section (line ~90) and items section (line ~93). Insert as a new row inside the header `Section` or as a separate section. Three pills: "All", "Active", "Done" mapping to `.all`, `.active`, `.completed`. Selected: `Theme.Colors.primary` fill + white text. Unselected: `Color.clear` with muted border + secondary text. Use `Capsule()` clip shape.
 

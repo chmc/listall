@@ -87,6 +87,11 @@ struct ListView: View {
                 .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.md, bottom: Theme.Spacing.sm, trailing: Theme.Spacing.md))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+
+                filterPillsView
+                    .listRowInsets(EdgeInsets(top: 0, leading: Theme.Spacing.md, bottom: Theme.Spacing.sm, trailing: Theme.Spacing.md))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
             .listSectionSeparator(.hidden)
 
@@ -143,6 +148,10 @@ struct ListView: View {
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.top, 4)
                     .padding(.bottom, Theme.Spacing.sm)
+
+                    filterPillsView
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.bottom, Theme.Spacing.sm)
 
                     ItemsEmptyStateView(
                         hasItems: !viewModel.items.isEmpty,
@@ -323,6 +332,42 @@ struct ListView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.top, Theme.Spacing.sm)
         .padding(.bottom, 4)
+    }
+
+    // MARK: - Inline Filter Pills
+
+    private static let inlineFilterOptions: [(label: String, option: ItemFilterOption)] = [
+        ("All", .all),
+        ("Active", .active),
+        ("Done", .completed)
+    ]
+
+    private var filterPillsView: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            ForEach(Self.inlineFilterOptions, id: \.option) { pill in
+                let isSelected = viewModel.currentFilterOption == pill.option
+                Button {
+                    viewModel.updateFilterOption(pill.option)
+                } label: {
+                    Text(pill.label)
+                        .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                        .foregroundColor(isSelected ? .white : .secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? Theme.Colors.primary : Color.clear)
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(isSelected ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+            Spacer()
+        }
     }
 
     private var addItemButton: some View {
