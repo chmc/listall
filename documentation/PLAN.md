@@ -325,7 +325,7 @@ Same changes in `MacSettingsView.swift`.
 - `desktop--06-3-macos-create-list-sheet-light-mode.png` (macOS light)
 - Create button should be teal on all platforms
 
-### Task J.2: Edit Item Sheet — Teal Accent
+### Task J.2: Edit Item Sheet — Teal Accent ✅ completed
 
 "Save" button and "Add Photo" button: `.foregroundColor(Theme.Colors.primary)`.
 

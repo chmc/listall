@@ -131,9 +131,9 @@ extension ItemEditView {
 
                         if !isAtImageLimit {
                             Image(systemName: "camera.fill")
-                                .foregroundColor(Theme.Colors.secondary)
+                                .foregroundColor(Theme.Colors.primary)
                             Image(systemName: "photo.fill")
-                                .foregroundColor(Theme.Colors.secondary)
+                                .foregroundColor(Theme.Colors.primary)
                         }
                     }
                     .padding(Theme.Spacing.md)

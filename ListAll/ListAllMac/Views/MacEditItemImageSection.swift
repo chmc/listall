@@ -63,7 +63,7 @@ struct MacEditItemImageSection: View {
         Button(action: addImagesFromPicker) {
             Image(systemName: "plus.circle.fill")
                 .font(.title3)
-                .foregroundColor(isAddButtonHovering ? .accentColor : .secondary)
+                .foregroundColor(isAddButtonHovering ? .accentColor : Theme.Colors.primary)
                 .animation(.easeInOut(duration: 0.15), value: isAddButtonHovering)
         }
         .buttonStyle(.plain)
