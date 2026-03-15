@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// A row component displaying a list with its name and item counts
+/// A row component displaying a list with its name, item counts in `4/6 items` format, and a progress bar
 struct WatchListRowView: View {
     let list: List
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(list.name)
@@ -12,37 +12,58 @@ struct WatchListRowView: View {
                 .foregroundColor(.primary)
                 .accessibilityIdentifier("WatchListRow_Name_\(list.id.uuidString)")
 
-            // Show item count in iOS format: "7 (22) items"
-            Text(itemCountText)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .accessibilityIdentifier("WatchListRow_ItemCount_\(list.id.uuidString)")
+            HStack(spacing: 4) {
+                Text(activeCountText)
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundColor(.accentColor)
+
+                Text(watchLocalizedString("items", comment: "watchOS list row: items label"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                progressBar
+            }
+            .accessibilityIdentifier("WatchListRow_ItemCount_\(list.id.uuidString)")
         }
         .padding(.vertical, 4)
         .accessibilityIdentifier("WatchListRowView_\(list.id.uuidString)")
     }
-    
-    /// Format item count like iOS: "7 (22) items"
-    private var itemCountText: String {
-        let activeCount = list.activeItemCount
-        let totalCount = list.itemCount
-        
-        if totalCount == 0 {
-                return watchLocalizedString("No Items", comment: "watchOS list row: no items label")
-        } else if activeCount == totalCount {
-            // All items are active
-                return String.localizedStringWithFormat(
-                    watchLocalizedString("%lld items", comment: "watchOS list row: total items count"),
-                    Int64(totalCount)
+
+    // MARK: - Computed Properties (internal for testing)
+
+    /// Format: "4/6"
+    var activeCountText: String {
+        "\(list.activeItemCount)/\(list.itemCount)"
+    }
+
+    /// Ratio of completed items (0.0 to 1.0)
+    var progressRatio: Double {
+        guard list.itemCount > 0 else { return 0 }
+        return Double(list.crossedOutItemCount) / Double(list.itemCount)
+    }
+
+    // MARK: - Progress Bar
+
+    private var progressBar: some View {
+        GeometryReader { _ in
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.accentColor, Color.green],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
                 )
-        } else {
-            // Show active count with total in parentheses
-                return String.localizedStringWithFormat(
-                    watchLocalizedString("%lld (%lld) items", comment: "watchOS list row: active and total items count"),
-                    Int64(activeCount),
-                    Int64(totalCount)
+                .frame(width: 32 * progressRatio, height: 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 32, height: 3),
+                    alignment: .leading
                 )
         }
+        .frame(width: 32, height: 3)
     }
 }
 
@@ -55,9 +76,7 @@ struct WatchListRowView: View {
 
 #Preview("List with Items") {
     let list = List(name: "Shopping List")
-    // Note: In a real preview, we'd populate with items
     SwiftUI.List {
         WatchListRowView(list: list)
     }
 }
-

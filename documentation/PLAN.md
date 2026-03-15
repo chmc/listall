@@ -171,7 +171,7 @@ Modify iPad sidebar: selected row gets 3px teal left border + tinted bg + teal t
 
 **Note:** watchOS has no `Theme.swift` access — use `.accentColor` and inline color definitions.
 
-### Task E.1: List Row — Count Format + Progress Bar
+### Task E.1: List Row — Count Format + Progress Bar ✅ completed
 
 Change count from `4 (6) items` to `4/6` teal + "items" muted. Add inline 32x3px progress bar with teal-to-green gradient. All left-aligned.
 
