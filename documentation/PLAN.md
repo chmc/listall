@@ -240,7 +240,7 @@ Replace current icon+text status with styled capsule: "Active" teal capsule (dot
 - `ipad--06-6-item-detail-view.png` (iPad)
 - Status shows as colored capsule badge, not plain text
 
-### Task G.2: Detail Card Icons — Brand Teal
+### Task G.2: Detail Card Icons — Brand Teal ✅ completed
 
 Use `Theme.Colors.primary` for detail card icons (quantity, images) instead of system colors.
 

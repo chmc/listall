@@ -64,15 +64,15 @@ struct ItemDetailView: View {
                         title: "Quantity",
                         value: "\(viewModel.item.quantity)",
                         icon: "number",
-                        color: Theme.Colors.info
+                        color: Theme.Colors.primary
                     )
-                    
+
                     // Images count
                     DetailCard(
                         title: "Images",
                         value: "\(viewModel.item.imageCount)",
                         icon: "photo",
-                        color: Theme.Colors.warning
+                        color: Theme.Colors.primary
                     )
                 }
                 
