@@ -26,6 +26,9 @@ struct WatchListView: View {
             } else if viewModel.sortedItems.isEmpty {
                 // Show empty state (respects current filter)
                 emptyStateView
+            } else if viewModel.currentFilter == .all && viewModel.activeItemCount == 0 && viewModel.totalItemCount > 0 {
+                // Show "All Done!" celebration when every item is completed
+                allDoneView
             } else {
                 // Show items
                 itemsContent
@@ -136,6 +139,29 @@ struct WatchListView: View {
         .accessibilityIdentifier("WatchItemCountSummary")
     }
     
+    // MARK: - All Done Celebration
+    private var allDoneView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 40))
+                .foregroundColor(.green)
+
+            Text(watchLocalizedString("All Done!", comment: "watchOS celebration title when all items are completed"))
+                .font(.headline)
+
+            Text(watchLocalizedString("Every item checked off", comment: "watchOS celebration message when all items are completed"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Text("\(viewModel.totalItemCount)/\(viewModel.totalItemCount) \(watchLocalizedString("completed", comment: "watchOS all done state - completed count label"))")
+                .font(.caption2)
+                .foregroundColor(.green)
+        }
+        .padding()
+        .accessibilityIdentifier("WatchAllDoneState")
+    }
+
     // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(spacing: 12) {

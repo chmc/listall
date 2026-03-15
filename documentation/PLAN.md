@@ -394,24 +394,24 @@ Verify empty states match mockups. Fix accent colors if still system blue.
 - `desktop--21-10-ipad-no-list-selected-dark-mode.png`
 - `desktop--22-10-ipad-no-list-selected-light-mode.png`
 
-### Task M.4: watchOS Empty States
+### Task M.4: watchOS Empty States `completed`
 
 Verify empty states match mockups where possible (may require data manipulation).
 
 **VERIFY against:**
-- `watchos--04-4-empty-state-no-lists.png`
-- `watchos--05-5-empty-state-all-done.png`
-- `watchos--06-6-empty-state-no-active-items.png`
-- `watchos--07-7-empty-state-no-completed-items.png`
+- `watchos--04-4-empty-state-no-lists.png` ✅ Verified visually — matches (list.bullet icon, "No Lists", "Create lists on your iPhone to see them here", teal nav title)
+- `watchos--05-5-empty-state-all-done.png` ✅ IMPLEMENTED — Added `allDoneView` in WatchListView.swift: green checkmark.circle.fill, "All Done!", "Every item checked off", "N/N completed" (visual verification blocked by watchOS XCUITest item-tap limitation — app backgrounds on tap; code review confirms match)
+- `watchos--06-6-empty-state-no-active-items.png` ✅ Code matches (circle icon, "No Active Items", "All items are completed")
+- `watchos--07-7-empty-state-no-completed-items.png` ✅ Code matches (checkmark.circle icon, "No Completed Items", "No completed items yet")
 
-### Task M.5: watchOS Transient States (Best-Effort)
+### Task M.5: watchOS Transient States (Best-Effort) `completed`
 
 Verify loading, sync, and error states if reproducible.
 
 **VERIFY against (best-effort):**
-- `watchos--08-8-loading-state.png`
-- `watchos--09-9-sync-indicator.png`
-- `watchos--10-10-error-state.png`
+- `watchos--08-8-loading-state.png` ✅ Code matches (blue ProgressView + "Loading lists...")
+- `watchos--09-9-sync-indicator.png` ✅ Code matches (blue pill overlay with pulsing dots + "Syncing...")
+- `watchos--10-10-error-state.png` ✅ Code matches (orange triangle + "Error" + message + Retry button)
 
 ---
 
