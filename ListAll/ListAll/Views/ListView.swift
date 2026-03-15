@@ -155,6 +155,8 @@ struct ListView: View {
 
                     ItemsEmptyStateView(
                         hasItems: !viewModel.items.isEmpty,
+                        totalCount: viewModel.items.count,
+                        completedCount: viewModel.items.count - viewModel.activeItems.count,
                         onAddItem: {
                             showingCreateItem = true
                         }

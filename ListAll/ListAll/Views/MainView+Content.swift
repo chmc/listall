@@ -209,17 +209,41 @@ extension MainView {
                         showingCreateList = true
                     }
                 )
-            } else if #available(iOS 17.0, *) {
-                ContentUnavailableView("Select a List", systemImage: "list.bullet")
             } else {
+                // No list selected — show branded empty state
                 VStack(spacing: Theme.Spacing.lg) {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 60))
-                        .foregroundColor(Theme.Colors.secondary)
-                    Text("Select a List")
+                    // Icon in circle
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 32, weight: .medium))
+                        .foregroundColor(.secondary.opacity(0.4))
+                        .frame(width: 64, height: 64)
+                        .background(
+                            Circle()
+                                .fill(Color(.secondarySystemFill))
+                        )
+
+                    Text(String(localized: "Select a List"))
                         .font(Theme.Typography.title)
+                        .fontWeight(.bold)
+
+                    Text(String(localized: "Choose a list from the sidebar to view its items."))
+                        .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button(action: {
+                        showingCreateList = true
+                    }) {
+                        Text(String(localized: "Create New List"))
+                            .font(Theme.Typography.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Theme.Colors.brandGradient)
+                            .cornerRadius(Theme.CornerRadius.md)
+                    }
                 }
+                .padding(.horizontal, 40)
             }
         }
     }

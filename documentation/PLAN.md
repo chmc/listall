@@ -382,7 +382,7 @@ Verify empty states match mockups. Fix accent colors if still system blue.
 - `iphone--05-5-items-empty-state-no-items.png`
 - `iphone--06-6-all-done-celebration.png`
 
-### Task M.3: iPad Empty States
+### Task M.3: iPad Empty States ✅ completed
 
 Verify empty states match mockups. Fix accent colors if still system blue.
 

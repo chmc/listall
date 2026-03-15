@@ -1,17 +1,24 @@
 import SwiftUI
 
-/// Empty state view for items list with usage tips
+/// Empty state view for items list
 struct ItemsEmptyStateView: View {
     let hasItems: Bool
+    let totalCount: Int
+    let completedCount: Int
     let onAddItem: () -> Void
+
+    init(hasItems: Bool, totalCount: Int = 0, completedCount: Int = 0, onAddItem: @escaping () -> Void) {
+        self.hasItems = hasItems
+        self.totalCount = totalCount
+        self.completedCount = completedCount
+        self.onAddItem = onAddItem
+    }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
             if hasItems {
-                // All items crossed out - celebration state
                 celebrationState
             } else {
-                // No items yet - helpful state
                 helpfulState
             }
         }
@@ -20,7 +27,7 @@ struct ItemsEmptyStateView: View {
 
     private var celebrationState: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            // Celebration icon
+            // Green checkmark circle with glow
             ZStack {
                 Circle()
                     .fill(LinearGradient(
@@ -30,82 +37,53 @@ struct ItemsEmptyStateView: View {
                     .shadow(color: Theme.Colors.completedGreen.opacity(0.2), radius: 12)
                     .frame(width: 100, height: 100)
 
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(Theme.Colors.completedGreen)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 44, weight: .bold))
+                    .foregroundColor(.white)
             }
 
-            Text(String(localized: "All Done! 🎉"))
+            Text(String(localized: "All Done!"))
                 .font(Theme.Typography.largeTitle)
                 .fontWeight(.bold)
 
-            Text(String(localized: "You've completed all items in this list."))
+            Text(String(localized: "Every item has been checked off."))
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.secondary)
                 .multilineTextAlignment(.center)
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text(String(localized: "What's next?"))
-                    .font(Theme.Typography.headline)
-                    .padding(.top, Theme.Spacing.md)
-
-                TipRow(icon: "eye", text: "Toggle the eye icon to see completed items")
-                TipRow(icon: "plus.circle", text: "Add more items to continue")
-                TipRow(icon: "arrow.left", text: "Go back to view your other lists")
+            if totalCount > 0 {
+                Text(String(localized: "\(completedCount)/\(totalCount) items completed"))
+                    .font(Theme.Typography.callout)
+                    .foregroundColor(Theme.Colors.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-            )
         }
     }
 
     private var helpfulState: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            Image(systemName: "list.bullet.rectangle")
-                .font(.system(size: 60))
-                .foregroundColor(Theme.Colors.secondary)
+            // Plus icon in rounded square
+            Image(systemName: "plus.square")
+                .font(.system(size: 48, weight: .light))
+                .foregroundColor(.secondary.opacity(0.4))
 
             Text(String(localized: "No Items Yet"))
                 .font(Theme.Typography.title)
+                .fontWeight(.bold)
 
-            Text(String(localized: "Start adding items to your list"))
+            Text(String(localized: "Add your first item to get started."))
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.secondary)
                 .multilineTextAlignment(.center)
 
-            // Add item button
             Button(action: onAddItem) {
-                HStack {
-                    Image(systemName: Constants.UI.addIcon)
-                    Text(String(localized: "Add Your First Item"))
-                }
-                .font(Theme.Typography.headline)
-                .foregroundColor(.white)
-                .padding()
-                .background(Theme.Colors.brandGradient)
-                .cornerRadius(Theme.CornerRadius.md)
-            }
-
-            // Usage tips
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("💡 Quick Tips")
+                Text(String(localized: "Add First Item"))
                     .font(Theme.Typography.headline)
-                    .padding(.top, Theme.Spacing.md)
-
-                TipRow(icon: "hand.tap", text: "Tap an item to mark it complete")
-                TipRow(icon: "arrow.right.circle", text: "Tap the arrow to edit details")
-                TipRow(icon: "photo", text: "Add photos, quantities, and descriptions")
-                TipRow(icon: "wand.and.stars", text: "Get smart suggestions as you type")
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Theme.Colors.brandGradient)
+                    .cornerRadius(Theme.CornerRadius.md)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-            )
         }
     }
 }
@@ -136,5 +114,5 @@ struct TipRow: View {
 }
 
 #Preview("Items Empty State - All Complete") {
-    ItemsEmptyStateView(hasItems: true, onAddItem: { })
+    ItemsEmptyStateView(hasItems: true, totalCount: 6, completedCount: 6, onAddItem: { })
 }

@@ -31,6 +31,7 @@ extension MainView {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .tint(Theme.Colors.primary)
         .overlay {
             archiveBannerOverlay
         }

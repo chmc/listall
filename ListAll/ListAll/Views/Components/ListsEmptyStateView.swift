@@ -11,7 +11,7 @@ struct ListsEmptyStateView: View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
                 // Icon with subtle animation
-                Image(systemName: Constants.UI.listIcon)
+                Image(systemName: "line.3.horizontal")
                     .font(.system(size: 70))
                     .foregroundColor(Theme.Colors.primary.opacity(0.15))
                     .scaleEffect(isAnimating ? 1.0 : 0.95)
@@ -36,11 +36,6 @@ struct ListsEmptyStateView: View {
 
                 // Sample list templates
                 VStack(spacing: Theme.Spacing.md) {
-                    Text(String(localized: "Get Started with a Template"))
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(Theme.Colors.primary)
-                        .padding(.top, Theme.Spacing.md)
-
                     ForEach(SampleDataService.templates, id: \.name) { template in
                         SampleListButton(template: template) {
                             onCreateSampleList(template)
@@ -82,27 +77,22 @@ struct ListsEmptyStateView: View {
 
                 // Feature highlights
                 VStack(spacing: Theme.Spacing.md) {
-                    Text(String(localized: "ListAll Features"))
-                        .font(Theme.Typography.headline)
-                        .foregroundColor(Theme.Colors.primary)
-                        .padding(.top, Theme.Spacing.lg)
-
                     FeatureHighlight(
-                        icon: "photo",
-                        title: "Add Photos",
-                        description: "Attach images to your items"
+                        icon: "icloud.fill",
+                        title: String(localized: "iCloud sync across all devices"),
+                        description: ""
                     )
 
                     FeatureHighlight(
-                        icon: "arrow.left.arrow.right",
-                        title: "Share & Sync",
-                        description: "Share lists with family and friends"
+                        icon: "checkmark.circle.fill",
+                        title: String(localized: "Track progress with smart counts"),
+                        description: ""
                     )
 
                     FeatureHighlight(
-                        icon: "wand.and.stars",
-                        title: "Smart Suggestions",
-                        description: "Get intelligent item recommendations"
+                        icon: "photo.fill",
+                        title: String(localized: "Attach photos to any item"),
+                        description: ""
                     )
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -179,14 +169,20 @@ struct FeatureHighlight: View {
                 .foregroundColor(Theme.Colors.primary)
                 .frame(width: 32, height: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
+            if description.isEmpty {
                 Text(title)
                     .font(Theme.Typography.callout)
-                    .fontWeight(.medium)
-
-                Text(description)
-                    .font(Theme.Typography.caption)
                     .foregroundColor(Theme.Colors.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(Theme.Typography.callout)
+                        .fontWeight(.medium)
+
+                    Text(description)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.secondary)
+                }
             }
 
             Spacer()
