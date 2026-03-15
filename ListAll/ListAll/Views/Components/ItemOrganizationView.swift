@@ -9,91 +9,69 @@ struct ItemOrganizationView: View {
             Form {
                 // Sort Options Section
                 Section {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Text(String(localized: "Sort By"))
-                            .font(Theme.Typography.headline)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: Theme.Spacing.sm) {
-                            ForEach(ItemSortOption.allCases) { option in
-                                Button(action: {
-                                    viewModel.updateSortOption(option)
-                                }) {
-                                    HStack {
-                                        Image(systemName: option.systemImage)
-                                        Text(option.displayName)
-                                            .lineLimit(2)
-                                            .minimumScaleFactor(0.8)
-                                        Spacer()
-                                        if viewModel.currentSortOption == option {
-                                            Image(systemName: "checkmark")
-                                                .foregroundColor(Theme.Colors.primary)
-                                        }
-                                    }
-                                    .padding(Theme.Spacing.sm)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                            .fill(viewModel.currentSortOption == option ?
-                                                  Theme.Colors.primary.opacity(0.1) : Color.gray.opacity(0.1))
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .foregroundColor(.primary)
-                            }
-                        }
-                        
-                        // Sort Direction
-                        HStack {
-                            Text(String(localized: "Direction"))
-                                .font(Theme.Typography.body)
-                            
-                            Spacer()
-                            
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: Theme.Spacing.sm) {
+                        ForEach(ItemSortOption.pillDisplayOrder) { option in
+                            let isSelected = viewModel.currentSortOption == option
                             Button(action: {
-                                viewModel.updateSortDirection(
-                                    viewModel.currentSortDirection == .ascending ? .descending : .ascending
-                                )
+                                viewModel.updateSortOption(option)
                             }) {
-                                HStack {
-                                    Image(systemName: viewModel.currentSortDirection.systemImage)
-                                    Text(viewModel.currentSortDirection.displayName)
-                                }
-                                .padding(.horizontal, Theme.Spacing.md)
-                                .padding(.vertical, Theme.Spacing.sm)
-                                .background(
-                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                        .fill(Theme.Colors.primary.opacity(0.1))
-                                )
+                                Text(option.shortDisplayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Theme.Spacing.sm)
+                                    .padding(.horizontal, Theme.Spacing.xs)
+                                    .foregroundColor(isSelected ? .white : .secondary)
+                                    .background(
+                                        Capsule()
+                                            .fill(isSelected ? Theme.Colors.primary : Color.clear)
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .strokeBorder(isSelected ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1)
+                                    )
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .foregroundColor(Theme.Colors.primary)
-                        }
-                        
-                        // Manual reordering note
-                        if viewModel.currentSortOption == .orderNumber {
-                            HStack(spacing: Theme.Spacing.sm) {
-                                Image(systemName: "hand.draw")
-                                    .foregroundColor(.green)
-                                Text(String(localized: "Drag-to-reorder enabled"))
-                                    .font(Theme.Typography.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.top, Theme.Spacing.xs)
-                        } else {
-                            HStack(spacing: Theme.Spacing.sm) {
-                                Image(systemName: "hand.raised.slash")
-                                    .foregroundColor(.orange)
-                                Text(String(localized: "Drag-to-reorder disabled (change to 'Order' to enable)"))
-                                    .font(Theme.Typography.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.top, Theme.Spacing.xs)
                         }
                     }
+
+                    // Sort Direction
+                    HStack {
+                        Text(String(localized: "Direction"))
+                            .font(Theme.Typography.body)
+
+                        Spacer()
+
+                        Button(action: {
+                            viewModel.updateSortDirection(
+                                viewModel.currentSortDirection == .ascending ? .descending : .ascending
+                            )
+                        }) {
+                            HStack {
+                                Image(systemName: viewModel.currentSortDirection.systemImage)
+                                Text(viewModel.currentSortDirection.displayName)
+                            }
+                            .padding(.horizontal, Theme.Spacing.md)
+                            .padding(.vertical, Theme.Spacing.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
+                                    .fill(Theme.Colors.primary.opacity(0.1))
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(Theme.Colors.primary)
+                    }
                 } header: {
-                    Label(String(localized: "Sorting"), systemImage: "arrow.up.arrow.down")
+                    Text(String(localized: "Sort By"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .tracking(0.8)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
                 }
                 
                 // Filter Options Section

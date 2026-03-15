@@ -41,4 +41,43 @@ class ItemOrganizationViewTests: XCTestCase {
         let oldTitle = String(localized: "Organization")
         XCTAssertNotEqual(newTitle, oldTitle, "New title should differ from old 'Organization' title")
     }
+
+    // MARK: - Task O.2: Sort By — Pill Buttons
+
+    func testShortDisplayNameReturnsAbbreviatedLabels() {
+        // Mockup shows short labels: "Order", "A-Z", "Qty", "Created", "Modified"
+        XCTAssertEqual(ItemSortOption.orderNumber.shortDisplayName, String(localized: "Order"))
+        XCTAssertEqual(ItemSortOption.title.shortDisplayName, String(localized: "A-Z"))
+        XCTAssertEqual(ItemSortOption.quantity.shortDisplayName, String(localized: "Qty"))
+        XCTAssertEqual(ItemSortOption.createdAt.shortDisplayName, String(localized: "Created"))
+        XCTAssertEqual(ItemSortOption.modifiedAt.shortDisplayName, String(localized: "Modified"))
+    }
+
+    func testShortDisplayNameDiffersFromDisplayNameForSomeCases() {
+        // shortDisplayName should differ from displayName for title, quantity, createdAt, modifiedAt
+        XCTAssertNotEqual(ItemSortOption.title.shortDisplayName, ItemSortOption.title.displayName)
+        XCTAssertNotEqual(ItemSortOption.quantity.shortDisplayName, ItemSortOption.quantity.displayName)
+        XCTAssertNotEqual(ItemSortOption.createdAt.shortDisplayName, ItemSortOption.createdAt.displayName)
+        XCTAssertNotEqual(ItemSortOption.modifiedAt.shortDisplayName, ItemSortOption.modifiedAt.displayName)
+    }
+
+    func testAllSortOptionsHaveShortDisplayName() {
+        // Every case must have a non-empty shortDisplayName
+        for option in ItemSortOption.allCases {
+            XCTAssertFalse(option.shortDisplayName.isEmpty, "\(option) should have a non-empty shortDisplayName")
+        }
+    }
+
+    func testPillDisplayOrderMatchesMockup() {
+        // Mockup shows: Order, A-Z, Qty, Created, Modified
+        let expected: [ItemSortOption] = [.orderNumber, .title, .quantity, .createdAt, .modifiedAt]
+        XCTAssertEqual(ItemSortOption.pillDisplayOrder, expected, "Pill order should match mockup: Order, A-Z, Qty, Created, Modified")
+        XCTAssertEqual(ItemSortOption.pillDisplayOrder.count, ItemSortOption.allCases.count, "All sort options should be included")
+    }
+
+    func testSortBySectionHeaderExists() {
+        // Section header uses "Sort By" key with .textCase(.uppercase) for visual "SORT BY"
+        let header = String(localized: "Sort By")
+        XCTAssertEqual(header, "Sort By", "Sort section header key should be 'Sort By'")
+    }
 }

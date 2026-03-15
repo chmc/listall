@@ -25,6 +25,24 @@ enum ItemSortOption: String, CaseIterable, Identifiable, Codable {
         }
     }
     
+    /// Display order for pill buttons matching mockup: Order, A-Z, Qty, Created, Modified
+    static let pillDisplayOrder: [ItemSortOption] = [.orderNumber, .title, .quantity, .createdAt, .modifiedAt]
+
+    var shortDisplayName: String {
+        switch self {
+        case .orderNumber:
+            return String(localized: "Order")
+        case .title:
+            return String(localized: "A-Z")
+        case .createdAt:
+            return String(localized: "Created")
+        case .modifiedAt:
+            return String(localized: "Modified")
+        case .quantity:
+            return String(localized: "Qty")
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .orderNumber:

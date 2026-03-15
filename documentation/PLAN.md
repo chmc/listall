@@ -475,7 +475,7 @@ Change `.navigationTitle("Organization")` → `.navigationTitle("Sort & Filter")
 **VERIFY against:**
 - `iphone--13-11-sort-filter-sheet.png` — title "Sort & Filter", Reset (teal) + Done (teal)
 
-### Task O.2: Sort By — Pill Buttons
+### Task O.2: Sort By — Pill Buttons ✅ completed
 
 Replace `LazyVGrid` (lines 16-45) with teal pill capsule buttons in a wrapping `FlowLayout` or `LazyVGrid(columns: 3)`. 5 pills with short labels: "Order", "A-Z", "Qty", "Created", "Modified". Selected: `Theme.Colors.primary` fill + white text. Unselected: muted border capsule. Remove checkmark icons. Section header: "SORT BY" (uppercase, muted, like mockup).
 
