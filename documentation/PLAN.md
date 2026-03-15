@@ -314,7 +314,7 @@ Same changes in `MacSettingsView.swift`.
 **Files:** `ListAll/ListAll/Views/CreateListView.swift`, `ListAll/ListAll/Views/ItemEditView.swift`
 **Note:** Check if macOS uses separate sheet views or shares iOS views. If separate, apply same changes to macOS equivalents.
 
-### Task J.1: Create List Sheet — Teal Accent
+### Task J.1: Create List Sheet — Teal Accent ✅ completed
 
 "Create" button: `.foregroundColor(Theme.Colors.primary)`, `.fontWeight(.semibold)`.
 
