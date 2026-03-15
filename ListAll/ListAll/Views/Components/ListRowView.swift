@@ -1,22 +1,5 @@
 import SwiftUI
 
-// MARK: - Alert Type Enum
-enum ListRowAlert: Identifiable {
-    case archive
-    case permanentDelete
-    case duplicate
-    case shareError(String)
-    
-    var id: String {
-        switch self {
-        case .archive: return "archive"
-        case .permanentDelete: return "permanentDelete"
-        case .duplicate: return "duplicate"
-        case .shareError: return "shareError"
-        }
-    }
-}
-
 struct ListRowView: View {
     let list: List
     @ObservedObject var mainViewModel: MainViewModel
@@ -389,17 +372,5 @@ struct ListRowView: View {
 #Preview {
     SwiftUI.List {
         ListRowView(list: List(name: "Sample List"), mainViewModel: MainViewModel())
-    }
-}
-
-// MARK: - View Extension for Conditional Modifiers
-extension View {
-    @ViewBuilder
-    func `if`<Transform: View>(_ condition: Bool, transform: (Self) -> Transform) -> some View {
-        if condition {
-            transform(self)
-        } else {
-            self
-        }
     }
 }
