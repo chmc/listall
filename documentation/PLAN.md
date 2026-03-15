@@ -367,13 +367,13 @@ Verify/update remaining empty states to match mockups: teal CTA buttons, teal ic
 
 These screens were marked "Already Done" in the spec but were UNTESTED in the investigation. Verify they match mockups; fix if they don't.
 
-### Task M.1: iPhone Lists Overview — AccentColor Verification
+### Task M.1: iPhone Lists Overview — AccentColor Verification `completed`
 
 Verify that the AccentColor asset makes toolbar icons, tab bar, and count colors teal (not system blue). If not, add explicit `.tint(Theme.Colors.primary)` where needed.
 
 **VERIFY against:** `iphone--01-1-lists-overview.png` — toolbar icons, tab bar active color, count numbers should all be teal
 
-### Task M.2: iPhone Empty States
+### Task M.2: iPhone Empty States `completed`
 
 Verify empty states match mockups. Fix accent colors if still system blue.
 
