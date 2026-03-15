@@ -88,25 +88,24 @@ struct ItemDetailView: View {
             }
             .padding(Theme.Spacing.md)
         }
+        .safeAreaInset(edge: .bottom) {
+            ToggleCapsuleButton(
+                isCrossedOut: viewModel.item.isCrossedOut,
+                action: { viewModel.toggleCrossedOut() }
+            )
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.bottom, Theme.Spacing.md)
+            .animation(Theme.Animation.quick, value: viewModel.item.isCrossedOut)
+        }
         .navigationTitle("Item Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Button(action: {
-                        viewModel.toggleCrossedOut()
-                    }) {
-                        Image(systemName: viewModel.item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
-                            .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
-                    }
-                    
-                    Button(action: {
-                        showingEditView = true
-                    }) {
-                        Image(systemName: "pencil")
-                    }
+                Button(action: {
+                    showingEditView = true
+                }) {
+                    Text("Edit")
                 }
-                .padding(.horizontal, Theme.Spacing.sm)
             }
         }
         .sheet(isPresented: $showingEditView) {
@@ -177,6 +176,44 @@ struct MetadataRow: View {
                 .font(Theme.Typography.callout)
                 .foregroundColor(.primary)
         }
+    }
+}
+
+// MARK: - Toggle Button Configuration
+
+struct ToggleButtonConfiguration {
+    let isCrossedOut: Bool
+
+    var text: String {
+        isCrossedOut ? "Mark as Active" : "Mark as Completed"
+    }
+
+    var color: Color {
+        isCrossedOut ? Theme.Colors.primary : Theme.Colors.completedGreen
+    }
+}
+
+// MARK: - Toggle Capsule Button
+
+struct ToggleCapsuleButton: View {
+    let isCrossedOut: Bool
+    let action: () -> Void
+
+    private var config: ToggleButtonConfiguration {
+        ToggleButtonConfiguration(isCrossedOut: isCrossedOut)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Text(config.text)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(config.color)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(config.color.opacity(0.15))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -248,7 +248,7 @@ Use `Theme.Colors.primary` for detail card icons (quantity, images) instead of s
 - `iphone--03-3-item-detail-view.png` — info card icons should be teal
 - `ipad--06-6-item-detail-view.png` — same on iPad
 
-### Task G.3: "Mark as Completed" Button — Capsule
+### Task G.3: "Mark as Completed" Button — Capsule ✅ completed
 
 Style the toggle button: white text on green capsule (for "Mark as Completed") / white text on teal capsule (for "Mark as Active").
 
