@@ -78,7 +78,7 @@ struct MacSettingsGeneralTab: View {
                 Button(action: { showingAllTips = true }) {
                     HStack {
                         Image(systemName: "list.bullet")
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(Theme.Colors.primary)
                             .accessibilityHidden(true)
                         Text("View All Feature Tips")
                         Spacer()
@@ -94,7 +94,7 @@ struct MacSettingsGeneralTab: View {
                 Button(action: { showingResetTooltipsAlert = true }) {
                     HStack {
                         Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(Theme.Colors.primary)
                             .accessibilityHidden(true)
                         Text("Show All Tips Again")
                     }

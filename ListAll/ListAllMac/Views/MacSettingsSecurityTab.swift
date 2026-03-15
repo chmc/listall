@@ -30,7 +30,7 @@ struct MacSettingsSecurityTab: View {
                     Toggle(isOn: $requiresBiometricAuth) {
                         HStack {
                             Image(systemName: biometricType.iconName)
-                                .foregroundColor(.blue)
+                                .foregroundColor(Theme.Colors.primary)
                             Text("Require \(biometricType.displayName)")
                         }
                     }

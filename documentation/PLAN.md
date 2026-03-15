@@ -298,7 +298,7 @@ All toggles: `.tint(Theme.Colors.primary)`. Export/Import buttons: `.foregroundC
 - `ipad--11-9b-settings-view-bottom.png` (iPad bottom)
 - Toggles teal (not green), buttons teal (not blue)
 
-### Task I.2: macOS Settings — Toggle Tints + Button Colors
+### Task I.2: macOS Settings — Toggle Tints + Button Colors ✅ completed
 
 Same changes in `MacSettingsView.swift`.
 
