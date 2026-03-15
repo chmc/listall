@@ -263,7 +263,7 @@ Style the toggle button: white text on green capsule (for "Mark as Completed") /
 
 **File:** `ListAll/ListAll/Views/ArchivedListView.swift`
 
-### Task H.1: Orange Archived Badge
+### Task H.1: Orange Archived Badge ✅ completed
 
 Replace current archive indicator with orange "Archived" capsule: archivebox icon + "Archived" text in `.orange`, with `orange.opacity(0.12)` background capsule.
 
