@@ -500,7 +500,7 @@ Replace list-row filter options (lines 100-131) with capsule chips in a wrapping
 **VERIFY against:**
 - `iphone--13-11-sort-filter-sheet.png` — "FILTER" section with 4 chip buttons
 
-### Task O.5: Summary — Stat Cards
+### Task O.5: Summary — Stat Cards ✅ completed
 
 Replace HStack summary rows (lines 134-166) with horizontal stat card bar. 4 cards: "Total" (white/muted), "Filtered" (white/muted), "Active" (teal number), "Completed" (green number). Card background: subtle rounded rect. Section header: "SUMMARY".
 

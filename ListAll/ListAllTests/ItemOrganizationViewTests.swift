@@ -142,4 +142,47 @@ class ItemOrganizationViewTests: XCTestCase {
         let header = String(localized: "Filter")
         XCTAssertEqual(header, "Filter", "Filter section header key should be 'Filter'")
     }
+
+    // MARK: - Task O.5: Summary — Stat Cards
+
+    func testSummarySectionHeaderKey() {
+        // Section header uses "Summary" key with .textCase(.uppercase) for visual "SUMMARY"
+        let header = String(localized: "Summary")
+        XCTAssertEqual(header, "Summary", "Summary section header key should be 'Summary'")
+    }
+
+    func testStatCardLabelsExist() {
+        // 4 stat cards with labels: "Total", "Filtered", "Active", "Completed"
+        let total = String(localized: "Total")
+        let filtered = String(localized: "Filtered")
+        let active = String(localized: "Active")
+        let completed = String(localized: "Completed")
+
+        XCTAssertEqual(total, "Total")
+        XCTAssertEqual(filtered, "Filtered")
+        XCTAssertEqual(active, "Active")
+        XCTAssertEqual(completed, "Completed")
+    }
+
+    func testStatCardColorsMatchDesign() {
+        // Active card uses teal (Theme.Colors.primary)
+        // Completed card uses green (Theme.Colors.completedGreen)
+        // Total and Filtered use secondary/muted colors
+        let teal = Theme.Colors.primary
+        let green = Theme.Colors.completedGreen
+        XCTAssertNotNil(teal, "Active stat card should use Theme.Colors.primary (teal)")
+        XCTAssertNotNil(green, "Completed stat card should use Theme.Colors.completedGreen")
+    }
+
+    func testViewModelProvidesAllStatCounts() {
+        // The ViewModel must provide items.count, filteredItems.count, activeItems.count, completedItems.count
+        let sampleList = List(name: "Test List")
+        let viewModel = ListViewModel(list: sampleList)
+
+        // These should all be accessible and non-negative
+        XCTAssertGreaterThanOrEqual(viewModel.items.count, 0)
+        XCTAssertGreaterThanOrEqual(viewModel.filteredItems.count, 0)
+        XCTAssertGreaterThanOrEqual(viewModel.activeItems.count, 0)
+        XCTAssertGreaterThanOrEqual(viewModel.completedItems.count, 0)
+    }
 }

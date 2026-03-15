@@ -119,39 +119,38 @@ struct ItemOrganizationView: View {
                         .textCase(.uppercase)
                 }
                 
-                // Current Status Section
+                // Summary Stat Cards Section
                 Section {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        HStack {
-                            Text(String(localized: "Total Items:"))
-                            Spacer()
-                            Text("\(viewModel.items.count)")
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack {
-                            Text(String(localized: "Filtered Items:"))
-                            Spacer()
-                            Text("\(viewModel.filteredItems.count)")
-                                .foregroundColor(Theme.Colors.primary)
-                        }
-                        
-                        HStack {
-                            Text(String(localized: "Active Items:"))
-                            Spacer()
-                            Text("\(viewModel.activeItems.count)")
-                                .foregroundColor(.green)
-                        }
-                        
-                        HStack {
-                            Text(String(localized: "Completed Items:"))
-                            Spacer()
-                            Text("\(viewModel.completedItems.count)")
-                                .foregroundColor(.orange)
-                        }
+                    HStack(spacing: 0) {
+                        statCard(
+                            value: viewModel.items.count,
+                            label: String(localized: "Total"),
+                            valueColor: .secondary
+                        )
+                        statCard(
+                            value: viewModel.filteredItems.count,
+                            label: String(localized: "Filtered"),
+                            valueColor: .secondary
+                        )
+                        statCard(
+                            value: viewModel.activeItems.count,
+                            label: String(localized: "Active"),
+                            valueColor: Theme.Colors.primary
+                        )
+                        statCard(
+                            value: viewModel.completedItems.count,
+                            label: String(localized: "Completed"),
+                            valueColor: Theme.Colors.completedGreen
+                        )
                     }
+                    .padding(.vertical, Theme.Spacing.sm)
                 } header: {
-                    Label(String(localized: "Summary"), systemImage: "chart.bar")
+                    Text(String(localized: "Summary"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .tracking(0.8)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
                 }
             }
             .tint(Theme.Colors.primary)
@@ -181,6 +180,23 @@ struct ItemOrganizationView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Stat Card Helper
+
+extension ItemOrganizationView {
+    func statCard(value: Int, label: String, valueColor: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(value)")
+                .font(.title2.weight(.bold).monospacedDigit())
+                .foregroundColor(valueColor)
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
