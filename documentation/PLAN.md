@@ -231,7 +231,7 @@ Apply teal accent to macOS segmented control / filter in content area.
 
 **File:** `ListAll/ListAll/Views/ItemDetailView.swift` (file already exists — style existing view, NOT creating new)
 
-### Task G.1: Status Badge — Capsule Styling
+### Task G.1: Status Badge — Capsule Styling ✅ completed
 
 Replace current icon+text status with styled capsule: "Active" teal capsule (dot + text) / "Completed" green capsule (checkmark + text).
 

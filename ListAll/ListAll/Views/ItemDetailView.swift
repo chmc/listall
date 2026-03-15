@@ -23,17 +23,9 @@ struct ItemDetailView: View {
                         .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.secondary : .primary)
                         .animation(Theme.Animation.quick, value: viewModel.item.isCrossedOut)
                     
-                    // Status indicator
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: viewModel.item.isCrossedOut ? Constants.UI.checkmarkIcon : Constants.UI.circleIcon)
-                            .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
-                            .font(.title3)
-                        
-                        Text(viewModel.item.isCrossedOut ? "Completed" : "Pending")
-                            .font(Theme.Typography.callout)
-                            .foregroundColor(viewModel.item.isCrossedOut ? Theme.Colors.success : Theme.Colors.secondary)
-                    }
-                    .animation(Theme.Animation.quick, value: viewModel.item.isCrossedOut)
+                    // Status badge capsule
+                    StatusBadgeView(isCrossedOut: viewModel.item.isCrossedOut)
+                        .animation(Theme.Animation.quick, value: viewModel.item.isCrossedOut)
                 }
                 
                 Divider()
@@ -185,6 +177,46 @@ struct MetadataRow: View {
                 .font(Theme.Typography.callout)
                 .foregroundColor(.primary)
         }
+    }
+}
+
+// MARK: - Status Badge
+
+struct StatusBadgeConfiguration {
+    let isCrossedOut: Bool
+
+    var text: String {
+        isCrossedOut ? "Completed" : "Active"
+    }
+
+    var iconName: String {
+        isCrossedOut ? "checkmark" : "circle.fill"
+    }
+
+    var color: Color {
+        isCrossedOut ? Theme.Colors.completedGreen : Theme.Colors.primary
+    }
+}
+
+struct StatusBadgeView: View {
+    let isCrossedOut: Bool
+
+    private var config: StatusBadgeConfiguration {
+        StatusBadgeConfiguration(isCrossedOut: isCrossedOut)
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: config.iconName)
+                .font(.system(size: isCrossedOut ? 10 : 6))
+            Text(config.text)
+                .font(.system(size: 13, weight: .medium))
+        }
+        .foregroundColor(config.color)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(config.color.opacity(0.12))
+        .clipShape(Capsule())
     }
 }
 
