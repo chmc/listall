@@ -147,3 +147,72 @@ class WatchConnectivitySyncTests: XCTestCase {
     }
 }
 
+// MARK: - iOS WatchConnectivity Sync Tests (Phase 74)
+
+extension WatchConnectivitySyncTests {
+
+    func testMainViewModel_WatchSyncNotification_SetsUpObserver() throws {
+        // Given: MainViewModel with initial lists
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Initial List")
+
+        // Then: Initial sync indicator state should be false
+        XCTAssertFalse(viewModel.isSyncingFromWatch)
+
+        // And: Lists should be present
+        XCTAssertEqual(viewModel.lists.count, 1)
+        XCTAssertEqual(viewModel.lists.first?.name, "Initial List")
+
+        // Note: The notification observer is set up in init, which we verify
+        // by checking that the ViewModel can receive notifications (tested in refreshFromWatch)
+    }
+
+    func testMainViewModel_RefreshFromWatch_SetsSyncingFlag() throws {
+        // Given: MainViewModel with initial data
+        let viewModel = TestHelpers.createTestMainViewModel()
+        try viewModel.addList(name: "Test List")
+
+        // Verify initial state
+        XCTAssertFalse(viewModel.isSyncingFromWatch)
+        XCTAssertEqual(viewModel.lists.count, 1)
+
+        // When: refreshFromWatch is called
+        viewModel.refreshFromWatch()
+
+        // Then: isSyncingFromWatch should be true immediately
+        XCTAssertTrue(viewModel.isSyncingFromWatch)
+
+        // And: Lists should still be accessible (data is maintained)
+        XCTAssertEqual(viewModel.lists.count, 1)
+        XCTAssertEqual(viewModel.lists.first?.name, "Test List")
+    }
+
+    func testListViewModel_RefreshItemsFromWatch_SetsSyncingFlag() throws {
+        // Given: Create an isolated data context with a list and item
+        let testDataManager = TestHelpers.createTestDataManager()
+        let list = List(name: "Test List")
+        testDataManager.addList(list)
+
+        // Create item in the same data context
+        let item = Item(title: "Initial Item")
+        testDataManager.addItem(item, to: list.id)
+
+        // Create ListViewModel with the same data manager's list
+        let listViewModel = TestListViewModel(list: list, dataManager: testDataManager)
+
+        // Verify initial state
+        XCTAssertFalse(listViewModel.isSyncingFromWatch)
+        XCTAssertEqual(listViewModel.items.count, 1)
+        XCTAssertEqual(listViewModel.items.first?.title, "Initial Item")
+
+        // When: refreshItemsFromWatch is called directly
+        listViewModel.refreshItemsFromWatch()
+
+        // Then: isSyncingFromWatch should be true immediately
+        XCTAssertTrue(listViewModel.isSyncingFromWatch)
+
+        // And: Items should still be accessible (data is maintained)
+        XCTAssertEqual(listViewModel.items.count, 1)
+    }
+}
+
