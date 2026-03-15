@@ -104,12 +104,14 @@ struct WatchListView: View {
     
     // MARK: - Item Count Summary
     private var itemCountSummary: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             // Active items count
             if viewModel.activeItemCount > 0 {
                 Text("\(viewModel.activeItemCount) \(watchLocalizedString("watch_status_active", comment: "watchOS status count - active items label"))")
                     .font(.caption2)
                     .foregroundColor(.teal)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .accessibilityIdentifier("WatchActiveItemCount")
             }
 
@@ -118,6 +120,8 @@ struct WatchListView: View {
                 Text("\(viewModel.completedItemCount) \(watchLocalizedString("watch_status_done", comment: "watchOS status count - completed items label"))")
                     .font(.caption2)
                     .foregroundColor(.green)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .accessibilityIdentifier("WatchCompletedItemCount")
             }
 
@@ -128,11 +132,11 @@ struct WatchListView: View {
             ))
                 .font(.caption2)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .accessibilityIdentifier("WatchTotalItemCount")
-
-            Spacer()
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 4)
         .padding(.vertical, 4)
         .background(Color.secondary.opacity(0.1))
         .cornerRadius(8)
