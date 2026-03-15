@@ -16,127 +16,77 @@ struct MacListsEmptyStateView: View {
     let onCreateSampleList: (SampleDataService.SampleListTemplate) -> Void
     let onCreateCustomList: () -> Void
 
-    @State private var isAnimating = false
-
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Icon with subtle animation
-                Image(systemName: Constants.UI.listIcon)
-                    .font(.system(size: 60))
-                    .foregroundColor(Theme.Colors.primary.opacity(0.15))
-                    .scaleEffect(isAnimating ? 1.0 : 0.95)
-                    .animation(
-                        Animation.easeInOut(duration: 2.0)
-                            .repeatForever(autoreverses: true),
-                        value: isAnimating
-                    )
-                    .padding(.top, 32)
-                    .accessibilityHidden(true)
+                Spacer()
+                    .frame(height: 32)
+
+                // Teal circle with list icon
+                ZStack {
+                    Circle()
+                        .fill(Theme.Colors.primary.opacity(0.15))
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 32, weight: .medium))
+                        .foregroundColor(Theme.Colors.primary)
+                }
+                .accessibilityHidden(true)
 
                 // Welcome message
                 VStack(spacing: 8) {
                     Text(String(localized: "Welcome to ListAll"))
-                        .font(.largeTitle)
+                        .font(.title)
                         .fontWeight(.bold)
                         .accessibilityAddTraits(.isHeader)
 
-                    Text(String(localized: "Organize everything in one place"))
+                    Text(String(localized: "Create your first list or start from a template"))
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
 
-                // Sample list templates
-                VStack(spacing: 12) {
-                    Text(String(localized: "Get Started with a Template"))
-                        .font(.headline)
-                        .foregroundColor(Theme.Colors.primary)
-                        .padding(.top, 8)
-
+                // 2x2 Template grid
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ], spacing: 12) {
                     ForEach(SampleDataService.templates, id: \.name) { template in
-                        MacSampleListButton(template: template) {
+                        MacTemplateGridButton(template: template) {
                             onCreateSampleList(template)
                         }
                     }
                 }
                 .padding(.horizontal, 16)
 
-                // Divider with "or" text
-                HStack {
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(height: 1)
-                    Text(String(localized: "or"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 8)
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(height: 1)
-                }
-                .padding(.horizontal, 32)
-
-                // Create custom list button
+                // Create custom list button - solid teal
                 Button(action: onCreateCustomList) {
-                    HStack(spacing: 8) {
-                        Image(systemName: Constants.UI.addIcon)
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(String(localized: "Create Custom List"))
-                            .font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: 350)
-                    .padding(.vertical, 12)
-                    .background(Theme.Colors.brandGradient)
-                    .cornerRadius(8)
+                    Text(String(localized: "Create Custom List"))
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: 350)
+                        .padding(.vertical, 12)
+                        .background(Theme.Colors.primary)
+                        .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens sheet to create new list")
                 .padding(.horizontal, 16)
 
-                // Feature highlights
-                VStack(spacing: 12) {
-                    Text(String(localized: "ListAll Features"))
-                        .font(.headline)
-                        .foregroundColor(Theme.Colors.primary)
-                        .padding(.top, 16)
-
-                    MacFeatureHighlight(
-                        icon: "photo",
-                        title: String(localized: "Add Photos"),
-                        description: String(localized: "Attach images to your items")
-                    )
-
-                    MacFeatureHighlight(
-                        icon: "arrow.left.arrow.right",
-                        title: String(localized: "Share & Sync"),
-                        description: String(localized: "Share lists with family and friends")
-                    )
-
-                    MacFeatureHighlight(
-                        icon: "wand.and.stars",
-                        title: String(localized: "Smart Suggestions"),
-                        description: String(localized: "Get intelligent item recommendations")
-                    )
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
+                Spacer()
+                    .frame(height: 32)
             }
             .frame(maxWidth: 450)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            isAnimating = true
-        }
     }
 }
 
-// MARK: - Sample List Button
+// MARK: - Template Grid Button
 
-/// Button for creating a sample list from a template.
-/// macOS-native styling with hover effects.
-struct MacSampleListButton: View {
+/// Compact template button for the 2x2 grid in welcome state.
+struct MacTemplateGridButton: View {
     let template: SampleDataService.SampleListTemplate
     let action: () -> Void
 
@@ -144,34 +94,28 @@ struct MacSampleListButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 // Icon
                 Image(systemName: template.icon)
-                    .font(.system(size: 22))
+                    .font(.system(size: 20))
                     .foregroundColor(Theme.Colors.primary)
-                    .frame(width: 36, height: 36)
-                    .background(Theme.Colors.primary.opacity(0.1))
-                    .cornerRadius(6)
+                    .frame(width: 32, height: 32)
 
                 // Text content
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     Text(template.name)
-                        .font(.headline)
+                        .font(.callout)
+                        .fontWeight(.medium)
                         .foregroundColor(.primary)
 
-                    Text(template.description)
+                    Text("\(template.sampleItems.count) \(String(localized: "items"))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
-
-                // Chevron
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary)
             }
-            .padding(12)
+            .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(NSColor.controlBackgroundColor))
@@ -179,11 +123,10 @@ struct MacSampleListButton: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(
-                        isHovering ? Theme.Colors.primary.opacity(0.5) : Theme.Colors.primary.opacity(0.2),
+                        isHovering ? Theme.Colors.primary.opacity(0.5) : Color.primary.opacity(0.08),
                         lineWidth: 1
                     )
             )
-            .scaleEffect(isHovering ? 1.01 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -192,7 +135,7 @@ struct MacSampleListButton: View {
             }
         }
         .accessibilityLabel("\(template.name) template")
-        .accessibilityHint("Creates a new list with sample \(template.name.lowercased()) items")
+        .accessibilityHint("Creates a new list with \(template.sampleItems.count) sample items")
     }
 }
 

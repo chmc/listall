@@ -168,6 +168,14 @@ struct MacListDetailView: View {
                             emptyListView
                         } else if !viewModel.searchText.isEmpty {
                             searchEmptyStateView
+                        } else if items.allSatisfy({ $0.isCrossedOut }) {
+                            // All items completed - show celebration
+                            MacItemsEmptyStateView(
+                                hasItems: true,
+                                isArchived: isCurrentListArchived,
+                                totalItems: items.count,
+                                onAddItem: { showingAddItemSheet = true }
+                            )
                         } else {
                             noMatchingItemsView
                         }

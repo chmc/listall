@@ -351,7 +351,7 @@ Icon: `.secondary.opacity(0.4)`. Subtitle: "Select a list from the sidebar or cr
 - `desktop--02-1-macos-sidebar-no-list-selected-light-mode.png`
 - Empty state has teal CTA button, proper subtitle
 
-### Task K.2: Other macOS Empty States — No Items + All Done + Welcome + Search
+### Task K.2: Other macOS Empty States — No Items + All Done + Welcome + Search `completed`
 
 Verify/update remaining empty states to match mockups: teal CTA buttons, teal icons, proper text.
 

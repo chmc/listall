@@ -15,11 +15,13 @@ import AppKit
 struct MacItemsEmptyStateView: View {
     let hasItems: Bool
     let isArchived: Bool
+    let totalItems: Int
     let onAddItem: () -> Void
 
-    init(hasItems: Bool, isArchived: Bool = false, onAddItem: @escaping () -> Void) {
+    init(hasItems: Bool, isArchived: Bool = false, totalItems: Int = 0, onAddItem: @escaping () -> Void) {
         self.hasItems = hasItems
         self.isArchived = isArchived
+        self.totalItems = totalItems
         self.onAddItem = onAddItem
     }
 
@@ -88,73 +90,66 @@ struct MacItemsEmptyStateView: View {
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text(String(localized: "You've completed all items in this list."))
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            // Tips
-            VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "What's next?"))
-                    .font(.headline)
-                    .padding(.top, 8)
-
-                MacTipRow(icon: "eye", text: String(localized: "Toggle the eye icon to see completed items"))
-                MacTipRow(icon: "plus.circle", text: String(localized: "Add more items to continue"))
-                MacTipRow(icon: "arrow.left", text: String(localized: "Go back to view your other lists"))
+            if totalItems > 0 {
+                Text("\(totalItems)/\(totalItems) \(String(localized: "items completed"))")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text(String(localized: "You've completed all items in this list."))
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
         }
     }
 
     @ViewBuilder
     private var helpfulState: some View {
         VStack(spacing: 20) {
-            Image(systemName: "list.bullet.rectangle")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
+            // Icon in circle matching mockup
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.primary.opacity(0.1))
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "square")
+                    .font(.system(size: 32))
+                    .foregroundColor(.secondary.opacity(0.4))
+            }
+            .accessibilityHidden(true)
 
             Text(String(localized: "No Items Yet"))
                 .font(.title2)
+                .fontWeight(.bold)
 
             Text(String(localized: "Start adding items to your list"))
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
-            // Add item button
+            // Add item button - teal
             Button(action: onAddItem) {
-                HStack {
-                    Image(systemName: Constants.UI.addIcon)
-                    Text(String(localized: "Add Your First Item"))
-                }
-                .font(.headline)
+                Text(String(localized: "Add First Item"))
+                    .font(.headline)
             }
             .buttonStyle(.borderedProminent)
+            .tint(Theme.Colors.primary)
 
-            // Usage tips
+            // Usage tips - simple bullet text matching mockup
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Quick Tips"))
-                    .font(.headline)
-                    .padding(.top, 8)
+                Text(String(localized: "QUICK TIPS"))
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .textCase(.uppercase)
+                    .padding(.bottom, 2)
 
-                MacTipRow(icon: "hand.tap", text: String(localized: "Click an item to mark it complete"))
-                MacTipRow(icon: "pencil", text: String(localized: "Double-click to edit details"))
-                MacTipRow(icon: "photo", text: String(localized: "Add photos, quantities, and descriptions"))
-                MacTipRow(icon: "wand.and.stars", text: String(localized: "Get smart suggestions as you type"))
+                MacSimpleTipRow(text: String(localized: "Tap + to add items quickly"))
+                MacSimpleTipRow(text: String(localized: "Drag to reorder items"))
+                MacSimpleTipRow(text: String(localized: "Swipe left to delete"))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
         }
     }
 
@@ -172,6 +167,27 @@ struct MacItemsEmptyStateView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 48))
                 .foregroundColor(Theme.Colors.completedGreen)
+        }
+    }
+}
+
+// MARK: - Simple Tip Row
+
+/// Simple bullet-point tip row for empty state views (no icon).
+struct MacSimpleTipRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("\u{2022}")
+                .font(.callout)
+                .foregroundColor(.secondary.opacity(0.5))
+
+            Text(text)
+                .font(.callout)
+                .foregroundColor(.secondary)
+
+            Spacer()
         }
     }
 }
@@ -209,7 +225,7 @@ struct MacTipRow: View {
 }
 
 #Preview("Items Empty State - All Complete") {
-    MacItemsEmptyStateView(hasItems: true, isArchived: false, onAddItem: { })
+    MacItemsEmptyStateView(hasItems: true, totalItems: 6, onAddItem: { })
         .frame(width: 500, height: 400)
 }
 

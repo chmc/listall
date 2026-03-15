@@ -17,6 +17,7 @@ extension MacListDetailView {
         MacItemsEmptyStateView(
             hasItems: false,
             isArchived: isCurrentListArchived,
+            totalItems: items.count,
             onAddItem: {
                 showingAddItemSheet = true
             }

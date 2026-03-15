@@ -18,60 +18,53 @@ struct MacSearchEmptyStateView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            // Search icon
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
+            // Search icon in circle
+            ZStack {
+                Circle()
+                    .fill(Color.secondary.opacity(0.1))
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 32))
+                    .foregroundColor(.secondary.opacity(0.4))
+            }
+            .accessibilityHidden(true)
 
             // Title
             Text(String(localized: "No Results Found"))
                 .font(.title2)
-                .fontWeight(.semibold)
+                .fontWeight(.bold)
                 .accessibilityAddTraits(.isHeader)
 
-            // Search query display
-            VStack(spacing: 4) {
-                Text(String(localized: "No items match"))
+            // Search query display - single line with teal term
+            HStack(spacing: 4) {
+                Text(String(localized: "No items matching"))
                     .font(.body)
                     .foregroundColor(.secondary)
 
                 Text("\"\(searchText)\"")
                     .font(.body)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
+                    .foregroundColor(Theme.Colors.primary)
+                    .lineLimit(1)
             }
 
-            // Clear search button
+            // Clear search button - bordered (not prominent) per mockup
             Button(action: onClear) {
-                HStack(spacing: 6) {
-                    Image(systemName: "xmark.circle")
-                    Text(String(localized: "Clear Search"))
-                }
-                .font(.headline)
+                Text(String(localized: "Clear Search"))
+                    .font(.callout)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
             .accessibilityLabel("Clear search")
             .accessibilityHint("Clears the search text to show all items")
 
-            // Tips section
-            VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Search Tips"))
-                    .font(.headline)
-                    .padding(.top, 8)
-
-                MacTipRow(icon: "textformat", text: String(localized: "Check for typos in your search"))
-                MacTipRow(icon: "magnifyingglass", text: String(localized: "Try searching for part of the item name"))
-                MacTipRow(icon: "line.3.horizontal.decrease", text: String(localized: "Check if filters are hiding results"))
+            // Tips - simple centered bullet text
+            VStack(spacing: 6) {
+                MacCenteredTipRow(text: String(localized: "Check spelling or try fewer words"))
+                MacCenteredTipRow(text: String(localized: "Search matches item names and notes"))
+                MacCenteredTipRow(text: String(localized: "Try searching in a different list"))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
+            .padding(.top, 4)
         }
         .padding(.horizontal, 32)
         .accessibilityElement(children: .contain)
@@ -79,9 +72,28 @@ struct MacSearchEmptyStateView: View {
     }
 }
 
+// MARK: - Centered Tip Row
+
+/// Simple centered bullet-point tip for search empty state.
+struct MacCenteredTipRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("\u{2022}")
+                .font(.callout)
+                .foregroundColor(.secondary.opacity(0.5))
+
+            Text(text)
+                .font(.callout)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
 #Preview("Search Empty State") {
     MacSearchEmptyStateView(
-        searchText: "nonexistent item",
+        searchText: "avocado toast",
         onClear: { }
     )
     .frame(width: 500, height: 450)
