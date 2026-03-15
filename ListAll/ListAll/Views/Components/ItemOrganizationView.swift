@@ -86,36 +86,37 @@ struct ItemOrganizationView: View {
                 
                 // Filter Options Section
                 Section {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        ForEach(ItemFilterOption.allCases) { option in
+                    FilterChipFlowLayout(spacing: Theme.Spacing.sm) {
+                        ForEach(ItemFilterOption.chipDisplayOrder) { option in
+                            let isSelected = viewModel.currentFilterOption == option
                             Button(action: {
                                 viewModel.updateFilterOption(option)
                             }) {
-                                HStack {
-                                    Image(systemName: option.systemImage)
-                                        .frame(width: 20)
-                                    Text(option.displayName)
-                                        .lineLimit(2)
-                                        .minimumScaleFactor(0.8)
-                                    Spacer()
-                                    if viewModel.currentFilterOption == option {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(Theme.Colors.primary)
-                                    }
-                                }
-                                .padding(Theme.Spacing.sm)
-                                .background(
-                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                        .fill(viewModel.currentFilterOption == option ?
-                                              Theme.Colors.primary.opacity(0.1) : Color.gray.opacity(0.1))
-                                )
+                                Text(option.chipDisplayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .lineLimit(1)
+                                    .padding(.vertical, Theme.Spacing.sm)
+                                    .padding(.horizontal, Theme.Spacing.md)
+                                    .foregroundColor(isSelected ? .white : .secondary)
+                                    .background(
+                                        Capsule()
+                                            .fill(isSelected ? Theme.Colors.primary : Color.clear)
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .strokeBorder(isSelected ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1)
+                                    )
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .foregroundColor(.primary)
                         }
                     }
                 } header: {
-                    Label(String(localized: "Filtering"), systemImage: "line.3.horizontal.decrease")
+                    Text(String(localized: "Filter"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .tracking(0.8)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
                 }
                 
                 // Current Status Section
@@ -180,6 +181,49 @@ struct ItemOrganizationView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Flow Layout for Filter Chips
+
+struct FilterChipFlowLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrangeSubviews(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrangeSubviews(proposal: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)
+        for (index, subview) in subviews.enumerated() {
+            let point = CGPoint(x: bounds.minX + result.positions[index].x, y: bounds.minY + result.positions[index].y)
+            subview.place(at: point, anchor: .topLeading, proposal: .unspecified)
+        }
+    }
+
+    private func arrangeSubviews(proposal: ProposedViewSize, subviews: Subviews) -> (positions: [CGPoint], size: CGSize) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var maxX: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += rowHeight + spacing
+                rowHeight = 0
+            }
+            positions.append(CGPoint(x: currentX, y: currentY))
+            rowHeight = max(rowHeight, size.height)
+            currentX += size.width + spacing
+            maxX = max(maxX, currentX - spacing)
+        }
+
+        return (positions, CGSize(width: maxX, height: currentY + rowHeight))
     }
 }
 

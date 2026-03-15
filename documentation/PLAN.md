@@ -491,7 +491,7 @@ Replace single direction toggle (lines 48-72) with two side-by-side pills: "Asce
 **VERIFY against:**
 - `iphone--13-11-sort-filter-sheet.png` — "SORT DIRECTION" with two equal-width pills
 
-### Task O.4: Filter — Chip Buttons
+### Task O.4: Filter — Chip Buttons ✅ completed
 
 Replace list-row filter options (lines 100-131) with capsule chips in a wrapping layout. 4 visible chips: "All", "Active", "Completed", "With Photos" (map to `.all`, `.active`, `.completed`, `.hasImages`). Drop `.hasDescription` — not in mockup, minor feature reduction. Selected: teal filled. Section header: "FILTER".
 

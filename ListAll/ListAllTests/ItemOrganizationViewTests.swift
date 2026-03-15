@@ -106,4 +106,40 @@ class ItemOrganizationViewTests: XCTestCase {
         XCTAssertEqual(cases[0], .ascending, "Ascending should be first (left pill)")
         XCTAssertEqual(cases[1], .descending, "Descending should be second (right pill)")
     }
+
+    // MARK: - Task O.4: Filter — Chip Buttons
+
+    func testChipDisplayNameReturnsShortLabels() {
+        // Mockup shows short labels: "All", "Active", "Completed", "With Photos"
+        XCTAssertEqual(ItemFilterOption.all.chipDisplayName, String(localized: "All"))
+        XCTAssertEqual(ItemFilterOption.active.chipDisplayName, String(localized: "Active"))
+        XCTAssertEqual(ItemFilterOption.completed.chipDisplayName, String(localized: "Completed"))
+        XCTAssertEqual(ItemFilterOption.hasImages.chipDisplayName, String(localized: "With Photos"))
+    }
+
+    func testChipDisplayOrderMatchesMockup() {
+        // Mockup shows 4 chips: All, Active, Completed, With Photos (no hasDescription)
+        let expected: [ItemFilterOption] = [.all, .active, .completed, .hasImages]
+        XCTAssertEqual(ItemFilterOption.chipDisplayOrder, expected, "Chip order should match mockup")
+        XCTAssertEqual(ItemFilterOption.chipDisplayOrder.count, 4, "Should have exactly 4 filter chips")
+    }
+
+    func testChipDisplayOrderExcludesHasDescription() {
+        // hasDescription is deliberately excluded from chip UI per mockup
+        XCTAssertFalse(ItemFilterOption.chipDisplayOrder.contains(.hasDescription),
+                       "hasDescription should not appear in chip display order")
+    }
+
+    func testAllChipDisplayOrderOptionsHaveChipDisplayName() {
+        // Every option in chipDisplayOrder must have a non-empty chipDisplayName
+        for option in ItemFilterOption.chipDisplayOrder {
+            XCTAssertFalse(option.chipDisplayName.isEmpty, "\(option) should have a non-empty chipDisplayName")
+        }
+    }
+
+    func testFilterSectionHeaderKey() {
+        // Section header uses "Filter" key with .textCase(.uppercase) for visual "FILTER"
+        let header = String(localized: "Filter")
+        XCTAssertEqual(header, "Filter", "Filter section header key should be 'Filter'")
+    }
 }

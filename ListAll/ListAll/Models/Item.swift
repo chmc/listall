@@ -84,6 +84,24 @@ enum ItemFilterOption: String, CaseIterable, Identifiable, Codable {
         }
     }
     
+    /// Display order for chip buttons matching mockup: All, Active, Completed, With Photos
+    static let chipDisplayOrder: [ItemFilterOption] = [.all, .active, .completed, .hasImages]
+
+    var chipDisplayName: String {
+        switch self {
+        case .all:
+            return String(localized: "All")
+        case .active:
+            return String(localized: "Active")
+        case .completed:
+            return String(localized: "Completed")
+        case .hasDescription:
+            return String(localized: "With Description")
+        case .hasImages:
+            return String(localized: "With Photos")
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .all:

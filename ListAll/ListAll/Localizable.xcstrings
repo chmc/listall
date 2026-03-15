@@ -7028,6 +7028,23 @@
         }
       }
     },
+    "With Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With Photos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valokuvien kanssa"
+          }
+        }
+      }
+    },
     "You have unsaved changes. Are you sure you want to discard them?": {
       "extractionState": "manual",
       "localizations": {
