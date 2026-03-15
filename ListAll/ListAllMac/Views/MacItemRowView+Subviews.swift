@@ -17,12 +17,10 @@ extension MacItemRowView {
         if item.isCrossedOut {
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.completedGreen.opacity(0.2))
-                Circle()
-                    .strokeBorder(Theme.Colors.completedGreen.opacity(0.3), lineWidth: 2)
+                    .fill(Theme.Colors.completedGreen)
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Theme.Colors.completedGreen)
+                    .foregroundColor(.white)
             }
             .frame(width: 20, height: 20)
             .accessibilityLabel("Completed")

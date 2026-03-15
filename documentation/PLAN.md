@@ -131,7 +131,7 @@ After all Phase B tasks, take iPad full-screen screenshot and compare holistical
 
 **File:** `ListAll/ListAllMac/Views/MacMainView.swift` (content area item rows)
 
-### Task C.1: macOS Card Background + Checkbox + Quantity
+### Task C.1: macOS Card Background + Checkbox + Quantity ✅ completed
 
 Same card pattern as iOS but with macOS sizing: 10px radius, 20px checkbox diameter, 11px vertical / 14px horizontal padding. Add hover state via `.onHover`: dark mode = `white.opacity(0.05)`, light mode = `black.opacity(0.02)` (white opacity is invisible on light backgrounds). Apply teal checkbox circles and teal quantity capsule badges.
 
