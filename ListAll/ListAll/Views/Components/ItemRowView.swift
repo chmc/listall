@@ -10,6 +10,30 @@ struct CardPressStyle: ButtonStyle {
     }
 }
 
+// MARK: - Card Press Modifier (for non-Button views)
+
+struct CardPressModifier: ViewModifier {
+    @GestureState private var isPressed = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: isPressed)
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: .infinity)
+                    .updating($isPressed) { currentState, gestureState, _ in
+                        gestureState = currentState
+                    }
+            )
+    }
+}
+
+extension View {
+    func cardPressEffect() -> some View {
+        modifier(CardPressModifier())
+    }
+}
+
 struct ItemRowView: View {
     let item: Item
     var viewModel: ListViewModel? = nil
@@ -208,6 +232,7 @@ struct ItemRowView: View {
         )
         .opacity(item.isCrossedOut ? 0.5 : 1.0)
         .contentShape(Rectangle())
+        .cardPressEffect()
     }
 
     // MARK: - Selection Mode Row
@@ -226,6 +251,7 @@ struct ItemRowView: View {
         )
         .opacity(item.isCrossedOut ? 0.5 : 1.0)
         .contentShape(Rectangle())
+        .cardPressEffect()
         .onTapGesture {
             viewModel?.toggleSelection(for: item.id)
         }

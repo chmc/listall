@@ -115,13 +115,13 @@ Apply `.opacity(0.5)` to entire completed item row (currently uses 0.7/0.6 split
 **VERIFY against:**
 - `iphone--02-2-items-list.png` — completed items noticeably dimmer than active
 
-### Task B.5: Press Feedback (CardPressStyle)
+### Task B.5: Press Feedback (CardPressStyle) ✅ completed
 
 Ensure `CardPressStyle` (scale 0.97 on press) is applied to card rows. Verify it works with existing context menu / swipe action gesture handlers.
 
 **VERIFY:** Interactive test on iPhone — tap and hold an item card, confirm scale feedback. Also test on iPad.
 
-### Task B.6: Cross-Platform Smoke Check
+### Task B.6: Cross-Platform Smoke Check ✅ completed
 
 After all Phase B tasks, take iPad full-screen screenshot and compare holistically against `ipad--01-*` and `ipad--02-*` to catch any shared-component regressions before moving to macOS.
 
