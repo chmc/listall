@@ -80,4 +80,30 @@ class ItemOrganizationViewTests: XCTestCase {
         let header = String(localized: "Sort By")
         XCTAssertEqual(header, "Sort By", "Sort section header key should be 'Sort By'")
     }
+
+    // MARK: - Task O.3: Sort Direction — Two Pill Buttons
+
+    func testSortDirectionHasTwoCases() {
+        // The direction pills should map to exactly two cases: ascending and descending
+        XCTAssertEqual(SortDirection.allCases.count, 2, "SortDirection should have exactly 2 cases")
+    }
+
+    func testSortDirectionDisplayNames() {
+        // Pill labels should be "Ascending" and "Descending"
+        XCTAssertEqual(SortDirection.ascending.displayName, String(localized: "Ascending"))
+        XCTAssertEqual(SortDirection.descending.displayName, String(localized: "Descending"))
+    }
+
+    func testSortDirectionCasesAreIdentifiable() {
+        // Each direction must be identifiable for ForEach usage
+        XCTAssertEqual(SortDirection.ascending.id, "Ascending")
+        XCTAssertEqual(SortDirection.descending.id, "Descending")
+    }
+
+    func testSortDirectionAllCasesOrder() {
+        // ascending should come first — matching left-to-right pill order in mockup
+        let cases = SortDirection.allCases
+        XCTAssertEqual(cases[0], .ascending, "Ascending should be first (left pill)")
+        XCTAssertEqual(cases[1], .descending, "Descending should be second (right pill)")
+    }
 }

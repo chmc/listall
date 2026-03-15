@@ -5946,7 +5946,23 @@
         }
       }
     },
-    "Sort direction": {},
+    "Sort Direction": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort Direction"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lajittelusuunta"
+          }
+        }
+      }
+    },
     "Sort items": {},
     "Sort Options": {},
     "Sorting": {

@@ -484,7 +484,7 @@ Replace `LazyVGrid` (lines 16-45) with teal pill capsule buttons in a wrapping `
 **VERIFY against:**
 - `iphone--13-11-sort-filter-sheet.png` — "SORT BY" section with 5 pill buttons (3+2 layout)
 
-### Task O.3: Sort Direction — Two Pill Buttons
+### Task O.3: Sort Direction — Two Pill Buttons ✅ completed
 
 Replace single direction toggle (lines 48-72) with two side-by-side pills: "Ascending" / "Descending". Selected: teal filled + white text. Unselected: muted border. Section header: "SORT DIRECTION". Remove the arrow icon.
 

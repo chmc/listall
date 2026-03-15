@@ -39,34 +39,44 @@ struct ItemOrganizationView: View {
                         }
                     }
 
-                    // Sort Direction
-                    HStack {
-                        Text(String(localized: "Direction"))
-                            .font(Theme.Typography.body)
-
-                        Spacer()
-
-                        Button(action: {
-                            viewModel.updateSortDirection(
-                                viewModel.currentSortDirection == .ascending ? .descending : .ascending
-                            )
-                        }) {
-                            HStack {
-                                Image(systemName: viewModel.currentSortDirection.systemImage)
-                                Text(viewModel.currentSortDirection.displayName)
-                            }
-                            .padding(.horizontal, Theme.Spacing.md)
-                            .padding(.vertical, Theme.Spacing.sm)
-                            .background(
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                    .fill(Theme.Colors.primary.opacity(0.1))
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .foregroundColor(Theme.Colors.primary)
-                    }
                 } header: {
                     Text(String(localized: "Sort By"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .tracking(0.8)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                }
+
+                // Sort Direction Section
+                Section {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        ForEach(SortDirection.allCases) { direction in
+                            let isSelected = viewModel.currentSortDirection == direction
+                            Button(action: {
+                                viewModel.updateSortDirection(direction)
+                            }) {
+                                Text(direction.displayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Theme.Spacing.sm)
+                                    .padding(.horizontal, Theme.Spacing.xs)
+                                    .foregroundColor(isSelected ? .white : .secondary)
+                                    .background(
+                                        Capsule()
+                                            .fill(isSelected ? Theme.Colors.primary : Color.clear)
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .strokeBorder(isSelected ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                } header: {
+                    Text(String(localized: "Sort Direction"))
                         .font(.caption)
                         .fontWeight(.semibold)
                         .tracking(0.8)
