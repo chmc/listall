@@ -272,7 +272,7 @@ Replace current archive indicator with orange "Archived" capsule: archivebox ico
 - `ipad--08-8a-archived-lists-overview.png` (iPad)
 - Archived badge is orange capsule
 
-### Task H.2: Toolbar Buttons + Item Row Styling
+### Task H.2: Toolbar Buttons + Item Row Styling ✅ completed
 
 Restore button → `Theme.Colors.primary`. Archived items: strikethrough + `.secondary` + `.opacity(0.6)`.
 

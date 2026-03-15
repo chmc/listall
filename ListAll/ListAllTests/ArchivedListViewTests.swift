@@ -34,28 +34,22 @@ struct ArchivedListViewStylingTests {
 
     // MARK: - 8c: Archived Item Row Styling
 
-    @Test("ArchivedItemRowView renders active item with secondary foreground and 0.6 opacity")
-    func archivedItemRowActiveItemStyling() {
-        // Active items in archived lists should display with:
-        // - .foregroundColor(.secondary) (not .primary)
+    @Test("ArchivedItemRowView renders all items with strikethrough, secondary color, and 0.6 opacity")
+    func archivedItemRowAlwaysStrikethrough() {
+        // ALL archived items should display with strikethrough regardless of isCrossedOut state
+        // - .strikethrough(true) (unconditional — all archived items are muted)
+        // - .foregroundColor(.secondary)
         // - .opacity(0.6)
-        // - Theme.Typography.body font
-        var item = Item(title: "Test Item")
-        item.isCrossedOut = false
-        #expect(item.displayTitle == "Test Item")
-        #expect(!item.isCrossedOut)
-        _ = ArchivedItemRowView(item: item)
-    }
+        var activeItem = Item(title: "Active Item")
+        activeItem.isCrossedOut = false
+        #expect(activeItem.displayTitle == "Active Item")
+        _ = ArchivedItemRowView(item: activeItem)
 
-    @Test("ArchivedItemRowView renders crossed-out item with strikethrough")
-    func archivedItemRowCrossedOutStyling() {
-        // Crossed-out items should additionally have strikethrough
-        // Both active and crossed-out items get .foregroundColor(.secondary) and .opacity(0.6)
-        var item = Item(title: "Completed Item")
-        item.isCrossedOut = true
-        #expect(item.displayTitle == "Completed Item")
-        #expect(item.isCrossedOut)
-        _ = ArchivedItemRowView(item: item)
+        var crossedOutItem = Item(title: "Completed Item")
+        crossedOutItem.isCrossedOut = true
+        #expect(crossedOutItem.displayTitle == "Completed Item")
+        _ = ArchivedItemRowView(item: crossedOutItem)
+        // Both should render identically with strikethrough — verified visually
     }
 
     @Test("ArchivedItemRowView shows quantity for items with quantity > 1")

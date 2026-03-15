@@ -136,7 +136,7 @@ struct ArchivedItemRowView: View {
                 // Title
                 Text(item.displayTitle)
                     .font(Theme.Typography.body)
-                    .strikethrough(item.isCrossedOut)
+                    .strikethrough(true)
                     .foregroundColor(.secondary)
                     .opacity(0.6)
                 
