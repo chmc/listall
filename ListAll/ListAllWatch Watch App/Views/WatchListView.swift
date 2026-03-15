@@ -100,32 +100,22 @@ struct WatchListView: View {
     
     // MARK: - Item Count Summary
     private var itemCountSummary: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             // Active items count
             if viewModel.activeItemCount > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "circle")
-                        .font(.caption2)
-                    Text("\(viewModel.activeItemCount)")
-                        .font(.caption)
-                }
-                .foregroundColor(.blue)
-                .accessibilityIdentifier("WatchActiveItemCount")
+                Text("\(viewModel.activeItemCount) \(watchLocalizedString("watch_status_active", comment: "watchOS status count - active items label"))")
+                    .font(.caption2)
+                    .foregroundColor(.teal)
+                    .accessibilityIdentifier("WatchActiveItemCount")
             }
 
             // Completed items count
             if viewModel.completedItemCount > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.caption2)
-                    Text("\(viewModel.completedItemCount)")
-                        .font(.caption)
-                }
-                .foregroundColor(.green)
-                .accessibilityIdentifier("WatchCompletedItemCount")
+                Text("\(viewModel.completedItemCount) \(watchLocalizedString("watch_status_done", comment: "watchOS status count - completed items label"))")
+                    .font(.caption2)
+                    .foregroundColor(.green)
+                    .accessibilityIdentifier("WatchCompletedItemCount")
             }
-
-            Spacer()
 
             // Total count
             Text(String.localizedStringWithFormat(
@@ -135,6 +125,8 @@ struct WatchListView: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .accessibilityIdentifier("WatchTotalItemCount")
+
+            Spacer()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

@@ -185,7 +185,7 @@ Remove checkbox circles from `WatchItemRowView`. Use tap-to-toggle with color di
 - `watchos--02-2-items-list-with-filter.png` — no checkbox circles, text with teal color
 - `watchos--03-3-completed-items-view.png` — completed items green + strikethrough
 
-### Task E.3: Status Counts — Text Labels
+### Task E.3: Status Counts — Text Labels ✅ completed
 
 Replace icon-based status indicators in `WatchListView` with text: "4 active 2 done 6 total" using teal/green/muted colors. Use `watchLocalizedString()` for localization.
 
