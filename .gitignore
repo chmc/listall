@@ -2,6 +2,7 @@
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 code_ontology.jsonl
+.claudeloop/
 
 ## User settings
 xcuserdata/
@@ -253,6 +254,9 @@ venv.bak/
 # xcode-build-server (machine-specific)
 buildServer.json
 .compile
+
+# --- Superpowers brainstorm artifacts ---
+.superpowers/
 
 # --- Grep fallback authorization (semantic search enforcement) ---
 .claude/.grep-fallback-authorized
