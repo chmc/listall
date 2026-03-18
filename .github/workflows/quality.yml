@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -33,7 +33,7 @@ jobs:
       run: xcodebuild -version
 
     - name: Cache DerivedData
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-derived-data-asan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
@@ -77,7 +77,7 @@ jobs:
 
     - name: Upload ASan test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: asan-test-results
         path: |
@@ -97,7 +97,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -106,7 +106,7 @@ jobs:
       run: xcodebuild -version
 
     - name: Cache DerivedData
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-derived-data-tsan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
@@ -132,7 +132,7 @@ jobs:
 
     - name: Upload TSan test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: tsan-test-results
         path: ListAll/TestResults-TSan.xcresult
@@ -149,7 +149,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -161,7 +161,7 @@ jobs:
       run: brew install peripheryapp/periphery/periphery
 
     - name: Cache DerivedData
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-derived-data-periphery-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
@@ -194,7 +194,7 @@ jobs:
 
     - name: Upload Periphery report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: periphery-report
         path: ListAll/periphery-report.md

@@ -59,370 +59,8 @@ final class ServicesTests: XCTestCase {
         XCTAssertEqual(finalItems[1].title, initialItems[1].title)
     }
     
-    // MARK: - SuggestionService Tests
+    // Suggestion tests moved to SuggestionServiceTests class below
 
-    func testSuggestionServiceBasicSuggestions() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and items
-        let testList = List(name: "Grocery List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Milk", description: "2% low fat")
-
-        // Test exact match returns the item
-        suggestionService.getSuggestions(for: "Milk", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find exactly one match for 'Milk'")
-        XCTAssertEqual(suggestionService.suggestions.first?.title, "Milk", "Should match 'Milk'")
-        XCTAssertEqual(suggestionService.suggestions.first?.description, "2% low fat", "Should preserve description")
-
-        // Test empty search returns no suggestions
-        suggestionService.getSuggestions(for: "", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 0, "Empty search should return no suggestions")
-    }
-
-    func testSuggestionServiceFuzzyMatching() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and items
-        let testList = List(name: "Shopping List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Bananas", description: "")
-
-        // Test prefix match
-        suggestionService.getSuggestions(for: "Banan", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find match for prefix 'Banan'")
-        XCTAssertEqual(suggestionService.suggestions.first?.title, "Bananas", "Should match 'Bananas'")
-    }
-
-    func testSuggestionServiceEmptySearch() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and items
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
-
-        // Test empty search
-        suggestionService.getSuggestions(for: "", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 0, "Empty search should return no suggestions")
-
-        // Test whitespace only search
-        suggestionService.getSuggestions(for: "   ", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 0, "Whitespace-only search should return no suggestions")
-    }
-
-    func testSuggestionServiceMultipleMatches() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and items with similar names
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Apple Juice", description: "")
-        let _ = testRepository.createItem(in: testList, title: "Apple Pie", description: "")
-
-        // Test search that matches multiple items
-        suggestionService.getSuggestions(for: "Apple", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 2, "Should find 2 matches for 'Apple'")
-
-        let titles = Set(suggestionService.suggestions.map { $0.title })
-        XCTAssertTrue(titles.contains("Apple Juice"), "Should include 'Apple Juice'")
-        XCTAssertTrue(titles.contains("Apple Pie"), "Should include 'Apple Pie'")
-    }
-
-    func testSuggestionServiceIndividualItems() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test lists with items
-        let list1 = List(name: "List 1")
-        let list2 = List(name: "List 2")
-        testDataManager.addList(list1)
-        testDataManager.addList(list2)
-        let _ = testRepository.createItem(in: list1, title: "Milk", description: "2% low fat")
-        let _ = testRepository.createItem(in: list2, title: "Milk Chocolate", description: "Dark")
-
-        // Test global search (nil list) finds items from all lists
-        suggestionService.getSuggestions(for: "Milk", in: nil as List?)
-        XCTAssertEqual(suggestionService.suggestions.count, 2, "Should find 2 items matching 'Milk' globally")
-
-        // Verify frequency is 1 for individual items (not grouped)
-        for suggestion in suggestionService.suggestions {
-            XCTAssertEqual(suggestion.frequency, 1, "Individual item frequency should be 1")
-        }
-    }
-
-    func testSuggestionServiceRecentItems() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list with items
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Recent Item 1", description: "")
-        let _ = testRepository.createItem(in: testList, title: "Recent Item 2", description: "")
-
-        // Test recent items
-        let recentItems = suggestionService.getRecentItems(limit: 10)
-        XCTAssertEqual(recentItems.count, 2, "Should return 2 recent items")
-
-        // Verify recent items have valid scores
-        for item in recentItems {
-            XCTAssertGreaterThan(item.recencyScore, 0, "Recent items should have positive recency score")
-            XCTAssertGreaterThanOrEqual(item.frequencyScore, 0, "Frequency score should be non-negative")
-        }
-    }
-
-    func testSuggestionServiceClearSuggestions() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test data
-        let testList = List(name: "Clear Test")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
-
-        // Get suggestions first
-        suggestionService.getSuggestions(for: "Test", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
-
-        // Clear suggestions
-        suggestionService.clearSuggestions()
-        XCTAssertEqual(suggestionService.suggestions.count, 0, "Suggestions should be cleared")
-
-        // Should be able to get suggestions again after clearing
-        suggestionService.getSuggestions(for: "Test", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find suggestion again after clear")
-    }
-
-    func testSuggestionServiceNoMatch() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and items
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Test", description: "")
-
-        // Test completely different strings should not match
-        suggestionService.getSuggestions(for: "zebra", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 0, "Should not find matches for unrelated strings")
-
-        suggestionService.getSuggestions(for: "xyz123", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 0, "Should not find matches for completely different strings")
-    }
-
-    // MARK: - Advanced Suggestion Tests
-
-    func testAdvancedSuggestionScoring() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and item
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
-
-        // Get suggestions and verify scoring properties
-        suggestionService.getSuggestions(for: "Test", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
-
-        let suggestion = suggestionService.suggestions.first!
-        XCTAssertGreaterThan(suggestion.score, 0, "Score should be positive for a match")
-        XCTAssertGreaterThanOrEqual(suggestion.recencyScore, 0, "Recency score should be non-negative")
-        XCTAssertGreaterThanOrEqual(suggestion.frequencyScore, 0, "Frequency score should be non-negative")
-        XCTAssertEqual(suggestion.totalOccurrences, 1, "Total occurrences should be 1 for single item")
-    }
-
-    func testSuggestionCaching() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test data
-        let testList = List(name: "Cache Test")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Cached Item", description: "")
-
-        // Get suggestions, then clear cache, then get again
-        suggestionService.getSuggestions(for: "Cached", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find item before cache clear")
-
-        suggestionService.clearSuggestionCache()
-
-        suggestionService.getSuggestions(for: "Cached", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find item after cache clear")
-    }
-
-    func testGlobalSearchAcrossLists() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test lists with same-named items
-        let list1 = List(name: "List 1")
-        let list2 = List(name: "List 2")
-        testDataManager.addList(list1)
-        testDataManager.addList(list2)
-
-        // Add items to both lists
-        let _ = testRepository.createItem(in: list1, title: "Frequent Item", description: "In list 1")
-        let _ = testRepository.createItem(in: list2, title: "Frequent Item", description: "In list 2")
-
-        // Test global suggestions finds both
-        suggestionService.getSuggestions(for: "Frequent", in: nil as List?)
-        XCTAssertEqual(suggestionService.suggestions.count, 2, "Should find 2 items with same title across lists")
-    }
-
-    func testRecencyScoring() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and item
-        let testList = List(name: "Recency Test")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Recent Item", description: "")
-
-        // Get suggestions for recently created item
-        suggestionService.getSuggestions(for: "Recent", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find recently created item")
-
-        let suggestion = suggestionService.suggestions.first!
-        // Recently created items should have high recency score (close to 100)
-        XCTAssertGreaterThan(suggestion.recencyScore, 50, "Recently created item should have high recency score")
-        XCTAssertLessThanOrEqual(suggestion.recencyScore, 100, "Recency score should not exceed 100")
-    }
-
-    func testCombinedScoringWeights() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list and item
-        let testList = List(name: "Combined Test")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Combined Item", description: "")
-
-        // Get suggestions
-        suggestionService.getSuggestions(for: "Combined", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
-
-        let suggestion = suggestionService.suggestions.first!
-        // Combined score should be positive and reasonable
-        XCTAssertGreaterThan(suggestion.score, 0, "Combined score should be positive")
-        XCTAssertLessThanOrEqual(suggestion.score, 100, "Combined score should not exceed 100")
-    }
-
-    func testSuggestionCacheInvalidation() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test data
-        let testList = List(name: "Cache Invalidation Test")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Invalidation Item", description: "")
-
-        // Get suggestions
-        suggestionService.getSuggestions(for: "Invalidation", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find item")
-
-        // Invalidate cache for specific search text
-        suggestionService.invalidateCacheFor(searchText: "Invalidation")
-
-        // Should still work after invalidation
-        suggestionService.getSuggestions(for: "Invalidation", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should still find item after cache invalidation")
-
-        // Test data changes invalidation
-        suggestionService.invalidateCacheForDataChanges()
-        suggestionService.getSuggestions(for: "Invalidation", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should still find item after data changes invalidation")
-    }
-
-    // MARK: - Limit Tests
-
-    func testGetSuggestionsWithLimit() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list with many items
-        let testList = List(name: "Limit Test")
-        testDataManager.addList(testList)
-        for i in 1...10 {
-            let _ = testRepository.createItem(in: testList, title: "Item \(i)", description: "")
-        }
-
-        // Test with limit
-        suggestionService.getSuggestions(for: "Item", in: testList, limit: 3)
-        XCTAssertEqual(suggestionService.suggestions.count, 3, "Should respect limit of 3")
-
-        // Test with different limit
-        suggestionService.getSuggestions(for: "Item", in: testList, limit: 5)
-        XCTAssertEqual(suggestionService.suggestions.count, 5, "Should respect limit of 5")
-    }
-
-    func testGetSuggestionsWithoutLimit() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list with items
-        let testList = List(name: "No Limit Test")
-        testDataManager.addList(testList)
-        for i in 1...5 {
-            let _ = testRepository.createItem(in: testList, title: "Apple \(i)", description: "")
-        }
-
-        // Test without limit returns all matches
-        suggestionService.getSuggestions(for: "Apple", in: testList, limit: nil)
-        XCTAssertEqual(suggestionService.suggestions.count, 5, "Should return all 5 matches without limit")
-
-        // Verify suggestions are sorted by score (descending)
-        for i in 1..<suggestionService.suggestions.count {
-            XCTAssertGreaterThanOrEqual(
-                suggestionService.suggestions[i-1].score,
-                suggestionService.suggestions[i].score,
-                "Suggestions should be sorted by score in descending order"
-            )
-        }
-    }
-
-    func testSuggestionDetailsIncluded() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let testRepository = TestDataRepository(dataManager: testDataManager)
-        let suggestionService = SuggestionService(dataRepository: testRepository)
-
-        // Create test list with detailed item
-        let testList = List(name: "Details Test")
-        testDataManager.addList(testList)
-        let _ = testRepository.createItem(in: testList, title: "Detailed Item", description: "With description", quantity: 3)
-
-        // Get suggestions
-        suggestionService.getSuggestions(for: "Detailed", in: testList)
-        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
-
-        let suggestion = suggestionService.suggestions.first!
-        XCTAssertEqual(suggestion.title, "Detailed Item", "Should preserve title")
-        XCTAssertEqual(suggestion.description, "With description", "Should preserve description")
-        XCTAssertEqual(suggestion.quantity, 3, "Should preserve quantity")
-        XCTAssertGreaterThan(suggestion.score, 0, "Score should be positive")
-    }
-    
     // MARK: - ExportService Tests
     
     func testExportServiceInitialization() throws {
@@ -1411,6 +1049,1069 @@ final class ServicesTests: XCTestCase {
         }
     }
     
+    // Import tests (Phase 27 & 28) moved to ImportServiceTests class below
+
+    // MARK: - SharingService Tests
+    
+    func testSharingServiceInitialization() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        XCTAssertNotNil(sharingService, "SharingService should initialize")
+        XCTAssertFalse(sharingService.isSharing, "Should not be sharing initially")
+        XCTAssertNil(sharingService.shareError, "Should have no error initially")
+    }
+    
+    func testShareListAsPlainText() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create test list with items
+        let testList = List(name: "Shopping List")
+        testDataManager.addList(testList)
+        
+        let _ = repository.createItem(in: testList, title: "Milk", description: "2% low fat", quantity: 2)
+        let _ = repository.createItem(in: testList, title: "Bread", description: "", quantity: 1)
+        
+        // Share list as plain text
+        let result = sharingService.shareList(testList, format: .plainText, options: .default)
+        
+        XCTAssertNotNil(result, "Should create share result")
+        XCTAssertEqual(result?.format, .plainText, "Should be plain text format")
+        
+        guard let textContent = result?.content as? String else {
+            XCTFail("Content should be a string")
+            return
+        }
+        
+        // Verify content
+        XCTAssertTrue(textContent.contains("Shopping List"), "Should contain list name")
+        XCTAssertTrue(textContent.contains("Milk"), "Should contain item title")
+        XCTAssertTrue(textContent.contains("2% low fat"), "Should contain item description")
+        XCTAssertTrue(textContent.contains("×2"), "Should contain quantity")
+        XCTAssertTrue(textContent.contains("Bread"), "Should contain second item")
+        XCTAssertTrue(textContent.contains("Shared from ListAll"), "Should contain attribution")
+    }
+    
+    func testShareListAsPlainTextWithOptions() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create test list with crossed out item
+        let testList = List(name: "Todo List")
+        testDataManager.addList(testList)
+        
+        let _ = repository.createItem(in: testList, title: "Active Item", description: "Description", quantity: 1)
+        var item2 = repository.createItem(in: testList, title: "Completed Item", description: "Done", quantity: 1)
+        item2.isCrossedOut = true
+        repository.updateItem(item2, title: item2.title, description: item2.itemDescription ?? "", quantity: item2.quantity)
+        
+        // Share with minimal options (no crossed out items, no descriptions)
+        let result = sharingService.shareList(testList, format: .plainText, options: .minimal)
+        
+        XCTAssertNotNil(result, "Should create share result")
+        
+        guard let textContent = result?.content as? String else {
+            XCTFail("Content should be a string")
+            return
+        }
+        
+        // Verify filtering
+        XCTAssertTrue(textContent.contains("Active Item"), "Should contain active item")
+        XCTAssertFalse(textContent.contains("Completed Item"), "Should not contain crossed out item")
+        XCTAssertFalse(textContent.contains("Description"), "Should not contain descriptions")
+    }
+    
+    func testShareListAsJSON() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create test list with items
+        let testList = List(name: "Work Tasks")
+        testDataManager.addList(testList)
+        
+        let _ = repository.createItem(in: testList, title: "Task 1", description: "Important task", quantity: 1)
+        let _ = repository.createItem(in: testList, title: "Task 2", description: "", quantity: 3)
+        
+        // Share list as JSON
+        let result = sharingService.shareList(testList, format: .json, options: .default)
+        
+        XCTAssertNotNil(result, "Should create share result")
+        XCTAssertEqual(result?.format, .json, "Should be JSON format")
+        XCTAssertNotNil(result?.fileName, "Should have filename")
+        
+        guard let fileURL = result?.content as? URL else {
+            XCTFail("Content should be a URL")
+            return
+        }
+        
+        // Verify file exists
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path), "File should exist")
+        
+        // Verify file content
+        let jsonData = try Data(contentsOf: fileURL)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        let listData = try decoder.decode(ListExportData.self, from: jsonData)
+        XCTAssertEqual(listData.name, "Work Tasks", "Should contain correct list name")
+        XCTAssertEqual(listData.items.count, 2, "Should contain 2 items")
+        XCTAssertEqual(listData.items[0].title, "Task 1", "Should contain correct item")
+        
+        // Clean up
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+    
+    func testShareListAsURL() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create test list
+        let testList = List(name: "My List")
+        testDataManager.addList(testList)
+        
+        // Share list as URL - should now return error (URL sharing removed)
+        let result = sharingService.shareList(testList, format: .url)
+        
+        XCTAssertNil(result, "Should not create share result for URL format")
+        XCTAssertNotNil(sharingService.shareError, "Should have error message")
+        XCTAssertEqual(sharingService.shareError, "URL sharing is not supported (app is not publicly distributed)", "Should have correct error message")
+    }
+    
+    func testShareListInvalidList() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create invalid list (empty name)
+        let invalidList = List(name: "")
+        testDataManager.addList(invalidList)
+        
+        // Try to share invalid list
+        let result = sharingService.shareList(invalidList, format: .plainText)
+        
+        XCTAssertNil(result, "Should not create share result for invalid list")
+        XCTAssertNotNil(sharingService.shareError, "Should have error message")
+    }
+    
+    func testShareListEmptyList() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create empty list
+        let emptyList = List(name: "Empty List")
+        testDataManager.addList(emptyList)
+        
+        // Share empty list
+        let result = sharingService.shareList(emptyList, format: .plainText)
+        
+        XCTAssertNotNil(result, "Should create share result for empty list")
+        
+        guard let textContent = result?.content as? String else {
+            XCTFail("Content should be a string")
+            return
+        }
+        
+        XCTAssertTrue(textContent.contains("Empty List"), "Should contain list name")
+        XCTAssertTrue(textContent.contains("(No items)"), "Should indicate no items")
+    }
+    
+    func testShareAllDataAsJSON() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create multiple lists with items
+        let list1 = List(name: "List 1")
+        let list2 = List(name: "List 2")
+        testDataManager.addList(list1)
+        testDataManager.addList(list2)
+        
+        let _ = repository.createItem(in: list1, title: "Item 1.1", description: "", quantity: 1)
+        let _ = repository.createItem(in: list2, title: "Item 2.1", description: "", quantity: 1)
+        
+        // Share all data
+        let result = sharingService.shareAllData(format: .json)
+        
+        XCTAssertNotNil(result, "Should create share result")
+        XCTAssertEqual(result?.format, .json, "Should be JSON format")
+        
+        guard let fileURL = result?.content as? URL else {
+            XCTFail("Content should be a URL")
+            return
+        }
+        
+        // Verify file exists
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path), "File should exist")
+        
+        // Verify file content
+        let jsonData = try Data(contentsOf: fileURL)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        let exportData = try decoder.decode(ExportData.self, from: jsonData)
+        XCTAssertEqual(exportData.lists.count, 2, "Should contain 2 lists")
+        XCTAssertEqual(exportData.version, "1.0", "Should have version")
+        
+        // Clean up
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+    
+    func testShareAllDataAsPlainText() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create test data
+        let list1 = List(name: "Groceries")
+        let list2 = List(name: "Tasks")
+        testDataManager.addList(list1)
+        testDataManager.addList(list2)
+        
+        let _ = repository.createItem(in: list1, title: "Milk", description: "", quantity: 1)
+        let _ = repository.createItem(in: list2, title: "Laundry", description: "", quantity: 1)
+        
+        // Share all data as plain text
+        let result = sharingService.shareAllData(format: .plainText)
+        
+        XCTAssertNotNil(result, "Should create share result")
+        XCTAssertEqual(result?.format, .plainText, "Should be plain text format")
+        
+        guard let textContent = result?.content as? String else {
+            XCTFail("Content should be a string")
+            return
+        }
+        
+        // Verify content
+        XCTAssertTrue(textContent.contains("ListAll Export"), "Should contain export header")
+        XCTAssertTrue(textContent.contains("Groceries"), "Should contain list 1")
+        XCTAssertTrue(textContent.contains("Tasks"), "Should contain list 2")
+        XCTAssertTrue(textContent.contains("Milk"), "Should contain item from list 1")
+        XCTAssertTrue(textContent.contains("Laundry"), "Should contain item from list 2")
+    }
+    
+    func testShareAllDataURLNotSupported() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Try to share all data as URL (not supported)
+        let result = sharingService.shareAllData(format: .url)
+        
+        XCTAssertNil(result, "Should not create share result for URL format")
+        XCTAssertNotNil(sharingService.shareError, "Should have error message")
+        XCTAssertEqual(sharingService.shareError, "URL format not supported for all data")
+    }
+    
+    func testParseListURL() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Create a test list and URL
+        let testList = List(name: "Test List")
+        let urlString = "listall://list/\(testList.id.uuidString)?name=Test%20List"
+        let url = URL(string: urlString)!
+        
+        // Parse URL
+        let parsed = sharingService.parseListURL(url)
+        
+        XCTAssertNotNil(parsed, "Should parse URL")
+        XCTAssertEqual(parsed?.listId, testList.id, "Should extract correct list ID")
+        XCTAssertEqual(parsed?.listName, "Test List", "Should extract and decode list name")
+    }
+    
+    func testParseListURLInvalidScheme() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Invalid scheme
+        let invalidURL = URL(string: "https://example.com/list/123")!
+        let parsed = sharingService.parseListURL(invalidURL)
+        
+        XCTAssertNil(parsed, "Should not parse URL with invalid scheme")
+    }
+    
+    func testParseListURLInvalidFormat() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Invalid UUID
+        let invalidURL = URL(string: "listall://list/not-a-uuid?name=Test")!
+        let parsed = sharingService.parseListURL(invalidURL)
+        
+        XCTAssertNil(parsed, "Should not parse URL with invalid UUID")
+    }
+    
+    func testValidateListForSharing() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Valid list
+        let validList = List(name: "Valid List")
+        XCTAssertTrue(sharingService.validateListForSharing(validList), "Should validate valid list")
+        XCTAssertNil(sharingService.shareError, "Should have no error for valid list")
+        
+        // Invalid list (empty name)
+        let invalidList = List(name: "")
+        XCTAssertFalse(sharingService.validateListForSharing(invalidList), "Should not validate invalid list")
+        XCTAssertNotNil(sharingService.shareError, "Should have error for invalid list")
+    }
+    
+    func testShareOptionsDefaults() throws {
+        let defaultOptions = ShareOptions.default
+        XCTAssertTrue(defaultOptions.includeCrossedOutItems, "Default should include crossed out items")
+        XCTAssertTrue(defaultOptions.includeDescriptions, "Default should include descriptions")
+        XCTAssertTrue(defaultOptions.includeQuantities, "Default should include quantities")
+        XCTAssertFalse(defaultOptions.includeDates, "Default should not include dates")
+        
+        let minimalOptions = ShareOptions.minimal
+        XCTAssertFalse(minimalOptions.includeCrossedOutItems, "Minimal should not include crossed out items")
+        XCTAssertFalse(minimalOptions.includeDescriptions, "Minimal should not include descriptions")
+        XCTAssertFalse(minimalOptions.includeQuantities, "Minimal should not include quantities")
+        XCTAssertFalse(minimalOptions.includeDates, "Minimal should not include dates")
+    }
+    
+    func testClearError() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        let exportService = ExportService(dataRepository: repository)
+        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
+        
+        // Set an error
+        sharingService.shareError = "Test error"
+        XCTAssertNotNil(sharingService.shareError, "Error should be set")
+        
+        // Clear error
+        sharingService.clearError()
+        XCTAssertNil(sharingService.shareError, "Error should be cleared")
+    }
+    
+    // Import image tests (Phase 44) moved to ImportServiceTests class below
+
+    // MARK: - BiometricAuthService Tests
+    
+    func testBiometricAuthServiceInitialization() throws {
+        // Test that service initializes correctly
+        let service = BiometricAuthService.shared
+        XCTAssertNotNil(service, "BiometricAuthService should initialize")
+        XCTAssertFalse(service.isAuthenticated, "Should not be authenticated on initialization")
+        XCTAssertNil(service.authenticationError, "Should have no error on initialization")
+    }
+    
+    func testBiometricTypeDetection() throws {
+        // Test that biometric type detection doesn't crash
+        let service = BiometricAuthService.shared
+        let biometricType = service.biometricType()
+        
+        // Verify it returns a valid type (will be .none in simulator/tests)
+        XCTAssertTrue(
+            biometricType == .none || 
+            biometricType == .faceID || 
+            biometricType == .touchID || 
+            biometricType == .opticID,
+            "Should return a valid biometric type"
+        )
+    }
+    
+    func testBiometricTypeDisplayNames() throws {
+        // Test that all biometric types have proper display names
+        XCTAssertEqual(BiometricType.none.displayName, "None")
+        XCTAssertEqual(BiometricType.touchID.displayName, "Touch ID")
+        XCTAssertEqual(BiometricType.faceID.displayName, "Face ID")
+        XCTAssertEqual(BiometricType.opticID.displayName, "Optic ID")
+    }
+    
+    func testBiometricTypeIconNames() throws {
+        // Test that all biometric types have proper icon names
+        XCTAssertEqual(BiometricType.none.iconName, "lock.fill")
+        XCTAssertEqual(BiometricType.touchID.iconName, "touchid")
+        XCTAssertEqual(BiometricType.faceID.iconName, "faceid")
+        XCTAssertEqual(BiometricType.opticID.iconName, "opticid")
+    }
+    
+    func testDeviceAuthenticationAvailabilityCheck() throws {
+        // Test that checking device authentication availability doesn't crash
+        let service = BiometricAuthService.shared
+        let isAvailable = service.isDeviceAuthenticationAvailable()
+        
+        // This will typically be false in simulator/tests, but shouldn't crash
+        XCTAssertTrue(isAvailable == true || isAvailable == false, "Should return a boolean value")
+    }
+    
+    func testResetAuthentication() throws {
+        // Test that reset authentication works correctly
+        let service = BiometricAuthService.shared
+        
+        // Set authenticated state to true (simulating authenticated state)
+        service.isAuthenticated = true
+        service.authenticationError = "Some error"
+        
+        // Reset
+        service.resetAuthentication()
+        
+        // Verify reset
+        XCTAssertFalse(service.isAuthenticated, "Should be unauthenticated after reset")
+        XCTAssertNil(service.authenticationError, "Error should be cleared after reset")
+    }
+    
+    func testAuthenticationOnUnavailableDevice() throws {
+        // Test authentication behavior when biometric auth is unavailable (like in simulator)
+        let service = BiometricAuthService.shared
+        let expectation = XCTestExpectation(description: "Authentication completion")
+        
+        // Allow the expectation to be fulfilled asynchronously but don't require it
+        // since LocalAuthentication may not call the completion handler on simulators
+        expectation.assertForOverFulfill = false
+        
+        service.authenticate { success, errorMessage in
+            // In simulator/tests, this will likely fail since biometrics aren't available
+            // But it shouldn't crash
+            XCTAssertTrue(success == true || success == false, "Should return a boolean")
+            if !success {
+                XCTAssertNotNil(errorMessage, "Should provide error message on failure")
+            }
+            expectation.fulfill()
+        }
+        
+        // Use a shorter timeout and accept both outcomes (fulfilled or timeout)
+        let result = XCTWaiter.wait(for: [expectation], timeout: 2.0)
+        
+        // The test passes if the call completes OR times out (simulator limitation)
+        XCTAssertTrue(
+            result == .completed || result == .timedOut,
+            "Test should either complete or timeout (simulator has no biometrics)"
+        )
+    }
+    
+    func testBiometricAuthServiceSingleton() throws {
+        // Test that BiometricAuthService is a proper singleton
+        let service1 = BiometricAuthService.shared
+        let service2 = BiometricAuthService.shared
+        
+        XCTAssertTrue(service1 === service2, "Should return the same instance")
+    }
+    
+    // MARK: - Authentication Timeout Tests
+    
+    func testAuthTimeoutDurationValues() throws {
+        // Test that all timeout duration values are correct
+        XCTAssertEqual(Constants.AuthTimeoutDuration.immediate.rawValue, 0)
+        XCTAssertEqual(Constants.AuthTimeoutDuration.oneMinute.rawValue, 60)
+        XCTAssertEqual(Constants.AuthTimeoutDuration.fiveMinutes.rawValue, 300)
+        XCTAssertEqual(Constants.AuthTimeoutDuration.fifteenMinutes.rawValue, 900)
+        XCTAssertEqual(Constants.AuthTimeoutDuration.thirtyMinutes.rawValue, 1800)
+        XCTAssertEqual(Constants.AuthTimeoutDuration.oneHour.rawValue, 3600)
+    }
+    
+    func testAuthTimeoutDurationDisplayNames() throws {
+        // Test that all timeout durations have proper display names (locale-independent)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.immediate.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneMinute.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fiveMinutes.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fifteenMinutes.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.thirtyMinutes.displayName.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneHour.displayName.isEmpty)
+        
+        // Verify each case has a unique display name
+        let displayNames = Constants.AuthTimeoutDuration.allCases.map { $0.displayName }
+        let uniqueNames = Set(displayNames)
+        XCTAssertEqual(displayNames.count, uniqueNames.count, "Each timeout duration should have a unique display name")
+    }
+    
+    func testAuthTimeoutDurationDescriptions() throws {
+        // Test that all timeout durations have proper descriptions (locale-independent)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.immediate.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneMinute.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fiveMinutes.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.fifteenMinutes.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.thirtyMinutes.description.isEmpty)
+        XCTAssertFalse(Constants.AuthTimeoutDuration.oneHour.description.isEmpty)
+        
+        // Verify each case has a unique description
+        let descriptions = Constants.AuthTimeoutDuration.allCases.map { $0.description }
+        let uniqueDescriptions = Set(descriptions)
+        XCTAssertEqual(descriptions.count, uniqueDescriptions.count, "Each timeout duration should have a unique description")
+    }
+    
+    func testAuthTimeoutDurationAllCases() throws {
+        // Test that all cases are included
+        let allCases = Constants.AuthTimeoutDuration.allCases
+        XCTAssertEqual(allCases.count, 6, "Should have 6 timeout duration options")
+        XCTAssertTrue(allCases.contains(.immediate))
+        XCTAssertTrue(allCases.contains(.oneMinute))
+        XCTAssertTrue(allCases.contains(.fiveMinutes))
+        XCTAssertTrue(allCases.contains(.fifteenMinutes))
+        XCTAssertTrue(allCases.contains(.thirtyMinutes))
+        XCTAssertTrue(allCases.contains(.oneHour))
+    }
+    
+    // MARK: - WatchConnectivityService Tests
+    
+    func testWatchConnectivityServiceSingleton() throws {
+        // Test that WatchConnectivityService is a proper singleton
+        let service1 = WatchConnectivityService.shared
+        let service2 = WatchConnectivityService.shared
+        
+        XCTAssertTrue(service1 === service2, "Should return the same instance")
+    }
+    
+    func testWatchConnectivityServiceInitialization() throws {
+        // Test that WatchConnectivityService initializes properly
+        let service = WatchConnectivityService.shared
+        
+        // Service should be created successfully
+        XCTAssertNotNil(service, "Service should be initialized")
+        
+        // Initial state should be inactive but not necessarily activated yet
+        // (activation may complete asynchronously)
+        XCTAssertTrue(service.isActivated == true || service.isActivated == false, "Should have a boolean activation state")
+        XCTAssertTrue(service.isReachable == true || service.isReachable == false, "Should have a boolean reachability state")
+    }
+    
+    func testWatchConnectivityServiceCanCommunicate() throws {
+        // Test the canCommunicate property
+        let service = WatchConnectivityService.shared
+        
+        // canCommunicate should return a boolean value
+        let canCommunicate = service.canCommunicate
+        XCTAssertTrue(canCommunicate == true || canCommunicate == false, "Should return a boolean value")
+        
+        // In simulator/test environment, canCommunicate will likely be false
+        // because there's no paired watch
+        #if targetEnvironment(simulator)
+        XCTAssertFalse(canCommunicate, "Should not be able to communicate in simulator")
+        #endif
+    }
+    
+    func testWatchConnectivityServiceSendSyncNotification() throws {
+        // Test that sendSyncNotification doesn't crash
+        let service = WatchConnectivityService.shared
+        
+        // This should not crash even if there's no paired device
+        service.sendSyncNotification()
+        
+        // If we reach here without crashing, the test passes
+        XCTAssertTrue(true, "sendSyncNotification should not crash when called")
+    }
+    
+    func testWatchConnectivityServiceNotificationPosting() throws {
+        // Test that incoming sync notifications are posted to NotificationCenter
+        let expectation = XCTestExpectation(description: "Notification posted")
+        
+        // Listen for the notification
+        let observer = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            expectation.fulfill()
+        }
+        
+        // Simulate receiving a message by posting the notification
+        // (We can't easily trigger a real WCSession message in unit tests)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil,
+            userInfo: ["syncNotification": true, "timestamp": Date().timeIntervalSince1970]
+        )
+        
+        // Wait for notification
+        wait(for: [expectation], timeout: 1.0)
+        
+        // Clean up
+        NotificationCenter.default.removeObserver(observer)
+    }
+    
+    // MARK: - Phase 72: DataRepository Sync Integration Tests
+    
+    func testDataRepositoryHandlesSyncNotification() throws {
+        // Test that DataRepository responds to sync notifications
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+
+        // Create a test list
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+
+        // Add an item directly to Core Data (simulating change from watch)
+        let externalItem = Item(title: "External Item")
+        testDataManager.addItem(externalItem, to: testList.id)
+
+        // Set up expectation to observe the notification directly before posting it
+        let syncExpectation = expectation(
+            forNotification: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil
+        )
+
+        // Post sync notification (simulating notification from Watch)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("WatchConnectivitySyncReceived"),
+            object: nil,
+            userInfo: ["syncNotification": true]
+        )
+
+        wait(for: [syncExpectation], timeout: 5.0)
+
+        // Verify data was reloaded by checking if lists are up to date
+        let lists = repository.getAllLists()
+        XCTAssertFalse(lists.isEmpty, "Lists should be reloaded after sync notification")
+    }
+    
+    func testDataRepositoryListOperationsSendSyncNotification() throws {
+        // Test that list operations trigger sync notifications
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        
+        // Note: We can't easily verify WatchConnectivityService.sendSyncNotification() 
+        // was called without mocking, but we can verify operations complete successfully
+        
+        // Create list
+        let newList = repository.createList(name: "New List")
+        XCTAssertNotNil(newList, "List should be created")
+        XCTAssertEqual(newList.name, "New List")
+        
+        // Update list
+        let updatedName = "Updated List"
+        repository.updateList(newList, name: updatedName)
+        let retrievedList = repository.getList(by: newList.id)
+        XCTAssertEqual(retrievedList?.name, updatedName, "List should be updated")
+        
+        // Delete list
+        repository.deleteList(newList)
+        let deletedList = repository.getList(by: newList.id)
+        XCTAssertNil(deletedList, "List should be deleted")
+    }
+    
+    func testDataRepositoryItemOperationsSendSyncNotification() throws {
+        // Test that item operations trigger sync notifications
+        let testDataManager = TestHelpers.createTestDataManager()
+        let repository = TestDataRepository(dataManager: testDataManager)
+        
+        // Create a test list
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        
+        // Create item
+        let newItem = repository.createItem(in: testList, title: "New Item", description: "Test", quantity: 1)
+        XCTAssertNotNil(newItem, "Item should be created")
+        XCTAssertEqual(newItem.title, "New Item")
+        
+        // Update item
+        repository.updateItem(newItem, title: "Updated Item", description: "Updated", quantity: 2)
+        let retrievedItem = repository.getItem(by: newItem.id)
+        XCTAssertEqual(retrievedItem?.title, "Updated Item", "Item should be updated")
+        XCTAssertEqual(retrievedItem?.quantity, 2, "Item quantity should be updated")
+        
+        // Toggle item completion
+        repository.toggleItemCrossedOut(newItem)
+        let toggledItem = repository.getItem(by: newItem.id)
+        XCTAssertTrue(toggledItem?.isCrossedOut ?? false, "Item should be crossed out")
+        
+        // Delete item
+        repository.deleteItem(newItem)
+        let deletedItem = repository.getItem(by: newItem.id)
+        XCTAssertNil(deletedItem, "Item should be deleted")
+    }
+}
+
+// MARK: - SuggestionServiceTests
+
+final class SuggestionServiceTests: XCTestCase {
+
+    // MARK: - SuggestionService Tests
+
+    func testSuggestionServiceBasicSuggestions() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and items
+        let testList = List(name: "Grocery List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Milk", description: "2% low fat")
+
+        // Test exact match returns the item
+        suggestionService.getSuggestions(for: "Milk", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find exactly one match for 'Milk'")
+        XCTAssertEqual(suggestionService.suggestions.first?.title, "Milk", "Should match 'Milk'")
+        XCTAssertEqual(suggestionService.suggestions.first?.description, "2% low fat", "Should preserve description")
+
+        // Test empty search returns no suggestions
+        suggestionService.getSuggestions(for: "", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Empty search should return no suggestions")
+    }
+
+    func testSuggestionServiceFuzzyMatching() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and items
+        let testList = List(name: "Shopping List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Bananas", description: "")
+
+        // Test prefix match
+        suggestionService.getSuggestions(for: "Banan", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find match for prefix 'Banan'")
+        XCTAssertEqual(suggestionService.suggestions.first?.title, "Bananas", "Should match 'Bananas'")
+    }
+
+    func testSuggestionServiceEmptySearch() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and items
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
+
+        // Test empty search
+        suggestionService.getSuggestions(for: "", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Empty search should return no suggestions")
+
+        // Test whitespace only search
+        suggestionService.getSuggestions(for: "   ", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Whitespace-only search should return no suggestions")
+    }
+
+    func testSuggestionServiceMultipleMatches() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and items with similar names
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Apple Juice", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Apple Pie", description: "")
+
+        // Test search that matches multiple items
+        suggestionService.getSuggestions(for: "Apple", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 2, "Should find 2 matches for 'Apple'")
+
+        let titles = Set(suggestionService.suggestions.map { $0.title })
+        XCTAssertTrue(titles.contains("Apple Juice"), "Should include 'Apple Juice'")
+        XCTAssertTrue(titles.contains("Apple Pie"), "Should include 'Apple Pie'")
+    }
+
+    func testSuggestionServiceIndividualItems() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test lists with items
+        let list1 = List(name: "List 1")
+        let list2 = List(name: "List 2")
+        testDataManager.addList(list1)
+        testDataManager.addList(list2)
+        let _ = testRepository.createItem(in: list1, title: "Milk", description: "2% low fat")
+        let _ = testRepository.createItem(in: list2, title: "Milk Chocolate", description: "Dark")
+
+        // Test global search (nil list) finds items from all lists
+        suggestionService.getSuggestions(for: "Milk", in: nil as List?)
+        XCTAssertEqual(suggestionService.suggestions.count, 2, "Should find 2 items matching 'Milk' globally")
+
+        // Verify frequency is 1 for individual items (not grouped)
+        for suggestion in suggestionService.suggestions {
+            XCTAssertEqual(suggestion.frequency, 1, "Individual item frequency should be 1")
+        }
+    }
+
+    func testSuggestionServiceRecentItems() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list with items
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Recent Item 1", description: "")
+        let _ = testRepository.createItem(in: testList, title: "Recent Item 2", description: "")
+
+        // Test recent items
+        let recentItems = suggestionService.getRecentItems(limit: 10)
+        XCTAssertEqual(recentItems.count, 2, "Should return 2 recent items")
+
+        // Verify recent items have valid scores
+        for item in recentItems {
+            XCTAssertGreaterThan(item.recencyScore, 0, "Recent items should have positive recency score")
+            XCTAssertGreaterThanOrEqual(item.frequencyScore, 0, "Frequency score should be non-negative")
+        }
+    }
+
+    func testSuggestionServiceClearSuggestions() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test data
+        let testList = List(name: "Clear Test")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
+
+        // Get suggestions first
+        suggestionService.getSuggestions(for: "Test", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
+
+        // Clear suggestions
+        suggestionService.clearSuggestions()
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Suggestions should be cleared")
+
+        // Should be able to get suggestions again after clearing
+        suggestionService.getSuggestions(for: "Test", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find suggestion again after clear")
+    }
+
+    func testSuggestionServiceNoMatch() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and items
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Test", description: "")
+
+        // Test completely different strings should not match
+        suggestionService.getSuggestions(for: "zebra", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Should not find matches for unrelated strings")
+
+        suggestionService.getSuggestions(for: "xyz123", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 0, "Should not find matches for completely different strings")
+    }
+
+    // MARK: - Advanced Suggestion Tests
+
+    func testAdvancedSuggestionScoring() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and item
+        let testList = List(name: "Test List")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Test Item", description: "")
+
+        // Get suggestions and verify scoring properties
+        suggestionService.getSuggestions(for: "Test", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
+
+        let suggestion = suggestionService.suggestions.first!
+        XCTAssertGreaterThan(suggestion.score, 0, "Score should be positive for a match")
+        XCTAssertGreaterThanOrEqual(suggestion.recencyScore, 0, "Recency score should be non-negative")
+        XCTAssertGreaterThanOrEqual(suggestion.frequencyScore, 0, "Frequency score should be non-negative")
+        XCTAssertEqual(suggestion.totalOccurrences, 1, "Total occurrences should be 1 for single item")
+    }
+
+    func testSuggestionCaching() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test data
+        let testList = List(name: "Cache Test")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Cached Item", description: "")
+
+        // Get suggestions, then clear cache, then get again
+        suggestionService.getSuggestions(for: "Cached", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find item before cache clear")
+
+        suggestionService.clearSuggestionCache()
+
+        suggestionService.getSuggestions(for: "Cached", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find item after cache clear")
+    }
+
+    func testGlobalSearchAcrossLists() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test lists with same-named items
+        let list1 = List(name: "List 1")
+        let list2 = List(name: "List 2")
+        testDataManager.addList(list1)
+        testDataManager.addList(list2)
+
+        // Add items to both lists
+        let _ = testRepository.createItem(in: list1, title: "Frequent Item", description: "In list 1")
+        let _ = testRepository.createItem(in: list2, title: "Frequent Item", description: "In list 2")
+
+        // Test global suggestions finds both
+        suggestionService.getSuggestions(for: "Frequent", in: nil as List?)
+        XCTAssertEqual(suggestionService.suggestions.count, 2, "Should find 2 items with same title across lists")
+    }
+
+    func testRecencyScoring() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and item
+        let testList = List(name: "Recency Test")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Recent Item", description: "")
+
+        // Get suggestions for recently created item
+        suggestionService.getSuggestions(for: "Recent", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find recently created item")
+
+        let suggestion = suggestionService.suggestions.first!
+        // Recently created items should have high recency score (close to 100)
+        XCTAssertGreaterThan(suggestion.recencyScore, 50, "Recently created item should have high recency score")
+        XCTAssertLessThanOrEqual(suggestion.recencyScore, 100, "Recency score should not exceed 100")
+    }
+
+    func testCombinedScoringWeights() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list and item
+        let testList = List(name: "Combined Test")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Combined Item", description: "")
+
+        // Get suggestions
+        suggestionService.getSuggestions(for: "Combined", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
+
+        let suggestion = suggestionService.suggestions.first!
+        // Combined score should be positive and reasonable
+        XCTAssertGreaterThan(suggestion.score, 0, "Combined score should be positive")
+        XCTAssertLessThanOrEqual(suggestion.score, 100, "Combined score should not exceed 100")
+    }
+
+    func testSuggestionCacheInvalidation() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test data
+        let testList = List(name: "Cache Invalidation Test")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Invalidation Item", description: "")
+
+        // Get suggestions
+        suggestionService.getSuggestions(for: "Invalidation", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find item")
+
+        // Invalidate cache for specific search text
+        suggestionService.invalidateCacheFor(searchText: "Invalidation")
+
+        // Should still work after invalidation
+        suggestionService.getSuggestions(for: "Invalidation", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should still find item after cache invalidation")
+
+        // Test data changes invalidation
+        suggestionService.invalidateCacheForDataChanges()
+        suggestionService.getSuggestions(for: "Invalidation", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should still find item after data changes invalidation")
+    }
+
+    // MARK: - Limit Tests
+
+    func testGetSuggestionsWithLimit() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list with many items
+        let testList = List(name: "Limit Test")
+        testDataManager.addList(testList)
+        for i in 1...10 {
+            let _ = testRepository.createItem(in: testList, title: "Item \(i)", description: "")
+        }
+
+        // Test with limit
+        suggestionService.getSuggestions(for: "Item", in: testList, limit: 3)
+        XCTAssertEqual(suggestionService.suggestions.count, 3, "Should respect limit of 3")
+
+        // Test with different limit
+        suggestionService.getSuggestions(for: "Item", in: testList, limit: 5)
+        XCTAssertEqual(suggestionService.suggestions.count, 5, "Should respect limit of 5")
+    }
+
+    func testGetSuggestionsWithoutLimit() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list with items
+        let testList = List(name: "No Limit Test")
+        testDataManager.addList(testList)
+        for i in 1...5 {
+            let _ = testRepository.createItem(in: testList, title: "Apple \(i)", description: "")
+        }
+
+        // Test without limit returns all matches
+        suggestionService.getSuggestions(for: "Apple", in: testList, limit: nil)
+        XCTAssertEqual(suggestionService.suggestions.count, 5, "Should return all 5 matches without limit")
+
+        // Verify suggestions are sorted by score (descending)
+        for i in 1..<suggestionService.suggestions.count {
+            XCTAssertGreaterThanOrEqual(
+                suggestionService.suggestions[i-1].score,
+                suggestionService.suggestions[i].score,
+                "Suggestions should be sorted by score in descending order"
+            )
+        }
+    }
+
+    func testSuggestionDetailsIncluded() throws {
+        let testDataManager = TestHelpers.createTestDataManager()
+        let testRepository = TestDataRepository(dataManager: testDataManager)
+        let suggestionService = SuggestionService(dataRepository: testRepository)
+
+        // Create test list with detailed item
+        let testList = List(name: "Details Test")
+        testDataManager.addList(testList)
+        let _ = testRepository.createItem(in: testList, title: "Detailed Item", description: "With description", quantity: 3)
+
+        // Get suggestions
+        suggestionService.getSuggestions(for: "Detailed", in: testList)
+        XCTAssertEqual(suggestionService.suggestions.count, 1, "Should find one suggestion")
+
+        let suggestion = suggestionService.suggestions.first!
+        XCTAssertEqual(suggestion.title, "Detailed Item", "Should preserve title")
+        XCTAssertEqual(suggestion.description, "With description", "Should preserve description")
+        XCTAssertEqual(suggestion.quantity, 3, "Should preserve quantity")
+        XCTAssertGreaterThan(suggestion.score, 0, "Score should be positive")
+    }
+    
+}
+
+// MARK: - ImportServiceTests
+
+final class ImportServiceTests: XCTestCase {
+
     // MARK: - Phase 27 ImportService Tests
     
     func testImportServiceInitialization() throws {
@@ -2035,365 +2736,7 @@ final class ServicesTests: XCTestCase {
         }
     }
     
-    // MARK: - SharingService Tests
-    
-    func testSharingServiceInitialization() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        XCTAssertNotNil(sharingService, "SharingService should initialize")
-        XCTAssertFalse(sharingService.isSharing, "Should not be sharing initially")
-        XCTAssertNil(sharingService.shareError, "Should have no error initially")
-    }
-    
-    func testShareListAsPlainText() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create test list with items
-        let testList = List(name: "Shopping List")
-        testDataManager.addList(testList)
-        
-        let _ = repository.createItem(in: testList, title: "Milk", description: "2% low fat", quantity: 2)
-        let _ = repository.createItem(in: testList, title: "Bread", description: "", quantity: 1)
-        
-        // Share list as plain text
-        let result = sharingService.shareList(testList, format: .plainText, options: .default)
-        
-        XCTAssertNotNil(result, "Should create share result")
-        XCTAssertEqual(result?.format, .plainText, "Should be plain text format")
-        
-        guard let textContent = result?.content as? String else {
-            XCTFail("Content should be a string")
-            return
-        }
-        
-        // Verify content
-        XCTAssertTrue(textContent.contains("Shopping List"), "Should contain list name")
-        XCTAssertTrue(textContent.contains("Milk"), "Should contain item title")
-        XCTAssertTrue(textContent.contains("2% low fat"), "Should contain item description")
-        XCTAssertTrue(textContent.contains("×2"), "Should contain quantity")
-        XCTAssertTrue(textContent.contains("Bread"), "Should contain second item")
-        XCTAssertTrue(textContent.contains("Shared from ListAll"), "Should contain attribution")
-    }
-    
-    func testShareListAsPlainTextWithOptions() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create test list with crossed out item
-        let testList = List(name: "Todo List")
-        testDataManager.addList(testList)
-        
-        let _ = repository.createItem(in: testList, title: "Active Item", description: "Description", quantity: 1)
-        var item2 = repository.createItem(in: testList, title: "Completed Item", description: "Done", quantity: 1)
-        item2.isCrossedOut = true
-        repository.updateItem(item2, title: item2.title, description: item2.itemDescription ?? "", quantity: item2.quantity)
-        
-        // Share with minimal options (no crossed out items, no descriptions)
-        let result = sharingService.shareList(testList, format: .plainText, options: .minimal)
-        
-        XCTAssertNotNil(result, "Should create share result")
-        
-        guard let textContent = result?.content as? String else {
-            XCTFail("Content should be a string")
-            return
-        }
-        
-        // Verify filtering
-        XCTAssertTrue(textContent.contains("Active Item"), "Should contain active item")
-        XCTAssertFalse(textContent.contains("Completed Item"), "Should not contain crossed out item")
-        XCTAssertFalse(textContent.contains("Description"), "Should not contain descriptions")
-    }
-    
-    func testShareListAsJSON() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create test list with items
-        let testList = List(name: "Work Tasks")
-        testDataManager.addList(testList)
-        
-        let _ = repository.createItem(in: testList, title: "Task 1", description: "Important task", quantity: 1)
-        let _ = repository.createItem(in: testList, title: "Task 2", description: "", quantity: 3)
-        
-        // Share list as JSON
-        let result = sharingService.shareList(testList, format: .json, options: .default)
-        
-        XCTAssertNotNil(result, "Should create share result")
-        XCTAssertEqual(result?.format, .json, "Should be JSON format")
-        XCTAssertNotNil(result?.fileName, "Should have filename")
-        
-        guard let fileURL = result?.content as? URL else {
-            XCTFail("Content should be a URL")
-            return
-        }
-        
-        // Verify file exists
-        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path), "File should exist")
-        
-        // Verify file content
-        let jsonData = try Data(contentsOf: fileURL)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        
-        let listData = try decoder.decode(ListExportData.self, from: jsonData)
-        XCTAssertEqual(listData.name, "Work Tasks", "Should contain correct list name")
-        XCTAssertEqual(listData.items.count, 2, "Should contain 2 items")
-        XCTAssertEqual(listData.items[0].title, "Task 1", "Should contain correct item")
-        
-        // Clean up
-        try? FileManager.default.removeItem(at: fileURL)
-    }
-    
-    func testShareListAsURL() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create test list
-        let testList = List(name: "My List")
-        testDataManager.addList(testList)
-        
-        // Share list as URL - should now return error (URL sharing removed)
-        let result = sharingService.shareList(testList, format: .url)
-        
-        XCTAssertNil(result, "Should not create share result for URL format")
-        XCTAssertNotNil(sharingService.shareError, "Should have error message")
-        XCTAssertEqual(sharingService.shareError, "URL sharing is not supported (app is not publicly distributed)", "Should have correct error message")
-    }
-    
-    func testShareListInvalidList() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create invalid list (empty name)
-        let invalidList = List(name: "")
-        testDataManager.addList(invalidList)
-        
-        // Try to share invalid list
-        let result = sharingService.shareList(invalidList, format: .plainText)
-        
-        XCTAssertNil(result, "Should not create share result for invalid list")
-        XCTAssertNotNil(sharingService.shareError, "Should have error message")
-    }
-    
-    func testShareListEmptyList() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create empty list
-        let emptyList = List(name: "Empty List")
-        testDataManager.addList(emptyList)
-        
-        // Share empty list
-        let result = sharingService.shareList(emptyList, format: .plainText)
-        
-        XCTAssertNotNil(result, "Should create share result for empty list")
-        
-        guard let textContent = result?.content as? String else {
-            XCTFail("Content should be a string")
-            return
-        }
-        
-        XCTAssertTrue(textContent.contains("Empty List"), "Should contain list name")
-        XCTAssertTrue(textContent.contains("(No items)"), "Should indicate no items")
-    }
-    
-    func testShareAllDataAsJSON() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create multiple lists with items
-        let list1 = List(name: "List 1")
-        let list2 = List(name: "List 2")
-        testDataManager.addList(list1)
-        testDataManager.addList(list2)
-        
-        let _ = repository.createItem(in: list1, title: "Item 1.1", description: "", quantity: 1)
-        let _ = repository.createItem(in: list2, title: "Item 2.1", description: "", quantity: 1)
-        
-        // Share all data
-        let result = sharingService.shareAllData(format: .json)
-        
-        XCTAssertNotNil(result, "Should create share result")
-        XCTAssertEqual(result?.format, .json, "Should be JSON format")
-        
-        guard let fileURL = result?.content as? URL else {
-            XCTFail("Content should be a URL")
-            return
-        }
-        
-        // Verify file exists
-        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path), "File should exist")
-        
-        // Verify file content
-        let jsonData = try Data(contentsOf: fileURL)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        
-        let exportData = try decoder.decode(ExportData.self, from: jsonData)
-        XCTAssertEqual(exportData.lists.count, 2, "Should contain 2 lists")
-        XCTAssertEqual(exportData.version, "1.0", "Should have version")
-        
-        // Clean up
-        try? FileManager.default.removeItem(at: fileURL)
-    }
-    
-    func testShareAllDataAsPlainText() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create test data
-        let list1 = List(name: "Groceries")
-        let list2 = List(name: "Tasks")
-        testDataManager.addList(list1)
-        testDataManager.addList(list2)
-        
-        let _ = repository.createItem(in: list1, title: "Milk", description: "", quantity: 1)
-        let _ = repository.createItem(in: list2, title: "Laundry", description: "", quantity: 1)
-        
-        // Share all data as plain text
-        let result = sharingService.shareAllData(format: .plainText)
-        
-        XCTAssertNotNil(result, "Should create share result")
-        XCTAssertEqual(result?.format, .plainText, "Should be plain text format")
-        
-        guard let textContent = result?.content as? String else {
-            XCTFail("Content should be a string")
-            return
-        }
-        
-        // Verify content
-        XCTAssertTrue(textContent.contains("ListAll Export"), "Should contain export header")
-        XCTAssertTrue(textContent.contains("Groceries"), "Should contain list 1")
-        XCTAssertTrue(textContent.contains("Tasks"), "Should contain list 2")
-        XCTAssertTrue(textContent.contains("Milk"), "Should contain item from list 1")
-        XCTAssertTrue(textContent.contains("Laundry"), "Should contain item from list 2")
-    }
-    
-    func testShareAllDataURLNotSupported() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Try to share all data as URL (not supported)
-        let result = sharingService.shareAllData(format: .url)
-        
-        XCTAssertNil(result, "Should not create share result for URL format")
-        XCTAssertNotNil(sharingService.shareError, "Should have error message")
-        XCTAssertEqual(sharingService.shareError, "URL format not supported for all data")
-    }
-    
-    func testParseListURL() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Create a test list and URL
-        let testList = List(name: "Test List")
-        let urlString = "listall://list/\(testList.id.uuidString)?name=Test%20List"
-        let url = URL(string: urlString)!
-        
-        // Parse URL
-        let parsed = sharingService.parseListURL(url)
-        
-        XCTAssertNotNil(parsed, "Should parse URL")
-        XCTAssertEqual(parsed?.listId, testList.id, "Should extract correct list ID")
-        XCTAssertEqual(parsed?.listName, "Test List", "Should extract and decode list name")
-    }
-    
-    func testParseListURLInvalidScheme() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Invalid scheme
-        let invalidURL = URL(string: "https://example.com/list/123")!
-        let parsed = sharingService.parseListURL(invalidURL)
-        
-        XCTAssertNil(parsed, "Should not parse URL with invalid scheme")
-    }
-    
-    func testParseListURLInvalidFormat() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Invalid UUID
-        let invalidURL = URL(string: "listall://list/not-a-uuid?name=Test")!
-        let parsed = sharingService.parseListURL(invalidURL)
-        
-        XCTAssertNil(parsed, "Should not parse URL with invalid UUID")
-    }
-    
-    func testValidateListForSharing() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Valid list
-        let validList = List(name: "Valid List")
-        XCTAssertTrue(sharingService.validateListForSharing(validList), "Should validate valid list")
-        XCTAssertNil(sharingService.shareError, "Should have no error for valid list")
-        
-        // Invalid list (empty name)
-        let invalidList = List(name: "")
-        XCTAssertFalse(sharingService.validateListForSharing(invalidList), "Should not validate invalid list")
-        XCTAssertNotNil(sharingService.shareError, "Should have error for invalid list")
-    }
-    
-    func testShareOptionsDefaults() throws {
-        let defaultOptions = ShareOptions.default
-        XCTAssertTrue(defaultOptions.includeCrossedOutItems, "Default should include crossed out items")
-        XCTAssertTrue(defaultOptions.includeDescriptions, "Default should include descriptions")
-        XCTAssertTrue(defaultOptions.includeQuantities, "Default should include quantities")
-        XCTAssertFalse(defaultOptions.includeDates, "Default should not include dates")
-        
-        let minimalOptions = ShareOptions.minimal
-        XCTAssertFalse(minimalOptions.includeCrossedOutItems, "Minimal should not include crossed out items")
-        XCTAssertFalse(minimalOptions.includeDescriptions, "Minimal should not include descriptions")
-        XCTAssertFalse(minimalOptions.includeQuantities, "Minimal should not include quantities")
-        XCTAssertFalse(minimalOptions.includeDates, "Minimal should not include dates")
-    }
-    
-    func testClearError() throws {
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        let exportService = ExportService(dataRepository: repository)
-        let sharingService = SharingService(dataRepository: repository, exportService: exportService)
-        
-        // Set an error
-        sharingService.shareError = "Test error"
-        XCTAssertNotNil(sharingService.shareError, "Error should be set")
-        
-        // Clear error
-        sharingService.clearError()
-        XCTAssertNil(sharingService.shareError, "Error should be cleared")
-    }
-    
+
     // MARK: - Phase 44 Import Image Support Tests
     
     func testImportFromJSONWithImages() throws {
@@ -2787,328 +3130,4 @@ final class ServicesTests: XCTestCase {
         }
     }
     
-    // MARK: - BiometricAuthService Tests
-    
-    func testBiometricAuthServiceInitialization() throws {
-        // Test that service initializes correctly
-        let service = BiometricAuthService.shared
-        XCTAssertNotNil(service, "BiometricAuthService should initialize")
-        XCTAssertFalse(service.isAuthenticated, "Should not be authenticated on initialization")
-        XCTAssertNil(service.authenticationError, "Should have no error on initialization")
-    }
-    
-    func testBiometricTypeDetection() throws {
-        // Test that biometric type detection doesn't crash
-        let service = BiometricAuthService.shared
-        let biometricType = service.biometricType()
-        
-        // Verify it returns a valid type (will be .none in simulator/tests)
-        XCTAssertTrue(
-            biometricType == .none || 
-            biometricType == .faceID || 
-            biometricType == .touchID || 
-            biometricType == .opticID,
-            "Should return a valid biometric type"
-        )
-    }
-    
-    func testBiometricTypeDisplayNames() throws {
-        // Test that all biometric types have proper display names
-        XCTAssertEqual(BiometricType.none.displayName, "None")
-        XCTAssertEqual(BiometricType.touchID.displayName, "Touch ID")
-        XCTAssertEqual(BiometricType.faceID.displayName, "Face ID")
-        XCTAssertEqual(BiometricType.opticID.displayName, "Optic ID")
-    }
-    
-    func testBiometricTypeIconNames() throws {
-        // Test that all biometric types have proper icon names
-        XCTAssertEqual(BiometricType.none.iconName, "lock.fill")
-        XCTAssertEqual(BiometricType.touchID.iconName, "touchid")
-        XCTAssertEqual(BiometricType.faceID.iconName, "faceid")
-        XCTAssertEqual(BiometricType.opticID.iconName, "opticid")
-    }
-    
-    func testDeviceAuthenticationAvailabilityCheck() throws {
-        // Test that checking device authentication availability doesn't crash
-        let service = BiometricAuthService.shared
-        let isAvailable = service.isDeviceAuthenticationAvailable()
-        
-        // This will typically be false in simulator/tests, but shouldn't crash
-        XCTAssertTrue(isAvailable == true || isAvailable == false, "Should return a boolean value")
-    }
-    
-    func testResetAuthentication() throws {
-        // Test that reset authentication works correctly
-        let service = BiometricAuthService.shared
-        
-        // Set authenticated state to true (simulating authenticated state)
-        service.isAuthenticated = true
-        service.authenticationError = "Some error"
-        
-        // Reset
-        service.resetAuthentication()
-        
-        // Verify reset
-        XCTAssertFalse(service.isAuthenticated, "Should be unauthenticated after reset")
-        XCTAssertNil(service.authenticationError, "Error should be cleared after reset")
-    }
-    
-    func testAuthenticationOnUnavailableDevice() throws {
-        // Test authentication behavior when biometric auth is unavailable (like in simulator)
-        let service = BiometricAuthService.shared
-        let expectation = XCTestExpectation(description: "Authentication completion")
-        
-        // Allow the expectation to be fulfilled asynchronously but don't require it
-        // since LocalAuthentication may not call the completion handler on simulators
-        expectation.assertForOverFulfill = false
-        
-        service.authenticate { success, errorMessage in
-            // In simulator/tests, this will likely fail since biometrics aren't available
-            // But it shouldn't crash
-            XCTAssertTrue(success == true || success == false, "Should return a boolean")
-            if !success {
-                XCTAssertNotNil(errorMessage, "Should provide error message on failure")
-            }
-            expectation.fulfill()
-        }
-        
-        // Use a shorter timeout and accept both outcomes (fulfilled or timeout)
-        let result = XCTWaiter.wait(for: [expectation], timeout: 2.0)
-        
-        // The test passes if the call completes OR times out (simulator limitation)
-        XCTAssertTrue(
-            result == .completed || result == .timedOut,
-            "Test should either complete or timeout (simulator has no biometrics)"
-        )
-    }
-    
-    func testBiometricAuthServiceSingleton() throws {
-        // Test that BiometricAuthService is a proper singleton
-        let service1 = BiometricAuthService.shared
-        let service2 = BiometricAuthService.shared
-        
-        XCTAssertTrue(service1 === service2, "Should return the same instance")
-    }
-    
-    // MARK: - Authentication Timeout Tests
-    
-    func testAuthTimeoutDurationValues() throws {
-        // Test that all timeout duration values are correct
-        XCTAssertEqual(Constants.AuthTimeoutDuration.immediate.rawValue, 0)
-        XCTAssertEqual(Constants.AuthTimeoutDuration.oneMinute.rawValue, 60)
-        XCTAssertEqual(Constants.AuthTimeoutDuration.fiveMinutes.rawValue, 300)
-        XCTAssertEqual(Constants.AuthTimeoutDuration.fifteenMinutes.rawValue, 900)
-        XCTAssertEqual(Constants.AuthTimeoutDuration.thirtyMinutes.rawValue, 1800)
-        XCTAssertEqual(Constants.AuthTimeoutDuration.oneHour.rawValue, 3600)
-    }
-    
-    func testAuthTimeoutDurationDisplayNames() throws {
-        // Test that all timeout durations have proper display names (locale-independent)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.immediate.displayName.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.oneMinute.displayName.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.fiveMinutes.displayName.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.fifteenMinutes.displayName.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.thirtyMinutes.displayName.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.oneHour.displayName.isEmpty)
-        
-        // Verify each case has a unique display name
-        let displayNames = Constants.AuthTimeoutDuration.allCases.map { $0.displayName }
-        let uniqueNames = Set(displayNames)
-        XCTAssertEqual(displayNames.count, uniqueNames.count, "Each timeout duration should have a unique display name")
-    }
-    
-    func testAuthTimeoutDurationDescriptions() throws {
-        // Test that all timeout durations have proper descriptions (locale-independent)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.immediate.description.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.oneMinute.description.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.fiveMinutes.description.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.fifteenMinutes.description.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.thirtyMinutes.description.isEmpty)
-        XCTAssertFalse(Constants.AuthTimeoutDuration.oneHour.description.isEmpty)
-        
-        // Verify each case has a unique description
-        let descriptions = Constants.AuthTimeoutDuration.allCases.map { $0.description }
-        let uniqueDescriptions = Set(descriptions)
-        XCTAssertEqual(descriptions.count, uniqueDescriptions.count, "Each timeout duration should have a unique description")
-    }
-    
-    func testAuthTimeoutDurationAllCases() throws {
-        // Test that all cases are included
-        let allCases = Constants.AuthTimeoutDuration.allCases
-        XCTAssertEqual(allCases.count, 6, "Should have 6 timeout duration options")
-        XCTAssertTrue(allCases.contains(.immediate))
-        XCTAssertTrue(allCases.contains(.oneMinute))
-        XCTAssertTrue(allCases.contains(.fiveMinutes))
-        XCTAssertTrue(allCases.contains(.fifteenMinutes))
-        XCTAssertTrue(allCases.contains(.thirtyMinutes))
-        XCTAssertTrue(allCases.contains(.oneHour))
-    }
-    
-    // MARK: - WatchConnectivityService Tests
-    
-    func testWatchConnectivityServiceSingleton() throws {
-        // Test that WatchConnectivityService is a proper singleton
-        let service1 = WatchConnectivityService.shared
-        let service2 = WatchConnectivityService.shared
-        
-        XCTAssertTrue(service1 === service2, "Should return the same instance")
-    }
-    
-    func testWatchConnectivityServiceInitialization() throws {
-        // Test that WatchConnectivityService initializes properly
-        let service = WatchConnectivityService.shared
-        
-        // Service should be created successfully
-        XCTAssertNotNil(service, "Service should be initialized")
-        
-        // Initial state should be inactive but not necessarily activated yet
-        // (activation may complete asynchronously)
-        XCTAssertTrue(service.isActivated == true || service.isActivated == false, "Should have a boolean activation state")
-        XCTAssertTrue(service.isReachable == true || service.isReachable == false, "Should have a boolean reachability state")
-    }
-    
-    func testWatchConnectivityServiceCanCommunicate() throws {
-        // Test the canCommunicate property
-        let service = WatchConnectivityService.shared
-        
-        // canCommunicate should return a boolean value
-        let canCommunicate = service.canCommunicate
-        XCTAssertTrue(canCommunicate == true || canCommunicate == false, "Should return a boolean value")
-        
-        // In simulator/test environment, canCommunicate will likely be false
-        // because there's no paired watch
-        #if targetEnvironment(simulator)
-        XCTAssertFalse(canCommunicate, "Should not be able to communicate in simulator")
-        #endif
-    }
-    
-    func testWatchConnectivityServiceSendSyncNotification() throws {
-        // Test that sendSyncNotification doesn't crash
-        let service = WatchConnectivityService.shared
-        
-        // This should not crash even if there's no paired device
-        service.sendSyncNotification()
-        
-        // If we reach here without crashing, the test passes
-        XCTAssertTrue(true, "sendSyncNotification should not crash when called")
-    }
-    
-    func testWatchConnectivityServiceNotificationPosting() throws {
-        // Test that incoming sync notifications are posted to NotificationCenter
-        let expectation = XCTestExpectation(description: "Notification posted")
-        
-        // Listen for the notification
-        let observer = NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("WatchConnectivitySyncReceived"),
-            object: nil,
-            queue: .main
-        ) { notification in
-            expectation.fulfill()
-        }
-        
-        // Simulate receiving a message by posting the notification
-        // (We can't easily trigger a real WCSession message in unit tests)
-        NotificationCenter.default.post(
-            name: NSNotification.Name("WatchConnectivitySyncReceived"),
-            object: nil,
-            userInfo: ["syncNotification": true, "timestamp": Date().timeIntervalSince1970]
-        )
-        
-        // Wait for notification
-        wait(for: [expectation], timeout: 1.0)
-        
-        // Clean up
-        NotificationCenter.default.removeObserver(observer)
-    }
-    
-    // MARK: - Phase 72: DataRepository Sync Integration Tests
-    
-    func testDataRepositoryHandlesSyncNotification() throws {
-        // Test that DataRepository responds to sync notifications
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-
-        // Create a test list
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-
-        // Add an item directly to Core Data (simulating change from watch)
-        let externalItem = Item(title: "External Item")
-        testDataManager.addItem(externalItem, to: testList.id)
-
-        // Set up expectation to observe the notification directly before posting it
-        let syncExpectation = expectation(
-            forNotification: NSNotification.Name("WatchConnectivitySyncReceived"),
-            object: nil
-        )
-
-        // Post sync notification (simulating notification from Watch)
-        NotificationCenter.default.post(
-            name: NSNotification.Name("WatchConnectivitySyncReceived"),
-            object: nil,
-            userInfo: ["syncNotification": true]
-        )
-
-        wait(for: [syncExpectation], timeout: 5.0)
-
-        // Verify data was reloaded by checking if lists are up to date
-        let lists = repository.getAllLists()
-        XCTAssertFalse(lists.isEmpty, "Lists should be reloaded after sync notification")
-    }
-    
-    func testDataRepositoryListOperationsSendSyncNotification() throws {
-        // Test that list operations trigger sync notifications
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        
-        // Note: We can't easily verify WatchConnectivityService.sendSyncNotification() 
-        // was called without mocking, but we can verify operations complete successfully
-        
-        // Create list
-        let newList = repository.createList(name: "New List")
-        XCTAssertNotNil(newList, "List should be created")
-        XCTAssertEqual(newList.name, "New List")
-        
-        // Update list
-        let updatedName = "Updated List"
-        repository.updateList(newList, name: updatedName)
-        let retrievedList = repository.getList(by: newList.id)
-        XCTAssertEqual(retrievedList?.name, updatedName, "List should be updated")
-        
-        // Delete list
-        repository.deleteList(newList)
-        let deletedList = repository.getList(by: newList.id)
-        XCTAssertNil(deletedList, "List should be deleted")
-    }
-    
-    func testDataRepositoryItemOperationsSendSyncNotification() throws {
-        // Test that item operations trigger sync notifications
-        let testDataManager = TestHelpers.createTestDataManager()
-        let repository = TestDataRepository(dataManager: testDataManager)
-        
-        // Create a test list
-        let testList = List(name: "Test List")
-        testDataManager.addList(testList)
-        
-        // Create item
-        let newItem = repository.createItem(in: testList, title: "New Item", description: "Test", quantity: 1)
-        XCTAssertNotNil(newItem, "Item should be created")
-        XCTAssertEqual(newItem.title, "New Item")
-        
-        // Update item
-        repository.updateItem(newItem, title: "Updated Item", description: "Updated", quantity: 2)
-        let retrievedItem = repository.getItem(by: newItem.id)
-        XCTAssertEqual(retrievedItem?.title, "Updated Item", "Item should be updated")
-        XCTAssertEqual(retrievedItem?.quantity, 2, "Item quantity should be updated")
-        
-        // Toggle item completion
-        repository.toggleItemCrossedOut(newItem)
-        let toggledItem = repository.getItem(by: newItem.id)
-        XCTAssertTrue(toggledItem?.isCrossedOut ?? false, "Item should be crossed out")
-        
-        // Delete item
-        repository.deleteItem(newItem)
-        let deletedItem = repository.getItem(by: newItem.id)
-        XCTAssertNil(deletedItem, "Item should be deleted")
-    }
 }

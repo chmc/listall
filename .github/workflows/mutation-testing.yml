@@ -49,7 +49,7 @@ jobs:
         swift build -c release --product muter
 
     - name: Upload Muter binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: muter-binary
         path: /tmp/muter/.build/release/muter
@@ -86,12 +86,21 @@ jobs:
             file_name: "ExportService"
             test_targets: "ListAllTests/ServicesTests"
           - file: "ListAll/ListAll/Services/ImportService.swift"
-            file_name: "ImportService"
-            test_targets: "ListAllTests/ServicesTests"
-            # 93 mutants — will produce partial results (completes ~20 mutants in timeout)
+            file_name: "ImportService-A"
+            test_targets: "ListAllTests/ImportServiceTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/Services/ImportService.swift"
+            file_name: "ImportService-B"
+            test_targets: "ListAllTests/ImportServiceTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/Services/SuggestionService.swift"
-            file_name: "SuggestionService"
-            test_targets: "ListAllTests/ServicesTests"
+            file_name: "SuggestionService-A"
+            test_targets: "ListAllTests/SuggestionServiceTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/Services/SuggestionService.swift"
+            file_name: "SuggestionService-B"
+            test_targets: "ListAllTests/SuggestionServiceTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/Utils/Constants.swift"
             file_name: "Constants"
             test_targets: ""
@@ -102,8 +111,13 @@ jobs:
             file_name: "URLHelper"
             test_targets: "ListAllTests/URLHelperTests"
           - file: "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
-            file_name: "ValidationHelper"
+            file_name: "ValidationHelper-A"
             test_targets: "ListAllTests/UtilsTests,ListAllTests/StressTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
+            file_name: "ValidationHelper-B"
+            test_targets: "ListAllTests/UtilsTests,ListAllTests/StressTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/Utils/LocalizationManager.swift"
             file_name: "LocalizationManager"
             test_targets: "ListAllTests/UtilsTests"
@@ -120,23 +134,31 @@ jobs:
             file_name: "ItemViewModel"
             test_targets: "ListAllTests/ViewModelsTests"
           - file: "ListAll/ListAll/ViewModels/ListViewModel.swift"
-            file_name: "ListViewModel"
-            test_targets: "ListAllTests/ViewModelsTests"
-            # 83 mutants — will produce partial results (completes ~20 mutants in timeout)
+            file_name: "ListViewModel-A"
+            test_targets: "ListAllTests/ListViewModelTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/ViewModels/ListViewModel.swift"
+            file_name: "ListViewModel-B"
+            test_targets: "ListAllTests/ListViewModelTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/ViewModels/MainViewModel.swift"
-            file_name: "MainViewModel"
-            test_targets: "ListAllTests/ViewModelsTests"
-            # 74 mutants — will produce partial results (completes ~20 mutants in timeout)
+            file_name: "MainViewModel-A"
+            test_targets: "ListAllTests/MainViewModelTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/ViewModels/MainViewModel.swift"
+            file_name: "MainViewModel-B"
+            test_targets: "ListAllTests/MainViewModelTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
     - name: Download Muter binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: muter-binary
         path: /usr/local/bin
@@ -174,14 +196,21 @@ jobs:
         echo "::notice::Baseline iOS test suite runtime: ${ELAPSED}s ($(( ELAPSED / 60 ))m$(( ELAPSED % 60 ))s)"
         echo "::endgroup::"
 
+    - name: Log system resources
+      run: |
+        echo "::group::System Resources"
+        sysctl hw.memsize | awk '{printf "RAM: %.1f GB\n", $2/1024/1024/1024}'
+        vm_stat | head -5
+        echo "::endgroup::"
+
     - name: Run Muter (iOS)
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
         if [ -n "${{ matrix.test_targets }}" ]; then
-          script -q muter-output.log ./scripts/run-muter.sh ios --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log timeout 350m ./scripts/run-muter.sh ios --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         else
-          script -q muter-output.log ./scripts/run-muter.sh ios --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log timeout 350m ./scripts/run-muter.sh ios --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         fi
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
@@ -189,7 +218,7 @@ jobs:
 
     - name: Upload mutation report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mutation-report-ios-${{ matrix.file_name }}-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
@@ -213,13 +242,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
     - name: Download Muter binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: muter-binary
         path: /usr/local/bin
@@ -239,7 +268,7 @@ jobs:
 
     - name: Upload mutation report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mutation-report-ios-manual-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
@@ -280,12 +309,21 @@ jobs:
             file_name: "ExportService"
             test_targets: "ListAllMacTests/ListAllMacTests"
           - file: "ListAll/ListAll/Services/ImportService.swift"
-            file_name: "ImportService"
+            file_name: "ImportService-A"
             test_targets: "ListAllMacTests/ImportServiceMacTests"
-            # 93 mutants — will produce partial results (completes ~35 mutants in timeout)
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/Services/ImportService.swift"
+            file_name: "ImportService-B"
+            test_targets: "ListAllMacTests/ImportServiceMacTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/Services/SuggestionService.swift"
-            file_name: "SuggestionService"
+            file_name: "SuggestionService-A"
             test_targets: "ListAllMacTests/SuggestionServiceMacTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/Services/SuggestionService.swift"
+            file_name: "SuggestionService-B"
+            test_targets: "ListAllMacTests/SuggestionServiceMacTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/Utils/Constants.swift"
             file_name: "Constants"
             test_targets: ""
@@ -296,8 +334,13 @@ jobs:
             file_name: "URLHelper"
             test_targets: "ListAllMacTests/UtilsTestsMac"
           - file: "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
-            file_name: "ValidationHelper"
+            file_name: "ValidationHelper-A"
             test_targets: "ListAllMacTests/UtilsTestsMac,ListAllMacTests/MacStressTests"
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/Utils/Helpers/ValidationHelper.swift"
+            file_name: "ValidationHelper-B"
+            test_targets: "ListAllMacTests/UtilsTestsMac,ListAllMacTests/MacStressTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/Utils/LocalizationManager.swift"
             file_name: "LocalizationManager"
             test_targets: "ListAllMacTests/UtilsTestsMac"
@@ -314,13 +357,21 @@ jobs:
             file_name: "ItemViewModel"
             test_targets: "ListAllMacTests/ListAllMacTests"
           - file: "ListAll/ListAll/ViewModels/ListViewModel.swift"
-            file_name: "ListViewModel"
+            file_name: "ListViewModel-A"
             test_targets: "ListAllMacTests/ListViewModelMacTests"
-            # 83 mutants — will produce partial results (completes ~35 mutants in timeout)
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/ViewModels/ListViewModel.swift"
+            file_name: "ListViewModel-B"
+            test_targets: "ListAllMacTests/ListViewModelMacTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           - file: "ListAll/ListAll/ViewModels/MainViewModel.swift"
-            file_name: "MainViewModel"
+            file_name: "MainViewModel-A"
             test_targets: "ListAllMacTests/MainViewModelMacTests"
-            # 74 mutants — will produce partial results (completes ~35 mutants in timeout)
+            extra_args: "--operators RelationalOperatorReplacement,RemoveSideEffects"
+          - file: "ListAll/ListAll/ViewModels/MainViewModel.swift"
+            file_name: "MainViewModel-B"
+            test_targets: "ListAllMacTests/MainViewModelMacTests"
+            extra_args: "--operators ChangeLogicalConnector,SwapTernary"
           # macOS-specific files
           - file: "ListAll/ListAllMac/Commands/AppCommands.swift"
             file_name: "AppCommands"
@@ -334,13 +385,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
     - name: Download Muter binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: muter-binary
         path: /usr/local/bin
@@ -348,14 +399,21 @@ jobs:
     - name: Make Muter executable
       run: chmod +x /usr/local/bin/muter
 
+    - name: Log system resources
+      run: |
+        echo "::group::System Resources"
+        sysctl hw.memsize | awk '{printf "RAM: %.1f GB\n", $2/1024/1024/1024}'
+        vm_stat | head -5
+        echo "::endgroup::"
+
     - name: Run Muter (macOS)
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
         if [ -n "${{ matrix.test_targets }}" ]; then
-          script -q muter-output.log ./scripts/run-muter.sh macos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log timeout 350m ./scripts/run-muter.sh macos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         else
-          script -q muter-output.log ./scripts/run-muter.sh macos --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log timeout 350m ./scripts/run-muter.sh macos --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         fi
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
@@ -363,7 +421,7 @@ jobs:
 
     - name: Upload mutation report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mutation-report-macos-${{ matrix.file_name }}-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
@@ -387,13 +445,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
     - name: Download Muter binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: muter-binary
         path: /usr/local/bin
@@ -408,7 +466,7 @@ jobs:
 
     - name: Upload mutation report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mutation-report-macos-manual-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
@@ -466,13 +524,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
     - name: Download Muter binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: muter-binary
         path: /usr/local/bin
@@ -485,14 +543,21 @@ jobs:
         xcrun simctl shutdown all || true
         xcrun simctl delete unavailable || true
 
+    - name: Log system resources
+      run: |
+        echo "::group::System Resources"
+        sysctl hw.memsize | awk '{printf "RAM: %.1f GB\n", $2/1024/1024/1024}'
+        vm_stat | head -5
+        echo "::endgroup::"
+
     - name: Run Muter (watchOS)
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
         if [ -n "${{ matrix.test_targets }}" ]; then
-          script -q muter-output.log ./scripts/run-muter.sh watchos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log timeout 350m ./scripts/run-muter.sh watchos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
         else
-          script -q muter-output.log ./scripts/run-muter.sh watchos --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log timeout 350m ./scripts/run-muter.sh watchos --files-to-mutate "${{ matrix.file }}"
         fi
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
@@ -500,7 +565,7 @@ jobs:
 
     - name: Upload mutation report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mutation-report-watchos-${{ matrix.file_name }}-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
@@ -524,13 +589,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
 
     - name: Download Muter binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: muter-binary
         path: /usr/local/bin
@@ -550,7 +615,7 @@ jobs:
 
     - name: Upload mutation report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mutation-report-watchos-manual-${{ github.run_id }}-${{ github.run_attempt }}
         path: |

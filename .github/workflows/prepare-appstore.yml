@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -62,7 +62,7 @@ jobs:
           fi
 
       - name: Generate iPhone screenshots
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3  # TODO: Still on Node.js 20 (nick-fields/retry#162). Replace by May 2026 if no update.
         with:
           timeout_minutes: 45
           max_attempts: 2
@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload iPhone screenshots artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-iphone
           path: fastlane/screenshots_compat/
@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-iphone
           path: |
@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 120  # iPad is significantly slower than iPhone in CI (needs ~84min for both locales)
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -139,7 +139,7 @@ jobs:
           fi
 
       - name: Generate iPad screenshots
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3  # TODO: Still on Node.js 20 (nick-fields/retry#162). Replace by May 2026 if no update.
         with:
           timeout_minutes: 60  # iPad needs more time due to slower simulator performance
           max_attempts: 2
@@ -150,7 +150,7 @@ jobs:
 
       - name: Upload iPad screenshots artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-ipad
           path: fastlane/screenshots_compat/
@@ -158,7 +158,7 @@ jobs:
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-ipad
           path: |
@@ -172,7 +172,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -219,7 +219,7 @@ jobs:
           done
 
       - name: Generate Watch screenshots
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3  # TODO: Still on Node.js 20 (nick-fields/retry#162). Replace by May 2026 if no update.
         with:
           timeout_minutes: 45
           max_attempts: 2
@@ -230,7 +230,7 @@ jobs:
 
       - name: Upload Watch screenshots artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-watch
           path: fastlane/screenshots/watch_normalized/
@@ -238,7 +238,7 @@ jobs:
 
       - name: Upload HTML report
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshot-report-watch
           path: fastlane/screenshots/watch/screenshots.html
@@ -246,7 +246,7 @@ jobs:
 
       - name: Upload xcresult and logs for diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-watch
           path: |
@@ -266,7 +266,7 @@ jobs:
       ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -281,19 +281,19 @@ jobs:
         run: mkdir -p fastlane/screenshots_compat
 
       - name: Download iPhone screenshots
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: screenshots-iphone
           path: fastlane/screenshots_compat/
 
       - name: Download iPad screenshots
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: screenshots-ipad
           path: fastlane/screenshots_compat/
 
       - name: Download Watch screenshots
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: screenshots-watch
           path: fastlane/screenshots/watch_normalized/

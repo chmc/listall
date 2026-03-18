@@ -22,7 +22,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -32,7 +32,7 @@ jobs:
 
     # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-derived-data-ios-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
@@ -87,7 +87,7 @@ jobs:
     # Always upload test results for debugging, even on success
     - name: Upload iOS test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ios-test-results
         path: ListAll/TestResults.xcresult
@@ -101,7 +101,7 @@ jobs:
 
     - name: Upload iOS coverage JSON
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ios-coverage
         path: ListAll/coverage-ios.json
@@ -110,7 +110,7 @@ jobs:
     # Upload diagnostic logs only on failure to reduce artifact storage
     - name: Upload iOS test logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ios-test-logs
         path: |
@@ -128,7 +128,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -138,7 +138,7 @@ jobs:
 
     # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-derived-data-watchos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
@@ -221,7 +221,7 @@ jobs:
     # Always upload test results for debugging, even on success
     - name: Upload watchOS test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: watchos-test-results
         path: ListAll/TestResults-Watch.xcresult
@@ -235,7 +235,7 @@ jobs:
 
     - name: Upload watchOS coverage JSON
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: watchos-coverage
         path: ListAll/coverage-watchos.json
@@ -244,7 +244,7 @@ jobs:
     # Upload diagnostic logs only on failure to reduce artifact storage
     - name: Upload watchOS test logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: watchos-test-logs
         path: |
@@ -262,7 +262,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
@@ -272,7 +272,7 @@ jobs:
 
     # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
         key: ${{ runner.os }}-derived-data-macos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
@@ -325,7 +325,7 @@ jobs:
     # Always upload test results for debugging, even on success
     - name: Upload macOS test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: macos-test-results
         path: ListAll/TestResults-Mac.xcresult
@@ -339,7 +339,7 @@ jobs:
 
     - name: Upload macOS coverage JSON
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: macos-coverage
         path: ListAll/coverage-macos.json
@@ -348,7 +348,7 @@ jobs:
     # Upload diagnostic logs only on failure to reduce artifact storage
     - name: Upload macOS test logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: macos-test-logs
         path: |

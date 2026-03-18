@@ -5,6 +5,66 @@ import CoreData
 
 class ViewModelsTests: XCTestCase {
     
+    // MainViewModel tests moved to MainViewModelTests class below
+
+    // MARK: - ItemViewModel Tests
+    
+    func testItemViewModelInitialization() throws {
+        let item = Item(title: "Test Item")
+        let viewModel = TestHelpers.createTestItemViewModel(with: item)
+        
+        XCTAssertEqual(viewModel.item.id, item.id)
+        XCTAssertEqual(viewModel.item.title, item.title)
+    }
+    
+    func testItemViewModelToggleCrossedOut() throws {
+        let item = Item(title: "Test Item")
+        let viewModel = TestHelpers.createTestItemViewModel(with: item)
+        let originalState = item.isCrossedOut
+
+        viewModel.toggleCrossedOut()
+        XCTAssertEqual(viewModel.item.isCrossedOut, !originalState)
+
+        viewModel.toggleCrossedOut()
+        XCTAssertEqual(viewModel.item.isCrossedOut, originalState)
+    }
+
+    func testUpdateItemSetsDescriptionToNilWhenEmpty() throws {
+        var item = Item(title: "Test Item")
+        item.itemDescription = "Original description"
+        let viewModel = TestHelpers.createTestItemViewModel(with: item)
+
+        viewModel.updateItem(title: "Test Item", description: "", quantity: 1)
+
+        XCTAssertNil(viewModel.item.itemDescription, "Empty description should be stored as nil")
+    }
+
+    func testUpdateItemSetsDescriptionWhenNotEmpty() throws {
+        let item = Item(title: "Test Item")
+        let viewModel = TestHelpers.createTestItemViewModel(with: item)
+
+        viewModel.updateItem(title: "Test Item", description: "New description", quantity: 1)
+
+        XCTAssertEqual(viewModel.item.itemDescription, "New description")
+    }
+
+    func testUpdateItemUpdatesModifiedDate() throws {
+        let item = Item(title: "Test Item")
+        let viewModel = TestHelpers.createTestItemViewModel(with: item)
+        let originalDate = viewModel.item.modifiedAt
+
+        viewModel.updateItem(title: "Updated Title", description: "", quantity: 2)
+
+        XCTAssertGreaterThan(viewModel.item.modifiedAt, originalDate, "modifiedAt should advance after updateItem")
+    }
+
+    // ListViewModel tests moved to ListViewModelTests class below
+}
+
+// MARK: - MainViewModelTests
+
+final class MainViewModelTests: XCTestCase {
+
     // MARK: - MainViewModel Tests
     
     func testMainViewModelInitialization() throws {
@@ -280,56 +340,11 @@ class ViewModelsTests: XCTestCase {
         XCTAssertEqual(viewModel.lists.first?.name, specialName)
     }
     
-    // MARK: - ItemViewModel Tests
-    
-    func testItemViewModelInitialization() throws {
-        let item = Item(title: "Test Item")
-        let viewModel = TestHelpers.createTestItemViewModel(with: item)
-        
-        XCTAssertEqual(viewModel.item.id, item.id)
-        XCTAssertEqual(viewModel.item.title, item.title)
-    }
-    
-    func testItemViewModelToggleCrossedOut() throws {
-        let item = Item(title: "Test Item")
-        let viewModel = TestHelpers.createTestItemViewModel(with: item)
-        let originalState = item.isCrossedOut
+}
 
-        viewModel.toggleCrossedOut()
-        XCTAssertEqual(viewModel.item.isCrossedOut, !originalState)
+// MARK: - ListViewModelTests
 
-        viewModel.toggleCrossedOut()
-        XCTAssertEqual(viewModel.item.isCrossedOut, originalState)
-    }
-
-    func testUpdateItemSetsDescriptionToNilWhenEmpty() throws {
-        var item = Item(title: "Test Item")
-        item.itemDescription = "Original description"
-        let viewModel = TestHelpers.createTestItemViewModel(with: item)
-
-        viewModel.updateItem(title: "Test Item", description: "", quantity: 1)
-
-        XCTAssertNil(viewModel.item.itemDescription, "Empty description should be stored as nil")
-    }
-
-    func testUpdateItemSetsDescriptionWhenNotEmpty() throws {
-        let item = Item(title: "Test Item")
-        let viewModel = TestHelpers.createTestItemViewModel(with: item)
-
-        viewModel.updateItem(title: "Test Item", description: "New description", quantity: 1)
-
-        XCTAssertEqual(viewModel.item.itemDescription, "New description")
-    }
-
-    func testUpdateItemUpdatesModifiedDate() throws {
-        let item = Item(title: "Test Item")
-        let viewModel = TestHelpers.createTestItemViewModel(with: item)
-        let originalDate = viewModel.item.modifiedAt
-
-        viewModel.updateItem(title: "Updated Title", description: "", quantity: 2)
-
-        XCTAssertGreaterThan(viewModel.item.modifiedAt, originalDate, "modifiedAt should advance after updateItem")
-    }
+final class ListViewModelTests: XCTestCase {
 
     // MARK: - ListViewModel Tests
     
