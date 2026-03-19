@@ -208,9 +208,9 @@ jobs:
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
         if [ -n "${{ matrix.test_targets }}" ]; then
-          script -q muter-output.log timeout 350m ./scripts/run-muter.sh ios --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
+          script -q muter-output.log ./scripts/run-muter.sh ios --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         else
-          script -q muter-output.log timeout 350m ./scripts/run-muter.sh ios --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
+          script -q muter-output.log ./scripts/run-muter.sh ios --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         fi
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
@@ -411,9 +411,9 @@ jobs:
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
         if [ -n "${{ matrix.test_targets }}" ]; then
-          script -q muter-output.log timeout 350m ./scripts/run-muter.sh macos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
+          script -q muter-output.log ./scripts/run-muter.sh macos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         else
-          script -q muter-output.log timeout 350m ./scripts/run-muter.sh macos --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
+          script -q muter-output.log ./scripts/run-muter.sh macos --files-to-mutate "${{ matrix.file }}" ${{ matrix.extra_args }}
         fi
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
@@ -555,9 +555,9 @@ jobs:
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
         if [ -n "${{ matrix.test_targets }}" ]; then
-          script -q muter-output.log timeout 350m ./scripts/run-muter.sh watchos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log ./scripts/run-muter.sh watchos --test-targets "${{ matrix.test_targets }}" --files-to-mutate "${{ matrix.file }}"
         else
-          script -q muter-output.log timeout 350m ./scripts/run-muter.sh watchos --files-to-mutate "${{ matrix.file }}"
+          script -q muter-output.log ./scripts/run-muter.sh watchos --files-to-mutate "${{ matrix.file }}"
         fi
         END_TIME=$(date +%s)
         ELAPSED=$(( END_TIME - START_TIME ))
