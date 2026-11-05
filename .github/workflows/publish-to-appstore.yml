@@ -32,6 +32,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      # The App Store version must match the built version in .version.
+      # A mistyped input (1.1.20 for build 1.1.19, 2026-02-18) made the store
+      # version run ahead of the repo and blocked the next patch release.
+      - name: Verify version matches .version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          REPO_VERSION="$(tr -d '[:space:]' < .version)"
+          if [[ "${INPUT_VERSION}" != "${REPO_VERSION}" ]]; then
+            echo "::error::Input version '${INPUT_VERSION}' does not match .version '${REPO_VERSION}' (the version built by Release to TestFlight)"
+            exit 1
+          fi
+          echo "✅ Publishing version ${REPO_VERSION}"
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
