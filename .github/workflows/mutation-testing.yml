@@ -199,6 +199,8 @@ jobs:
         echo "::endgroup::"
 
     - name: Run Muter (iOS)
+      # Below the 360-min job limit so "Upload mutation report" still runs on timeout
+      timeout-minutes: 340
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
@@ -257,6 +259,8 @@ jobs:
         xcrun simctl delete unavailable || true
 
     - name: Run Muter (iOS)
+      # Below the 360-min job limit so "Upload mutation report" still runs on timeout
+      timeout-minutes: 340
       run: |
         chmod +x scripts/run-muter.sh
         script -q muter-output.log ./scripts/run-muter.sh ios ${{ github.event.inputs.muter_args }}
@@ -407,6 +411,8 @@ jobs:
         echo "::endgroup::"
 
     - name: Run Muter (macOS)
+      # Below the 360-min job limit so "Upload mutation report" still runs on timeout
+      timeout-minutes: 340
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
@@ -460,6 +466,8 @@ jobs:
       run: chmod +x /usr/local/bin/muter
 
     - name: Run Muter (macOS)
+      # Below the 360-min job limit so "Upload mutation report" still runs on timeout
+      timeout-minutes: 340
       run: |
         chmod +x scripts/run-muter.sh
         script -q muter-output.log ./scripts/run-muter.sh macos ${{ github.event.inputs.muter_args }}
@@ -551,6 +559,8 @@ jobs:
         echo "::endgroup::"
 
     - name: Run Muter (watchOS)
+      # Below the 360-min job limit so "Upload mutation report" still runs on timeout
+      timeout-minutes: 340
       run: |
         chmod +x scripts/run-muter.sh
         START_TIME=$(date +%s)
@@ -609,6 +619,8 @@ jobs:
         xcrun simctl delete unavailable || true
 
     - name: Run Muter (watchOS)
+      # Below the 360-min job limit so "Upload mutation report" still runs on timeout
+      timeout-minutes: 340
       run: |
         chmod +x scripts/run-muter.sh
         script -q muter-output.log ./scripts/run-muter.sh watchos ${{ github.event.inputs.muter_args }}
