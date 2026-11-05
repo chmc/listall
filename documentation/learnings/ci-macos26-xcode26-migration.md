@@ -78,6 +78,11 @@ muter run --operators RelationalOperatorReplacement RemoveSideEffects
 - [ ] Don't use `cmd | head -n 1` under `set -o pipefail`, because it can SIGPIPE intermittently (exit 141). Use `awk 'NR==1'` instead.
 - [ ] Periphery is installed from the pinned 3.8.0 release zip, with its sha256 checked against the GitHub release digest. Don't use the `peripheryapp/periphery` tap: current Homebrew rejects its cask with "Calling `depends_on macos: :catalina` is disabled". Upstream is archived, so no new releases are coming.
 - [ ] CI builds Release too ("Build iOS/macOS app (Release)"). Xcode 16.1 ignored the Xcode 26 settings `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, `SWIFT_APPROACHABLE_CONCURRENCY` and `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY`, which existed only in the ListAllMac **Release** configuration. On Xcode 26.6 they broke the 1.1.22 TestFlight archive: "missing import of defining module 'Combine'", "does not conform to protocol 'ObservableObject'". Debug-only CI and local tests passed. The settings were removed, so Release now matches Debug and every earlier shipped build. Keep the Debug and Release Swift settings identical per target.
+- [ ] Flaky timing tests on macos-26 runners. The busier main thread exposed real cross-talk, so the fixes are in the code, not just longer timeouts:
+  - `CoreDataManager` observes `NSManagedObjectContextDidSave` for all contexts, so every save of a test's in-memory container reloaded the host app on main. It now ignores other coordinators. Test: `testSaveOnUnrelatedStoreDoesNotTriggerRefresh`.
+  - `WatchMainViewModel` reloaded Core Data once per sync notification. It now coalesces them with cancellable work items. Test: `..._coalesceIntoSingleReload`.
+  - Watch indicator tests wait on state (`XCTNSPredicateExpectation`) instead of a fixed `asyncAfter`.
+  - macOS pasteboard tests use `makeIsolatedPasteboard()`, because `NSPasteboard.general` is shared by parallel test processes. Call `clearContents()` before `writeObjects`.
 - [ ] App Store versions must only increase. Check the live version (`https://itunes.apple.com/lookup?bundleId=io.github.chmc.ListAll`) and the App Store Connect TestFlight trains before choosing `bump_type`. `.version` on main can lag behind, because builds 1.1.20/1.1.21 were released from a feature branch.
 
 ## Key Insight
