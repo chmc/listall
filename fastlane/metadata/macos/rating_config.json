@@ -10,8 +10,18 @@
   "gamblingSimulated": "NONE",
   "sexualContentOrNudity": "NONE",
   "sexualContentGraphicAndNudity": "NONE",
+  "gunsOrOtherWeapons": "NONE",
+  "contests": "NONE",
   "unrestrictedWebAccess": false,
   "gambling": false,
-  "contests": "NONE",
-  "ageRatingOverride": "NONE"
+  "lootBox": false,
+  "advertising": false,
+  "userGeneratedContent": false,
+  "messagingAndChat": false,
+  "socialMedia": false,
+  "socialMediaAgeRestricted": false,
+  "parentalControls": false,
+  "ageAssurance": false,
+  "healthOrWellnessTopics": false,
+  "ageRatingOverrideV2": "NONE"
 }
