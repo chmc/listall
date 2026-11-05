@@ -62,6 +62,19 @@ Questionnaire Answers:
 - Gambling: None
 - Unrestricted Web Access: No
 - User Generated Content: No
+- Guns or Other Weapons: None
+- Loot Boxes: No
+- Advertising: No
+- Messaging and Chat: No
+- Social Media: No (and not age-restricted social media)
+- Parental Controls: No
+- Age Assurance: No
+- Health or Wellness Topics: No
+
+The source of truth is rating_config.json. Apple added required questions in
+2026 (e.g. socialMedia); a missing one fails deliver with "You must provide a
+value for the attribute '<name>'". Full attribute list: App Store Connect API
+AgeRatingDeclarationUpdateRequest.Data.Attributes.
 
 
 PRICING
