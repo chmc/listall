@@ -18,7 +18,7 @@ jobs:
   build-and-test-ios:
     name: Build and Test iOS
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
     - name: Checkout code
@@ -86,6 +86,21 @@ jobs:
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
+          | xcbeautify --renderer github-actions
+
+    # Release-configuration compile check (includes the embedded watch app).
+    # TestFlight archives Release; Debug-only CI let Release-only build
+    # settings break the 1.1.22 macOS release.
+    - name: Build iOS app (Release)
+      run: |
+        set -o pipefail
+        cd ListAll
+        xcodebuild build \
+          -project ListAll.xcodeproj \
+          -scheme ListAll \
+          -destination 'generic/platform=iOS' \
+          -configuration Release \
+          CODE_SIGNING_ALLOWED=NO \
           | xcbeautify --renderer github-actions
 
     # Always upload test results for debugging, even on success
@@ -293,6 +308,20 @@ jobs:
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
+          | xcbeautify --renderer github-actions
+
+    # Release-configuration compile check: TestFlight archives Release, and
+    # Release-only build settings broke the 1.1.22 macOS release.
+    - name: Build macOS app (Release)
+      run: |
+        set -o pipefail
+        cd ListAll
+        xcodebuild build \
+          -project ListAll.xcodeproj \
+          -scheme ListAllMac \
+          -destination 'generic/platform=macOS' \
+          -configuration Release \
+          CODE_SIGNING_ALLOWED=NO \
           | xcbeautify --renderer github-actions
 
     # Always upload test results for debugging, even on success
