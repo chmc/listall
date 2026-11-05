@@ -95,7 +95,7 @@ check_xcode() {
     # Check Xcode version matches .xcode-version exactly (same as CI)
     local expected_xcode xcode_version
     expected_xcode="$(tr -d '[:space:]' < "${PROJECT_ROOT}/.xcode-version")"
-    xcode_version="$(xcodebuild -version | head -1 | awk '{print $2}')"
+    xcode_version="$(xcodebuild -version | awk 'NR==1 {print $2}')"
 
     if [[ "${xcode_version}" == "${expected_xcode}" ]]; then
         log_success "Xcode ${xcode_version} (matches .xcode-version)"
@@ -146,7 +146,7 @@ check_tools() {
     # Check ImageMagick (convert command)
     if command -v convert &>/dev/null; then
         local imagemagick_version
-        imagemagick_version="$(convert -version 2>/dev/null | head -1 | awk '{print $3}')"
+        imagemagick_version="$(convert -version 2>/dev/null | awk 'NR==1 {print $3}')"
         log_success "ImageMagick ${imagemagick_version} installed"
     else
         log_failure "ImageMagick not found"

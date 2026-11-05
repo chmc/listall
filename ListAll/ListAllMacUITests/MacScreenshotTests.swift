@@ -72,6 +72,14 @@ final class MacScreenshotTests: MacUITestCase {
         drainRunLoop()
     }
 
+    /// Arguments that make screenshots independent of state persisted on the capturing Mac:
+    /// feature tips are marked viewed, and the archived sidebar section uses its default
+    /// (collapsed) value via the NSArgumentDomain, overriding any stored @AppStorage value.
+    private static let deterministicStateArguments = [
+        "DISABLE_TOOLTIPS",
+        "-archivedSectionExpanded", "NO"
+    ]
+
     /// Launch app with retry logic to handle "Failed to terminate" errors
     /// Note: maxRetries=2 gives 2×60s=120s budget, leaving 180s for test execution within 300s timeout
     private func launchAppWithRetry(arguments: [String], maxRetries: Int = 2) -> Bool {
@@ -90,7 +98,7 @@ final class MacScreenshotTests: MacUITestCase {
             }
 
             // Set launch arguments: preserve MacSnapshotHelper args + test-specific args
-            app.launchArguments = baseArguments + arguments
+            app.launchArguments = baseArguments + arguments + Self.deterministicStateArguments
 
             print("🚀 Launch attempt \(attempt)/\(maxRetries)...")
 

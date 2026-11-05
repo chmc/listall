@@ -41,7 +41,7 @@ jobs:
           DEVICE_UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro Max")
           xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
           xcrun simctl bootstatus "$DEVICE_UDID" -b
-          xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
+          xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState discharging --batteryLevel 100 2>/dev/null || true
           echo "✅ Simulator pre-booted and ready"
 
       - name: Generate iPhone screenshots
@@ -101,7 +101,7 @@ jobs:
           DEVICE_UDID=$(.github/scripts/resolve-simulator.sh iOS "iPad Pro 13-inch (M5)")
           xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
           xcrun simctl bootstatus "$DEVICE_UDID" -b
-          xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
+          xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState discharging --batteryLevel 100 2>/dev/null || true
           echo "✅ Simulator pre-booted and ready"
 
       - name: Generate iPad screenshots
