@@ -7,6 +7,9 @@ set -euo pipefail
 # Validates the local environment meets all requirements for screenshot
 # generation before running time-consuming Fastlane lanes.
 #
+# Note: the simulator check uses .github/scripts/resolve-simulator.sh, which
+# creates missing devices (and pairs the Watch) on the selected Xcode's runtime.
+#
 # Exit Codes:
 #   0 - All checks passed
 #   1 - One or more checks failed
@@ -89,17 +92,16 @@ check_xcode() {
         return
     fi
 
-    # Check Xcode version (16.1+)
-    local xcode_version
+    # Check Xcode version matches .xcode-version exactly (same as CI)
+    local expected_xcode xcode_version
+    expected_xcode="$(tr -d '[:space:]' < "${PROJECT_ROOT}/.xcode-version")"
     xcode_version="$(xcodebuild -version | head -1 | awk '{print $2}')"
-    local major minor
-    major="$(echo "${xcode_version}" | cut -d. -f1)"
-    minor="$(echo "${xcode_version}" | cut -d. -f2)"
 
-    if [[ "${major}" -gt 16 ]] || [[ "${major}" -eq 16 && "${minor}" -ge 1 ]]; then
-        log_success "Xcode ${xcode_version} (requirement: 16.1+)"
+    if [[ "${xcode_version}" == "${expected_xcode}" ]]; then
+        log_success "Xcode ${xcode_version} (matches .xcode-version)"
     else
-        log_failure "Xcode ${xcode_version} - Expected: 16.1 or higher"
+        log_failure "Xcode ${xcode_version} - Expected: ${expected_xcode} (.xcode-version)"
+        log_info "  Select it: sudo xcode-select -s /Applications/Xcode_${expected_xcode}.app"
     fi
 }
 
@@ -116,29 +118,22 @@ check_simulators() {
         return
     fi
 
-    # Check iPhone 16 Pro Max
-    if xcrun simctl list devices available 2>/dev/null | grep -q "iPhone 16 Pro Max"; then
-        log_success "iPhone 16 Pro Max simulator available"
-    else
-        log_failure "iPhone 16 Pro Max simulator not found"
-        log_info "  Install via: Xcode > Settings > Platforms > iOS 18.1"
-    fi
-
-    # Check iPad Pro 13-inch (M4)
-    if xcrun simctl list devices available 2>/dev/null | grep -q "iPad Pro 13-inch (M4)"; then
-        log_success "iPad Pro 13-inch (M4) simulator available"
-    else
-        log_failure "iPad Pro 13-inch (M4) simulator not found"
-        log_info "  Install via: Xcode > Settings > Platforms > iOS 18.1"
-    fi
-
-    # Check Apple Watch Series 10 (46mm)
-    if xcrun simctl list devices available 2>/dev/null | grep -q "Apple Watch Series 10 (46mm)"; then
-        log_success "Apple Watch Series 10 (46mm) simulator available"
-    else
-        log_failure "Apple Watch Series 10 (46mm) simulator not found"
-        log_info "  Install via: Xcode > Settings > Platforms > watchOS 11.1"
-    fi
+    # Resolve (or create) each device on the runtime of the selected Xcode,
+    # using the same resolver as the CI workflows
+    local platform device
+    while IFS='|' read -r platform device; do
+        if "${SCRIPT_DIR}/resolve-simulator.sh" "${platform}" "${device}" >/dev/null 2>&1; then
+            log_success "${device} simulator available (${platform} runtime of selected Xcode)"
+        else
+            log_failure "${device} simulator not available on the selected Xcode's ${platform} runtime"
+            log_info "  Install the runtime: xcodebuild -downloadPlatform ${platform}"
+        fi
+    done <<'DEVICES'
+iOS|iPhone 17 Pro
+iOS|iPhone 17 Pro Max
+iOS|iPad Pro 13-inch (M5)
+watchOS|Apple Watch Series 11 (46mm)
+DEVICES
 }
 
 # ==============================================================================
@@ -158,18 +153,16 @@ check_tools() {
         log_info "  Install via: brew install imagemagick"
     fi
 
-    # Check Ruby version (3.2+)
+    # Check Ruby version matches .ruby-version exactly (same as CI)
     if command -v ruby &>/dev/null; then
-        local ruby_version
-        ruby_version="$(ruby --version | awk '{print $2}' | cut -dp -f1)"
-        local ruby_major ruby_minor
-        ruby_major="$(echo "${ruby_version}" | cut -d. -f1)"
-        ruby_minor="$(echo "${ruby_version}" | cut -d. -f2)"
+        local expected_ruby ruby_version
+        expected_ruby="$(tr -d '[:space:]' < "${PROJECT_ROOT}/.ruby-version")"
+        ruby_version="$(ruby -e 'print RUBY_VERSION')"
 
-        if [[ "${ruby_major}" -gt 3 ]] || [[ "${ruby_major}" -eq 3 && "${ruby_minor}" -ge 2 ]]; then
-            log_success "Ruby ${ruby_version} (requirement: 3.2+)"
+        if [[ "${ruby_version}" == "${expected_ruby}" ]]; then
+            log_success "Ruby ${ruby_version} (matches .ruby-version)"
         else
-            log_failure "Ruby ${ruby_version} - Expected: 3.2 or higher"
+            log_failure "Ruby ${ruby_version} - Expected: ${expected_ruby} (.ruby-version)"
         fi
     else
         log_failure "Ruby not found"

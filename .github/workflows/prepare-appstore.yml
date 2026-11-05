@@ -14,55 +14,38 @@ permissions:
 jobs:
   generate-iphone-screenshots:
     name: Generate iPhone Screenshots
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Setup Xcode
+        uses: ./.github/actions/setup-xcode
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: brew install imagemagick
 
       - name: Clean and pre-boot simulator
+        timeout-minutes: 10
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
           # Pre-boot iPhone simulator to reduce test startup time
-          echo "Pre-booting iPhone 16 Pro Max simulator..."
-          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          for runtime, devices in data.get('devices', {}).items():
-              if 'iOS' in runtime:
-                  for d in devices:
-                      if 'iPhone 16 Pro Max' in d['name'] and d['isAvailable']:
-                          print(d['udid'])
-                          sys.exit(0)
-          " 2>/dev/null || true)
-          if [ -n "$DEVICE_UDID" ]; then
-            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-            echo "Waiting 30s for simulator to fully boot..."
-            sleep 30
-            xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
-            echo "✅ Simulator pre-booted and ready"
-          else
-            echo "⚠️ Could not find iPhone 16 Pro Max simulator, will boot on demand"
-          fi
+          echo "Pre-booting iPhone 17 Pro Max simulator..."
+          DEVICE_UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro Max")
+          xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$DEVICE_UDID" -b
+          xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
+          echo "✅ Simulator pre-booted and ready"
 
       - name: Generate iPhone screenshots
-        uses: nick-fields/retry@v3  # TODO: Still on Node.js 20 (nick-fields/retry#162). Replace by May 2026 if no update.
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 45
           max_attempts: 2
@@ -91,55 +74,38 @@ jobs:
 
   generate-ipad-screenshots:
     name: Generate iPad Screenshots
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 120  # iPad is significantly slower than iPhone in CI (needs ~84min for both locales)
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Setup Xcode
+        uses: ./.github/actions/setup-xcode
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot normalization)
         run: brew install imagemagick
 
       - name: Clean and pre-boot simulator
+        timeout-minutes: 10
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
           # Pre-boot iPad simulator to reduce test startup time
-          echo "Pre-booting iPad Pro 13-inch (M4) simulator..."
-          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          for runtime, devices in data.get('devices', {}).items():
-              if 'iOS' in runtime:
-                  for d in devices:
-                      if 'iPad Pro 13-inch (M4)' in d['name'] and d['isAvailable']:
-                          print(d['udid'])
-                          sys.exit(0)
-          " 2>/dev/null || true)
-          if [ -n "$DEVICE_UDID" ]; then
-            xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
-            echo "Waiting 30s for simulator to fully boot..."
-            sleep 30
-            xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
-            echo "✅ Simulator pre-booted and ready"
-          else
-            echo "⚠️ Could not find iPad Pro 13-inch (M4) simulator, will boot on demand"
-          fi
+          echo "Pre-booting iPad Pro 13-inch (M5) simulator..."
+          DEVICE_UDID=$(.github/scripts/resolve-simulator.sh iOS "iPad Pro 13-inch (M5)")
+          xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$DEVICE_UDID" -b
+          xcrun simctl status_bar "$DEVICE_UDID" override --time "9:41" --batteryState charged --batteryLevel 100 2>/dev/null || true
+          echo "✅ Simulator pre-booted and ready"
 
       - name: Generate iPad screenshots
-        uses: nick-fields/retry@v3  # TODO: Still on Node.js 20 (nick-fields/retry#162). Replace by May 2026 if no update.
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 60  # iPad needs more time due to slower simulator performance
           max_attempts: 2
@@ -168,22 +134,18 @@ jobs:
 
   generate-watch-screenshots:
     name: Generate Watch Screenshots
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Setup Xcode
+        uses: ./.github/actions/setup-xcode
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot normalization)
@@ -193,33 +155,12 @@ jobs:
         run: |
           xcrun simctl shutdown all || true
           xcrun simctl delete unavailable || true
-          # Clean up duplicate Watch simulators to avoid "multiple devices matched" error
-          # Keep the oldest watchOS version (matches Xcode 16.1 bundled watchOS 11.1)
-          echo "Cleaning duplicate Apple Watch Series 10 (46mm) simulators..."
-          WATCH_UDIDS=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys, re
-          data = json.load(sys.stdin)
-          watches = []
-          for runtime, devices in data.get('devices', {}).items():
-              if 'watchOS' in runtime:
-                  match = re.search(r'watchOS-(\d+)-(\d+)', runtime)
-                  version_tuple = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
-                  for d in devices:
-                      if 'Apple Watch Series 10 (46mm)' in d['name'] and d['isAvailable']:
-                          watches.append((d['udid'], runtime, version_tuple))
-          # Sort ascending, keep oldest (Xcode 16.1 uses watchOS 11.1)
-          watches.sort(key=lambda x: x[2])
-          if len(watches) > 1:
-              for w in watches[1:]:
-                  print(w[0])
-          " 2>/dev/null || true)
-          for UDID in $WATCH_UDIDS; do
-            echo "Deleting duplicate simulator: $UDID"
-            xcrun simctl delete "$UDID" || true
-          done
+          # One Xcode + one runtime: resolve (or create) the exact Watch device
+          WATCH_UDID=$(.github/scripts/resolve-simulator.sh watchOS "Apple Watch Series 11 (46mm)")
+          echo "Using watchOS simulator UDID: ${WATCH_UDID}"
 
       - name: Generate Watch screenshots
-        uses: nick-fields/retry@v3  # TODO: Still on Node.js 20 (nick-fields/retry#162). Replace by May 2026 if no update.
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 45
           max_attempts: 2
@@ -258,7 +199,7 @@ jobs:
   upload-to-appstore:
     name: Upload Metadata & Screenshots
     needs: [generate-iphone-screenshots, generate-ipad-screenshots, generate-watch-screenshots]
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 30
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -271,14 +212,17 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
           bundler-cache: true
 
       - name: Install ImageMagick (required for screenshot validation)
         run: brew install imagemagick
 
-      - name: Create screenshots_compat directory
-        run: mkdir -p fastlane/screenshots_compat
+      # Start from empty dirs: committed screenshots must not mix with the fresh
+      # artifacts (different device names would otherwise upload both sets)
+      - name: Reset screenshot directories
+        run: |
+          rm -rf fastlane/screenshots_compat fastlane/screenshots/watch_normalized
+          mkdir -p fastlane/screenshots_compat fastlane/screenshots/watch_normalized
 
       - name: Download iPhone screenshots
         uses: actions/download-artifact@v8
@@ -319,7 +263,7 @@ jobs:
           echo "### Screenshots Generated & Uploaded" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ iPhone (EN + FI): 5 screenshots (1290x2796)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ iPad 13\" (EN + FI): 4 screenshots (2064x2752)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Watch (EN + FI): 10 screenshots (396x484)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Watch (EN + FI): 10 screenshots (416x496)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to [App Store Connect](https://appstoreconnect.apple.com)" >> $GITHUB_STEP_SUMMARY

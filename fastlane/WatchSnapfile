@@ -5,11 +5,9 @@
 project "./ListAll/ListAll.xcodeproj"
 
 # Watch simulator to use
-# NOTE: Device names vary by Xcode version:
-# - Xcode 16.1 (CI): Apple Watch Series 10 (46mm) is available
-# - Fastlane will fall back to available devices if exact match not found
+# Must exist in the Xcode pinned in .xcode-version (CI: macos-26, Xcode 26.6)
 devices([
-  "Apple Watch Series 10 (46mm)"  # Available in CI (Xcode 16.1)
+  "Apple Watch Series 11 (46mm)"  # 416x496, same size as Series 10 (46mm)
 ])
 
 # List of languages to generate screenshots for

@@ -110,17 +110,17 @@ Examples:
     ./generate-screenshots-local.sh macos
 
 Platform Details:
-    iphone  - iPhone 16 Pro Max (6.7" display, 1290x2796)
+    iphone  - iPhone 17 Pro Max (normalized to 6.7" App Store size, 1290x2796)
               Fastlane lane: screenshots_iphone + framing
               Screenshots: 5 per locale (framed with device bezel)
               Estimated time: ~25 minutes
 
-    ipad    - iPad Pro 13" M4 (13" display, 2064x2752)
+    ipad    - iPad Pro 13-inch (M5) (13" display, 2064x2752)
               Fastlane lane: screenshots_ipad + framing
               Screenshots: 4 per locale (framed with device bezel)
               Estimated time: ~40 minutes
 
-    watch   - Apple Watch Series 10 46mm (45mm slot, 396x484)
+    watch   - Apple Watch Series 11 (46mm) (416x496)
               Fastlane lane: watch_screenshots
               Screenshots: 5 per locale (unframed)
               Estimated time: ~20 minutes
@@ -159,11 +159,10 @@ Output Locations:
         fastlane/screenshots/
 
 Prerequisites:
-    - Xcode 16.1 or higher
-    - iOS 18.1 simulators installed
-    - watchOS 11 simulators installed
+    - Xcode version from .xcode-version (same as CI)
+    - iOS/watchOS simulator runtimes for that Xcode (xcodebuild -downloadPlatform iOS|watchOS)
     - ImageMagick (brew install imagemagick)
-    - Ruby 3.2+ with bundler
+    - Ruby from .ruby-version with bundler
     - App Store Connect API credentials in fastlane/.env
 
 Exit Codes:
@@ -703,7 +702,7 @@ trap cleanup_restore_apps EXIT
 # =============================================================================
 
 generate_iphone_screenshots() {
-    log_info "Platform: iPhone 16 Pro Max (6.7\" display)"
+    log_info "Platform: iPhone 17 Pro Max (normalized to 6.7\" App Store size)"
     log_info "Expected output: 1290x2796 pixels"
     log_info "Screenshots: 5 per locale"
     log_info "Estimated time: ~20 minutes"
@@ -718,7 +717,7 @@ generate_iphone_screenshots() {
 }
 
 generate_ipad_screenshots() {
-    log_info "Platform: iPad Pro 13\" M4 (13\" display)"
+    log_info "Platform: iPad Pro 13-inch (M5) (13\" display)"
     log_info "Expected output: 2064x2752 pixels"
     log_info "Screenshots: 4 per locale"
     log_info "Estimated time: ~35 minutes"
@@ -733,8 +732,8 @@ generate_ipad_screenshots() {
 }
 
 generate_watch_screenshots() {
-    log_info "Platform: Apple Watch Series 10 46mm (normalized to 45mm slot)"
-    log_info "Expected output: 396x484 pixels"
+    log_info "Platform: Apple Watch Series 11 (46mm)"
+    log_info "Expected output: 416x496 pixels"
     log_info "Screenshots: 5 per locale"
     log_info "Estimated time: ~20 minutes"
     echo ""
@@ -985,6 +984,12 @@ main() {
         echo "Valid locales: en-US, fi, all"
         echo "Run with --help for more information"
         exit "${EXIT_INVALID_ARGS}"
+    fi
+
+    # Test hook: stop after argument validation, before simulator cleanup and
+    # clean_screenshot_directories() touch the real repository
+    if [[ "${SCREENSHOTS_VALIDATE_ONLY:-}" == "1" ]]; then
+        exit "${EXIT_SUCCESS}"
     fi
 
     # Change to project root

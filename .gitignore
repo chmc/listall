@@ -237,8 +237,7 @@ venv.bak/
 # RVM
 /.rvmrc
 
-# rbenv
-/.ruby-version
+# rbenv (.ruby-version is tracked: it pins Ruby for local and CI)
 /.ruby-gemset
 
 # dotenv

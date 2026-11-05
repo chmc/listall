@@ -51,9 +51,9 @@ All tests passing:
 
 Test 1: Device Detection
 --------------------------------------------------
-✓ iPhone 16 Pro Max-01_Welcome.png
-✓ iPad Pro 13-inch (M4)-02_MainScreen.png
-✓ Apple Watch Series 10 (46mm)-01_Watch.png
+✓ iPhone 17 Pro Max-01_Welcome.png
+✓ iPad Pro 13-inch (M5)-02_MainScreen.png
+✓ Apple Watch Series 11 (46mm)-01_Watch.png
 ✗ Unknown Device-03_Test.png (expected - returns nil)
 
 Test 2: Metadata Loading
@@ -102,7 +102,7 @@ Test 4: Available Frames
 require_relative 'lib/device_frame_registry'
 
 # Detect device type
-spec = DeviceFrameRegistry.detect_device('iPhone 16 Pro Max-01_Welcome.png')
+spec = DeviceFrameRegistry.detect_device('iPhone 17 Pro Max-01_Welcome.png')
 # => { type: :iphone, frame: 'iphone_16_pro_max', screen_size: [1290, 2796] }
 
 # Unknown device returns nil
@@ -151,9 +151,9 @@ end
 
 The module uses regex patterns to detect device types from filenames. This matches the naming convention used by Fastlane Snapshot:
 
-- `iPhone 16 Pro Max-01_Welcome.png` → iPhone
-- `iPad Pro 13-inch (M4)-02_Main.png` → iPad
-- `Apple Watch Series 10 (46mm)-01_Watch.png` → Watch
+- `iPhone 17 Pro Max-01_Welcome.png` → iPhone
+- `iPad Pro 13-inch (M5)-02_Main.png` → iPad
+- `Apple Watch Series 11 (46mm)-01_Watch.png` → Watch
 
 ### Metadata Path Resolution
 

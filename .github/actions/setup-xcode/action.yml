@@ -1,0 +1,32 @@
+name: Setup Xcode
+description: Select the Xcode pinned in .xcode-version and log the toolchain (macOS, Xcode, simulator SDKs and runtimes)
+
+runs:
+  using: composite
+  steps:
+    - name: Select Xcode from .xcode-version
+      shell: bash
+      run: |
+        set -euo pipefail
+        XCODE_VERSION="$(tr -d '[:space:]' < .xcode-version)"
+        XCODE_APP="/Applications/Xcode_${XCODE_VERSION}.app"
+        if [[ ! -d "${XCODE_APP}" ]]; then
+          echo "::error::Xcode ${XCODE_VERSION} (from .xcode-version) not found at ${XCODE_APP}"
+          ls -d /Applications/Xcode*.app || true
+          exit 1
+        fi
+        sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+
+        ACTUAL="$(xcodebuild -version | head -n 1)"
+        if [[ "${ACTUAL}" != "Xcode ${XCODE_VERSION}" ]]; then
+          echo "::error::Expected Xcode ${XCODE_VERSION}, got '${ACTUAL}'"
+          exit 1
+        fi
+
+        echo "::group::Toolchain"
+        sw_vers
+        xcodebuild -version
+        echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
+        echo "watchOS Simulator SDK: $(xcrun --sdk watchsimulator --show-sdk-version)"
+        xcrun simctl list runtimes
+        echo "::endgroup::"

@@ -14,9 +14,9 @@ puts "Test 1: Device Detection"
 puts "-" * 50
 
 test_files = [
-  'iPhone 16 Pro Max-01_Welcome.png',
-  'iPad Pro 13-inch (M4)-02_MainScreen.png',
-  'Apple Watch Series 10 (46mm)-01_Watch.png',
+  'iPhone 17 Pro Max-01_Welcome.png',
+  'iPad Pro 13-inch (M5)-02_MainScreen.png',
+  'Apple Watch Series 11 (46mm)-01_Watch.png',
   'Unknown Device-03_Test.png'
 ]
 

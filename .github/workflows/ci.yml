@@ -17,33 +17,37 @@ jobs:
   #############################################################################
   build-and-test-ios:
     name: Build and Test iOS
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 25
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
       uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-ios-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-ios-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-ios-
+          ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-ios-
 
     # Pre-flight: Clean simulator state to prevent boot failures
     - name: Clean simulator state
       run: |
         xcrun simctl shutdown all || true
         xcrun simctl delete unavailable || true
+
+    - name: Resolve iOS simulator
+      id: ios-sim
+      run: |
+        UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro")
+        echo "Using iOS simulator UDID: ${UDID}"
+        echo "udid=${UDID}" >> "$GITHUB_OUTPUT"
 
     # Note: enabling Swift 6 strict concurrency will require disabling
     # SWIFT_TREAT_WARNINGS_AS_ERRORS temporarily until migration is complete.
@@ -54,14 +58,14 @@ jobs:
         xcodebuild clean build \
           -project ListAll.xcodeproj \
           -scheme ListAll \
-          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -destination "platform=iOS Simulator,id=${{ steps.ios-sim.outputs.udid }}" \
           -configuration Debug \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     - name: Run iOS tests
       run: |
@@ -70,7 +74,7 @@ jobs:
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme ListAll \
-          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -destination "platform=iOS Simulator,id=${{ steps.ios-sim.outputs.udid }}" \
           -resultBundlePath TestResults.xcresult \
           -enableCodeCoverage YES \
           -skip-testing:ListAllTests/AppGroupsTests \
@@ -82,7 +86,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     # Always upload test results for debugging, even on success
     - name: Upload iOS test results
@@ -123,27 +127,24 @@ jobs:
   #############################################################################
   build-and-test-watchos:
     name: Build and Test watchOS
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 15
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
       uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-watchos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-watchos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-watchos-
+          ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-watchos-
 
     # Pre-flight: Clean simulator state to prevent boot failures
     - name: Clean simulator state
@@ -154,26 +155,9 @@ jobs:
     - name: Resolve watchOS simulator
       id: watch-sim
       run: |
-        # Find the first available Apple Watch Series 10 (46mm) simulator UDID
-        # Using jq (available on GitHub runners) for reliable JSON parsing
-        # This avoids "multiple devices matched" errors when paired simulators exist
-        WATCH_UDID=$(xcrun simctl list devices available -j 2>/dev/null | jq -r '
-          .devices | to_entries[] |
-          select(.key | contains("watchOS")) |
-          .value[] |
-          select(.isAvailable == true and .name == "Apple Watch Series 10 (46mm)") |
-          .udid
-        ' | head -n 1)
-
-        if [[ -z "${WATCH_UDID}" ]]; then
-          echo "ERROR: No available Apple Watch Series 10 (46mm) simulator found"
-          echo "Available watchOS simulators:"
-          xcrun simctl list devices available | grep -i watch
-          exit 1
-        fi
-
-        echo "Using watchOS simulator UDID: ${WATCH_UDID}"
-        echo "udid=${WATCH_UDID}" >> "$GITHUB_OUTPUT"
+        UDID=$(.github/scripts/resolve-simulator.sh watchOS "Apple Watch Series 11 (46mm)")
+        echo "Using watchOS simulator UDID: ${UDID}"
+        echo "udid=${UDID}" >> "$GITHUB_OUTPUT"
 
     - name: Pre-boot watchOS simulator
       run: |
@@ -195,7 +179,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     - name: Run watchOS tests
       timeout-minutes: 10
@@ -216,7 +200,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     # Always upload test results for debugging, even on success
     - name: Upload watchOS test results
@@ -257,35 +241,29 @@ jobs:
   #############################################################################
   build-and-test-macos:
     name: Build and Test macOS
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 20  # Shorter timeout - no simulator overhead
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     # Platform-specific cache key prevents cross-platform cache corruption
     - name: Cache DerivedData
       uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-macos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-macos-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-macos-
+          ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-macos-
 
     - name: Build macOS app
       run: |
         set -o pipefail
         cd ListAll
-        # SWIFT_STRICT_CONCURRENCY=minimal suppresses NSImage/AppKit Sendable
-        # warnings from Xcode 16.1 for Swift 5.9.
-        # Remove when CI upgrades Xcode or project migrates to Swift 6.
         xcodebuild clean build \
           -project ListAll.xcodeproj \
           -scheme ListAllMac \
@@ -295,17 +273,13 @@ jobs:
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-          SWIFT_STRICT_CONCURRENCY=minimal \
           RUN_CLANG_STATIC_ANALYZER=YES \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     - name: Run macOS tests
       run: |
         set -o pipefail
         cd ListAll
-        # SWIFT_STRICT_CONCURRENCY=minimal suppresses NSImage/AppKit Sendable
-        # warnings from Xcode 16.1 for Swift 5.9.
-        # Remove when CI upgrades Xcode or project migrates to Swift 6.
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme ListAllMac \
@@ -318,9 +292,8 @@ jobs:
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-          SWIFT_STRICT_CONCURRENCY=minimal \
           RUN_CLANG_STATIC_ANALYZER=YES \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     # Always upload test results for debugging, even on success
     - name: Upload macOS test results

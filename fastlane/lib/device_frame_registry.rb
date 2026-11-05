@@ -6,10 +6,10 @@ require 'json'
 #
 # Manages device frame metadata and provides device detection from screenshot filenames.
 # This module is part of the custom screenshot framing solution that replaces Fastlane Frameit
-# with support for all device types including iPad Pro 13" M4 and Apple Watch.
+# with support for all device types including iPad Pro 13" and Apple Watch.
 #
 # @example Detect device from filename
-#   spec = DeviceFrameRegistry.detect_device('iPhone 16 Pro Max-01_Welcome.png')
+#   spec = DeviceFrameRegistry.detect_device('iPhone 17 Pro Max-01_Welcome.png')
 #   # => { type: :iphone, frame: 'iphone_16_pro_max', screen_size: [1290, 2796] }
 #
 # @example Load frame metadata
@@ -35,17 +35,17 @@ module DeviceFrameRegistry
   # - frame: Frame asset identifier (used to locate metadata and PNG files)
   # - screen_size: Expected screenshot dimensions [width, height] for validation
   DEVICE_MAPPINGS = {
-    /iPhone 16 Pro Max/ => {
+    /iPhone 17 Pro Max/ => {
       type: :iphone,
       frame: 'iphone_16_pro_max',
       screen_size: [1260, 2736]  # 2026 App Store standard (pre-resized by Fastfile)
     },
-    /iPad Pro 13-inch \(M4\)/ => {
+    /iPad Pro 13-inch \(M5\)/ => {
       type: :ipad,
       frame: 'ipad_pro_13_m4',
       screen_size: [2064, 2752]
     },
-    /Apple Watch Series 10 \(46mm\)/ => {
+    /Apple Watch Series 11 \(46mm\)/ => {
       type: :watch,
       frame: 'apple_watch_series_7plus_45mm',
       screen_size: [396, 484]
@@ -57,14 +57,14 @@ module DeviceFrameRegistry
   # This method matches the filename against known device patterns and returns
   # the corresponding device specification. Returns nil if no match is found.
   #
-  # @param filename [String] The screenshot filename (e.g., "iPhone 16 Pro Max-01_Welcome.png")
+  # @param filename [String] The screenshot filename (e.g., "iPhone 17 Pro Max-01_Welcome.png")
   # @return [Hash, nil] Device specification hash or nil if not recognized
   #   @option [Symbol] :type Device category (:iphone, :ipad, or :watch)
   #   @option [String] :frame Frame identifier for asset lookup
   #   @option [Array<Integer>] :screen_size Expected dimensions [width, height]
   #
   # @example
-  #   DeviceFrameRegistry.detect_device('iPhone 16 Pro Max-01_Welcome.png')
+  #   DeviceFrameRegistry.detect_device('iPhone 17 Pro Max-01_Welcome.png')
   #   # => { type: :iphone, frame: 'iphone_16_pro_max', screen_size: [1290, 2796] }
   #
   def self.detect_device(filename)

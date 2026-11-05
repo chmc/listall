@@ -46,7 +46,7 @@ RSpec.describe 'FramingHelper' do
   end
 
   describe '.frame_screenshot', :requires_implementation, :requires_imagemagick do
-    let(:screenshot_path) { File.join(screenshots_dir, 'en-US', 'iPhone 16 Pro Max-01_Welcome.png') }
+    let(:screenshot_path) { File.join(screenshots_dir, 'en-US', 'iPhone 17 Pro Max-01_Welcome.png') }
     let(:output_path) { File.join(output_dir, 'output_framed.png') }
     let(:device_spec) do
       {
@@ -216,7 +216,7 @@ RSpec.describe 'FramingHelper' do
       it 'frames iPad screenshots' do
         skip "FramingHelper not yet implemented (TDD Red phase)"
 
-        ipad_screenshot = File.join(screenshots_dir, 'en-US', 'iPad Pro 13-inch (M4)-01_Welcome.png')
+        ipad_screenshot = File.join(screenshots_dir, 'en-US', 'iPad Pro 13-inch (M5)-01_Welcome.png')
         ipad_output = File.join(output_dir, 'ipad_framed.png')
         ipad_spec = {
           type: :ipad,
@@ -234,7 +234,7 @@ RSpec.describe 'FramingHelper' do
       it 'frames Apple Watch screenshots' do
         skip "FramingHelper not yet implemented (TDD Red phase)"
 
-        watch_screenshot = File.join(screenshots_dir, 'en-US', 'Apple Watch Series 10 (46mm)-01_Watch.png')
+        watch_screenshot = File.join(screenshots_dir, 'en-US', 'Apple Watch Series 11 (46mm)-01_Watch.png')
         watch_output = File.join(output_dir, 'watch_framed.png')
         watch_spec = {
           type: :watch,
@@ -292,8 +292,8 @@ RSpec.describe 'FramingHelper' do
 
         FramingHelper.frame_all_screenshots(input_dir, output_dir)
 
-        expect(File.exist?(File.join(output_dir, 'iPhone 16 Pro Max-01_Welcome_framed.png'))).to be true
-        expect(File.exist?(File.join(output_dir, 'iPad Pro 13-inch (M4)-01_Welcome_framed.png'))).to be true
+        expect(File.exist?(File.join(output_dir, 'iPhone 17 Pro Max-01_Welcome_framed.png'))).to be true
+        expect(File.exist?(File.join(output_dir, 'iPad Pro 13-inch (M5)-01_Welcome_framed.png'))).to be true
       end
     end
 
@@ -349,7 +349,7 @@ RSpec.describe 'FramingHelper' do
         skip "FramingHelper not yet implemented (TDD Red phase)"
 
         # Add a corrupted file
-        corrupted_path = File.join(input_dir, 'iPhone 16 Pro Max-corrupted.png')
+        corrupted_path = File.join(input_dir, 'iPhone 17 Pro Max-corrupted.png')
         create_corrupted_file(corrupted_path, 'not a png')
 
         results = FramingHelper.frame_all_screenshots(input_dir, output_dir)
@@ -378,7 +378,7 @@ RSpec.describe 'FramingHelper' do
         skip "FramingHelper not yet implemented (TDD Red phase)"
 
         # Add a file that looks already framed
-        already_framed = File.join(input_dir, 'iPhone 16 Pro Max-01_Welcome_framed.png')
+        already_framed = File.join(input_dir, 'iPhone 17 Pro Max-01_Welcome_framed.png')
         create_test_screenshot(already_framed, 1290, 2796, '#FFFFFF')
 
         results = FramingHelper.frame_all_screenshots(input_dir, output_dir)
@@ -391,14 +391,14 @@ RSpec.describe 'FramingHelper' do
       it 'provides detailed error messages' do
         skip "FramingHelper not yet implemented (TDD Red phase)"
 
-        corrupted_path = File.join(input_dir, 'iPhone 16 Pro Max-bad.png')
+        corrupted_path = File.join(input_dir, 'iPhone 17 Pro Max-bad.png')
         create_corrupted_file(corrupted_path)
 
         results = FramingHelper.frame_all_screenshots(input_dir, output_dir)
 
         expect(results[:errors]).not_to be_empty
         error = results[:errors].first
-        expect(error[:file]).to include('iPhone 16 Pro Max-bad.png')
+        expect(error[:file]).to include('iPhone 17 Pro Max-bad.png')
         expect(error[:error]).to be_a(String)
         expect(error[:error].length).to be > 10 # Non-empty error message
       end
@@ -437,7 +437,7 @@ RSpec.describe 'FramingHelper' do
       fi_dir = File.join(screenshots_dir, 'fi')
       FileUtils.mkdir_p(fi_dir)
       create_test_screenshot(
-        File.join(fi_dir, 'iPhone 16 Pro Max-01_Welcome.png'),
+        File.join(fi_dir, 'iPhone 17 Pro Max-01_Welcome.png'),
         1290, 2796, '#FFFFFF'
       )
     end
@@ -519,19 +519,19 @@ RSpec.describe 'FramingHelper' do
 
     # Create iPhone screenshot
     create_test_screenshot(
-      File.join(en_us_dir, 'iPhone 16 Pro Max-01_Welcome.png'),
+      File.join(en_us_dir, 'iPhone 17 Pro Max-01_Welcome.png'),
       1290, 2796, '#FFFFFF'
     )
 
     # Create iPad screenshot
     create_test_screenshot(
-      File.join(en_us_dir, 'iPad Pro 13-inch (M4)-01_Welcome.png'),
+      File.join(en_us_dir, 'iPad Pro 13-inch (M5)-01_Welcome.png'),
       2064, 2752, '#F5F5F5'
     )
 
-    # Create Watch screenshot (Series 10 captures normalized to Series 7+ dimensions for App Store)
+    # Create Watch screenshot (Series 11 captures normalized to Series 7+ dimensions for App Store)
     create_test_screenshot(
-      File.join(en_us_dir, 'Apple Watch Series 10 (46mm)-01_Watch.png'),
+      File.join(en_us_dir, 'Apple Watch Series 11 (46mm)-01_Watch.png'),
       396, 484, '#EEEEEE'
     )
   end

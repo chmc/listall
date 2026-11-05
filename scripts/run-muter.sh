@@ -102,34 +102,9 @@ inject_test_targets() {
     sed -i '' "s|^  - test$|${sed_insert}  - test|" "${config}"
 }
 
-# Resolve a simulator UDID by platform and device name pattern
-# Usage: resolve_simulator "iOS" "iPhone 16 Pro"
-resolve_simulator() {
-    local platform="$1"
-    local name_pattern="$2"
-
-    xcrun simctl list devices available -j 2>/dev/null | \
-        python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-platform = '${platform}'
-name_pattern = '${name_pattern}'
-for runtime, devices in sorted(data.get('devices', {}).items(), reverse=True):
-    if platform in runtime:
-        for d in devices:
-            if d.get('isAvailable') and name_pattern in d.get('name', ''):
-                # Also extract OS version from runtime string
-                # e.g., 'com.apple.CoreSimulator.SimRuntime.iOS-18-2' -> '18.2'
-                parts = runtime.rsplit('-', 2)
-                if len(parts) >= 3:
-                    os_ver = parts[-2] + '.' + parts[-1]
-                else:
-                    os_ver = 'unknown'
-                print(d['udid'] + '|' + d['name'] + '|' + os_ver)
-                sys.exit(0)
-sys.exit(1)
-" 2>/dev/null || true
-}
+# Resolve a simulator UDID on the runtime matching the selected Xcode.
+# Shared with CI workflows so local and CI runs use the same device and runtime.
+readonly RESOLVE_SIMULATOR="${PROJECT_ROOT}/.github/scripts/resolve-simulator.sh"
 
 # Ensure cleanup happens on exit
 cleanup_config() {
@@ -144,18 +119,12 @@ run_ios() {
     echo "==> Running Muter for iOS"
 
     # Resolve iPhone simulator
-    local sim_info
-    sim_info=$(resolve_simulator "iOS" "iPhone 16 Pro")
-    if [[ -z "${sim_info}" ]]; then
-        echo "ERROR: No available iPhone 16 Pro simulator found."
-        echo "Available iOS simulators:"
-        xcrun simctl list devices available | grep -i iphone || echo "  (none)"
+    local sim_udid
+    if ! sim_udid=$("${RESOLVE_SIMULATOR}" iOS "iPhone 17 Pro"); then
+        echo "ERROR: Could not resolve iPhone 17 Pro simulator."
         exit 1
     fi
-
-    local sim_udid sim_name sim_os
-    IFS='|' read -r sim_udid sim_name sim_os <<< "${sim_info}"
-    echo "    Simulator: ${sim_name} (iOS ${sim_os}, ${sim_udid})"
+    echo "    Simulator: iPhone 17 Pro (${sim_udid})"
 
     # Generate config with resolved destination
     sed "s|IOS_DESTINATION_PLACEHOLDER|platform=iOS Simulator,id=${sim_udid}|g" \
@@ -197,18 +166,12 @@ run_watchos() {
     echo "==> Running Muter for watchOS"
 
     # Resolve watchOS simulator
-    local sim_info
-    sim_info=$(resolve_simulator "watchOS" "Apple Watch")
-    if [[ -z "${sim_info}" ]]; then
-        echo "ERROR: No available Apple Watch simulator found."
-        echo "Available watchOS simulators:"
-        xcrun simctl list devices available | grep -i watch || echo "  (none)"
+    local sim_udid
+    if ! sim_udid=$("${RESOLVE_SIMULATOR}" watchOS "Apple Watch Series 11 (46mm)"); then
+        echo "ERROR: Could not resolve Apple Watch Series 11 (46mm) simulator."
         exit 1
     fi
-
-    local sim_udid sim_name sim_os
-    IFS='|' read -r sim_udid sim_name sim_os <<< "${sim_info}"
-    echo "    Simulator: ${sim_name} (watchOS ${sim_os}, ${sim_udid})"
+    echo "    Simulator: Apple Watch Series 11 (46mm) (${sim_udid})"
 
     # Generate config with resolved destination
     sed "s|WATCHOS_DESTINATION_PLACEHOLDER|platform=watchOS Simulator,id=${sim_udid}|g" \

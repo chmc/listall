@@ -37,10 +37,10 @@ RSpec.describe 'DeviceFrameRegistry' do
 
   describe '.detect_device', :requires_implementation do
     context 'when detecting iPhone devices' do
-      it 'detects iPhone 16 Pro Max from filename' do
+      it 'detects iPhone 17 Pro Max from filename' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        result = DeviceFrameRegistry.detect_device('iPhone 16 Pro Max-01_Welcome.png')
+        result = DeviceFrameRegistry.detect_device('iPhone 17 Pro Max-01_Welcome.png')
 
         expect(result).to be_a(Hash)
         expect(result[:type]).to eq(:iphone)
@@ -62,7 +62,7 @@ RSpec.describe 'DeviceFrameRegistry' do
       it 'detects iPhone from middle of filename' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        result = DeviceFrameRegistry.detect_device('en-US_iPhone 16 Pro Max-Screenshot.png')
+        result = DeviceFrameRegistry.detect_device('en-US_iPhone 17 Pro Max-Screenshot.png')
 
         expect(result).not_to be_nil
         expect(result[:type]).to eq(:iphone)
@@ -70,10 +70,10 @@ RSpec.describe 'DeviceFrameRegistry' do
     end
 
     context 'when detecting iPad devices' do
-      it 'detects iPad Pro 13-inch (M4) from filename' do
+      it 'detects iPad Pro 13-inch (M5) from filename' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        result = DeviceFrameRegistry.detect_device('iPad Pro 13-inch (M4)-01_Welcome.png')
+        result = DeviceFrameRegistry.detect_device('iPad Pro 13-inch (M5)-01_Welcome.png')
 
         expect(result).to be_a(Hash)
         expect(result[:type]).to eq(:ipad)
@@ -84,7 +84,7 @@ RSpec.describe 'DeviceFrameRegistry' do
       it 'handles iPad filename variations' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        result = DeviceFrameRegistry.detect_device('iPad Pro 13-inch (M4) - Screenshot.png')
+        result = DeviceFrameRegistry.detect_device('iPad Pro 13-inch (M5) - Screenshot.png')
 
         expect(result).not_to be_nil
         expect(result[:type]).to eq(:ipad)
@@ -92,10 +92,10 @@ RSpec.describe 'DeviceFrameRegistry' do
     end
 
     context 'when detecting Apple Watch devices' do
-      it 'detects Apple Watch Series 10 (46mm) from filename' do
+      it 'detects Apple Watch Series 11 (46mm) from filename' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        result = DeviceFrameRegistry.detect_device('Apple Watch Series 10 (46mm)-01_Watch.png')
+        result = DeviceFrameRegistry.detect_device('Apple Watch Series 11 (46mm)-01_Watch.png')
 
         expect(result).to be_a(Hash)
         expect(result[:type]).to eq(:watch)
@@ -143,7 +143,7 @@ RSpec.describe 'DeviceFrameRegistry' do
       it 'handles filenames with special characters' do
         skip "DeviceFrameRegistry not yet implemented (TDD Red phase)"
 
-        result = DeviceFrameRegistry.detect_device('iPhone 16 Pro Max-Screenshot (1).png')
+        result = DeviceFrameRegistry.detect_device('iPhone 17 Pro Max-Screenshot (1).png')
 
         expect(result).not_to be_nil
         expect(result[:type]).to eq(:iphone)
