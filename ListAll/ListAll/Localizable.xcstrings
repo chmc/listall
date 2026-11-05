@@ -5707,6 +5707,24 @@
         }
       }
     },
+    "Select a List" : {
+      "comment" : "Title of the empty detail view on iPad when no list is selected.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a List"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valitse lista"
+          }
+        }
+      }
+    },
     "Select a list from the sidebar or create a new one." : {
       "extractionState" : "manual",
       "localizations" : {
