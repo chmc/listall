@@ -88,6 +88,9 @@ Pushing a `v*` tag also triggers the Release workflow. A tag push has no inputs,
 ### Publishing to the App Store
 `Publish to App Store` takes the version as input. It must equal `.version`, which is the version Release to TestFlight built, and the workflow fails otherwise. On 2026-02-18, the input 1.1.20 was used for build 1.1.19. The store version then ran ahead of the repo, and a plain patch bump would have produced the already-live 1.1.20. That was fixed by `set_version 1.1.21` followed by patch → 1.1.22.
 
+### New build for the same version
+Before a version is submitted or released, its train is open, so a new build can be uploaded without a version bump. Dispatch Release to TestFlight with `skip_version_bump: true`. The build number is the workflow run number, so it always increases. This path creates no commit or tag, so `vX.Y.Z` stays on the original bump commit. Don't move the tag: pushing a `v*` tag starts a release with a patch bump. Example: 1.1.22 builds 105/106 → 107 on 2026-11-05 to include the flaky-test production fixes.
+
 ### Choosing the next version
 The version must be higher than the live App Store version on each platform. See `learnings/testflight-version-train-closed.md`. `validate_version_train` checks this before the build. It runs after the version-bump job has already committed and tagged, though, so check the live version first:
 ```bash
