@@ -41,12 +41,11 @@ Sets the version to a specific value across:
 - Version file
 - All Xcode targets (main app, watch app, test targets)
 
-After setting, commit the changes and create a git tag:
+After setting, commit the changes (without a tag, see the warning under "Automatic on Tag Push"):
 ```bash
 git add .version ListAll/ListAll.xcodeproj/project.pbxproj
-git commit -m "Bump version to X.Y.Z"
-git tag vX.Y.Z
-git push origin main --tags
+git commit -m "Set version to X.Y.Z"
+git push origin main
 ```
 
 ### Validate Versions
@@ -84,10 +83,15 @@ The Release workflow (`/.github/workflows/release.yml`) supports version managem
 4. Optionally check "Skip version bump" to use current version
 
 ### Automatic on Tag Push
-Push a tag to trigger release:
+Pushing a `v*` tag also triggers the Release workflow. A tag push has no inputs, so the run does a **patch bump on top of `.version`**. Pushing `v1.2.0` while `.version` is 1.2.0 releases **1.2.1**. Prefer manual dispatch. The workflow creates the tag itself.
+
+### Publishing to the App Store
+`Publish to App Store` takes the version as input. It must equal `.version`, which is the version Release to TestFlight built, and the workflow fails otherwise. On 2026-02-18, the input 1.1.20 was used for build 1.1.19. The store version then ran ahead of the repo, and a plain patch bump would have produced the already-live 1.1.20. That was fixed by `set_version 1.1.21` followed by patch → 1.1.22.
+
+### Choosing the next version
+The version must be higher than the live App Store version on each platform. See `learnings/testflight-version-train-closed.md`. `validate_version_train` checks this before the build. It runs after the version-bump job has already committed and tagged, though, so check the live version first:
 ```bash
-git tag v1.2.0
-git push origin v1.2.0
+curl -s "https://itunes.apple.com/lookup?bundleId=io.github.chmc.ListAll" | grep -o '"version":"[^"]*"'
 ```
 
 ## Version Bump Workflow
@@ -185,16 +189,15 @@ bundle exec fastlane set_version version:1.2.0
 # 3. Validate
 bundle exec fastlane validate_versions
 
-# 4. Commit and tag
+# 4. Commit (no tag: a pushed v* tag triggers a release with a patch bump)
 git add .version ListAll/ListAll.xcodeproj/project.pbxproj
-git commit -m "Bump version to 1.2.0"
-git tag v1.2.0
+git commit -m "Set version to 1.2.0"
 
 # 5. Push
-git push origin main --tags
+git push origin main
 
-# 6. Build and upload (or let GitHub Actions do it)
-bundle exec fastlane beta skip_version_bump:true
+# 6. Build and upload: Actions → Release to TestFlight with skip_version_bump: true
+#    This path creates no tag. Prefer the bump_type path below, which commits and tags.
 ```
 
 **Or use GitHub Actions:**

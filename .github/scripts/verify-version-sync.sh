@@ -50,8 +50,10 @@ get_version() {
     local scheme="$1"
     local version
 
+    # awk reads all input (no early exit): under pipefail, `head -1` closing
+    # the pipe early can SIGPIPE xcodebuild (exit 141) intermittently.
     if ! version="$(xcodebuild -project "${PROJECT_PATH}" -showBuildSettings -scheme "${scheme}" 2>/dev/null | \
-        grep "MARKETING_VERSION" | head -1 | awk '{print $3}')"; then
+        awk '$1 == "MARKETING_VERSION" && !found { print $3; found = 1 }')"; then
         echo ""
         return 1
     fi
