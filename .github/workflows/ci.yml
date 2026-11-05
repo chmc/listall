@@ -76,6 +76,7 @@ jobs:
           -scheme ListAll \
           -destination "platform=iOS Simulator,id=${{ steps.ios-sim.outputs.udid }}" \
           -resultBundlePath TestResults.xcresult \
+          -parallel-testing-enabled NO \
           -enableCodeCoverage YES \
           -skip-testing:ListAllTests/AppGroupsTests \
           -skip-testing:ListAllTests/CloudKitTests \
@@ -102,6 +103,15 @@ jobs:
           -configuration Release \
           CODE_SIGNING_ALLOWED=NO \
           | xcbeautify --renderer github-actions
+
+    # macos-26 runner: 3 vCPU / 7 GB. Simulator tests run serially (no clones) because
+    # random multi-second stalls (trivial tests taking 30-190 s) broke timing tests;
+    # this snapshot shows whether memory pressure / swap is the cause.
+    - name: Log memory and swap usage
+      if: always()
+      run: |
+        sysctl -n hw.ncpu hw.memsize vm.swapusage
+        memory_pressure -Q || true
 
     # Always upload test results for debugging, even on success
     - name: Upload iOS test results
@@ -208,6 +218,7 @@ jobs:
           -scheme "ListAllWatch Watch App" \
           -destination "platform=watchOS Simulator,id=${{ steps.watch-sim.outputs.udid }}" \
           -resultBundlePath TestResults-Watch.xcresult \
+          -parallel-testing-enabled NO \
           -enableCodeCoverage YES \
           -skip-testing:"ListAllWatch Watch AppUITests" \
           CODE_SIGN_IDENTITY="" \
@@ -216,6 +227,15 @@ jobs:
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
           RUN_CLANG_STATIC_ANALYZER=YES \
           | xcbeautify --renderer github-actions
+
+    # macos-26 runner: 3 vCPU / 7 GB. Simulator tests run serially (no clones) because
+    # random multi-second stalls (trivial tests taking 30-190 s) broke timing tests;
+    # this snapshot shows whether memory pressure / swap is the cause.
+    - name: Log memory and swap usage
+      if: always()
+      run: |
+        sysctl -n hw.ncpu hw.memsize vm.swapusage
+        memory_pressure -Q || true
 
     # Always upload test results for debugging, even on success
     - name: Upload watchOS test results
