@@ -17,7 +17,7 @@ runs:
         fi
         sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
 
-        ACTUAL="$(xcodebuild -version | head -n 1)"
+        ACTUAL="$(xcodebuild -version | awk 'NR==1')"
         if [[ "${ACTUAL}" != "Xcode ${XCODE_VERSION}" ]]; then
           echo "::error::Expected Xcode ${XCODE_VERSION}, got '${ACTUAL}'"
           exit 1

@@ -155,7 +155,7 @@ Runs automated UI tests to capture screenshots for all configured devices and lo
 
 Generate iPhone screenshots only
 
-Captures iPhone 16 Pro Max screenshots for EN and FI locales
+Captures iPhone 17 Pro Max screenshots for EN and FI locales
 
 Outputs normalized screenshots to screenshots_compat/ ready for App Store
 
@@ -167,7 +167,7 @@ Outputs normalized screenshots to screenshots_compat/ ready for App Store
 
 Generate iPad screenshots only
 
-Captures iPad Pro 13-inch (M4) screenshots for EN and FI locales
+Captures iPad Pro 13-inch (M5) screenshots for EN and FI locales
 
 Outputs normalized screenshots to screenshots_compat/ ready for App Store
 
@@ -219,7 +219,7 @@ Verify framed screenshots exist for all locales
 
 Generate watchOS screenshots (fully automated via UITests + simctl)
 
-Captures screenshots from Apple Watch Series 10 (46mm) for EN and FI locales
+Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales
 
 ### ios verify_watch_screenshots
 

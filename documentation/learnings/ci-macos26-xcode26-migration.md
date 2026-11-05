@@ -70,6 +70,12 @@ muter run --operators RelationalOperatorReplacement RemoveSideEffects
 - [ ] Keep the local dev VM on the same macOS/Xcode as the runner image. Xcode 26.6 only supports macOS 26.2–26.x, so not macOS 27.
 - [ ] Watch GitHub runner-image deprecation notices and Apple "Upcoming requirements". The next SDK step is due April 2027.
 - [ ] `test-generate-screenshots-local.sh` must keep `SCREENSHOTS_VALIDATE_ONLY=1`. Without it, its end-to-end invocations deleted the committed App Store screenshots.
+- [ ] After moving to a new Mac or VM with Migration Assistant, re-grant privacy permissions (TCC) to the app hosting Claude Code, e.g. VS Code. TCC grants do not migrate. The permissions needed are:
+  - "Access data from other apps" / Full Disk Access. Without it, the macOS screenshot lane fails writing into the UI-test container: `Operation not permitted` on `~/Library/Containers/io.github.chmc.ListAllMacUITests.xctrunner/...`.
+  - Accessibility and Screen Recording, for the MCP tools.
+- [ ] macOS screenshot tests pass `DISABLE_TOOLTIPS` and `-archivedSectionExpanded NO`. Otherwise feature tips and `@AppStorage` UI state persisted on the capturing Mac leak into the App Store images.
+- [ ] iOS 26 renders `simctl status_bar --batteryState charged` as a green charging battery. The Snapfile uses `discharging` at 100% to get a plain full battery.
+- [ ] Don't use `cmd | head -n 1` under `set -o pipefail`, because it can SIGPIPE intermittently (exit 141). Use `awk 'NR==1'` instead.
 
 ## Key Insight
 
