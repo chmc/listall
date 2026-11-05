@@ -51,9 +51,9 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             )
         }
 
-        // Wait for debounced notification
-        // Timeout: 500ms debounce + 2.5s buffer for CI environments (slower runners)
-        wait(for: [notificationExpectation], timeout: 3.0)
+        // Wait for debounced notification (500ms). 10s like test 4: on CI the hosted
+        // app's main thread can be busy for many seconds, delaying the debounce timer.
+        wait(for: [notificationExpectation], timeout: 10.0)
     }
     
     // MARK: - Test 2: DataManager Reloads on Remote Change
@@ -93,8 +93,8 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             object: nil
         )
         
-        // Wait for reload
-        wait(for: [expectation], timeout: 2.0)
+        // Wait for reload (10s: see test 1)
+        wait(for: [expectation], timeout: 10.0)
         
         // Verify data was reloaded
         XCTAssertGreaterThan(dataManager.lists.count, initialCount)
@@ -137,8 +137,8 @@ final class CoreDataRemoteChangeTests: XCTestCase {
             }
         }
 
-        // Wait for debounced notification (500ms + buffer for CI)
-        wait(for: [expectation], timeout: 3.0)
+        // Wait for debounced notification (500ms; 10s timeout: see test 1)
+        wait(for: [expectation], timeout: 10.0)
 
         // Verify only one notification was sent despite 5 rapid changes
         XCTAssertEqual(notificationCount, 1)

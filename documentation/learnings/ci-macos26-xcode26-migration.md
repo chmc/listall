@@ -82,6 +82,7 @@ muter run --operators RelationalOperatorReplacement RemoveSideEffects
   - `CoreDataManager` observes `NSManagedObjectContextDidSave` for all contexts, so every save of a test's in-memory container reloaded the host app on main. It now ignores other coordinators. Test: `testSaveOnUnrelatedStoreDoesNotTriggerRefresh`.
   - `WatchMainViewModel` reloaded Core Data once per sync notification. It now coalesces them with cancellable work items. Test: `..._coalesceIntoSingleReload`.
   - Watch indicator tests wait on state (`XCTNSPredicateExpectation`) instead of a fixed `asyncAfter`.
+  - Hosted iOS tests waiting for a main-run-loop debounce timer (`CoreDataRemoteChangeTests`) use 10 s timeouts. On CI the host app's main thread was seen busy for 14–20 s; the root source is not yet identified.
   - macOS pasteboard tests use `makeIsolatedPasteboard()`, because `NSPasteboard.general` is shared by parallel test processes. Call `clearContents()` before `writeObjects`.
 - [ ] App Store versions must only increase. Check the live version (`https://itunes.apple.com/lookup?bundleId=io.github.chmc.ListAll`) and the App Store Connect TestFlight trains before choosing `bump_type`. `.version` on main can lag behind, because builds 1.1.20/1.1.21 were released from a feature branch.
 
