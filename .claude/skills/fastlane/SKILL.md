@@ -82,7 +82,7 @@ concurrent_simulators(true)
 
 | Device | Dimensions | Model |
 |--------|-----------|-------|
-| iPhone 6.7" | 1290x2796 | iPhone 16 Pro Max |
+| iPhone 6.7" | 1290x2796 | iPhone 17 Pro Max |
 | iPhone 6.5" | 1242x2688 | iPhone 11 Pro Max |
 | iPad 13" | 2064x2752 | iPad Pro M4 |
 | iPad 12.9" | 2048x2732 | iPad Pro 12.9 |

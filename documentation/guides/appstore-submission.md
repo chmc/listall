@@ -79,7 +79,7 @@
 **Must provide for ALL device sizes:**
 
 #### iPhone (REQUIRED)
-- [ ] **iPhone 6.9" Display** (iPhone 16 Pro Max) - 1320x2868 px
+- [ ] **iPhone 6.9" Display** (iPhone 17 Pro Max) - 1320x2868 px
   - 3-10 screenshots showing core features
 - [ ] **iPhone 6.7" Display** (iPhone 14 Pro Max, 15 Pro Max) - 1290x2796 px
   - 3-10 screenshots

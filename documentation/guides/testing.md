@@ -6,7 +6,7 @@ This document provides shell/xcodebuild best practices for stable test execution
 
 **Current Status:**
 - iOS + watchOS test execution via `xcodebuild`
-- Tests run on `macos-14` runners with Xcode 16.1
+- Tests run on `macos-26` runners with the Xcode pinned in `.xcode-version` (selected by `./.github/actions/setup-xcode`); simulators are resolved with `.github/scripts/resolve-simulator.sh` on that Xcode's runtime
 - Fastlane provides test lanes but CI uses direct xcodebuild
 - No parallel testing configured
 - Builds use `clean build` before testing
@@ -222,7 +222,7 @@ main "$@"
     xcodebuild clean build \
       -project ListAll.xcodeproj \
       -scheme ListAll \
-      -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest'
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
 
 - name: Run iOS tests
   run: |
@@ -230,7 +230,7 @@ main "$@"
     xcodebuild test \
       -project ListAll.xcodeproj \
       -scheme ListAll \
-      -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest'
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
 ```
 
 ### Issues
@@ -249,7 +249,7 @@ set -euo pipefail
 
 readonly SCHEME="ListAll"
 readonly PROJECT="ListAll.xcodeproj"
-readonly DESTINATION="platform=iOS Simulator,name=iPhone 16 Pro,OS=latest"
+readonly DESTINATION="platform=iOS Simulator,name=iPhone 17 Pro,OS=latest"
 readonly DERIVED_DATA_PATH="./build"
 
 # Build once for testing
@@ -285,7 +285,7 @@ set -euo pipefail
 
 readonly SCHEME="ListAll"
 readonly PROJECT="ListAll.xcodeproj"
-readonly DESTINATION="platform=iOS Simulator,name=iPhone 16 Pro,OS=latest"
+readonly DESTINATION="platform=iOS Simulator,name=iPhone 17 Pro,OS=latest"
 readonly DERIVED_DATA_PATH="./build"
 
 # Single command: clean, build, and test
@@ -348,7 +348,7 @@ xcodebuild clean test \
     xcodebuild build-for-testing \
       -project ListAll.xcodeproj \
       -scheme ListAll \
-      -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
       -derivedDataPath "$DERIVED_DATA_PATH" \
       -configuration Debug
 ```
@@ -448,7 +448,7 @@ set -euo pipefail
 xcodebuild test \
     -project ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -parallel-testing-enabled YES \
     -maximum-parallel-testing-workers 2 \
     -resultBundlePath TestResults.xcresult
@@ -464,8 +464,8 @@ set -euo pipefail
 xcodebuild test \
     -project ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Plus' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+    -destination 'platform=iOS Simulator,name=iPhone Air' \
     -parallel-testing-enabled YES \
     -maximum-parallel-testing-workers auto \
     -resultBundlePath TestResults.xcresult
@@ -521,7 +521,7 @@ readonly EXIT_INVALID_ARGS=3
 # Defaults
 SCHEME="ListAll"
 PLATFORM="iOS"
-DEVICE_NAME="iPhone 16 Pro"
+DEVICE_NAME="iPhone 17 Pro"
 RESULT_BUNDLE_PATH="TestResults.xcresult"
 DERIVED_DATA_PATH="./build"
 
@@ -557,7 +557,7 @@ set_destination() {
             DESTINATION="platform=iOS Simulator,name=${DEVICE_NAME},OS=latest"
             ;;
         watchOS)
-            DESTINATION="platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest"
+            DESTINATION="platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=latest"
             ;;
         macOS)
             DESTINATION="platform=macOS"
@@ -709,16 +709,16 @@ on:
 jobs:
   build-and-test:
     name: Build and Test
-    runs-on: macos-14
+    runs-on: macos-26
 
     strategy:
       matrix:
         platform:
           - scheme: ListAll
-            destination: 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest'
+            destination: 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
             name: iOS
           - scheme: "ListAllWatch Watch App"
-            destination: 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest'
+            destination: 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=latest'
             name: watchOS
       fail-fast: false  # Continue testing other platforms if one fails
 
@@ -726,11 +726,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Set Derived Data Path
       run: echo "DERIVED_DATA_PATH=${{ github.workspace }}/DerivedData" >> $GITHUB_ENV
@@ -902,7 +899,7 @@ private_lane :run_watch_tests do
     "cd ../ListAll && xcodebuild test " \
     "-project ListAll.xcodeproj " \
     "-scheme 'ListAllWatch Watch App' " \
-    "-destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=latest' " \
+    "-destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=latest' " \
     "-resultBundlePath ../fastlane/test_output/watchOS-TestResults.xcresult " \
     "-derivedDataPath ../fastlane/build " \
     "-configuration Debug " \
@@ -937,7 +934,7 @@ end
 xcodebuild clean test \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -resultBundlePath TestResults.xcresult
 ```
 
@@ -947,14 +944,14 @@ xcodebuild clean test \
 xcodebuild build-for-testing \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -derivedDataPath ./build
 
 # Step 2: Run tests without rebuilding
 xcodebuild test-without-building \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -derivedDataPath ./build \
     -resultBundlePath TestResults.xcresult
 ```
@@ -964,7 +961,7 @@ xcodebuild test-without-building \
 xcodebuild test \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -parallel-testing-enabled YES \
     -maximum-parallel-testing-workers 2 \
     -resultBundlePath TestResults.xcresult
@@ -975,7 +972,7 @@ xcodebuild test \
 xcodebuild test \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -only-testing:ListAllTests/DataRepositoryTests \
     -resultBundlePath TestResults.xcresult
 ```
@@ -985,7 +982,7 @@ xcodebuild test \
 xcodebuild test \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -skip-testing:ListAllTests/FlakyTests \
     -resultBundlePath TestResults.xcresult
 ```
@@ -995,7 +992,7 @@ xcodebuild test \
 xcodebuild test \
     -project ListAll/ListAll.xcodeproj \
     -scheme ListAll \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
     -test-iterations 3 \
     -retry-tests-on-failure \
     -resultBundlePath TestResults.xcresult
@@ -1073,7 +1070,7 @@ After implementing changes, verify:
    xcodebuild build-for-testing \
        -project ListAll.xcodeproj \
        -scheme ListAll \
-       -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+       -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
        -derivedDataPath ./build
    ```
 
@@ -1082,7 +1079,7 @@ After implementing changes, verify:
    xcodebuild test-without-building \
        -project ListAll.xcodeproj \
        -scheme ListAll \
-       -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+       -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
        -derivedDataPath ./build \
        -resultBundlePath TestResults.xcresult
    ```

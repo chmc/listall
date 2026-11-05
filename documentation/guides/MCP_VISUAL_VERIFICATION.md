@@ -46,7 +46,7 @@ xcodebuild build-for-testing \
     -project ListAll.xcodeproj \
     -scheme ListAll \
     -sdk iphonesimulator \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
 This creates `ListAllUITests-Runner.app` in DerivedData which enables fast simulator interactions.
@@ -324,7 +324,7 @@ xcodebuild build-for-testing \
     -project ListAll.xcodeproj \
     -scheme ListAll \
     -sdk iphonesimulator \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+    -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
 ### "No simulators are booted"

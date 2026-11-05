@@ -585,6 +585,20 @@ class UITestDataService {
 | `release.yml` | Manual/tag | Version bump, TestFlight upload |
 | `publish-to-appstore.yml` | Manual | Upload screenshots/metadata to ASC |
 | `validate-macos-screenshots.yml` | Screenshot changes | Validate dimensions |
+| `quality.yml` | Weekly (Sun) / manual | ASan, TSan, Periphery |
+| `mutation-testing.yml` | Weekly (Sun) / manual | Muter mutation testing (sharded by operator) |
+
+### Toolchain Pinning (local = CI)
+
+All macOS jobs run on `macos-26`. Tool versions have a single source of truth so local and CI builds are identical:
+
+| File | Pins | Used by |
+|------|------|---------|
+| `.xcode-version` | Xcode (e.g. `26.6`) | `.github/actions/setup-xcode` (all workflows), `local-preflight-check.sh` |
+| `.ruby-version` | Ruby | `ruby/setup-ruby` (all workflows), `local-preflight-check.sh` |
+| `Gemfile.lock` | fastlane, bundler | `bundle install` |
+
+Simulators are resolved with `.github/scripts/resolve-simulator.sh <iOS|watchOS> "<exact name>"`, which uses only the runtime that ships with the selected Xcode (Xcode 26.6 → iOS/watchOS 26.5) and creates the device if missing. Standard devices: iPhone 17 Pro (tests), iPhone 17 Pro Max, iPad Pro 13-inch (M5), Apple Watch Series 11 (46mm) (screenshots/tests).
 
 ### CI Pipeline Architecture
 
