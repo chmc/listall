@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import Combine
 @testable import ListAllWatch_Watch_App
 
 final class WatchSyncChaosTests: XCTestCase {
@@ -475,15 +476,47 @@ final class WatchSyncChaosTests: XCTestCase {
             )
         }
 
-        // Assert: Should not crash, and eventually settle after the sync indicator hide delay.
-        // Use syncIndicatorHideDelay + ciBuffer so all pending asyncAfter blocks have fired.
-        let settleDelay = Self.syncIndicatorHideDelay + Self.ciBuffer
-        let settled = XCTestExpectation(description: "ViewModel settles after rapid notifications")
-        DispatchQueue.main.asyncAfter(deadline: .now() + settleDelay) {
-            XCTAssertNil(viewModel.errorMessage, "No error after rapid sync notifications")
-            XCTAssertGreaterThanOrEqual(viewModel.lists.count, 0, "Lists should be non-negative")
-            settled.fulfill()
+        // Assert: Should not crash, and eventually settle (indicator off).
+        // Wait on the state rather than a fixed timer: a busy CI main queue delays timers.
+        waitForSyncIndicatorOff(viewModel)
+        XCTAssertNil(viewModel.errorMessage, "No error after rapid sync notifications")
+        XCTAssertGreaterThanOrEqual(viewModel.lists.count, 0, "Lists should be non-negative")
+    }
+
+    /// Rapid sync notifications coalesce into one reload, and the indicator stays on
+    /// until that reload is done (no flicker from earlier notifications' timers).
+    func testSyncOrdering_rapidSuccessiveNotifications_coalesceIntoSingleReload() {
+        // Arrange
+        let viewModel = WatchMainViewModel()
+        defer { NotificationCenter.default.removeObserver(viewModel) }
+        var reloadCount = 0
+        let reloads = viewModel.$isLoading
+            .dropFirst()
+            .filter { $0 }
+            .sink { _ in reloadCount += 1 }
+        defer { reloads.cancel() }
+
+        // Act
+        for _ in 0..<20 {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("WatchConnectivitySyncReceived"),
+                object: nil
+            )
         }
-        wait(for: [settled], timeout: settleDelay + 2.0)
+
+        // Assert
+        XCTAssertTrue(viewModel.isSyncingFromiOS, "Indicator shows immediately")
+        waitForSyncIndicatorOff(viewModel)
+        XCTAssertEqual(reloadCount, 1, "20 rapid notifications should trigger a single reload")
+    }
+
+    // MARK: - Helpers
+
+    private func waitForSyncIndicatorOff(_ viewModel: WatchMainViewModel, timeout: TimeInterval = 10.0) {
+        let indicatorOff = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in !viewModel.isSyncingFromiOS },
+            object: nil
+        )
+        wait(for: [indicatorOff], timeout: timeout)
     }
 }

@@ -38,13 +38,13 @@ final class ListAllWatch_Watch_AppTests: XCTestCase {
         // Then: isSyncingFromiOS is set synchronously in refreshFromiOS()
         XCTAssertTrue(viewModel.isSyncingFromiOS, "Should be syncing after notification")
 
-        // And: Sync indicator should eventually disappear (0.1s + 0.5s async delays in refreshFromiOS)
-        let syncComplete = XCTestExpectation(description: "Sync indicator disappears")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            syncComplete.fulfill()
-        }
-        wait(for: [syncComplete], timeout: 5.0)
-        XCTAssertFalse(viewModel.isSyncingFromiOS, "Should stop syncing after delay")
+        // And: Sync indicator should eventually disappear (0.1s + 0.5s async delays in refreshFromiOS).
+        // Wait on the state, not a fixed timer: a busy CI main queue delays timers.
+        let syncComplete = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in !viewModel.isSyncingFromiOS },
+            object: nil
+        )
+        wait(for: [syncComplete], timeout: 10.0)
     }
 
     /// Test that WatchListViewModel responds to sync notifications from iOS

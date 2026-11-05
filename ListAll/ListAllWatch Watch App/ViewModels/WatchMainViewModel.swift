@@ -14,7 +14,12 @@ class WatchMainViewModel: ObservableObject {
     
     // Watch sync properties
     @Published var isSyncingFromiOS = false
-    
+
+    // Pending sync reload / indicator hide, cancelled when a newer sync arrives so a
+    // burst of notifications coalesces into one Core Data reload without flicker.
+    private var pendingSyncReload: DispatchWorkItem?
+    private var pendingSyncIndicatorHide: DispatchWorkItem?
+
     init() {
         setupDataListener()
         setupWatchConnectivityObserver()
@@ -85,16 +90,29 @@ class WatchMainViewModel: ObservableObject {
         
         // Update Core Data with received lists
         updateCoreDataWithLists(receivedLists)
-        
+
         // Reload UI
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        scheduleSyncReload()
+    }
+
+    /// Reloads lists shortly after a sync and hides the indicator after a brief delay.
+    /// A newer sync cancels the pending reload/hide, so bursts reload only once.
+    private func scheduleSyncReload() {
+        pendingSyncReload?.cancel()
+        pendingSyncIndicatorHide?.cancel()
+
+        let reload = DispatchWorkItem { [weak self] in
+            guard let self else { return }
             self.loadLists()
-            
-            // Hide sync indicator after brief delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.isSyncingFromiOS = false
+
+            let hide = DispatchWorkItem { [weak self] in
+                self?.isSyncingFromiOS = false
             }
+            self.pendingSyncIndicatorHide = hide
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: hide)
         }
+        pendingSyncReload = reload
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: reload)
     }
     
     private func updateCoreDataWithLists(_ receivedLists: [List]) {
@@ -176,14 +194,7 @@ class WatchMainViewModel: ObservableObject {
         isSyncingFromiOS = true
         
         // Reload lists from DataManager (which already has the updated data from Core Data)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.loadLists()
-            
-            // Hide sync indicator after brief delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.isSyncingFromiOS = false
-            }
-        }
+        scheduleSyncReload()
     }
     
     /// Load all active (non-archived) lists
