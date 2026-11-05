@@ -132,7 +132,7 @@ Normalizes all screenshots (iPhone, iPad, Watch) to App Store dimensions.
 **Example output**:
 ```
 🔄 en-US/iPhone 17 Pro Max-01-WelcomeScreen.png: 1320x2868 → 1290x2796
-✅ en-US/iPad Pro 13-inch (M4)-01-WelcomeScreen.png: Already 2064x2752, copying...
+✅ en-US/iPad Pro 13-inch (M5)-01-WelcomeScreen.png: Already 2064x2752, copying...
 🔄 en-US/Apple Watch Series 11-01_Watch_Lists_Home.png: 416x496 → 396x484
 
 ======================================================================
@@ -157,7 +157,7 @@ Validates all normalized screenshots against App Store requirements.
 **Example output**:
 ```
 ✅ en-US/iPhone 17 Pro Max-01-WelcomeScreen.png: 1290x2796 (iPhone 6.7")
-✅ en-US/iPad Pro 13-inch (M4)-01-WelcomeScreen.png: 2064x2752 (iPad 13")
+✅ en-US/iPad Pro 13-inch (M5)-01-WelcomeScreen.png: 2064x2752 (iPad 13")
 ✅ en-US/Apple Watch Series 11-01_Watch_Lists_Home.png: 396x484 (Apple Watch Series 7+ 45mm)
 
 ======================================================================

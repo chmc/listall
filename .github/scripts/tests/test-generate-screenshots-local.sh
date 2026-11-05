@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+# End-to-end invocations of the script must never run cleanup/generation against
+# the real repository (it deletes the committed App Store screenshots)
+export SCREENSHOTS_VALIDATE_ONLY=1
+
 # Test configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
@@ -240,6 +244,25 @@ assert_dir_not_exists() {
     else
         ((TESTS_FAILED++))
         echo -e "  ${RED}✗${NC} ${message}"
+        return 1
+    fi
+}
+
+assert_not_contains() {
+    local haystack="$1"
+    local needle="$2"
+    local message="${3:-String should not contain: ${needle}}"
+
+    ((TESTS_RUN++))
+
+    if [[ "${haystack}" != *"${needle}"* ]]; then
+        ((TESTS_PASSED++))
+        echo -e "  ${GREEN}✓${NC} ${message}"
+        return 0
+    else
+        ((TESTS_FAILED++))
+        echo -e "  ${RED}✗${NC} ${message}"
+        echo -e "    Did not expect to find: ${needle}"
         return 1
     fi
 }
@@ -658,7 +681,7 @@ test_generate_iphone_screenshots_success() {
     local exit_code=$?
 
     assert_true "${exit_code}" "generate_iphone_screenshots returns success"
-    assert_contains "${output}" "iPhone 16 Pro Max" \
+    assert_contains "${output}" "iPhone 17 Pro Max" \
         "generate_iphone_screenshots shows device info"
 
     echo ""
@@ -720,7 +743,7 @@ test_generate_watch_screenshots_success() {
     local exit_code=$?
 
     assert_true "${exit_code}" "generate_watch_screenshots returns success"
-    assert_contains "${output}" "Apple Watch Series 10" \
+    assert_contains "${output}" "Apple Watch Series 11" \
         "generate_watch_screenshots shows device info"
 
     echo ""
@@ -1166,6 +1189,20 @@ test_script_invalid_locale() {
         "Error message shown for invalid locale"
     assert_contains "${output}" "Valid locales:" \
         "Valid locales listed in error"
+
+    echo ""
+}
+
+test_script_validate_only_has_no_side_effects() {
+    echo -e "${BLUE}Testing SCREENSHOTS_VALIDATE_ONLY stops before cleanup/generation${NC}"
+
+    # Regression: end-to-end invocations used to run clean_screenshot_directories()
+    # against the real repository and delete the committed App Store screenshots.
+    local output exit_code=0
+    output=$(SCREENSHOTS_VALIDATE_ONLY=1 timeout 10 "${SCRIPT_UNDER_TEST}" iphone en-US 2>&1) || exit_code=$?
+
+    assert_equals "0" "${exit_code}" "validate-only run exits 0 right after argument validation"
+    assert_not_contains "${output}" "Cleaned:" "validate-only run does not clean screenshot directories"
 
     echo ""
 }
@@ -2225,6 +2262,7 @@ run_all_tests() {
     test_script_help_flag_short
     test_script_invalid_platform
     test_script_invalid_locale
+    test_script_validate_only_has_no_side_effects
     test_script_valid_platform_iphone
     test_script_valid_platform_all
     test_script_valid_locale_all

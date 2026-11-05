@@ -91,7 +91,7 @@ end
 # App Store Connect requires exact pixel dimensions (Apple's 2026 requirements):
 # - iPhone 6.9": 1260x2736 (2026 standard)
 # - iPad 13": 2064x2752 (2024 standard)
-# - Watch Series 10: 416x496 (2026 standard)
+# - Watch Series 11 (46mm): 416x496 (2026 standard)
 # - macOS: 2880x1800 (16:10 Retina)
 # Framed screenshots have device bezels which change dimensions to non-standard sizes
 # that App Store Connect rejects.
@@ -107,7 +107,7 @@ def prepare_screenshots_for_delivery(compat_path, skip_watch: false)
     FileUtils.mkdir_p(dst_dir)
 
     # Copy raw normalized screenshots (NOT framed - exact App Store dimensions)
-    # Match patterns like "iPhone 16 Pro Max-01_Welcome.png" and "iPad Pro 13-inch (M4)-02_MainScreen.png"
+    # Match patterns like "iPhone 17 Pro Max-01_Welcome.png" and "iPad Pro 13-inch (M5)-02_MainScreen.png"
     Dir.glob(File.join(src_dir, "*.png")).each do |screenshot|
       basename = File.basename(screenshot)
       # Skip framed versions and only include device-prefixed screenshots
@@ -146,7 +146,7 @@ def prepare_screenshots_for_delivery(compat_path, skip_watch: false)
 end
 
 # Helper method to run screenshot generation for a specific device
-# @param device [String] Device name (e.g., "iPhone 16 Pro Max" or "iPad Pro 13-inch (M4)")
+# @param device [String] Device name (e.g., "iPhone 17 Pro Max" or "iPad Pro 13-inch (M5)")
 # @param locales [Array<String>] Locales to capture (default: ["en-US", "fi"])
 # @param clear_previous [Boolean] Whether to clear previous screenshots (default: true)
 # @return [Integer] Number of screenshots captured
@@ -938,7 +938,7 @@ platform :ios do
   end
 
   desc "Generate iPhone screenshots only"
-  desc "Captures iPhone 16 Pro Max screenshots for EN and FI locales"
+  desc "Captures iPhone 17 Pro Max screenshots for EN and FI locales"
   desc "Outputs normalized screenshots to screenshots_compat/ ready for App Store"
   lane :screenshots_iphone do
     UI.header("📱 Generating iPhone Screenshots")
@@ -955,7 +955,7 @@ platform :ios do
     end
 
     # Generate iPhone screenshots
-    device = "iPhone 16 Pro Max"
+    device = "iPhone 17 Pro Max"
     count = generate_screenshots_for_device(device, clear_previous: true)
 
     if count == 0
@@ -979,7 +979,7 @@ platform :ios do
   end
 
   desc "Generate iPad screenshots only"
-  desc "Captures iPad Pro 13-inch (M4) screenshots for EN and FI locales"
+  desc "Captures iPad Pro 13-inch (M5) screenshots for EN and FI locales"
   desc "Outputs normalized screenshots to screenshots_compat/ ready for App Store"
   lane :screenshots_ipad do
     UI.header("📱 Generating iPad Screenshots")
@@ -996,7 +996,7 @@ platform :ios do
     end
 
     # Generate iPad screenshots
-    device = "iPad Pro 13-inch (M4)"
+    device = "iPad Pro 13-inch (M5)"
     count = generate_screenshots_for_device(device, clear_previous: true)
 
     if count == 0
@@ -1120,7 +1120,7 @@ platform :ios do
     # Run snapshot per device/language combination for incremental verification
     # This provides immediate feedback instead of waiting 30+ minutes
     screenshots_dir = File.expand_path("screenshots", __dir__)
-    devices = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"]
+    devices = ["iPhone 17 Pro Max", "iPad Pro 13-inch (M5)"]
     locales = %w[en-US fi]
     
     # Track expected screenshots per device/locale combination
@@ -1170,7 +1170,7 @@ platform :ios do
         
         # CRITICAL FIX: Set SIMULATOR_DEVICE_NAME explicitly so SnapshotHelper can save screenshots with correct filename
         # Fastlane snapshot normally sets this, but with test_without_building it may not work correctly
-        # Device name format: Remove spaces and special characters (e.g., "iPhone 16 Pro Max" -> "iPhone16ProMax")
+        # Device name format: Remove spaces and special characters (e.g., "iPhone 17 Pro Max" -> "iPhone17ProMax")
         device_name_sanitized = device.gsub(/[^a-zA-Z0-9]/, "")
         ENV['SIMULATOR_DEVICE_NAME'] = device_name_sanitized
         UI.message("🔧 Setting SIMULATOR_DEVICE_NAME=#{device_name_sanitized} for SnapshotHelper")
@@ -1329,8 +1329,8 @@ platform :ios do
           derived_data_path: derived,
           devices: [device],
           languages: [locale],
-          # Note: ios_version parameter removed - Fastlane will auto-select iOS 18.1 for both devices
-          # iPhone 16 Pro Max only has iOS 18.1, iPad has both 18.1 and 18.2 beta (18.1 preferred)
+          # No ios_version: snapshot defaults to the selected Xcode's simulator SDK version
+          # (.xcode-version 26.6 -> iOS 26.5), the same runtime CI uses
           clear_previous_screenshots: false,  # Shell script handles platform-specific cleanup
           # SIMPLIFIED: Use method-level only_testing to run ONLY the screenshot tests
           # Format: "TargetName/ClassName/testMethodName"
@@ -1460,7 +1460,7 @@ platform :ios do
         # CRITICAL: Fastlane Snapshot saves screenshots to cache directory, but may not extract them
         # if log parsing fails. We need to manually find and copy them.
         # Screenshots are saved as: <simulator-name>-<screenshot-name>.png
-        # e.g., "iPhone16ProMax-01-WelcomeScreen.png"
+        # e.g., "iPhone17ProMax-01-WelcomeScreen.png"
         
         # Method 1: Extract from result bundle (FALLBACK - only if Fastlane automatic extraction fails)
         # With result_bundle: false, Fastlane should automatically extract screenshots via log parsing
@@ -1575,7 +1575,7 @@ platform :ios do
                   png_files_in_bundle.each do |png_path|
                     basename = File.basename(png_path)
                     # Extract screenshot name from filename (remove device prefix if present)
-                    # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens, so we can't just split on first hyphen
+                    # FIXED: Device names like "iPad Pro 13-inch (M5)" contain hyphens, so we can't just split on first hyphen
                     # Instead, look for the screenshot number pattern (e.g., "-01_" or "-02_") which marks the end of device name
                     screenshot_name = basename
                     if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
@@ -1612,7 +1612,7 @@ platform :ios do
                   basename = File.basename(src)
                   
                   # Try to extract screenshot name from path if it contains test/screenshot info
-                  # Screenshot names from SnapshotHelper are like: "iPhone16ProMax-01-WelcomeScreen.png"
+                  # Screenshot names from SnapshotHelper are like: "iPhone17ProMax-01-WelcomeScreen.png"
                   # or they might be in subdirectories with test names
                   dst = File.join(locale_dir, basename)
                   
@@ -3084,8 +3084,8 @@ platform :ios do
               UI.message("   ✅ Found #{cache_screenshots.count} screenshots in cache directory")
               cache_screenshots.each do |src|
                 basename = File.basename(src)
-                # Remove device prefix if present (e.g., "iPhone16ProMax-01-WelcomeScreen.png" -> "01-WelcomeScreen.png")
-                # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens, so we can't just split on first hyphen
+                # Remove device prefix if present (e.g., "iPhone17ProMax-01-WelcomeScreen.png" -> "01-WelcomeScreen.png")
+                # FIXED: Device names like "iPad Pro 13-inch (M5)" contain hyphens, so we can't just split on first hyphen
                 # Instead, look for the screenshot number pattern (e.g., "-01_" or "-02_") which marks the end of device name
                 screenshot_name = basename
                 if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
@@ -3126,7 +3126,7 @@ platform :ios do
                     UI.message("   ✅ Found #{subdir_screenshots.count} screenshots in subdirectory!")
                     subdir_screenshots.each do |src|
                       basename = File.basename(src)
-                      # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens
+                      # FIXED: Device names like "iPad Pro 13-inch (M5)" contain hyphens
                       # Use regex to find screenshot number pattern instead of splitting on first hyphen
                       if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
                         device_part = match[1]
@@ -3294,7 +3294,7 @@ platform :ios do
             found_screenshots.each do |src|
               begin
                 basename = File.basename(src)
-                # FIXED: Device names like "iPad Pro 13-inch (M4)" contain hyphens
+                # FIXED: Device names like "iPad Pro 13-inch (M5)" contain hyphens
                 # Use regex to find screenshot number pattern instead of splitting on first hyphen
                 if match = basename.match(/^(.+?)(-\d{2}[-_].+\.png)$/i)
                   device_part = match[1]
@@ -3479,8 +3479,8 @@ platform :ios do
           basename = File.basename(f)
           basename.include?(device_sanitized_for_check) || 
           basename.include?(device.gsub(/[^a-zA-Z0-9]/, "")) ||
-          basename.include?("iPhone16ProMax") || 
-          basename.include?("iPadPro13inchM4") ||
+          basename.include?("iPhone17ProMax") || 
+          basename.include?("iPadPro13inchM5") ||
           basename.match?(/^\d{2}-/) # Screenshot names like "01-WelcomeScreen.png"
         }
         
@@ -3785,7 +3785,7 @@ platform :ios do
   end
 
   desc "Generate watchOS screenshots (fully automated via UITests + simctl)"
-  desc "Captures screenshots from Apple Watch Series 10 (46mm) for EN and FI locales"
+  desc "Captures screenshots from Apple Watch Series 11 (46mm) for EN and FI locales"
   lane :watch_screenshots do
     UI.header("🍎⌚️ Generating watchOS Screenshots")
     
@@ -3801,8 +3801,8 @@ platform :ios do
     # Fastlane snapshot will handle pairing automatically if devices are available,
     # but we ensure they exist and are ready
     UI.header("Preparing Watch and iPhone simulators for pairing")
-    watch_device = "Apple Watch Series 10 (46mm)"  # Available in CI (Xcode 16.1)
-    iphone_device = "iPhone 16 Pro Max"  # Use same device as iOS screenshots for consistency
+    watch_device = "Apple Watch Series 11 (46mm)"  # Available in CI (macos-26, Xcode 26.6)
+    iphone_device = "iPhone 17 Pro"  # Companion paired by .github/scripts/resolve-simulator.sh
     
     # Ensure simulators exist and are available
     # Fastlane snapshot will automatically pair them when running Watch tests
@@ -3878,7 +3878,7 @@ platform :ios do
       WatchScreenshotHelper.normalize_screenshots(
         watch_raw_dir,
         watch_normalized_dir,
-        target_size: :series10  # 416x496 - Apple Watch Series 10 (46mm) - 2026 standard
+        target_size: :series10  # 416x496 - Apple Watch Series 10/11 (46mm) - 2026 standard
       )
     rescue => e
       UI.user_error!("Failed to normalize watch screenshots: #{e.message}")
@@ -3922,7 +3922,7 @@ platform :ios do
       WatchScreenshotHelper.validate_screenshots(
         watch_normalized_dir,
         expected_count: 5,
-        allowed_sizes: [:series10]  # Only accept 416x496 (Series 10) - 2026 standard
+        allowed_sizes: [:series10]  # Only accept 416x496 (Series 10/11 46mm) - 2026 standard
       )
       UI.success("✅ All watch screenshots validated successfully!")
     rescue WatchScreenshotHelper::ValidationError => e
@@ -4166,7 +4166,7 @@ platform :ios do
     # Expected App Store dimensions (Apple's requirements, exact sizes)
     iphone_size = { width: 1290, height: 2796 }  # iPhone 6.7" exact (framed)
     ipad_size = { width: 2064, height: 2752 }    # iPad 13" exact (framed)
-    watch_size = { width: 416, height: 496 }     # Watch Series 10 exact (no frame)
+    watch_size = { width: 416, height: 496 }     # Watch Series 11 (46mm) exact (no frame)
     macos_size = { width: 2880, height: 1800 }   # macOS Retina exact
 
     # Validate iPhone/iPad screenshots

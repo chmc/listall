@@ -19,26 +19,23 @@ jobs:
   #############################################################################
   asan-stress:
     name: ASan Stress Tests
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Cache DerivedData
       uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-asan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-asan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-asan-
+          ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-asan-
 
     - name: Run macOS stress tests with ASan
       run: |
@@ -54,17 +51,18 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     - name: Run iOS stress + concurrency tests with ASan
       run: |
         set -o pipefail
         xcrun simctl shutdown all || true
+        SIM_UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro")
         cd ListAll
         xcodebuild test \
           -project ListAll.xcodeproj \
           -scheme ListAll \
-          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -destination "platform=iOS Simulator,id=${SIM_UDID}" \
           -enableAddressSanitizer YES \
           -only-testing:ListAllTests/StressTests \
           -only-testing:ListAllTests/ConcurrencyTests \
@@ -73,7 +71,7 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     - name: Upload ASan test results
       if: always()
@@ -92,26 +90,23 @@ jobs:
   #############################################################################
   tsan-macos:
     name: TSan macOS
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 60
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Cache DerivedData
       uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-tsan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-tsan-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-tsan-
+          ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-tsan-
 
     - name: Run macOS tests with TSan
       run: |
@@ -128,7 +123,7 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          | xcpretty
+          | xcbeautify --renderer github-actions
 
     - name: Upload TSan test results
       if: always()
@@ -144,18 +139,15 @@ jobs:
   #############################################################################
   periphery:
     name: Periphery Dead Code
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 30
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Install Periphery
       run: brew install peripheryapp/periphery/periphery
@@ -164,9 +156,9 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-derived-data-periphery-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+        key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-periphery-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
         restore-keys: |
-          ${{ runner.os }}-derived-data-periphery-
+          ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-periphery-
 
     - name: Clean simulator state
       run: |

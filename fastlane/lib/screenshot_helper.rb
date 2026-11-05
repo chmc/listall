@@ -25,7 +25,7 @@ module ScreenshotHelper
 
     # Apple Watch sizes
     watch_ultra: { width: 410, height: 502, name: "Apple Watch Ultra (49mm)", platform: :watchos },
-    watch_series10: { width: 416, height: 496, name: "Apple Watch Series 10 (46mm)", platform: :watchos },
+    watch_series10: { width: 416, height: 496, name: "Apple Watch Series 10/11 (46mm)", platform: :watchos },
     watch_series7plus: { width: 396, height: 484, name: "Apple Watch Series 7+ (45mm)", platform: :watchos },
     watch_series4to6: { width: 368, height: 448, name: "Apple Watch Series 4-6 (40mm)", platform: :watchos }
   }.freeze

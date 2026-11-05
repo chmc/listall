@@ -33,12 +33,15 @@ jobs:
   #############################################################################
   build-muter:
     name: Build Muter
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 15
 
     steps:
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Clone and build Muter
       run: |
@@ -60,7 +63,7 @@ jobs:
   #############################################################################
   mutation-ios:
     name: Mutate iOS (${{ matrix.file_name }})
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build-muter
     if: >-
       github.event.inputs.muter_args == '' &&
@@ -154,8 +157,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Download Muter binary
       uses: actions/download-artifact@v8
@@ -175,15 +178,7 @@ jobs:
       if: matrix.file_name == 'Item'
       run: |
         echo "::group::Baseline test suite timing"
-        SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
-        import json, sys
-        data = json.load(sys.stdin)
-        for rt, devs in sorted(data.get('devices', {}).items(), reverse=True):
-            if 'iOS' in rt:
-                for d in devs:
-                    if d.get('isAvailable') and 'iPhone 16 Pro' in d.get('name', ''):
-                        print(d['udid']); sys.exit(0)
-        sys.exit(1)")
+        SIM_UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro")
         START=$(date +%s)
         xcodebuild test \
           -project ListAll/ListAll.xcodeproj \
@@ -232,7 +227,7 @@ jobs:
   #############################################################################
   mutation-ios-manual:
     name: Mutate iOS (manual)
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build-muter
     if: >-
       github.event.inputs.muter_args != '' &&
@@ -244,8 +239,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Download Muter binary
       uses: actions/download-artifact@v8
@@ -282,7 +277,7 @@ jobs:
   #############################################################################
   mutation-macos:
     name: Mutate macOS (${{ matrix.file_name }})
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build-muter
     if: >-
       github.event.inputs.muter_args == '' &&
@@ -392,8 +387,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Download Muter binary
       uses: actions/download-artifact@v8
@@ -440,7 +435,7 @@ jobs:
   #############################################################################
   mutation-macos-manual:
     name: Mutate macOS (manual)
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build-muter
     if: >-
       github.event.inputs.muter_args != '' &&
@@ -452,8 +447,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Download Muter binary
       uses: actions/download-artifact@v8
@@ -485,7 +480,7 @@ jobs:
   #############################################################################
   mutation-watchos:
     name: Mutate watchOS (${{ matrix.file_name }})
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build-muter
     if: >-
       github.event.inputs.muter_args == '' &&
@@ -531,8 +526,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Download Muter binary
       uses: actions/download-artifact@v8
@@ -584,7 +579,7 @@ jobs:
   #############################################################################
   mutation-watchos-manual:
     name: Mutate watchOS (manual)
-    runs-on: macos-14
+    runs-on: macos-26
     needs: build-muter
     if: >-
       github.event.inputs.muter_args != '' &&
@@ -596,8 +591,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+    - name: Setup Xcode
+      uses: ./.github/actions/setup-xcode
 
     - name: Download Muter binary
       uses: actions/download-artifact@v8

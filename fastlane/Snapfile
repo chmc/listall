@@ -5,13 +5,12 @@
 project "./ListAll/ListAll.xcodeproj"
 
 # List of simulators to use for screenshot generation
-# Using iOS 18.1 to match CI environment (macos-14 with Xcode 16.1)
-# iPhone 16 Pro Max is 6.7" which is acceptable for App Store 6.5" slot
-# NOTE: Device names vary by Xcode version - CI uses Xcode 16.1 which has iPhone 16 Pro Max (not iPhone 17)
-# Fastlane will automatically select iOS 18.1 simulator since it's most common/stable
+# Must exist in the Xcode pinned in .xcode-version (CI: macos-26). Snapshot uses the
+# selected Xcode's simulator SDK version (Xcode 26.6 -> iOS 26.5), same as CI.
+# iPhone 17 Pro Max captures 1320x2868, normalized to the App Store 6.7" size by the Fastfile
 devices([
-  "iPhone 16 Pro Max",      # 6.7" display (closest to App Store 6.5" requirement)
-  "iPad Pro 13-inch (M4)"   # 13" iPad Pro for App Store screenshots
+  "iPhone 17 Pro Max",      # 6.9" display, normalized for the App Store 6.7" slot
+  "iPad Pro 13-inch (M5)"   # 13" iPad Pro for App Store screenshots
 ])
 
 # List of languages to generate screenshots for

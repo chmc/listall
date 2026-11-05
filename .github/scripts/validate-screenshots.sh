@@ -42,7 +42,7 @@ readonly -a IPHONE_VALID_DIMENSIONS=(
     "1290x2796"  # iPhone 6.7" exact (required by App Store)
 )
 
-# iPad: 13" display (iPad Pro 13-inch M4)
+# iPad: 13" display (iPad Pro 13-inch M4/M5)
 readonly -a IPAD_VALID_DIMENSIONS=(
     "2064x2752"  # iPad 13" exact (2024 standard)
 )
