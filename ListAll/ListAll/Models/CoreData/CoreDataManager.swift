@@ -22,6 +22,11 @@ class CoreDataManager: ObservableObject {
     // This prevents drag-drop operations from triggering reload loops
     private var isLocalSave = false
 
+    // Coordinator whose context saves trigger a UI refresh. Captured before the
+    // DidSave observer is registered, because that handler runs on the saving
+    // (background) thread and must not touch the lazy persistentContainer.
+    private var observedStoreCoordinator: NSPersistentStoreCoordinator?
+
     // MARK: - CloudKit Sync Status Tracking
     /// Timestamp of last successful CloudKit sync (import or export)
     @Published private(set) var lastSyncDate: Date?
@@ -322,6 +327,8 @@ class CoreDataManager: ObservableObject {
     /// Setup remote change notification observers
     /// Note: Made internal (not private) to allow reset from test support methods
     func setupRemoteChangeNotifications() {
+        observedStoreCoordinator = persistentContainer.persistentStoreCoordinator
+
         // Observe remote changes from other processes (e.g., watchOS app, CloudKit sync)
         NotificationCenter.default.addObserver(
             self,
@@ -410,6 +417,12 @@ class CoreDataManager: ObservableObject {
     @objc private func handleContextDidSave(_ notification: Notification) {
         guard let savedContext = notification.object as? NSManagedObjectContext else { return }
 
+        // The observer sees every context in the process (object: nil). Ignore saves to
+        // other Core Data stacks, e.g. a test's in-memory container; otherwise each such
+        // save makes the app refresh and reload its own store.
+        guard let observedStoreCoordinator,
+              savedContext.persistentStoreCoordinator === observedStoreCoordinator else { return }
+
         // Only process saves from OTHER contexts (background contexts)
         // Skip our own viewContext saves to avoid loops
         guard savedContext != viewContext else {
@@ -433,7 +446,7 @@ class CoreDataManager: ObservableObject {
             }
         }
 
-        // This is a background context save from non-CloudKit source (e.g., watchOS, widget, app extension)
+        // A background context on our own store saved (e.g. newBackgroundContext() work in this process)
         print("🌐 CoreDataManager: Background context saved (non-CloudKit) - triggering UI refresh")
 
         // Ensure we're on main thread for UI updates

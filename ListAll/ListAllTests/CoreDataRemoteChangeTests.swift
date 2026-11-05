@@ -187,4 +187,50 @@ final class CoreDataRemoteChangeTests: XCTestCase {
         // (processRemoteChange posts .coreDataRemoteChange on main thread)
         XCTAssertTrue(wasMainThread, "Notification should be handled on main thread")
     }
+
+    // MARK: - Test 5: Context Saves Are Scoped to the App's Store
+
+    /// A background context on the app's own coordinator (e.g. a watch/widget-driven
+    /// or CloudKit-adjacent background save) must still trigger a UI refresh.
+    func testBackgroundSaveOnOwnStoreTriggersRefresh() throws {
+        let notificationExpectation = expectation(
+            forNotification: .coreDataRemoteChange,
+            object: nil,
+            handler: nil
+        )
+        let ownBackgroundContext = CoreDataManager.shared.persistentContainer.newBackgroundContext()
+
+        // Post DidSave for the app's own coordinator without writing to the real store
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .NSManagedObjectContextDidSave, object: ownBackgroundContext)
+        }
+
+        wait(for: [notificationExpectation], timeout: 5.0)
+    }
+
+    /// Saves in an unrelated Core Data stack in the same process (e.g. a test's
+    /// in-memory container) must not make the app refresh and reload its store.
+    func testSaveOnUnrelatedStoreDoesNotTriggerRefresh() throws {
+        let unexpectedRefresh = expectation(
+            forNotification: .coreDataRemoteChange,
+            object: nil,
+            handler: nil
+        )
+        unexpectedRefresh.isInverted = true
+
+        let unrelatedContainer = TestHelpers.createInMemoryCoreDataStack()
+        let backgroundContext = unrelatedContainer.newBackgroundContext()
+        try backgroundContext.performAndWait {
+            let entity = ListEntity(context: backgroundContext)
+            entity.id = UUID()
+            entity.name = "Unrelated store"
+            entity.orderNumber = 0
+            entity.createdAt = Date()
+            entity.modifiedAt = Date()
+            entity.isArchived = false
+            try backgroundContext.save()
+        }
+
+        wait(for: [unexpectedRefresh], timeout: 2.0)
+    }
 }
