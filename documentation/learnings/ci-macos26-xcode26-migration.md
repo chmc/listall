@@ -76,6 +76,8 @@ muter run --operators RelationalOperatorReplacement RemoveSideEffects
 - [ ] macOS screenshot tests pass `DISABLE_TOOLTIPS` and `-archivedSectionExpanded NO`. Otherwise feature tips and `@AppStorage` UI state persisted on the capturing Mac leak into the App Store images.
 - [ ] iOS 26 renders `simctl status_bar --batteryState charged` as a green charging battery. The Snapfile uses `discharging` at 100% to get a plain full battery.
 - [ ] Don't use `cmd | head -n 1` under `set -o pipefail`, because it can SIGPIPE intermittently (exit 141). Use `awk 'NR==1'` instead.
+- [ ] Periphery is installed from the pinned 3.8.0 release zip, with its sha256 checked against the GitHub release digest. Don't use the `peripheryapp/periphery` tap: current Homebrew rejects its cask with "Calling `depends_on macos: :catalina` is disabled". Upstream is archived, so no new releases are coming.
+- [ ] App Store versions must only increase. Check the live version (`https://itunes.apple.com/lookup?bundleId=io.github.chmc.ListAll`) and the App Store Connect TestFlight trains before choosing `bump_type`. `.version` on main can lag behind, because builds 1.1.20/1.1.21 were released from a feature branch.
 
 ## Key Insight
 
