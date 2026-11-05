@@ -2846,7 +2846,7 @@ final class ExportServiceMacTests: XCTestCase {
     func testNSPasteboardSetStringOnMacOS() {
         #if os(macOS)
         // Test that NSPasteboard.setString works correctly on macOS
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         let testString = "Test export data from ListAll"
         let result = pasteboard.setString(testString, forType: .string)
@@ -2861,7 +2861,7 @@ final class ExportServiceMacTests: XCTestCase {
 
     func testNSPasteboardClearContentsOnMacOS() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         _ = pasteboard.setString("Test", forType: .string)
 
@@ -2876,7 +2876,7 @@ final class ExportServiceMacTests: XCTestCase {
     func testNSPasteboardJSONDataOnMacOS() {
         #if os(macOS)
         // Test putting JSON-like data on pasteboard
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         let jsonString = "{\"lists\": [], \"version\": \"1.0\"}"
         let result = pasteboard.setString(jsonString, forType: .string)
@@ -2892,7 +2892,7 @@ final class ExportServiceMacTests: XCTestCase {
     func testNSPasteboardCSVDataOnMacOS() {
         #if os(macOS)
         // Test putting CSV data on pasteboard
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         let csvString = "List Name,Item Title,Description\nShopping,Milk,2%"
         let result = pasteboard.setString(csvString, forType: .string)
@@ -3875,7 +3875,7 @@ final class SharingServiceMacTests: XCTestCase {
 
     func testNSPasteboardCopyString() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
 
         let testString = "Test sharing content from ListAll"
@@ -3892,7 +3892,7 @@ final class SharingServiceMacTests: XCTestCase {
 
     func testNSPasteboardClearContents() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         _ = pasteboard.setString("temporary", forType: .string)
 
@@ -3908,7 +3908,7 @@ final class SharingServiceMacTests: XCTestCase {
 
     func testNSPasteboardMultipleTypes() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
 
         let testString = "Plain text version"
@@ -6893,7 +6893,7 @@ final class ServicesMenuMacTests: XCTestCase {
 
     func testReadTextFromPasteboard() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
 
         let testText = "Test item 1\nTest item 2"
@@ -6906,7 +6906,7 @@ final class ServicesMenuMacTests: XCTestCase {
 
     func testEmptyPasteboard() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
 
         // Reading from empty pasteboard should return nil
@@ -6917,7 +6917,7 @@ final class ServicesMenuMacTests: XCTestCase {
 
     func testPasteboardWithMultipleTypes() {
         #if os(macOS)
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
 
         let testText = "Plain text version"
@@ -7955,7 +7955,7 @@ final class MacImageGalleryViewTests: XCTestCase {
     // MARK: - Clipboard Tests
 
     func testCopyImageToPasteboard() {
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         let testImage = createTestNSImage()
 
@@ -7966,7 +7966,7 @@ final class MacImageGalleryViewTests: XCTestCase {
     }
 
     func testPasteImageFromPasteboard() {
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
         let testImage = createTestNSImage()
         pasteboard.writeObjects([testImage])
@@ -7978,7 +7978,7 @@ final class MacImageGalleryViewTests: XCTestCase {
     }
 
     func testHasImagesOnPasteboard() {
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         pasteboard.clearContents()
 
         let hasImagesEmpty = pasteboard.canReadObject(forClasses: [NSImage.self], options: nil)
@@ -7990,7 +7990,8 @@ final class MacImageGalleryViewTests: XCTestCase {
     }
 
     func testClearPasteboard() {
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
+        pasteboard.clearContents()  // AppKit requires clearContents() before writeObjects
         pasteboard.writeObjects([createTestNSImage()])
         XCTAssertTrue(pasteboard.canReadObject(forClasses: [NSImage.self], options: nil))
 
@@ -9376,7 +9377,7 @@ final class ListSharingMacTests: XCTestCase {
 
     #if os(macOS)
     func testNSPasteboardBasicOperations() {
-        let pasteboard = NSPasteboard.general
+        let pasteboard = makeIsolatedPasteboard()
         let testString = "Test \(UUID().uuidString)"
 
         // Clear and set string

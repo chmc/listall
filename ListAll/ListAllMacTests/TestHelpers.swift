@@ -18,6 +18,21 @@ import CloudKit
 // Resolve ambiguity between SwiftUI.List and ListAll.List
 typealias ListModel = ListAll.List
 
+#if os(macOS)
+import XCTest
+
+extension XCTestCase {
+    /// A uniquely named pasteboard, released when the test ends.
+    /// NSPasteboard.general is shared by every process, including parallel test
+    /// runners, so tests using it can overwrite each other's contents.
+    func makeIsolatedPasteboard() -> NSPasteboard {
+        let name = NSPasteboard.Name("io.github.chmc.ListAllMacTests.\(UUID().uuidString)")
+        addTeardownBlock { NSPasteboard(name: name).releaseGlobally() }
+        return NSPasteboard(name: name)
+    }
+}
+#endif
+
 /// Test helper for setting up isolated test environments
 class TestHelpers {
 
