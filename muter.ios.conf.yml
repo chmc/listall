@@ -6,6 +6,9 @@ arguments:
   - ListAll
   - -destination
   - "IOS_DESTINATION_PLACEHOLDER"
+  # Serial: parallel simulator clones stall on 3-vCPU CI runners (see ci-macos26-xcode26-migration.md)
+  - -parallel-testing-enabled
+  - "NO"
   - -skip-testing:ListAllTests/AppGroupsTests
   - -skip-testing:ListAllTests/CloudKitTests
   - -skip-testing:ListAllTests/ServicesTests/testGetSuggestionsWithLimit

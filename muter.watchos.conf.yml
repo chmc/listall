@@ -6,6 +6,9 @@ arguments:
   - "ListAllWatch Watch App"
   - -destination
   - "WATCHOS_DESTINATION_PLACEHOLDER"
+  # Serial: parallel simulator clones stall on 3-vCPU CI runners (see ci-macos26-xcode26-migration.md)
+  - -parallel-testing-enabled
+  - "NO"
   - -skip-testing:ListAllWatch Watch AppUITests
   - "SWIFT_TREAT_WARNINGS_AS_ERRORS=NO"
   - "CODE_SIGN_IDENTITY="
