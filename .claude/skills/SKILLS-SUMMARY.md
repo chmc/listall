@@ -339,7 +339,7 @@ xcrun simctl list devices available
 - Flaky tests in CI
 
 **Patterns**:
-- Use `macos-14` or `macos-15` (Apple Silicon)
+- Use `macos-26` with Xcode from `.xcode-version` (`./.github/actions/setup-xcode`)
 - Set `timeout-minutes` on all jobs
 - Upload artifacts with `if: always()`
 - Use `nick-fields/retry` for transient failures

@@ -55,7 +55,7 @@ fastlane/
 ├── screenshots/              # Raw captures from snapshot
 │   ├── en-US/
 │   │   ├── iPhone 17 Pro Max-01-WelcomeScreen.png
-│   │   ├── iPad Pro 13-inch (M4)-01-WelcomeScreen.png
+│   │   ├── iPad Pro 13-inch (M5)-01-WelcomeScreen.png
 │   │   └── ...
 │   └── fi/
 ├── screenshots_compat/       # Normalized sizes for Frameit
@@ -85,7 +85,7 @@ fastlane/
 ## Devices
 
 - **iPhone 17 Pro Max** (6.7" → 1290x2796 raw, 1421x2909 framed)
-- **iPad Pro 13-inch (M4)** (2048x2732 raw, 2286x3168 framed)
+- **iPad Pro 13-inch (M5)** (2048x2732 raw, 2286x3168 framed)
 
 ## Locales
 

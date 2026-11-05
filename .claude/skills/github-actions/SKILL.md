@@ -18,13 +18,19 @@ description: GitHub Actions CI/CD patterns for iOS and Apple platforms. Use when
 
 ### Runner Selection
 ```yaml
-# GOOD: Apple Silicon (faster)
-runs-on: macos-14
-# or
-runs-on: macos-15
+# GOOD: current Apple Silicon image (macos-14 was retired 2026-11-02)
+runs-on: macos-26
 
-# BAD: Intel (slower, deprecated)
-runs-on: macos-12
+# Xcode comes from .xcode-version via the shared composite action,
+# so local and CI use the same Xcode and simulator runtime
+- uses: actions/checkout@v6
+- uses: ./.github/actions/setup-xcode
+
+# Simulators: resolve by exact name on the selected Xcode's runtime
+UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro")
+
+# BAD: retired images, OS=latest, hardcoded Xcode_<ver>.app paths
+runs-on: macos-14
 ```
 
 ## Reliability Patterns
@@ -42,7 +48,7 @@ runs-on: macos-12
 ```yaml
 jobs:
   preflight:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - name: Validate environment
         run: |
@@ -87,13 +93,13 @@ jobs:
 ```yaml
 jobs:
   screenshots-iphone:
-    runs-on: macos-14
+    runs-on: macos-26
     # ...
   screenshots-ipad:
-    runs-on: macos-14
+    runs-on: macos-26
     # ...
   screenshots-watch:
-    runs-on: macos-14
+    runs-on: macos-26
     # ...
 ```
 
@@ -104,13 +110,13 @@ jobs:
 # BAD: Can run for 6 hours
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26
     # No timeout-minutes!
 
 # GOOD: Explicit timeout
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 45
 ```
 
@@ -145,7 +151,7 @@ jobs:
   run: |
     xcodebuild build \
       -scheme MyApp \
-      -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
       CODE_SIGN_IDENTITY='' \
       CODE_SIGNING_REQUIRED=NO
 ```

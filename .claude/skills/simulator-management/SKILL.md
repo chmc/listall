@@ -18,14 +18,14 @@ xcrun simctl shutdown all
 xcrun simctl delete unavailable
 
 # Boot specific simulator
-xcrun simctl boot "iPhone 16 Pro"
+xcrun simctl boot "iPhone 17 Pro"
 
 # Erase simulator
 xcrun simctl erase <UDID>
 
 # Delete and recreate simulator
 xcrun simctl delete <UDID>
-xcrun simctl create "iPhone 16 Pro" "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
+xcrun simctl create "iPhone 17 Pro" "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
 ```
 
 ## CI/CD Patterns
@@ -73,7 +73,7 @@ xcrun simctl delete <UDID>
 ### Pre-booting
 ```bash
 # BAD: Race conditions with Fastlane
-xcrun simctl boot "iPhone 16 Pro"
+xcrun simctl boot "iPhone 17 Pro"
 bundle exec fastlane snapshot
 
 # GOOD: Let Fastlane manage
