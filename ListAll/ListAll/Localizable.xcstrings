@@ -2021,24 +2021,6 @@
         }
       }
     },
-    "Create lists on your iPhone to see them here" : {
-      "comment" : "watchOS empty state message for lists",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create lists on your iPhone to see them here"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Luo listoja iPhonellasi nähdäksesi ne täällä"
-          }
-        }
-      }
-    },
     "Create New List" : {
       "comment" : "A button label that, when tapped, presents a screen to create a new destination list.",
       "extractionState" : "manual",
@@ -4322,6 +4304,24 @@
         }
       }
     },
+    "Lists from your iPhone appear here" : {
+      "comment" : "watchOS empty state message for lists",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lists from your iPhone appear here"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhonesi listat näkyvät täällä"
+          }
+        }
+      }
+    },
     "Lists: %lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -6469,6 +6469,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Synkronoi iCloudin ja Apple Watchin kanssa"
+          }
+        }
+      }
+    },
+    "Sync with iPhone" : {
+      "comment" : "watchOS empty state button that asks the iPhone for its lists",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync with iPhone"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synkronoi iPhonen kanssa"
           }
         }
       }

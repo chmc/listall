@@ -477,6 +477,29 @@ MainViewModel.handleWatchListsData()
     └── Update only if received is newer
 ```
 
+### Watch Initial Sync (iPhone → Watch)
+
+The watch has no CloudKit, so it gets the iPhone's lists only through WatchConnectivity.
+`WatchConnectivityService.init(session:)` does not activate the session: `MainViewModel` (iOS) and
+`WatchMainViewModel` (watchOS) call `activate()` after registering their data observers, so queued transfers
+are never delivered before anyone listens.
+
+```
+iOS sends its lists (sendCurrentListsToWatch → listsProvider) when:
+    ├── the session activates and the watch app is installed
+    ├── sessionWatchStateDidChange reports the watch app installed
+    └── the watch sends a fullSyncRequest (message or userInfo)
+
+watchOS requestFullSync() on activation, pull-to-refresh and the empty-state "Sync with iPhone" button:
+    ├── lists transfer still queued → transferUserInfo (iPhone gets watch edits before replying)
+    ├── reachable → sendMessage (wakes a suspended iPhone app); on error → transferUserInfo
+    └── not reachable → transferUserInfo
+```
+
+The watch never pushes a full snapshot on launch or refresh: a stale snapshot would delete iPhone lists it has
+never seen. Watch edits are still sent as they happen. Limitation: if the iPhone app is not running at all, the
+queued request is answered the next time it is opened. See `learnings/watchos-initial-sync-request.md`.
+
 ---
 
 ## State Management

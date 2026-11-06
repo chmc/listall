@@ -81,10 +81,9 @@ class MainViewModel: ObservableObject {
         loadLists()
 
         #if os(iOS)
-        // 4. Auto-sync clean data to Watch (after WatchConnectivity activates)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            WatchConnectivityService.shared.sendListsData(self.dataManager.lists)
-        }
+        // 4. Start Watch sync: the service sends clean data once the session activates,
+        //    when the watch app is installed, and when the watch requests it
+        startWatchConnectivity()
         #endif
     }
     
@@ -112,6 +111,19 @@ class MainViewModel: ObservableObject {
             name: NSNotification.Name("WatchConnectivityListsDataReceived"),
             object: nil
         )
+    }
+
+    /// Activates WatchConnectivity after the incoming data observers are registered,
+    /// so transfers queued by the watch are not delivered before anyone listens
+    private func startWatchConnectivity() {
+        // Unit tests inject mock data managers; don't push their data to a paired watch simulator
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+
+        let watchConnectivity = WatchConnectivityService.shared
+        watchConnectivity.listsProvider = { [weak self] in
+            self?.dataManager.lists ?? []
+        }
+        watchConnectivity.activate()
     }
 
     @objc private func handleWatchSyncNotification(_ notification: Notification) {

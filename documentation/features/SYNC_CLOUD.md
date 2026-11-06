@@ -36,8 +36,10 @@
 - `Services/HandoffService.swift` - Handoff
 - `Models/CoreData/CoreDataManager.swift` - NSPersistentCloudKitContainer
 
-**iOS**:
-- `Services/WatchConnectivityService.swift` - Watch sync
+**iOS + watchOS**:
+- `Services/WatchConnectivityService.swift` - Watch sync. The iPhone sends its lists when the session activates,
+  when the watch app is installed, and when the watch requests them (watch launch, pull-to-refresh,
+  empty-state "Sync with iPhone" button). See ARCHITECTURE.md "Watch Initial Sync".
 
 **macOS**:
 - `ListAllMac/Views/MacSettingsView.swift` - Sync status display (read-only)

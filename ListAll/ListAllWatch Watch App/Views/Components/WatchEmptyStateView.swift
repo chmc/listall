@@ -2,7 +2,19 @@ import SwiftUI
 
 /// Empty state view for when there are no lists
 struct WatchEmptyStateView: View {
+    /// Asks the iPhone for its lists
+    let onSync: () async -> Void
+
+    @State private var isSyncing = false
+
     var body: some View {
+        // Scrolls with the Digital Crown so the message and button fit on small watches
+        ScrollView {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 12) {
             Image(systemName: "list.bullet")
                 .font(.system(size: 40))
@@ -14,23 +26,34 @@ struct WatchEmptyStateView: View {
                 .foregroundColor(.primary)
                 .accessibilityIdentifier("WatchEmptyState_Title")
 
-            Text(watchLocalizedString("Create lists on your iPhone to see them here", comment: "watchOS empty state message for lists"))
+            Text(watchLocalizedString("Lists from your iPhone appear here", comment: "watchOS empty state message for lists"))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal)
                 .accessibilityIdentifier("WatchEmptyState_Message")
+
+            Button {
+                Task {
+                    isSyncing = true
+                    await onSync()
+                    isSyncing = false
+                }
+            } label: {
+                Label(watchLocalizedString("Sync with iPhone", comment: "watchOS empty state button that asks the iPhone for its lists"),
+                      systemImage: "arrow.triangle.2.circlepath")
+            }
+            .disabled(isSyncing)
+            .accessibilityIdentifier("WatchEmptyState_SyncButton")
         }
         .padding()
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("WatchEmptyStateView")
-        .accessibilityLabel(watchLocalizedString("No lists available", comment: "watchOS accessibility label for empty lists state"))
-        .accessibilityHint(watchLocalizedString("Create lists on your iPhone to see them here", comment: "watchOS empty state message for lists"))
     }
 }
 
 // MARK: - Preview
 #Preview {
-    WatchEmptyStateView()
+    WatchEmptyStateView(onSync: {})
 }
-
-
