@@ -70,7 +70,7 @@ Availability: All Territories
 
 REVIEW NOTES
 ============
-Source of truth: review_information/notes.txt (uploaded by Publish to App Store).
+Source of truth: fastlane/app_review/ios_notes.txt (uploaded by Publish to App Store).
 
 
 CONTACT INFORMATION
