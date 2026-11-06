@@ -30,6 +30,13 @@ Reference the `code-review` skill for detailed review patterns and severity leve
 
 Do not trust the author's "verified" claims, fact tables or code comments. Check the claims that the decision depends on yourself (read the code, run commands in a scratch copy). Report which claims you confirmed and which you refuted, with evidence. Where possible, prove a finding (failing test, mutation, log output) instead of asserting it.
 
+## Verification Gaps
+
+When reviewing a plan or a "done" claim:
+- For each *not verified* item, propose at least one concrete way to verify it (another tool, a test that covers
+  everything except the unreachable part, a real device), or say why none exists. Check that it has a `Kokeiltu:` line.
+- Check that every "this works" claim in a root-cause analysis has evidence (log, test, screenshot), not just reasoning.
+
 ## Structured Output
 
 1. **Summary**: One paragraph overview and assessment

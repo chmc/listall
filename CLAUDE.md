@@ -32,10 +32,12 @@ SKILL USAGE INSTRUCTION:
 
 MANDATORY before every plan approval request, root-cause/fix decision, and "done" claim:
 
-1. **Verify facts**: give evidence for every claim the decision depends on: the command you ran and its output, or `file:line`. Take counts and warnings from a clean state (no incremental build or cache).
-2. **Separate**: present *verified* (with evidence) and *assumed / not verified* as separate lists. Do not claim certainty without evidence.
+1. **Verify facts**: give evidence for every claim the decision depends on: the command you ran and its output, or `file:line`. Take counts and warnings from a clean state (no incremental build or cache). A root-cause claim, including "this path works", needs reproduction evidence (log line or screenshot) whenever the bug is reproducible.
+2. **Separate**: present *verified* (with evidence) and *assumed / not verified* as separate lists. Do not claim certainty without evidence. Every *not verified* item needs a `Kokeiltu:` line (what you tried and the result) or a link to a learnings file that documents the limitation with evidence.
 3. **Challenge**: (a) challenge your own claims: what would make this wrong, and what was not tested? (b) For plans and non-trivial changes (not typo fixes), run `critic-reviewer` during planning. Give it the code and the plan, not your conclusions, and tell it to verify the claims itself.
 4. **Decide**: state the final decision with reasons, and say which claims were refuted and what changed as a result.
+
+**Before reporting anything as a limitation** ("can't verify", "not possible", "tool doesn't work"): run the escalation ladder in `.claude/skills/visual-verification/SKILL.md` → "When Something Fails". Hooks enforce it: `mcp-failure-ladder.sh` on listall MCP errors, `verification-gap-check.sh` on the final answer.
 
 ## Implementation Visual Verification
 

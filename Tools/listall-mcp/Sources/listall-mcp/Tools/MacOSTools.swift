@@ -270,12 +270,8 @@ enum MacOSTools {
         // If UITEST_MODE is in launch args, quit the app first to ensure fresh launch with new args
         // (If app is already running, macOS brings existing instance to foreground without applying new args)
         if launchArgs.contains("UITEST_MODE") {
-            let targetApp = appName ?? "ListAll"
-            log("UITEST_MODE requested, quitting '\(targetApp)' to ensure fresh launch...")
-            let quitScript = "tell application \"\(targetApp)\" to quit"
-            _ = try? await ShellCommand.execute("/usr/bin/osascript", arguments: ["-e", quitScript])
-            // Brief sleep to ensure app fully terminates before relaunch
-            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds
+            log("UITEST_MODE requested, quitting '\(bundleId ?? appName ?? "ListAll")' to ensure fresh launch...")
+            await terminateRunningApps(appName: appName, bundleId: bundleId)
         }
 
         // Execute the open command
@@ -315,8 +311,18 @@ enum MacOSTools {
             }
             if launchArgs.contains("BACKGROUND") {
                 message += " App is running in background (not focused)."
+            }
+
+            // Report the real state instead of assuming the window is up
+            let start = Date()
+            let windowAppeared = await pollUntil(timeout: windowWaitTimeout) {
+                let found = try? findAppWindows(appName: appName, bundleId: bundleId)
+                return !(found?.windows.isEmpty ?? true)
+            }
+            if windowAppeared {
+                message += String(format: " Window visible after %.1fs.", Date().timeIntervalSince(start))
             } else {
-                message += " The app should now be visible."
+                message += " No window visible after \(Int(windowWaitTimeout))s (app may still be starting or has no window)."
             }
 
             return CallTool.Result(content: [
@@ -333,6 +339,27 @@ enum MacOSTools {
 
             throw MCPError.internalError("Failed to launch app: \(result.stderr)")
         }
+    }
+
+    /// Quit running instances and wait until they have really exited (up to 3 s, then force).
+    /// Matches by bundle ID, or by localized name when only the app name is known.
+    private static func terminateRunningApps(appName: String?, bundleId: String?) async {
+        let apps = NSWorkspace.shared.runningApplications.filter { app in
+            if let bundleId = bundleId { return app.bundleIdentifier == bundleId }
+            return app.localizedName == appName
+        }
+        guard !apps.isEmpty else { return }
+
+        apps.forEach { $0.terminate() }
+        if await pollUntil(timeout: 3, interval: 0.1, condition: { apps.allSatisfy(\.isTerminated) }) {
+            log("Running instance terminated")
+            return
+        }
+
+        // terminate() only sends the request (a modal can block it): escalate
+        log("terminate() timed out, using forceTerminate()")
+        apps.filter { !$0.isTerminated }.forEach { $0.forceTerminate() }
+        _ = await pollUntil(timeout: 2, interval: 0.1) { apps.allSatisfy(\.isTerminated) }
     }
 
     // MARK: - App Path Discovery
@@ -376,58 +403,20 @@ enum MacOSTools {
 
     /// Handle listall_screenshot_macos tool call
     /// Uses CGWindowListCopyWindowInfo + screencapture command for reliable CLI operation
-    static func handleScreenshotMacOS(arguments: [String: Value]?) async throws -> CallTool.Result {
-        log("listall_screenshot_macos called")
+    /// How long launch and screenshot wait for an app window to appear
+    static let windowWaitTimeout: TimeInterval = 10
 
-        var appName = arguments?["app_name"].flatMap { value -> String? in
-            if case .string(let str) = value { return str }
-            return nil
-        }
+    typealias AppWindow = (windowId: CGWindowID, name: String, ownerName: String, bounds: CGRect, layer: Int)
 
-        var bundleId = arguments?["bundle_id"].flatMap { value -> String? in
-            if case .string(let str) = value { return str }
-            return nil
-        }
-
-        let windowTitle = arguments?["window_title"].flatMap { value -> String? in
-            if case .string(let str) = value { return str }
-            return nil
-        }
-
-        let context = arguments?["context"].flatMap { value -> String? in
-            if case .string(let str) = value { return str }
-            return nil
-        }
-
-        // Validate that at least one identifier is provided
-        guard appName != nil || bundleId != nil else {
-            throw MCPError.invalidParams("Either app_name or bundle_id must be provided")
-        }
-
-        // Normalize ListAll variants (ListAllMac -> ListAll)
-        appName = normalizeListAllAppName(appName)
-        bundleId = normalizeListAllBundleID(bundleId)
-
-        // Validate bundle ID if provided
-        if let bundleId = bundleId {
-            try validateBundleID(bundleId)
-        }
-
-        // Validate app name if provided
-        if let appName = appName {
-            try validateAppName(appName)
-        }
-
-        log("Finding window for app: \(bundleId ?? appName ?? "unknown")")
-
-        // Use CGWindowListCopyWindowInfo to find windows (works reliably in CLI context)
+    /// Find on-screen windows of an app, highest layer (sheets/modals) first.
+    /// Uses CGWindowListCopyWindowInfo (works reliably in CLI context).
+    /// - Returns: matching windows and the names of all apps with windows (for error messages)
+    static func findAppWindows(appName: String?, bundleId: String?) throws -> (windows: [AppWindow], availableApps: Set<String>) {
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
             throw MCPError.internalError("Failed to get window list")
         }
 
-        // Find windows matching the app
-        // Store layer to sort by (higher layers = sheets/modals on top)
-        var matchingWindows: [(windowId: CGWindowID, name: String, ownerName: String, bounds: CGRect, layer: Int)] = []
+        var matchingWindows: [AppWindow] = []
 
         for windowInfo in windowList {
             guard let windowId = windowInfo[kCGWindowNumber as String] as? CGWindowID,
@@ -475,16 +464,72 @@ enum MacOSTools {
         // Sort by layer descending - highest layer (sheets/modals) first
         matchingWindows.sort { $0.layer > $1.layer }
 
+        let availableApps = Set(windowList.compactMap { $0[kCGWindowOwnerName as String] as? String })
+        return (matchingWindows, availableApps)
+    }
+
+    static func handleScreenshotMacOS(arguments: [String: Value]?) async throws -> CallTool.Result {
+        log("listall_screenshot_macos called")
+
+        var appName = arguments?["app_name"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        var bundleId = arguments?["bundle_id"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let windowTitle = arguments?["window_title"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        let context = arguments?["context"].flatMap { value -> String? in
+            if case .string(let str) = value { return str }
+            return nil
+        }
+
+        // Validate that at least one identifier is provided
+        guard appName != nil || bundleId != nil else {
+            throw MCPError.invalidParams("Either app_name or bundle_id must be provided")
+        }
+
+        // Normalize ListAll variants (ListAllMac -> ListAll)
+        appName = normalizeListAllAppName(appName)
+        bundleId = normalizeListAllBundleID(bundleId)
+
+        // Validate bundle ID if provided
+        if let bundleId = bundleId {
+            try validateBundleID(bundleId)
+        }
+
+        // Validate app name if provided
+        if let appName = appName {
+            try validateAppName(appName)
+        }
+
+        log("Finding window for app: \(bundleId ?? appName ?? "unknown")")
+
+        var (matchingWindows, availableApps) = try findAppWindows(appName: appName, bundleId: bundleId)
+
+        // The window may not exist yet (app still launching or relaunching): wait for it instead of failing
+        if matchingWindows.isEmpty {
+            log("No window yet, waiting up to \(Int(windowWaitTimeout))s")
+            _ = await pollUntil(timeout: windowWaitTimeout) {
+                guard let found = try? findAppWindows(appName: appName, bundleId: bundleId) else { return false }
+                (matchingWindows, availableApps) = found
+                return !found.windows.isEmpty
+            }
+        }
+
         guard !matchingWindows.isEmpty else {
             let identifier = bundleId ?? appName ?? "unknown"
-            log("No windows found for: \(identifier)")
-
-            // List available apps for debugging
-            let availableApps = Set(windowList.compactMap { $0[kCGWindowOwnerName as String] as? String })
-            log("Available applications: \(availableApps)")
+            log("No windows found for: \(identifier). Available applications: \(availableApps)")
 
             throw MCPError.internalError(
-                "Application '\(identifier)' not found or has no visible windows. " +
+                "Application '\(identifier)' not found or has no visible windows after waiting \(Int(windowWaitTimeout))s. " +
                 "Available apps: \(availableApps.joined(separator: ", "))"
             )
         }

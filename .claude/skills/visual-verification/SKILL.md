@@ -89,6 +89,37 @@ screenshot → understand context → interact → screenshot → validate → i
 
 When done: `listall_quit_macos` (quit) or `listall_hide_macos` (keep running hidden)
 
+**Never send `listall_launch*` and `listall_screenshot*` in the same parallel batch.** With `UITEST_MODE` the launch quits the app first, so a parallel screenshot runs while the app is closing ("no visible windows").
+
+## When Something Fails
+
+A failed tool or a missing result is a problem to investigate, not a limitation to report. Before writing "can't verify" / "not possible":
+
+1. **Read the exact error text**, not a summary. `listall_diagnostics` output is a hint, not proof: its "Screen Recording: NOT GRANTED" was wrong while screenshots worked.
+2. **Rule out timing and state**: wait for the condition (window, boot, session activation) and retry once.
+3. **Read the tool's source** if it is in the repo: `grep` the error message in `Tools/listall-mcp/Sources` and see what it actually checks.
+4. **Search** `documentation/learnings/` and the Known traps table below; then Context7 or the web for the exact message.
+5. **Try at least two alternative paths** within the rules: another MCP tool, an `xcodebuild test` (unit/UI), a round-trip or integration test that covers everything except the unreachable part, a real device.
+6. **Report** with one `Kokeiltu:` line per item (command or tool + result), the remaining risk, and what the user can do.
+
+**Shortcut**: if a learnings file already documents the limitation with evidence, cite it and skip steps 2–5.
+
+### Known Traps
+
+Only traps observed with evidence; see `documentation/learnings/simulator-verification-traps.md` for the log lines.
+
+| Symptom | Action |
+|---------|--------|
+| macOS screenshot "not found or has no visible windows" | Window not open yet: screenshot after the launch result, never in parallel; retry |
+| Diagnostics "Screen Recording: NOT GRANTED" | Try `listall_screenshot_macos`; it is the authoritative test |
+| Watch click "build-for-testing did not generate xctestrun file" | See `mcp-watch-xctestrun-naming.md`; rebuild MCP + restart Claude Code |
+| "Unable to lookup in current state: Shutdown" after `xcodebuild test` | Boot the simulators again |
+| Screenshot "Command timed out after 30 seconds" | `listall_shutdown_simulator(udid: all)`, boot, relaunch |
+| Watch app launch fails with FBSOpenApplicationServiceErrorDomain code=4 | Install `Debug-watchsimulator/ListAllWatch Watch App.app` on the watch separately |
+| `name=iPhone 17 Pro` destination hits the wrong device | Use `id=<UDID>` from `xcrun simctl list pairs` |
+| iOS WCSession activates ~1 min after boot | Wait for "WCSession activated" in the log before judging sync |
+| Watch never receives `transferUserInfo` | Not supported between simulators: round-trip test + real device |
+
 ## Fresh Build Before Verification
 
 **Clean once, then build every platform without `clean`.** `xcodebuild clean` wipes the whole shared `Build/Products` folder, not just its own scheme. A `clean build` per platform deletes the previous platform's app and the XCUITest runner, which then forces a slow rebuild (seen 2026-11-06: the macOS `clean build` removed `Debug-iphonesimulator/ListAll.app` and `ListAllUITests-Runner.app`).

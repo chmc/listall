@@ -50,13 +50,6 @@ enum XCUITestBridge {
             }
         }
 
-        /// xctestrun file platform pattern
-        var xctestrunPattern: String {
-            switch self {
-            case .iOS, .unknown: return "iphonesimulator"
-            case .watchOS: return "watchsimulator"
-            }
-        }
 
         /// Test target path for MCPCommandRunner
         var testTarget: String {
@@ -993,8 +986,6 @@ enum XCUITestBridge {
             return nil
         }
 
-        let platformPattern = platform.xctestrunPattern
-
         // Look for ListAll-* directories
         for dir in contents where dir.hasPrefix("ListAll-") {
             let buildPath = "\(derivedDataPath)/\(dir)/Build/Products"
@@ -1002,8 +993,8 @@ enum XCUITestBridge {
                 continue
             }
 
-            // Look for .xctestrun files matching the platform
-            for file in buildContents where file.hasSuffix(".xctestrun") && file.contains(platformPattern) {
+            // Match by scheme: the watch scheme's file is named "..._iphonesimulator..." in Xcode 26
+            for file in buildContents where isSimulatorXCTestRun(file, forScheme: platform.schemeName) {
                 return "\(buildPath)/\(file)"
             }
         }

@@ -1,22 +1,25 @@
 import Foundation
 import ScreenCaptureKit
 import ApplicationServices
+import MCPHelpers
 
 // MARK: - Permission Checking
 
 /// Service for checking macOS privacy permissions required for MCP tools
 enum PermissionService {
-    /// Check if Screen Recording permission is granted
-    /// - Returns: true if permission is granted, false otherwise
-    static func hasScreenRecordingPermission() async -> Bool {
+    /// Check Screen Recording permission from the TCC preflight plus a ScreenCaptureKit probe.
+    /// Only the preflight decides "not granted"; an SC error is reported with its domain/code instead of hidden.
+    static func screenRecordingStatus() async -> ScreenRecordingStatus {
+        let preflightGranted = CGPreflightScreenCaptureAccess()
+        var shareableContentError: String?
         do {
-            // Attempting to get shareable content will fail if permission is not granted
             _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            return true
         } catch {
-            log("Screen Recording permission check failed: \(error)")
-            return false
+            let nsError = error as NSError
+            shareableContentError = "\(nsError.domain) \(nsError.code): \(nsError.localizedDescription)"
+            log("ScreenCaptureKit shareable content check failed: \(shareableContentError ?? "")")
         }
+        return ScreenRecordingStatus(preflightGranted: preflightGranted, shareableContentError: shareableContentError)
     }
 
     /// Check if Accessibility permission is granted
@@ -35,14 +38,14 @@ enum PermissionService {
     /// Get detailed permission status for diagnostics
     /// - Returns: Dictionary with permission statuses
     static func getPermissionStatus() async -> [String: Any] {
-        let screenRecording = await hasScreenRecordingPermission()
+        let screenRecording = await screenRecordingStatus()
         let accessibility = hasAccessibilityPermission()
 
         return [
             "screen_recording": [
-                "granted": screenRecording,
-                "description": screenRecording
-                    ? "Screen Recording permission granted"
+                "granted": screenRecording.isUsable,
+                "description": screenRecording.isUsable
+                    ? "Screen Recording: \(screenRecording.summary)"
                     : "Screen Recording permission NOT granted. Grant in System Settings > Privacy & Security > Screen Recording",
                 "required_for": ["listall_screenshot_macos"]
             ],
