@@ -1,5 +1,6 @@
 import Foundation
 import MCP
+import MCPHelpers
 
 // MARK: - Diagnostics Tool
 
@@ -102,7 +103,7 @@ enum DiagnosticsTool {
 
         log("Diagnostics completed: \(issueCount) issues found")
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     // MARK: - Permission Checks

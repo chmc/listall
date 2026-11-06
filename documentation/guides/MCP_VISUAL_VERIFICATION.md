@@ -28,13 +28,16 @@ This creates a feedback loop where Claude can implement UI changes, visually ver
 
 ```bash
 cd Tools/listall-mcp
-swift build -c release
+cp -p .build/debug/listall-mcp ~/listall-mcp.backup || echo "No existing binary to back up"  # keep a working binary before rebuilding
+swift build
 ```
 
-The release binary will be at:
+The binary will be at (this is the path `.mcp.json` uses):
 ```
-Tools/listall-mcp/.build/release/listall-mcp
+Tools/listall-mcp/.build/debug/listall-mcp
 ```
+
+Restart Claude Code after rebuilding; the MCP server is a long-running process. If the new build fails, copy the backup back to the same path. Verified with Xcode 26.6 (swift-sdk 0.12.1); see `documentation/learnings/mcp-swift-sdk-xcode-26-6-build.md`.
 
 ### 2. Pre-build XCUITest Runner (for simulator interactions)
 
@@ -45,7 +48,6 @@ cd ListAll
 xcodebuild build-for-testing \
     -project ListAll.xcodeproj \
     -scheme ListAll \
-    -sdk iphonesimulator \
     -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
@@ -65,7 +67,7 @@ Create or edit `.claude/settings.local.json`:
 {
   "mcpServers": {
     "listall": {
-      "command": "/Users/aleksi/source/listall/Tools/listall-mcp/.build/release/listall-mcp"
+      "command": "/Users/aleksi/source/listall/Tools/listall-mcp/.build/debug/listall-mcp"
     }
   }
 }
@@ -79,7 +81,7 @@ Edit `~/.claude/settings.json`:
 {
   "mcpServers": {
     "listall": {
-      "command": "/path/to/listall/Tools/listall-mcp/.build/release/listall-mcp"
+      "command": "/path/to/listall/Tools/listall-mcp/.build/debug/listall-mcp"
     }
   }
 }
@@ -323,7 +325,6 @@ cd ListAll
 xcodebuild build-for-testing \
     -project ListAll.xcodeproj \
     -scheme ListAll \
-    -sdk iphonesimulator \
     -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
@@ -385,7 +386,7 @@ Claude Code <--> stdio <--> listall-mcp (Swift)
 | File | Description |
 |------|-------------|
 | `Tools/listall-mcp/` | MCP server Swift package |
-| `Tools/listall-mcp/.build/release/listall-mcp` | Release binary |
+| `Tools/listall-mcp/.build/debug/listall-mcp` | Server binary (used by `.mcp.json`) |
 | `ListAll/ListAllUITests/MCPCommandRunner.swift` | XCUITest command runner |
 | `/tmp/listall_mcp_command.json` | Command file (runtime) |
 | `/tmp/listall_mcp_result.json` | Result file (runtime) |

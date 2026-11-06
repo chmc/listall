@@ -1,5 +1,6 @@
 import Foundation
 import MCP
+import MCPHelpers
 import IndexStoreWrapper
 
 // MARK: - Call Graph Tool
@@ -147,7 +148,7 @@ enum CallGraphTool {
 
         // Find the index store
         guard let storePath = findIndexStorePath() else {
-            return CallTool.Result(content: [.text(
+            return CallTool.Result(content: [.plainText(
                 """
                 Error: Could not find Xcode index store.
 
@@ -163,7 +164,7 @@ enum CallGraphTool {
         do {
             store = try IndexStore(path: storePath)
         } catch {
-            return CallTool.Result(content: [.text(
+            return CallTool.Result(content: [.plainText(
                 "Error: Could not open index store at \(storePath): \(error)"
             )], isError: true)
         }
@@ -202,7 +203,7 @@ enum CallGraphTool {
                     message += "- `\(s.name)` (\(s.kind), \(s.fileName):\(s.line))\n"
                 }
             }
-            return CallTool.Result(content: [.text(message)], isError: true)
+            return CallTool.Result(content: [.plainText(message)], isError: true)
         }
 
         // Query-local snippet cache (not static — MCP server is long-running)
@@ -240,8 +241,8 @@ enum CallGraphTool {
 
         // Append stale index warning if needed
         let warning = checkIndexStaleness(store: store, sourceFilePaths: sourceFilePaths)
-        if let warning = warning, case .text(let text) = result.content.first {
-            return CallTool.Result(content: [.text(text + "\n" + warning)], isError: result.isError)
+        if let warning = warning, case .text(let text, _, _) = result.content.first {
+            return CallTool.Result(content: [.plainText(text + "\n" + warning)], isError: result.isError)
         }
 
         return result
@@ -258,7 +259,7 @@ enum CallGraphTool {
                 output += formatSnippet(fullPath: def.fullPath, line: def.line, cache: &snippetCache)
             }
         }
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     private static func handleCallersMode(symbol: String, definitions: [SymbolDefinition], usrs: Set<String>, store: IndexStore, includeSource: Bool, snippetCache: inout [String: [String]]) -> CallTool.Result {
@@ -295,7 +296,7 @@ enum CallGraphTool {
                 output += "\n_Results capped at 100. Use a more specific symbol name or add file filter to narrow results._\n"
             }
         }
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     private static func handleCalleesMode(symbol: String, definitions: [SymbolDefinition], usrs: Set<String>, fileFilter: String?, store: IndexStore, includeSource: Bool, snippetCache: inout [String: [String]]) -> CallTool.Result {
@@ -320,7 +321,7 @@ enum CallGraphTool {
                 output += "\n"
             }
         }
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     private static func handleGraphMode(symbol: String, definitions: [SymbolDefinition], usrs: Set<String>, fileFilter: String?, store: IndexStore, includeSource: Bool, snippetCache: inout [String: [String]]) -> CallTool.Result {
@@ -372,7 +373,7 @@ enum CallGraphTool {
             }
         }
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     private static func handleReferencesMode(symbol: String, definitions: [SymbolDefinition], usrs: Set<String>, store: IndexStore, includeSource: Bool, snippetCache: inout [String: [String]]) -> CallTool.Result {
@@ -418,7 +419,7 @@ enum CallGraphTool {
             }
         }
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     private static func handleDumpMode(symbol: String, fileFilter: String?, store: IndexStore) -> CallTool.Result {
@@ -480,7 +481,7 @@ enum CallGraphTool {
             output += "\n"
         }
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     private static func handleHierarchyMode(symbol: String, definitions: [SymbolDefinition], usrs: Set<String>, store: IndexStore) -> CallTool.Result {
@@ -612,7 +613,7 @@ enum CallGraphTool {
             }
         }
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     // MARK: - Search Mode
@@ -683,7 +684,7 @@ enum CallGraphTool {
         }
 
         if results.isEmpty {
-            return CallTool.Result(content: [.text(
+            return CallTool.Result(content: [.plainText(
                 "No symbols found matching '\(query)'.\n\nTry a shorter or different substring."
             )])
         }
@@ -733,14 +734,14 @@ enum CallGraphTool {
             output += "- `\(item.name)` (\(item.kind), \(item.fileName):\(item.line))\n"
         }
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     // MARK: - Members Mode
 
     private static func handleMembersMode(symbol: String, definitions: [SymbolDefinition], usrs: Set<String>, store: IndexStore, includeSource: Bool, snippetCache: inout [String: [String]]) -> CallTool.Result {
         guard let def = definitions.first else {
-            return CallTool.Result(content: [.text(
+            return CallTool.Result(content: [.plainText(
                 "No definition found for '\(symbol)'. The members mode requires a type definition."
             )], isError: true)
         }
@@ -827,7 +828,7 @@ enum CallGraphTool {
 
         if members.isEmpty {
             output += "_No members found_\n"
-            return CallTool.Result(content: [.text(output)])
+            return CallTool.Result(content: [.plainText(output)])
         }
 
         // Group by kind
@@ -872,7 +873,7 @@ enum CallGraphTool {
             output += "\n_Includes members from \(extensionUSRs.count) extension(s)_\n"
         }
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     // MARK: - Suggestion Helper

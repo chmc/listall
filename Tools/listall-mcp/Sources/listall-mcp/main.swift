@@ -1,5 +1,6 @@
 import Foundation
 import MCP
+import MCPHelpers
 
 // MARK: - Logging
 
@@ -56,53 +57,59 @@ struct ListAllMCP {
             return ListTools.Result(tools: allTools)
         }
 
+        // Tool handlers share state and assume one call at a time; swift-sdk 0.11+
+        // runs requests concurrently, so serialize tool calls here
+        let toolCallGate = SerialGate()
+
         // Register tool call handler
         await server.withMethodHandler(CallTool.self) { params in
-            log("CallTool called: \(params.name)")
+            try await toolCallGate.run {
+                log("CallTool called: \(params.name)")
 
-            // Handle simulator tools
-            if SimulatorTools.isSimulatorTool(params.name) {
-                return try await SimulatorTools.handleToolCall(name: params.name, arguments: params.arguments)
+                // Handle simulator tools
+                if SimulatorTools.isSimulatorTool(params.name) {
+                    return try await SimulatorTools.handleToolCall(name: params.name, arguments: params.arguments)
+                }
+
+                // Handle macOS tools
+                if MacOSTools.isMacOSTool(params.name) {
+                    return try await MacOSTools.handleToolCall(name: params.name, arguments: params.arguments)
+                }
+
+                // Handle interaction tools (click, type, swipe, query)
+                if InteractionTools.isInteractionTool(params.name) {
+                    return try await InteractionTools.handleToolCall(name: params.name, arguments: params.arguments)
+                }
+
+                // Handle diagnostic tools
+                if DiagnosticsTool.isDiagnosticTool(params.name) {
+                    return try await DiagnosticsTool.handleToolCall(name: params.name, arguments: params.arguments)
+                }
+
+                // Handle call graph tools
+                if CallGraphTool.isCallGraphTool(params.name) {
+                    return try await CallGraphTool.handleToolCall(name: params.name, arguments: params.arguments)
+                }
+
+                // Handle echo tool
+                guard params.name == echoTool.name else {
+                    log("Unknown tool: \(params.name)")
+                    throw MCPError.invalidParams("Unknown tool: \(params.name)")
+                }
+
+                // Extract message from arguments (required parameter)
+                guard let args = params.arguments,
+                      case .string(let message) = args["message"] else {
+                    log("Missing required parameter: message")
+                    throw MCPError.invalidParams("Missing required parameter: message")
+                }
+
+                log("Echo message: \(message)")
+
+                return CallTool.Result(content: [
+                    .plainText("Echo from listall-mcp: \(message)")
+                ])
             }
-
-            // Handle macOS tools
-            if MacOSTools.isMacOSTool(params.name) {
-                return try await MacOSTools.handleToolCall(name: params.name, arguments: params.arguments)
-            }
-
-            // Handle interaction tools (click, type, swipe, query)
-            if InteractionTools.isInteractionTool(params.name) {
-                return try await InteractionTools.handleToolCall(name: params.name, arguments: params.arguments)
-            }
-
-            // Handle diagnostic tools
-            if DiagnosticsTool.isDiagnosticTool(params.name) {
-                return try await DiagnosticsTool.handleToolCall(name: params.name, arguments: params.arguments)
-            }
-
-            // Handle call graph tools
-            if CallGraphTool.isCallGraphTool(params.name) {
-                return try await CallGraphTool.handleToolCall(name: params.name, arguments: params.arguments)
-            }
-
-            // Handle echo tool
-            guard params.name == echoTool.name else {
-                log("Unknown tool: \(params.name)")
-                throw MCPError.invalidParams("Unknown tool: \(params.name)")
-            }
-
-            // Extract message from arguments (required parameter)
-            guard let args = params.arguments,
-                  case .string(let message) = args["message"] else {
-                log("Missing required parameter: message")
-                throw MCPError.invalidParams("Missing required parameter: message")
-            }
-
-            log("Echo message: \(message)")
-
-            return CallTool.Result(content: [
-                .text("Echo from listall-mcp: \(message)")
-            ])
         }
 
         // Start server with stdio transport

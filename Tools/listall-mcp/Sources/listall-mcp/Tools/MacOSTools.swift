@@ -320,7 +320,7 @@ enum MacOSTools {
             }
 
             return CallTool.Result(content: [
-                .text(message)
+                .plainText(message)
             ])
         } else {
             log("Failed to launch app: \(result.stderr)")
@@ -563,8 +563,8 @@ enum MacOSTools {
         log("Screenshot captured successfully (\(pngData.count) bytes), saved to: \(savedPath)")
 
         return CallTool.Result(content: [
-            .text("Screenshot saved to: \(savedPath)"),
-            .image(data: base64Image, mimeType: "image/png", metadata: nil)
+            .plainText("Screenshot saved to: \(savedPath)"),
+            .image(data: base64Image, mimeType: "image/png", annotations: nil, _meta: nil)
         ])
     }
 
@@ -637,7 +637,7 @@ enum MacOSTools {
 
         log("Permission check completed")
 
-        return CallTool.Result(content: [.text(output)])
+        return CallTool.Result(content: [.plainText(output)])
     }
 
     // MARK: - Quit Handler
@@ -690,7 +690,7 @@ enum MacOSTools {
 
                     if app.isTerminated {
                         log("Successfully quit app using NSRunningApplication.terminate()")
-                        return CallTool.Result(content: [.text("Successfully quit '\(identifier)'.")])
+                        return CallTool.Result(content: [.plainText("Successfully quit '\(identifier)'.")])
                     }
 
                     // App didn't terminate in time (e.g. modal blocking) - force terminate
@@ -700,7 +700,7 @@ enum MacOSTools {
                         try await Task.sleep(nanoseconds: 500_000_000) // 500ms for force
                         if app.isTerminated {
                             log("Successfully force-quit app using NSRunningApplication.forceTerminate()")
-                            return CallTool.Result(content: [.text("Successfully quit '\(identifier)' (forced due to modal dialog).")])
+                            return CallTool.Result(content: [.plainText("Successfully quit '\(identifier)' (forced due to modal dialog).")])
                         }
                     }
                 }
@@ -709,7 +709,7 @@ enum MacOSTools {
             } else {
                 // App not running
                 log("App '\(identifier)' is not running (NSRunningApplication check)")
-                return CallTool.Result(content: [.text("App '\(identifier)' was not running.")])
+                return CallTool.Result(content: [.plainText("App '\(identifier)' was not running.")])
             }
         }
 
@@ -726,18 +726,18 @@ enum MacOSTools {
         let result = try await ShellCommand.execute("/usr/bin/osascript", arguments: ["-e", quitScript])
 
         if result.exitCode == 0 {
-            return CallTool.Result(content: [.text("Successfully quit '\(identifier)'.")])
+            return CallTool.Result(content: [.plainText("Successfully quit '\(identifier)'.")])
         } else {
             // App might not be running - not an error
             if result.stderr.contains("not running") {
-                return CallTool.Result(content: [.text("App '\(identifier)' was not running.")])
+                return CallTool.Result(content: [.plainText("App '\(identifier)' was not running.")])
             }
             // Modal dialog open causes -128 / "User canceled" - force terminate
             if result.stderr.contains("User canceled") || result.stderr.contains("-128") {
                 log("AppleScript quit blocked by modal dialog, force-terminating via killall")
                 if let appName = appName {
                     _ = try await ShellCommand.execute("/usr/bin/killall", arguments: [appName])
-                    return CallTool.Result(content: [.text("Successfully quit '\(identifier)' (forced due to modal dialog).")])
+                    return CallTool.Result(content: [.plainText("Successfully quit '\(identifier)' (forced due to modal dialog).")])
                 }
             }
             throw MCPError.internalError("Failed to quit app: \(result.stderr)")
@@ -787,14 +787,14 @@ enum MacOSTools {
                 let success = app.hide()
                 if success {
                     log("Successfully hid app using NSRunningApplication")
-                    return CallTool.Result(content: [.text("Successfully hid '\(identifier)'.")])
+                    return CallTool.Result(content: [.plainText("Successfully hid '\(identifier)'.")])
                 }
                 // Fall through to AppleScript if hide() fails
                 log("NSRunningApplication.hide() returned false, trying AppleScript")
             } else {
                 // App not running
                 log("App '\(identifier)' is not running (NSRunningApplication check)")
-                return CallTool.Result(content: [.text("App '\(identifier)' is not running. Nothing to hide.")])
+                return CallTool.Result(content: [.plainText("App '\(identifier)' is not running. Nothing to hide.")])
             }
         }
 
@@ -806,7 +806,7 @@ enum MacOSTools {
 
         if checkResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines) != "true" {
             log("App '\(identifier)' is not running (AppleScript check)")
-            return CallTool.Result(content: [.text("App '\(identifier)' is not running. Nothing to hide.")])
+            return CallTool.Result(content: [.plainText("App '\(identifier)' is not running. Nothing to hide.")])
         }
 
         // App is running, safe to hide
@@ -815,7 +815,7 @@ enum MacOSTools {
 
         if result.exitCode == 0 {
             log("Successfully hid app using AppleScript")
-            return CallTool.Result(content: [.text("Successfully hid '\(identifier)'.")])
+            return CallTool.Result(content: [.plainText("Successfully hid '\(identifier)'.")])
         } else {
             throw MCPError.internalError("Failed to hide app: \(result.stderr)")
         }
