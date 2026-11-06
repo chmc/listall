@@ -11,6 +11,27 @@
         ]
       }
     ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "mcp__listall__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/mcp-failure-ladder.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/verification-gap-check.sh"
+          }
+        ]
+      }
+    ],
     "SubagentStart": [
       {
         "hooks": [

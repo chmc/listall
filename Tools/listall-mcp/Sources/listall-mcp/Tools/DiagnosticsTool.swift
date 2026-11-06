@@ -114,9 +114,9 @@ enum DiagnosticsTool {
         var issues = 0
 
         // Screen Recording
-        let screenRecordingGranted = await PermissionService.hasScreenRecordingPermission()
-        if screenRecordingGranted {
-            output += "  Screen Recording: GRANTED\n"
+        let screenRecording = await PermissionService.screenRecordingStatus()
+        if screenRecording.isUsable {
+            output += "  Screen Recording: \(screenRecording.summary)\n"
         } else {
             output += "  Screen Recording: NOT GRANTED\n"
             output += "    -> Open System Settings > Privacy & Security > Screen Recording\n"
