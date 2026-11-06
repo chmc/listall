@@ -1,30 +1,11 @@
-Tervetuloa ListAll macOS-versioon!
+Kiitos kun käytät ListAllia!
 
-Nyt voit nauttia kaikista suosikki-listojen hallintaominaisuuksistasi suoraan Macillasi.
+UUTTA TÄSSÄ PÄIVITYKSESSÄ:
+• Saat ilmoituksen, jos iCloud-synkronointi epäonnistuu
+• Haun tyhjentäminen ei enää nollaa kohdelistaa
+• Pitkät järjestys- ja suodatusnimet eivät enää katkea
+• Luotettavampi synkronointi Macin, iPhonen ja iPadin välillä
 
-UUTTA MACOSISSA:
+• Lisäksi bugikorjauksia ja suorituskykyparannuksia
 
-• Natiivi macOS-sovellus joka tuntuu kotoisalta
-• Moni-ikkunatuki - avaa useita listoja rinnakkain
-• Pikanäppäimet tehokkaaseen työnkulkuun
-• Valikkokomennot kaikille tärkeille toiminnoille
-• Palvelut-valikon integraatio
-• Pikalatselun esikatselu listatiedostoille
-• Vedä ja pudota kohteita ikkunoiden välillä
-• Handoff iOS-laitteillesi
-• Saumaton iCloud-synkronointi Mac, iPhone, iPad ja Apple Watch -laitteiden välillä
-
-KAIKKI iOS-OMINAISUUDET MUKANA:
-
-• Älykkäät kohdeehdotukset
-• Visuaaliset listat kuvilla
-• Touch ID -suojaus
-• Offline-tila
-• Tuki tummalle tilalle
-• Vie/tuo listoja
-• Massatoiminnot
-• Ja paljon muuta!
-
-Jos pidät ListAllistä, harkitse arvostelun jättämistä. Kysymyksiä tai palautetta varten ota yhteyttä tukiosoitteen kautta.
-
-Nauti järjestyneemmästä elämästä ListAllin kanssa!
+Jos pidät ListAllista, harkitse arvostelun jättämistä!

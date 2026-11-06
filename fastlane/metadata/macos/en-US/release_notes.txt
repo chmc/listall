@@ -1,17 +1,11 @@
+Thank you for using ListAll!
 
-Welcome to ListAll for Mac!
+NEW IN THIS UPDATE:
+• You'll now see a notice if iCloud sync fails
+• Clearing a search no longer resets your item list
+• Long sort and filter labels are no longer cut off
+• More reliable sync between Mac, iPhone and iPad
 
-INTRODUCING LISTALL FOR MACOS:
+• Additional bug fixes and performance improvements
 
-• Native macOS app with full feature parity
-• Multi-window support - work with multiple lists at once
-• Keyboard shortcuts for fast navigation
-• Drag-and-drop between windows and apps
-• Touch ID security
-• Handoff support with iPhone
-• iCloud sync across all your devices
-
-All your favorite features from iOS, now optimized for Mac with a native macOS experience.
-
-If you enjoy ListAll, please consider leaving a review. For questions or feedback, contact us at the support URL.
-
+If you enjoy ListAll, please consider leaving a review!
