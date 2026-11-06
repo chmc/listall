@@ -1,17 +1,12 @@
 Thank you for using ListAll!
 
 NEW IN THIS UPDATE:
-
-REDESIGNED IPAD EXPERIENCE
-• New two-column split view layout optimized for iPad
-• Sidebar for quick list switching without navigating back
-• Settings accessible directly from the sidebar
-• Toolbar-integrated actions for a cleaner layout
-
-CONTEXT MENUS
-• Long-press any list or item for quick actions
-• Right-click support with trackpad or mouse
-• Edit, share, duplicate, archive and more
+• Updated for iOS 26 and watchOS 26
+• You'll now see a notice if iCloud sync fails, so you always know your data is safe
+• Item counts update instantly, also on Apple Watch
+• Long sort and filter labels are no longer cut off
+• Scroll to dismiss the keyboard when naming a list
+• More reliable sync between iPhone, iPad and Apple Watch
 
 • Additional bug fixes and performance improvements
 

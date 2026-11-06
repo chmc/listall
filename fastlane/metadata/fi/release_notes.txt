@@ -1,18 +1,13 @@
 Kiitos kun käytät ListAllia!
 
 UUTTA TÄSSÄ PÄIVITYKSESSÄ:
-
-UUDISTETTU IPAD-KOKEMUS
-• Uusi kahden sarakkeen jaettu näkymä iPadille
-• Sivupalkki nopeaan listan vaihtoon ilman takaisin navigointia
-• Asetukset suoraan sivupalkista
-• Työkalupalkkiin integroidut toiminnot siistimmälle ulkoasulle
-
-PIKAVALIKOT
-• Paina pitkään listaa tai kohdetta avataksesi pikatoiminnot
-• Hiiren oikean painikkeen tuki ohjauslevyllä tai hiirellä
-• Muokkaa, jaa, kopioi, arkistoi ja paljon muuta
+• Päivitetty iOS 26:lle ja watchOS 26:lle
+• Saat ilmoituksen, jos iCloud-synkronointi epäonnistuu
+• Kohteiden määrät päivittyvät heti, myös Apple Watchissa
+• Pitkät järjestys- ja suodatusnimet eivät enää katkea
+• Näppäimistön saa piiloon vierittämällä listaa nimettäessä
+• Luotettavampi synkronointi iPhonen, iPadin ja Apple Watchin välillä
 
 • Lisäksi bugikorjauksia ja suorituskykyparannuksia
 
-Jos pidät ListAllistä, harkitse arvostelun jättämistä!
+Jos pidät ListAllista, harkitse arvostelun jättämistä!
