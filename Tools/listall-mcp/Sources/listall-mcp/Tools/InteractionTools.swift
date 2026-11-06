@@ -1,5 +1,6 @@
 import Foundation
 import MCP
+import MCPHelpers
 import ApplicationServices
 
 // MARK: - Interaction Tools
@@ -484,7 +485,7 @@ enum InteractionTools {
                 message += "\n  Hint: \(hint)"
             }
 
-            return CallTool.Result(content: [.text(message)])
+            return CallTool.Result(content: [.plainText(message)])
         } else {
             throw MCPError.internalError(result.error ?? result.message)
         }
@@ -525,7 +526,7 @@ enum InteractionTools {
         )
 
         if result.success {
-            return CallTool.Result(content: [.text(result.message)])
+            return CallTool.Result(content: [.plainText(result.message)])
         } else {
             throw MCPError.internalError(result.error ?? result.message)
         }
@@ -560,7 +561,7 @@ enum InteractionTools {
         )
 
         if result.success {
-            return CallTool.Result(content: [.text(result.message)])
+            return CallTool.Result(content: [.plainText(result.message)])
         } else {
             throw MCPError.internalError(result.error ?? result.message)
         }
@@ -598,7 +599,7 @@ enum InteractionTools {
                 }
             }
 
-            return CallTool.Result(content: [.text(output)])
+            return CallTool.Result(content: [.plainText(output)])
         } else {
             throw MCPError.internalError(result.error ?? result.message)
         }
@@ -653,7 +654,7 @@ enum InteractionTools {
                 message += "\n  Hint: \(hint)"
             }
 
-            return CallTool.Result(content: [.text(message)])
+            return CallTool.Result(content: [.plainText(message)])
         } else {
             throw MCPError.internalError(result.error ?? result.message)
         }
@@ -671,7 +672,7 @@ enum InteractionTools {
         }
 
         if actionsArray.isEmpty {
-            return CallTool.Result(content: [.text("No actions to execute")])
+            return CallTool.Result(content: [.plainText("No actions to execute")])
         }
 
         // Convert Value array to XCUITestBridge.Action array
@@ -800,7 +801,7 @@ enum InteractionTools {
         }
 
         if result.success {
-            return CallTool.Result(content: [.text(output)])
+            return CallTool.Result(content: [.plainText(output)])
         } else {
             throw MCPError.internalError(output)
         }
@@ -886,7 +887,7 @@ enum InteractionTools {
         log("Click successful on '\(targetDesc)'")
 
         return CallTool.Result(content: [
-            .text("Successfully clicked '\(targetDesc)'. The action has been performed.")
+            .plainText("Successfully clicked '\(targetDesc)'. The action has been performed.")
         ])
     }
 
@@ -975,7 +976,7 @@ enum InteractionTools {
             log("Text entered into '\(targetDesc)'")
 
             return CallTool.Result(content: [
-                .text("Successfully entered text into '\(targetDesc)'. Text: '\(text)'")
+                .plainText("Successfully entered text into '\(targetDesc)'. Text: '\(text)'")
             ])
         } else {
             // Type into focused element using key events
@@ -1000,7 +1001,7 @@ enum InteractionTools {
             log("Text typed using key events")
 
             return CallTool.Result(content: [
-                .text("Successfully typed '\(text)' into focused element using keyboard events.")
+                .plainText("Successfully typed '\(text)' into focused element using keyboard events.")
             ])
         }
     }
@@ -1122,7 +1123,7 @@ enum InteractionTools {
         log("Scroll successful on '\(targetDesc)'")
 
         return CallTool.Result(content: [
-            .text("Successfully scrolled \(directionStr) by \(Int(amount)) pixels on '\(targetDesc)'.")
+            .plainText("Successfully scrolled \(directionStr) by \(Int(amount)) pixels on '\(targetDesc)'.")
         ])
     }
 
@@ -1206,7 +1207,7 @@ enum InteractionTools {
         log("Context menu shown on '\(targetDesc)'")
 
         return CallTool.Result(content: [
-            .text("Successfully showed context menu on '\(targetDesc)'. Use listall_screenshot to verify the menu appeared.")
+            .plainText("Successfully showed context menu on '\(targetDesc)'. Use listall_screenshot to verify the menu appeared.")
         ])
     }
 
@@ -1312,7 +1313,7 @@ enum InteractionTools {
         let modeInfo = compact ? ", compact: true" : ""
 
         return CallTool.Result(content: [
-            .text("UI Elements for '\(appIdentifier)' (format: \(format), depth: \(clampedDepth)\(modeInfo)):\n\n\(jsonString)")
+            .plainText("UI Elements for '\(appIdentifier)' (format: \(format), depth: \(clampedDepth)\(modeInfo)):\n\n\(jsonString)")
         ])
     }
 }

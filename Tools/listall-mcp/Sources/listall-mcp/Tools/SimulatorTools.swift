@@ -446,7 +446,7 @@ enum SimulatorTools {
         let jsonString = String(data: jsonOutput, encoding: .utf8) ?? "[]"
 
         return CallTool.Result(content: [
-            .text("Found \(devices.count) simulators:\n\n\(jsonString)")
+            .plainText("Found \(devices.count) simulators:\n\n\(jsonString)")
         ])
     }
 
@@ -469,12 +469,12 @@ enum SimulatorTools {
         if result.exitCode == 0 {
             log("Simulator booted successfully")
             return CallTool.Result(content: [
-                .text("Simulator \(udid) booted successfully. It may take a few seconds to fully start.")
+                .plainText("Simulator \(udid) booted successfully. It may take a few seconds to fully start.")
             ])
         } else if result.stderr.contains("Unable to boot device in current state: Booted") {
             log("Simulator already booted")
             return CallTool.Result(content: [
-                .text("Simulator \(udid) is already booted.")
+                .plainText("Simulator \(udid) is already booted.")
             ])
         } else {
             log("Failed to boot simulator: \(result.stderr)")
@@ -503,11 +503,11 @@ enum SimulatorTools {
             let message = udid == "all"
                 ? "All simulators have been shut down."
                 : "Simulator \(udid) shut down successfully."
-            return CallTool.Result(content: [.text(message)])
+            return CallTool.Result(content: [.plainText(message)])
         } else if result.stderr.contains("Unable to shutdown device in current state: Shutdown") {
             log("Simulator already shutdown")
             return CallTool.Result(content: [
-                .text("Simulator \(udid) is already shut down.")
+                .plainText("Simulator \(udid) is already shut down.")
             ])
         } else {
             log("Failed to shutdown simulator: \(result.stderr)")
@@ -590,7 +590,7 @@ enum SimulatorTools {
             if !launchArgs.isEmpty {
                 message += " Launch args: \(launchArgs.joined(separator: ", "))"
             }
-            return CallTool.Result(content: [.text(message)])
+            return CallTool.Result(content: [.plainText(message)])
         } else {
             log("Failed to launch app: \(launchResult.stderr)")
             throw MCPError.internalError("Failed to launch app: \(launchResult.stderr)")
@@ -709,8 +709,8 @@ enum SimulatorTools {
         log("Screenshot taken successfully (\(imageData.count) bytes), saved to: \(savedPath)")
 
         return CallTool.Result(content: [
-            .text("Screenshot saved to: \(savedPath)"),
-            .image(data: base64Image, mimeType: "image/png", metadata: nil)
+            .plainText("Screenshot saved to: \(savedPath)"),
+            .image(data: base64Image, mimeType: "image/png", annotations: nil, _meta: nil)
         ])
     }
 }
