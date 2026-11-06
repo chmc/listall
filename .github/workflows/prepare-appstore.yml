@@ -205,6 +205,11 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+      # fastlane release requires the App Review contact (see publish-to-appstore.yml)
+      REVIEW_CONTACT_FIRST_NAME: ${{ secrets.REVIEW_CONTACT_FIRST_NAME }}
+      REVIEW_CONTACT_LAST_NAME: ${{ secrets.REVIEW_CONTACT_LAST_NAME }}
+      REVIEW_CONTACT_EMAIL: ${{ secrets.REVIEW_CONTACT_EMAIL }}
+      REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

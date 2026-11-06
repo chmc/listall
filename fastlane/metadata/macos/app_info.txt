@@ -86,46 +86,7 @@ Availability: All Territories
 
 REVIEW NOTES (macOS-Specific)
 =============================
-(Uploaded from review_information/notes.txt; keep that file as the source.)
-
-ListAll for Mac is a privacy-focused list management app with iCloud sync to iOS.
-
-KEY TESTING INSTRUCTIONS:
-1. Create a new list via File > New List (Cmd+Shift+N)
-2. Add items using File > New Item (Cmd+N)
-3. Add photos to items via drag-and-drop or paste
-4. Type similar item names multiple times to see smart suggestions
-5. Cross out items by clicking the checkbox
-6. Archive lists via Lists menu or context menu
-7. Test Quick Look preview on items with images (spacebar)
-8. Test keyboard shortcuts (see Lists and Edit menus)
-9. Test Services menu integration (select text in Safari, right-click > Services > Add to ListAll)
-10. Test Handoff - start on iPhone, continue on Mac (or vice versa)
-
-PRIVACY PERMISSIONS:
-- Photos: Access existing photos for list items
-- iCloud: Sync data across devices (enabled by default)
-- Network: Required for iCloud sync
-
-NO THIRD-PARTY SERVICES:
-- All data stored locally or in user's iCloud
-- No analytics or tracking
-- No ads
-- No subscriptions
-- No in-app purchases
-
-SPECIAL NOTES:
-- App works completely offline (iCloud syncs when available)
-- No account creation required
-- Full keyboard navigation support
-- VoiceOver compatible
-- Works with Touch ID on supported Macs
-
-SANDBOX ENTITLEMENTS:
-- com.apple.security.app-sandbox: YES
-- com.apple.security.network.client: YES (for iCloud)
-- com.apple.security.application-groups: group.io.github.chmc.ListAll
-- com.apple.developer.icloud-services: CloudKit
+Source of truth: review_information/notes.txt (uploaded by Publish to App Store).
 
 
 CONTACT INFORMATION

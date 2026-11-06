@@ -129,23 +129,49 @@ def validate_release_notes!(platform:, version:)
   UI.success("✅ #{platform} release notes are updated for #{version}")
 end
 
-# App Review contact for deliver's app_review_information. The repo is public, so
-# the contact comes from GitHub secrets (REVIEW_CONTACT_*) instead of the
-# metadata/review_information/*.txt files; notes.txt stays in git. App Store
-# Connect requires all four fields before "Add for Review", so fail before upload.
+# App Review contact (name, email, phone). The repo is public, so it comes from
+# GitHub secrets (REVIEW_CONTACT_*) and is uploaded with Spaceship after deliver
+# instead of deliver's app_review_information option, whose summary table would
+# print it into the public Actions log. Review notes stay in git
+# (metadata/**/review_information/notes.txt, uploaded by deliver).
+# App Store Connect requires all four fields before "Add for Review", so the
+# release lanes call this before uploading anything.
 def review_contact_from_env
   fields = {
-    first_name: "REVIEW_CONTACT_FIRST_NAME",
-    last_name: "REVIEW_CONTACT_LAST_NAME",
-    email_address: "REVIEW_CONTACT_EMAIL",
-    phone_number: "REVIEW_CONTACT_PHONE"
+    "contact_first_name" => "REVIEW_CONTACT_FIRST_NAME",
+    "contact_last_name" => "REVIEW_CONTACT_LAST_NAME",
+    "contact_email" => "REVIEW_CONTACT_EMAIL",
+    "contact_phone" => "REVIEW_CONTACT_PHONE"
   }
   missing = fields.values.select { |name| ENV[name].to_s.strip.empty? }
   unless missing.empty?
     UI.user_error!("❌ App Review contact missing: set #{missing.join(', ')} (GitHub secrets for Publish to App Store)")
   end
 
-  fields.transform_values { |name| ENV[name].strip }
+  contact = fields.transform_values { |name| ENV[name].strip }
+  unless contact["contact_phone"].match?(/\A\+\d[\d\s\-()]{5,}\z/)
+    UI.user_error!("❌ REVIEW_CONTACT_PHONE must be in international format, e.g. +358 40 123 4567")
+  end
+  contact
+end
+
+# platform: "IOS" or "MAC_OS". Requires the Spaceship token from app_store_connect_api_key.
+def upload_review_contact!(platform:, version:, contact:)
+  app_id = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier) || "io.github.chmc.ListAll"
+  app = Spaceship::ConnectAPI::App.find(app_id)
+  UI.user_error!("App #{app_id} not found in App Store Connect") unless app
+
+  platform_filter = platform == "MAC_OS" ? Spaceship::ConnectAPI::Platform::MAC_OS : Spaceship::ConnectAPI::Platform::IOS
+  app_version = app.get_app_store_versions(filter: { platform: platform_filter, versionString: version }, includes: "").first
+  UI.user_error!("#{platform} App Store version #{version} not found") unless app_version
+
+  detail = app_version.fetch_app_store_review_detail(includes: nil)
+  if detail
+    detail.update(attributes: contact)
+  else
+    app_version.create_app_store_review_detail(attributes: contact)
+  end
+  UI.success("✅ #{platform} App Review contact set for #{version}")
 end
 
 # Prepare screenshots for deliver by copying RAW NORMALIZED screenshots (not framed)
@@ -759,13 +785,14 @@ platform :ios do
       screenshots_path: skip_screenshots ? nil : delivery_path,
       skip_screenshots: skip_screenshots,
       overwrite_screenshots: !skip_screenshots,
-      app_review_information: review_contact,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,
       force: true,
       ignore_language_directory_validation: true
     )
+
+    upload_review_contact!(platform: "IOS", version: version, contact: review_contact)
 
     UI.success("Metadata#{skip_screenshots ? '' : ' and screenshots'} uploaded successfully!")
   end
@@ -885,13 +912,14 @@ platform :ios do
       screenshots_path: skip_screenshots ? nil : screenshots_path,
       skip_screenshots: skip_screenshots,
       overwrite_screenshots: !skip_screenshots,
-      app_review_information: review_contact,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,
       force: true,
       ignore_language_directory_validation: true
     )
+
+    upload_review_contact!(platform: "MAC_OS", version: version, contact: review_contact)
 
     UI.success("macOS metadata#{skip_screenshots ? '' : ' and screenshots'} delivered to App Store Connect!")
   end
