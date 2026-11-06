@@ -6,6 +6,7 @@ require 'shellwords'
 require_relative 'lib/version_helper'
 require_relative 'lib/watch_screenshot_helper'
 require_relative 'lib/screenshot_helper'
+require_relative 'lib/release_notes_guard'
 # NOTE: fastlane_patch_ipad13 removed - iPad Pro 13" (2064x2752) is now natively
 # supported in fastlane 2.230.0+ via DEVICE_RESOLUTIONS constant
 
@@ -85,6 +86,47 @@ def validate_version_train(version:, platform:, api_key:)
     end
     UI.important("⚠️ Could not verify version train (#{e.message}) - proceeding anyway")
   end
+end
+
+# Pre-flight check: every locale's release_notes.txt must be non-empty and differ
+# from the "What's New" of every other App Store version on the platform, so a
+# release never ships an earlier version's notes. Fails closed: if App Store
+# Connect cannot be read or returns no earlier versions, the publish stops.
+# platform: "IOS" or "MAC_OS". Requires the Spaceship token from app_store_connect_api_key.
+def validate_release_notes!(platform:, version:)
+  metadata_dir = File.expand_path(platform == "MAC_OS" ? "metadata/macos" : "metadata", __dir__)
+  local = ReleaseNotesGuard.read_local(metadata_dir)
+
+  previous = Hash.new { |hash, key| hash[key] = [] }
+  begin
+    app_id = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier) || "io.github.chmc.ListAll"
+    app = Spaceship::ConnectAPI::App.find(app_id)
+    UI.user_error!("App #{app_id} not found in App Store Connect") unless app
+
+    platform_filter = platform == "MAC_OS" ? Spaceship::ConnectAPI::Platform::MAC_OS : Spaceship::ConnectAPI::Platform::IOS
+    earlier = app.get_app_store_versions(filter: { platform: platform_filter }, includes: "")
+                 .reject { |asv| asv.version_string == version }
+    UI.user_error!("No earlier #{platform} App Store versions found to compare release notes against") if earlier.empty?
+
+    UI.message("🔍 Comparing #{platform} release notes with #{earlier.size} earlier versions")
+    earlier.each do |asv|
+      asv.get_app_store_version_localizations.each { |loc| previous[loc.locale] << loc.whats_new }
+    end
+  rescue => e
+    raise e if e.is_a?(FastlaneCore::Interface::FastlaneError)
+    UI.user_error!("❌ Could not read #{platform} release notes from App Store Connect: #{e.message}")
+  end
+
+  problems = ReleaseNotesGuard.problems(local: local, previous: previous)
+  unless problems.empty?
+    UI.user_error!(
+      "❌ #{platform} release notes are not updated for #{version} (#{metadata_dir}):\n" \
+      "#{problems.map { |p| "  - #{p}" }.join("\n")}\n" \
+      "Write the new version's \"What's New\" text, commit it, and publish again."
+    )
+  end
+
+  UI.success("✅ #{platform} release notes are updated for #{version}")
 end
 
 # Prepare screenshots for deliver by copying RAW NORMALIZED screenshots (not framed)
@@ -630,6 +672,24 @@ platform :ios do
     end
   end
 
+  desc "Verify iOS and macOS release notes differ from all earlier App Store versions (no uploads)"
+  desc "Usage: fastlane validate_release_notes version:1.2.0"
+  lane :validate_release_notes do |options|
+    require_asc_env!
+    version = options[:version]
+    UI.user_error!("Version required. Usage: fastlane validate_release_notes version:1.2.0") unless version
+
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+      is_key_content_base64: false,
+      in_house: false
+    )
+    validate_release_notes!(platform: "IOS", version: version)
+    validate_release_notes!(platform: "MAC_OS", version: version)
+  end
+
   desc "Deliver metadata/screenshots to App Store (no auto-submit)"
   desc "Creates new app version if needed. Usage: fastlane release version:1.2.0"
   desc "Options: skip_watch:true to skip watch screenshots, skip_screenshots:true to skip ALL screenshots"
@@ -650,6 +710,7 @@ platform :ios do
       is_key_content_base64: false,
       in_house: false
     )
+    validate_release_notes!(platform: "IOS", version: version)
 
     # Path to normalized screenshots (exact App Store dimensions, not framed)
     # App Store Connect requires exact pixel dimensions (Apple's 2026 requirements):
@@ -756,6 +817,7 @@ platform :ios do
       is_key_content_base64: false,
       in_house: false
     )
+    validate_release_notes!(platform: "MAC_OS", version: version)
 
     screenshots_path = File.expand_path("screenshots/mac/processed", __dir__)
 
