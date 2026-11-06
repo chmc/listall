@@ -129,13 +129,14 @@ def validate_release_notes!(platform:, version:)
   UI.success("✅ #{platform} release notes are updated for #{version}")
 end
 
-# App Review contact (name, email, phone). The repo is public, so it comes from
-# GitHub secrets (REVIEW_CONTACT_*) and is uploaded with Spaceship after deliver
-# instead of deliver's app_review_information option, whose summary table would
-# print it into the public Actions log. Review notes stay in git
-# (metadata/**/review_information/notes.txt, uploaded by deliver).
-# App Store Connect requires all four fields before "Add for Review", so the
-# release lanes call this before uploading anything.
+# App Review information (contact + notes). The repo is public, so the contact
+# comes from GitHub secrets (REVIEW_CONTACT_*); the notes come from git
+# (fastlane/app_review/*_notes.txt). Both are uploaded in one Spaceship request
+# after deliver: App Store Connect rejects a review-detail update that lacks the
+# contact, and deliver's app_review_information option would print the contact
+# into the public Actions log. The notes live outside metadata/ so deliver does
+# not upload them on its own. The release lanes call review_contact_from_env
+# before uploading anything, since "Add for Review" requires all four fields.
 def review_contact_from_env
   fields = {
     "contact_first_name" => "REVIEW_CONTACT_FIRST_NAME",
@@ -156,7 +157,11 @@ def review_contact_from_env
 end
 
 # platform: "IOS" or "MAC_OS". Requires the Spaceship token from app_store_connect_api_key.
-def upload_review_contact!(platform:, version:, contact:)
+def upload_review_information!(platform:, version:, contact:)
+  notes_path = File.expand_path("app_review/#{platform == 'MAC_OS' ? 'macos' : 'ios'}_notes.txt", __dir__)
+  notes = File.read(notes_path).strip
+  UI.user_error!("❌ App Review notes are empty: #{notes_path}") if notes.empty?
+
   app_id = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier) || "io.github.chmc.ListAll"
   app = Spaceship::ConnectAPI::App.find(app_id)
   UI.user_error!("App #{app_id} not found in App Store Connect") unless app
@@ -165,13 +170,14 @@ def upload_review_contact!(platform:, version:, contact:)
   app_version = app.get_app_store_versions(filter: { platform: platform_filter, versionString: version }, includes: "").first
   UI.user_error!("#{platform} App Store version #{version} not found") unless app_version
 
+  attributes = contact.merge("notes" => notes, "demo_account_required" => false)
   detail = app_version.fetch_app_store_review_detail(includes: nil)
   if detail
-    detail.update(attributes: contact)
+    detail.update(attributes: attributes)
   else
-    app_version.create_app_store_review_detail(attributes: contact)
+    app_version.create_app_store_review_detail(attributes: attributes)
   end
-  UI.success("✅ #{platform} App Review contact set for #{version}")
+  UI.success("✅ #{platform} App Review information set for #{version}")
 end
 
 # Prepare screenshots for deliver by copying RAW NORMALIZED screenshots (not framed)
@@ -792,7 +798,7 @@ platform :ios do
       ignore_language_directory_validation: true
     )
 
-    upload_review_contact!(platform: "IOS", version: version, contact: review_contact)
+    upload_review_information!(platform: "IOS", version: version, contact: review_contact)
 
     UI.success("Metadata#{skip_screenshots ? '' : ' and screenshots'} uploaded successfully!")
   end
@@ -919,7 +925,7 @@ platform :ios do
       ignore_language_directory_validation: true
     )
 
-    upload_review_contact!(platform: "MAC_OS", version: version, contact: review_contact)
+    upload_review_information!(platform: "MAC_OS", version: version, contact: review_contact)
 
     UI.success("macOS metadata#{skip_screenshots ? '' : ' and screenshots'} delivered to App Store Connect!")
   end

@@ -86,12 +86,12 @@ Availability: All Territories
 
 REVIEW NOTES (macOS-Specific)
 =============================
-Source of truth: review_information/notes.txt (uploaded by Publish to App Store).
+Source of truth: fastlane/app_review/macos_notes.txt (uploaded by Publish to App Store).
 
 
 CONTACT INFORMATION
 ===================
 Uploaded by Publish to App Store from the GitHub secrets REVIEW_CONTACT_*
-(not stored in this public repo). Review notes: review_information/notes.txt
+(not stored in this public repo). Review notes: fastlane/app_review/macos_notes.txt
 
 Demo Account: Not required (no login system)
