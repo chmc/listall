@@ -1,99 +1,56 @@
 # Project Instructions
 
-Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+Use Context7 MCP for library/API documentation, code generation, setup or configuration steps without being asked.
 
-## Subagent Skill Injection
+## Rules
 
-MANDATORY: When spawning subagents via the Agent tool, include this instruction block in prompts (replace `{agent-name}`):
+- Don't delete the `/.claude/` or `/docs/` directories or `/CLAUDE.md`. Show the user any single file you remove or merge under them before committing.
+- Never remove UI features without an explicit request.
+- Read `documentation/ARCHITECTURE.md` before working on app code.
+- When something fails, search `documentation/learnings/` first (by `tags:` and symptoms); most recurring problems are recorded there.
+- Before implementing, check which docs in `documentation/` the change affects and update them. A user-facing feature added or removed updates `documentation/features/SUMMARY.md` and its category file; the `feature-doc-gate` hook blocks `feat` commits that change app code without them.
+- Follow TDD, DRY, SOLID, YAGNI. One task at a time.
+- All tests must pass before commit. Commits go straight to `main`, so CI only reports a failure after it has landed.
+
+## Build & Test
+
+Run from `ListAll/`. Commands mirror `.github/workflows/ci.yml`; `resolve-simulator.sh` pins the simulator runtime to the Xcode in `.xcode-version`.
+
+```bash
+IOS=$(../.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro")
+WATCH=$(../.github/scripts/resolve-simulator.sh watchOS "Apple Watch Series 11 (46mm)")
+xcodebuild test -project ListAll.xcodeproj -scheme ListAll -destination "platform=iOS Simulator,id=$IOS" -parallel-testing-enabled NO \
+  -skip-testing:ListAllTests/AppGroupsTests -skip-testing:ListAllTests/CloudKitTests -skip-testing:ListAllUITests -skip-testing:ListAllUITestsLaunchTests
+xcodebuild test -project ListAll.xcodeproj -scheme "ListAllWatch Watch App" -destination "platform=watchOS Simulator,id=$WATCH" -parallel-testing-enabled NO -skip-testing:"ListAllWatch Watch AppUITests"
+xcodebuild test -project ListAll.xcodeproj -scheme ListAllMac -destination 'platform=macOS' -skip-testing:ListAllMacUITests -skip-testing:MacKeyboardNavigationTests
+# One test: -only-testing:<Target>/<Class>/<method>
 ```
-SKILL USAGE INSTRUCTION:
-1. Read your agent definition at `.claude/agents/{agent-name}.md`
-2. For each skill in your `skills:` frontmatter, read `.claude/skills/{skill-name}/SKILL.md`
-3. ONLY if task requires skills outside your domain, read `.claude/skills/SKILLS-SUMMARY.md`
-4. Apply patterns from loaded skills; reference which skills you used
-```
-**Verification**: If your Agent prompt does NOT contain the SKILL USAGE INSTRUCTION block, you are violating this rule.
 
-## Mandatory Rules
+`bundle exec fastlane test` ends in `|| true` and never fails, so don't use it as a check.
 
-- Never delete: `/CLAUDE.md`, `/.claude/`, `/docs/`
-- Never remove UI features without explicit request
-- Read before working: `/documentation/ARCHITECTURE.md`
-- Search `/documentation/learnings/*.md` when encountering issues (use tags/symptoms to find relevant files)
-- Before implementation: check if documentation in `/documentation/` needs updating based on the change
-- Always include .claude/agents/critic-reviewer.md for a second opinion, at the planning stage (before asking for plan approval), not only before commit; see Decision Protocol
-- Update `documentation/features/SUMMARY.md` and category files after implementation
-- Visual verification (build → launch → screenshot → analyze) is mandatory after ALL implementation work
-- Follow: TDD, DRY, SOLID, YAGNI
-- All tests must pass before commit
-- One task at a time
+## Visual Verification
+
+After every change to app code, build, launch, screenshot and analyze the result on each affected platform (macOS, iPhone, iPad if it shows the UI, watch if affected) with the listall MCP tools. Unit tests don't catch layout, navigation or localization problems, and the user expects the screenshots to have been studied, not just taken. The `visual-verification` skill has the platform rules, fresh-build sequence, launch arguments and cleanup.
 
 ## Decision Protocol
 
-MANDATORY before every plan approval request, root-cause/fix decision, and "done" claim:
+Before asking for plan approval, before a root-cause or fix decision, and before saying something is done:
 
 1. **Verify facts**: give evidence for every claim the decision depends on: the command you ran and its output, or `file:line`. Take counts and warnings from a clean state (no incremental build or cache). A root-cause claim, including "this path works", needs reproduction evidence (log line or screenshot) whenever the bug is reproducible.
-2. **Separate**: present *verified* (with evidence) and *assumed / not verified* as separate lists. Do not claim certainty without evidence. Every *not verified* item needs a `Kokeiltu:` line (what you tried and the result) or a link to a learnings file that documents the limitation with evidence.
-3. **Challenge**: (a) challenge your own claims: what would make this wrong, and what was not tested? (b) For plans and non-trivial changes (not typo fixes), run `critic-reviewer` during planning. Give it the code and the plan, not your conclusions, and tell it to verify the claims itself.
-4. **Decide**: state the final decision with reasons, and say which claims were refuted and what changed as a result.
+2. **Separate**: list *verified* (with evidence) and *not verified* separately. Each not-verified item gets a `Kokeiltu:` line (what you tried and the result) or a link to a learnings file that documents the limitation with evidence.
+3. **Challenge**: ask what would make each claim wrong and what was not tested. For plans of non-trivial changes (not typo fixes), run `critic-reviewer` during planning, before asking for approval. Give it the code and the plan, not your conclusions, ask it to verify the claims itself and to report correctness gaps rather than style.
+4. **Decide**: state the decision with reasons, and which claims were refuted and what changed as a result.
 
-**Before reporting anything as a limitation** ("can't verify", "not possible", "tool doesn't work"): run the escalation ladder in `.claude/skills/visual-verification/SKILL.md` → "When Something Fails". Hooks enforce it: `mcp-failure-ladder.sh` on listall MCP errors, `verification-gap-check.sh` on the final answer.
+Before reporting anything as a limitation ("can't verify", "not possible", "tool doesn't work"), run the escalation ladder in the `visual-verification` skill → "When Something Fails". Its alternative paths are other listall MCP tools, `xcodebuild test`, integration tests or a real device, not screenshot substitutes. The `mcp-failure-ladder` and `verification-gap-check` hooks point back to it.
 
-## Implementation Visual Verification
+## Code Navigation
 
-**BLOCKING RULE**: MCP tools MUST be connected before visual verification. If `listall_diagnostics` or other `listall_*` tools are not available, you MUST:
-1. Stop and inform the user that MCP tools are not connected
-2. Request Claude Code restart to load the MCP server
-3. **NO WORKAROUNDS ALLOWED** - do not use `screencapture`, `simctl io`, or other alternatives
+Use `listall_call_graph` for Swift symbols (callers, definitions, references, hierarchy) and Grep for string literals, comments and non-Swift files; the `semantic-search` skill has the modes. A hook blocks symbol-like Grep searches. If the call graph index is unavailable, `touch .claude/.grep-fallback-authorized` allows Grep for 5 minutes.
 
-### Required Platform Coverage
+## Subagents
 
-| Platform | When Required | Tool |
-|----------|---------------|------|
-| macOS | Always for shared/macOS code | `listall_screenshot_macos` |
-| iPhone | Always for shared/iOS code | `listall_screenshot` (boot iPhone simulator) |
-| iPad | If UI supports iPad | `listall_screenshot` (boot iPad simulator) |
-| watchOS | If change affects watch app | `listall_screenshot` (boot Watch simulator) |
+Custom agents in `.claude/agents/` preload the skills listed in their `skills:` frontmatter, and their descriptions say when to use them. Built-in Explore and Plan agents don't read this file, so put any constraint they need into the prompt.
 
-### Verification Workflow
+## Learnings
 
-1. **Run `listall_diagnostics`** if tools not working
-2. Launch each applicable platform with `UITEST_MODE` + `DISABLE_TOOLTIPS`
-3. Screenshot all platforms, compare for consistency
-4. For interactive testing: use `listall_query`, `listall_click`, `listall_type`, `listall_swipe`
-5. **Cleanup**: Quit macOS app (`listall_quit_macos`) and shutdown simulators (`listall_shutdown_simulator`)
-
-MCP server config: `.mcp.json` | Binary: `Tools/listall-mcp/.build/debug/listall-mcp`
-
-See `.claude/skills/visual-verification/SKILL.md` for launch commands, cleanup, and detailed patterns.
-
-## Semantic Search Tools
-
-**MANDATORY**: Use `listall_call_graph` as primary tool for understanding Swift code (callers, definitions, references, hierarchy). Use Grep only for string literals, comments, non-code content.
-See `.claude/skills/semantic-search/SKILL.md` for modes, parameters, and workflows.
-**Fallback**: If call_graph fails, run `touch .claude/.grep-fallback-authorized` then retry with Grep.
-
-## Agents & Skills
-
-Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.md` for skill reference.
-
-| Agent | Use For | Skills |
-|-------|---------|--------|
-| `apple-dev-expert` | iOS/watchOS implementation, UX | swift-swiftui, fastlane, xctest, apple-hig, apple-ux-patterns |
-| `apple-dev-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync |
-| `critic-reviewer` | Review before implementation | code-review |
-| `integration-specialist` | Sync/data flow issues | coredata-sync, watch-connectivity |
-| `pipeline-specialist` | CI/CD failures | github-actions, fastlane |
-| `shell-script-specialist` | Shell scripts | bash-scripting |
-| `testing-specialist` | Tests, verification | xctest, test-isolation |
-
-**Always run `critic-reviewer` before major implementations** (timing and method: see Decision Protocol).
-
-## Learnings Format
-
-Write learnings to `/documentation/learnings/` using LLM optimized format. See templates for format details:
-
-| Template | Use For |
-|----------|---------|
-| `TEMPLATE.md` | Bug fixes, issues, problems solved |
-| `GUIDE_TEMPLATE.md` | Reference docs, how-tos, analysis |
+Write learnings to `documentation/learnings/` with `TEMPLATE.md` (bugs and fixes) or `GUIDE_TEMPLATE.md` (reference and analysis), including `title:` and `tags:` frontmatter so they can be found later.

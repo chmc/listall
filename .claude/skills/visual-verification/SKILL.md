@@ -212,13 +212,18 @@ Run `listall_diagnostics()` if tools aren't working.
 
 ## Platforms
 
-Verify on all platforms affected by your change:
+Verify on every platform your change affects, and compare the screenshots for consistency:
 
-| Platform | Bundle ID |
-|----------|-----------|
-| macOS | `io.github.chmc.ListAll` |
-| iOS/iPad | `io.github.chmc.ListAll` |
-| watchOS | `io.github.chmc.ListAll.watchkitapp` |
+| Platform | When required | Bundle ID | Screenshot |
+|----------|---------------|-----------|------------|
+| macOS | Shared or macOS code | `io.github.chmc.ListAll` | `listall_screenshot_macos` |
+| iPhone | Shared or iOS code | `io.github.chmc.ListAll` | `listall_screenshot` (iPhone simulator) |
+| iPad | UI that iPad shows | `io.github.chmc.ListAll` | `listall_screenshot` (iPad simulator) |
+| watchOS | Watch app affected | `io.github.chmc.ListAll.watchkitapp` | `listall_screenshot` (Watch simulator) |
+
+Launch iOS and macOS with `UITEST_MODE` and `DISABLE_TOOLTIPS` (deterministic test data, no feature tips covering the UI). The watch app only reads `UITEST_MODE`.
+
+**If the `listall_*` tools are missing** from the session, stop and ask the user to restart Claude Code (the MCP server loads at startup). Don't substitute `screencapture` or `simctl io`: they capture whatever state the device is in, without the test data, the accessibility tree or the interaction tools, so they can't show that the change works.
 
 ## Context Naming
 
