@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!-- Source for docs/assets/og-image.png (1200x630) and twitter-image.png (1200x675).
+     Render: see README.md in this directory -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ListAll social card</title>
+<style>
+  :root {
+    --cyan: #00D9FF; --blue: #0066FF; --purple: #AA00FF; --magenta: #FF00CC; --emerald: #00FF88;
+    --bg-dark: #0A0A0F; --text-secondary: rgba(255, 255, 255, 0.72);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: var(--h, 630px); overflow: hidden; background: var(--bg-dark); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    color: #fff; position: relative; -webkit-font-smoothing: antialiased;
+  }
+  .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.55; }
+  .orb-1 { width: 520px; height: 520px; background: var(--blue); top: -220px; left: -160px; }
+  .orb-2 { width: 460px; height: 460px; background: var(--magenta); bottom: -260px; right: 160px; opacity: 0.4; }
+  .orb-3 { width: 380px; height: 380px; background: var(--cyan); top: 80px; right: -120px; opacity: 0.35; }
+  .content {
+    position: relative; height: 100%; display: flex; align-items: center;
+    padding: 0 0 0 80px; gap: 40px;
+  }
+  .text { flex: 1; }
+  .brand { display: flex; align-items: center; gap: 22px; margin-bottom: 30px; }
+  .brand img { width: 104px; height: 104px; border-radius: 23px; box-shadow: 0 10px 40px rgba(0, 217, 255, 0.35); }
+  .brand span { font-size: 64px; font-weight: 800; letter-spacing: -1.5px; }
+  h1 { font-size: 54px; line-height: 1.08; font-weight: 800; letter-spacing: -1.2px; margin-bottom: 24px; }
+  h1 .hl {
+    background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 35%, var(--purple) 65%, var(--magenta) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .platforms { font-size: 26px; color: var(--text-secondary); margin-bottom: 26px; }
+  .pills { display: flex; gap: 12px; flex-wrap: wrap; }
+  .pill {
+    font-size: 20px; font-weight: 600; padding: 9px 18px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+  /* The App Store screenshot has a device frame on a coloured background:
+     crop to the device (x 99-1190, top 244 of 1290x2796) and let it bleed off the bottom. */
+  .shot {
+    --scale: 0.33;
+    position: absolute; right: 90px; top: 64px;
+    width: calc(1091px * var(--scale)); height: 900px;
+    border-radius: 58px; overflow: hidden;
+    box-shadow: 0 30px 90px rgba(0, 102, 255, 0.5), 0 0 60px rgba(255, 0, 204, 0.2);
+  }
+  .shot img {
+    position: absolute; width: calc(1290px * var(--scale));
+    left: calc(-99px * var(--scale)); top: calc(-244px * var(--scale));
+  }
+</style>
+</head>
+<body>
+  <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+  <div class="content">
+    <div class="text">
+      <div class="brand"><img src="../../../docs/assets/appicon.png" alt=""><span>ListAll</span></div>
+      <h1>Smart lists,<br><span class="hl">synced everywhere</span></h1>
+      <p class="platforms">iPhone · iPad · Mac · Apple Watch</p>
+      <div class="pills">
+        <span class="pill">Free</span><span class="pill">No ads</span>
+        <span class="pill">Smart suggestions</span><span class="pill">iCloud sync</span>
+      </div>
+    </div>
+    <div class="shot"><img src="../../../fastlane/screenshots_compat/en-US/iPhone 17 Pro Max-03_GroceryItems.png" alt=""></div>
+  </div>
+  <script>
+    // ?h=675 renders the Twitter variant in a browser; render.swift sets --h itself
+    const h = new URLSearchParams(location.search).get('h');
+    if (h) document.documentElement.style.setProperty('--h', h + 'px');
+  </script>
+</body>
+</html>

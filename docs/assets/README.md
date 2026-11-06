@@ -158,8 +158,8 @@ Once assets are added, update `index.html`:
 
 - [ ] App icon (app-icon.png)
 - [ ] Screenshots (5-8 images)
-- [ ] Open Graph image (og-image.png)
-- [ ] Twitter Card image (twitter-image.png)
+- [x] Open Graph image (og-image.png), source: `documentation/assets/social-card/`
+- [x] Twitter Card image (twitter-image.png), source: `documentation/assets/social-card/`
 - [ ] Favicon (favicon.ico)
 - [ ] Apple Touch Icon (apple-touch-icon.png)
 
