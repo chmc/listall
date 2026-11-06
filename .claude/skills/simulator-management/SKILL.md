@@ -37,9 +37,9 @@ xcrun simctl shutdown all
 xcrun simctl delete unavailable
 ```
 
-### Let Fastlane Manage Boot
-- Never pre-boot simulators before Fastlane
-- Let Fastlane boot on demand
+### Boot Before Fastlane Only When Fully Booted
+- The workflows pre-boot (`prepare-appstore.yml` "Clean and pre-boot simulator") and wait with `xcrun simctl bootstatus "$UDID" -b`; this prevented DTServiceHub races (`documentation/learnings/watchos-ci-timeout-uitests.md`)
+- What races is a `simctl boot` without waiting: Fastlane starts while the device is half-booted
 - Set `SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT=120`
 
 ### Clean Duplicate Simulators
@@ -70,14 +70,16 @@ xcrun simctl delete <UDID>
 
 ## Antipatterns
 
-### Pre-booting
+### Booting Without Waiting
 ```bash
-# BAD: Race conditions with Fastlane
-xcrun simctl boot "iPhone 17 Pro"
+# BAD: Fastlane starts while the device is still booting
+xcrun simctl boot "$UDID"
 bundle exec fastlane snapshot
 
-# GOOD: Let Fastlane manage
-xcrun simctl shutdown all
+# GOOD: as in prepare-appstore.yml
+UDID=$(.github/scripts/resolve-simulator.sh iOS "iPhone 17 Pro Max")
+xcrun simctl boot "$UDID" 2>/dev/null || true
+xcrun simctl bootstatus "$UDID" -b
 bundle exec fastlane snapshot
 ```
 

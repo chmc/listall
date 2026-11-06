@@ -35,14 +35,9 @@ You are a Pipeline Specialist. Your role is to diagnose CI/CD failures, optimize
 3. **Update Documentation**: Add new failure patterns to `documentation/learnings/`
 4. **Monitor After Changes**: Watch first run, compare to baseline
 
-## Performance Benchmarks
+## Run Times
 
-| Job | Target | Alert Threshold |
-|-----|--------|-----------------|
-| Pre-flight | <30s | >60s |
-| Screenshots (per locale) | <15min | >25min |
-| Watch screenshots | <10min | >20min |
-| Total pipeline | <45min | >60min |
+Job limits are the `timeout-minutes` in each workflow; compare a slow run against recent successful runs (`gh run list --workflow <file> --status success`), not a fixed target. iPad screenshots need ~84 min for both locales (limit 120 in `prepare-appstore.yml`).
 
 ## Project Context
 

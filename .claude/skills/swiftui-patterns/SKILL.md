@@ -117,7 +117,7 @@ func updateItem(_ item: Item) {
 ```
 
 ### Pattern
-One source of reload, coalesced (cancellable `DispatchWorkItem`), skipped while a mutation is in flight. The `isMutating` guard is in the `coredata-sync` skill ("Remote Change Notification Timing").
+One source of reload, coalesced (cancellable `DispatchWorkItem`), skipped while a drag or edit is in progress; the pattern and the code it comes from are in the `coredata-sync` skill ("Remote Change Notification Timing").
 
 ## Debugging Checklist
 

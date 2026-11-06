@@ -65,17 +65,18 @@ concurrent_simulators(true)
 
 ## Simulator Management
 
-Shut down and clean simulators before screenshot runs and let Fastlane boot them on demand; commands and antipatterns are in the `simulator-management` skill.
+Shut down and clean simulators before screenshot runs, and only hand a pre-booted device to Fastlane after `simctl bootstatus -b`; commands are in the `simulator-management` skill.
 
 ## App Store Screenshot Requirements
 
-| Device | Dimensions | Model |
-|--------|-----------|-------|
-| iPhone 6.7" | 1290x2796 | iPhone 17 Pro Max |
-| iPhone 6.5" | 1242x2688 | iPhone 11 Pro Max |
-| iPad 13" | 2064x2752 | iPad Pro M4 |
-| iPad 12.9" | 2048x2732 | iPad Pro 12.9 |
-| Apple Watch | 396x484 | Apple Watch Ultra |
+Sizes the Fastfile delivers (`prepare_screenshots_for_delivery` comment and `target_sizes`):
+
+| Device | Delivered size | Captured on |
+|--------|----------------|-------------|
+| iPhone 6.9" | 1260x2736 | iPhone 17 Pro Max (captures 1320x2868, normalized) |
+| iPad 13" | 2064x2752 | iPad Pro 13-inch |
+| Apple Watch | 416x496 | Apple Watch Series 11 (46mm) |
+| macOS | 2880x1800 | Mac |
 
 ## Common Issues
 

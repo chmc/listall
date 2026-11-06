@@ -35,24 +35,18 @@ NotificationCenter.observe(.NSPersistentStoreRemoteChange) {
 ```
 
 ### Solution
+Skip reloads while the state that a reload would break is active, based on state, not a timer. `MainViewModel.loadLists()` (`ListAll/ListAll/ViewModels/MainViewModel.swift`) returns early while `isDragging || isEditModeActive`, because replacing the array SwiftUI is animating breaks drag and drop:
+
 ```swift
-var isMutating = false
+private var isDragOperationInProgress: Bool { isDragging || isEditModeActive }
 
-func moveItems(...) {
-    isMutating = true
-    defer {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-            self.isMutating = false
-        }
-    }
-    // ... mutation code
-}
-
-func loadData() {
-    guard !isMutating else { return }  // Skip during mutation
-    // ... load code
+func loadLists() {
+    if isDragOperationInProgress { return }  // reload again when the drag/edit ends
+    // ... load
 }
 ```
+
+Coalesce notification bursts into one reload (`WatchMainViewModel.scheduleSyncReload()`: cancellable `DispatchWorkItem`, `[weak self]`). Avoid fixed `asyncAfter` delays as a lock: they are guesses that fail under load.
 
 ## CloudKit Sync Configuration
 

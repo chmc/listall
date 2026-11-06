@@ -37,7 +37,7 @@ runs-on: macos-14
 
 ### Retry for Transient Failures
 ```yaml
-- uses: nick-fields/retry@v3
+- uses: nick-fields/retry@v4
   with:
     timeout_minutes: 30
     max_attempts: 3

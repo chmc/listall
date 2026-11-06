@@ -5,7 +5,7 @@ description: "Reference for the listall_call_graph MCP tool: modes, parameters, 
 
 # Semantic Search with `listall_call_graph`
 
-Queries Xcode's IndexStore for structured code analysis. **MANDATORY**: Use as primary tool for understanding Swift code — callers, definitions, references, hierarchy. Use Grep only for string literals, comments, non-code content.
+Queries Xcode's IndexStore for structured code analysis. Use it as the primary tool for understanding Swift code, because it follows real symbol references where Grep matches text — callers, definitions, references, hierarchy. Use Grep only for string literals, comments, non-code content.
 
 ## Modes
 

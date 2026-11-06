@@ -32,7 +32,7 @@ ListAll is a multi-platform list management app built with SwiftUI for iOS, watc
 - **Data Persistence:** Core Data + CloudKit (Release builds)
 - **Features:** NavigationSplitView, keyboard shortcuts, Services menu
 - **Minimum macOS Version:** macOS 14.0 (Sonoma)
-- **Bundle ID:** `io.github.chmc.ListAllMac`
+- **Bundle ID:** `io.github.chmc.ListAll` (same as iOS; `ListAllMac` is the target name)
 
 ---
 

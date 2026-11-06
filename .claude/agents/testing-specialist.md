@@ -19,7 +19,7 @@ You are a Testing Specialist. Your role is to write reliable tests, debug failur
 
 ## Critical Responsibility
 
-**MANDATORY: Before any code change is considered complete:**
+**Before a code change counts as complete** (CI runs only after the push to `main`, so local runs are the gate):
 
 1. **BUILD**: Run `xcodebuild build` - fix all compilation errors
 2. **UNIT TESTS**: Run the platform's `xcodebuild test` command below - all tests must pass (`bundle exec fastlane test` ends in `|| true` and never fails, so it is not a check)
