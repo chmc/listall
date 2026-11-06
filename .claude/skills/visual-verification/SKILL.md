@@ -89,6 +89,32 @@ screenshot → understand context → interact → screenshot → validate → i
 
 When done: `listall_quit_macos` (quit) or `listall_hide_macos` (keep running hidden)
 
+## Fresh Build Before Verification
+
+**Clean once, then build every platform without `clean`.** `xcodebuild clean` wipes the whole shared `Build/Products` folder, not just its own scheme. A `clean build` per platform deletes the previous platform's app and the XCUITest runner, which then forces a slow rebuild (seen 2026-11-06: the macOS `clean build` removed `Debug-iphonesimulator/ListAll.app` and `ListAllUITests-Runner.app`).
+
+```bash
+# 1. Clean ONCE (only if code changed this session or DerivedData may be stale)
+xcodebuild clean -project ListAll/ListAll.xcodeproj -scheme ListAll -quiet
+
+# 2. macOS app (no clean)
+xcodebuild build -project ListAll/ListAll.xcodeproj -scheme ListAllMac -destination "platform=macOS" -quiet
+
+# 3. iOS app + XCUITest runner in one step (no clean); listall_query/click on simulators need the runner
+xcodebuild build-for-testing -project ListAll/ListAll.xcodeproj -scheme ListAll \
+  -destination "platform=iOS Simulator,name=iPhone 17 Pro" -quiet
+```
+
+Then run `listall_diagnostics`: every needed bundle under APP BUNDLES must say FOUND before you launch anything.
+
+Rules:
+- Never put `clean` in a per-platform loop, and never run `clean` after another platform has already been built.
+- iOS uses `build-for-testing`, not `build`: plain `build` does not produce `ListAllUITests-Runner.app`.
+- Never pass `-sdk iphonesimulator`. It forces the embedded watch app onto the iOS SDK, and install then fails with "WatchKit 2.0 app's UIDeviceFamily key does not specify that it's compatible with device family 4". `-destination` alone picks watchsimulator for the watch target.
+- Builds share DerivedData, so run them one after another, not in parallel.
+
+**Rebuilding the MCP server itself** (`Tools/listall-mcp`): `.mcp.json` runs `.build/debug/listall-mcp` straight from the repo. Back it up first (`cp -p Tools/listall-mcp/.build/debug/listall-mcp ~/listall-mcp.backup`). A failed build or a broken binary removes every `listall_*` tool. After a successful build, restart Claude Code. See `documentation/learnings/mcp-swift-sdk-xcode-26-6-build.md`.
+
 ## Tools
 
 ### Launch & Screenshot

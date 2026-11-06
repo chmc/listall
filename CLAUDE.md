@@ -21,12 +21,21 @@ SKILL USAGE INSTRUCTION:
 - Read before working: `/documentation/ARCHITECTURE.md`
 - Search `/documentation/learnings/*.md` when encountering issues (use tags/symptoms to find relevant files)
 - Before implementation: check if documentation in `/documentation/` needs updating based on the change
-- Always include .claude/agents/critic-reviewer.md to make sure that there is second opinion in place
+- Always include .claude/agents/critic-reviewer.md for a second opinion, at the planning stage (before asking for plan approval), not only before commit; see Decision Protocol
 - Update `documentation/features/SUMMARY.md` and category files after implementation
 - Visual verification (build → launch → screenshot → analyze) is mandatory after ALL implementation work
 - Follow: TDD, DRY, SOLID, YAGNI
 - All tests must pass before commit
 - One task at a time
+
+## Decision Protocol
+
+MANDATORY before every plan approval request, root-cause/fix decision, and "done" claim:
+
+1. **Verify facts**: give evidence for every claim the decision depends on: the command you ran and its output, or `file:line`. Take counts and warnings from a clean state (no incremental build or cache).
+2. **Separate**: present *verified* (with evidence) and *assumed / not verified* as separate lists. Do not claim certainty without evidence.
+3. **Challenge**: (a) challenge your own claims: what would make this wrong, and what was not tested? (b) For plans and non-trivial changes (not typo fixes), run `critic-reviewer` during planning. Give it the code and the plan, not your conclusions, and tell it to verify the claims itself.
+4. **Decide**: state the final decision with reasons, and say which claims were refuted and what changed as a result.
 
 ## Implementation Visual Verification
 
@@ -76,7 +85,7 @@ Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.
 | `shell-specialist` | Shell scripts | bash-scripting |
 | `testing-specialist` | Tests, verification | xctest, test-isolation |
 
-**Always run `critic` before major implementations.**
+**Always run `critic` before major implementations** (timing and method: see Decision Protocol).
 
 ## Learnings Format
 

@@ -26,6 +26,10 @@ When reviewing, examine: ASSUMPTIONS, RISKS, ALTERNATIVES, EDGE CASES, DEPENDENC
 
 Reference the `code-review` skill for detailed review patterns and severity levels.
 
+## Verify, Don't Trust
+
+Do not trust the author's "verified" claims, fact tables or code comments. Check the claims that the decision depends on yourself (read the code, run commands in a scratch copy). Report which claims you confirmed and which you refuted, with evidence. Where possible, prove a finding (failing test, mutation, log output) instead of asserting it.
+
 ## Structured Output
 
 1. **Summary**: One paragraph overview and assessment

@@ -29,6 +29,13 @@ description: Code review patterns and checklist for quality assurance. Use when 
 - **Debugging**: Can failures be easily diagnosed?
 - **Recovery**: What happens when jobs fail?
 
+### For Dependency Upgrades
+- **Runtime semantics**: A clean compile is not enough. Diff how the library calls your code: concurrency and serialization of handlers, cancellation, ordering, and default values.
+- **Transitive changes**: Diff `Package.resolved` (new or bumped packages).
+- **Pin type**: Under 0.x, `from:` accepts any 0.y and minor bumps can break the API. Use `.upToNextMinor(from:)`.
+- **Deprecations**: Count them from a clean build. Incremental builds under-report.
+- **Rollback**: Can the previous artifact be restored if the new build fails?
+
 ## Constructive Critique Patterns
 
 ### Do This
