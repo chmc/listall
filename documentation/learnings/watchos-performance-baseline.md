@@ -1,3 +1,15 @@
+---
+title: watchOS MCP Tools Performance Baseline
+date: 2026-02-03
+category: watchos
+tags:
+  - watchos
+  - mcp
+  - performance
+  - baseline
+  - xcuitest
+---
+
 # watchOS MCP Tools Performance Baseline
 
 **Date**: 2026-02-03

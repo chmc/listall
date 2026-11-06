@@ -1,3 +1,16 @@
+---
+title: idb Spike Investigation Findings
+date: 2026-02-03
+category: testing
+tags:
+  - idb
+  - ios-simulator
+  - mcp
+  - performance
+  - automation
+  - xcuitest
+---
+
 # idb Spike Investigation Findings
 
 **Date**: 2026-02-03

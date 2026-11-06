@@ -1,3 +1,16 @@
+---
+title: Publish Workflow macOS Fixes
+date: 2026-02-01
+category: ci-cd
+tags:
+  - fastlane
+  - deliver
+  - macos
+  - asc-api
+  - rating-config
+  - publish-workflow
+---
+
 # Publish Workflow macOS Fixes
 
 **Date**: 2026-02-01

@@ -1,3 +1,16 @@
+---
+title: ASC iOS Screenshot Upload API Bug (February 2026)
+date: 2026-02-01
+category: ci-cd
+tags:
+  - asc-api
+  - screenshots
+  - fastlane
+  - ci-cd
+  - display-type-not-allowed
+  - resolved
+---
+
 # ASC iOS Screenshot Upload API Bug (February 2026)
 
 **Date**: 2026-02-01

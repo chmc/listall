@@ -1,3 +1,16 @@
+---
+title: MCP Tool Improvement Decision
+date: 2026-02-03
+category: testing
+tags:
+  - mcp
+  - xcuitest
+  - retry
+  - batching
+  - performance
+  - decision
+---
+
 # MCP Tool Improvement Decision
 
 **Date**: 2026-02-03

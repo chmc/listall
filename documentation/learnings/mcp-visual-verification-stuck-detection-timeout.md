@@ -1,3 +1,16 @@
+---
+title: MCP Visual Verification: Stuck Detection and Timeout
+date: 2026-01-23
+category: testing
+tags:
+  - mcp
+  - timeout
+  - concurrency
+  - xcuitest
+  - process-management
+  - screenshots
+---
+
 # MCP Visual Verification: Stuck Detection and Timeout Implementation
 
 **Date**: 2026-01-23
