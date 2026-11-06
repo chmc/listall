@@ -66,7 +66,7 @@ try await toolCallGate.run { /* whole CallTool handler */ }
 - [ ] Count warnings from a clean build. An incremental build reported 17 deprecations; a clean build showed 53.
 - [ ] If the rpath points to an old Xcode after `xcode-select -s`, try `swift package purge-cache` or build with `--manifest-cache none` (not verified; `otool -l .build/debug/listall-mcp | grep -A2 LC_RPATH` shows the result).
 - [ ] `DEVELOPER_DIR` must point to `…/Contents/Developer`; a bare `/Applications/Foo.app` silently falls back to `/Applications/Xcode.app` (deliberately not handled).
-- [ ] Follow-up: make `ScreenshotStorage` and `XCUITestBridge` thread-safe on their own. The gate masks the problem but does not fix it.
+- [ ] Keep `SerialGate` around CallTool. It is the fix, not a workaround: the XCUITest runners (`ListAllUITests/MCPCommandRunner.swift:112-113` and the watchOS runner) use fixed `/tmp/listall_mcp_*.json` paths and run one command at a time, and `ScreenshotStorage` is only called from tool handlers. Removing or narrowing the gate brings the races back.
 
 ## Key Insight
 
