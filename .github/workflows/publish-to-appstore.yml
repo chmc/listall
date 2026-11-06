@@ -52,6 +52,11 @@ jobs:
         with:
           bundler-cache: true
 
+      # Fails if any release_notes.txt is empty or still equals the live
+      # version's "What's New" (1.1.22 was first uploaded with 1.1.20's notes).
+      - name: Verify release notes are updated
+        run: bundle exec fastlane validate_release_notes version:${{ inputs.version }}
+
       - name: Install ImageMagick (required for screenshot validation)
         run: brew install imagemagick
 
