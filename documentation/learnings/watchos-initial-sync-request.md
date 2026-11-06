@@ -74,6 +74,9 @@ func session(_ session: WCSession, activationDidCompleteWith state: ...) {
 paired devices). In the simulator you can verify the request (`sendMessage`) and that the iPhone sends
 ("Sending N lists ... via transferUserInfo"), but the lists only arrive on real devices.
 
+Device-verified 2026-11-06: TestFlight 1.1.23 (108) on iPhone + Apple Watch Ultra 4; the lists appeared on the
+watch without any change on the iPhone (user report).
+
 ## Known Gaps
 
 - If the iPhone app is not running at all, the background launch creates no `MainViewModel`, so the session is
