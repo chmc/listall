@@ -1,96 +1,24 @@
 ---
 name: swift-swiftui
-description: Swift and SwiftUI patterns, antipatterns, and best practices. Use when writing or reviewing Swift/SwiftUI code.
+description: "General Swift and SwiftUI conventions for this codebase: concurrency, state management with ObservableObject, view composition. Use when writing or reviewing Swift/SwiftUI code."
 ---
 
-# Swift & SwiftUI Best Practices
+# Swift & SwiftUI Conventions in ListAll
 
-## Patterns (Do This)
+Match the code that is already there; `documentation/ARCHITECTURE.md` has the layers (MVVM + repository, Core Data with `NSPersistentCloudKitContainer`, ~85% shared code via target membership).
 
-### State Management
-- Use `@Observable` macro (iOS 17+) for simple state instead of overusing Combine
-- Use `@Environment` for dependency injection instead of singletons
-- Prefer value types (struct) for models
+## State Management
+- ViewModels are `ObservableObject` classes with `@Published` properties, owned with `@StateObject` and passed with `@ObservedObject` / `@EnvironmentObject`. The codebase has no `@Observable` types; migrating is a separate decision, not something to do in passing.
+- Services are `static let shared` singletons behind protocols (`CoreDataManaging`, `DataManaging`, `CloudSyncProviding`), so tests can inject fakes. Add new services the same way and depend on the protocol, not the concrete type.
+- Prefer value types (struct) for models that don't come from Core Data.
 
-### Async/Concurrency
-- Prefer async/await over nested completion handlers
-- Use `actor` for thread-safe shared mutable state instead of manual locks
-- Use `TaskGroup` for concurrent operations instead of unbounded Task spawning
+## Concurrency
+- UI state changes happen on the main thread: `@MainActor` or `DispatchQueue.main.async`, as the surrounding code does.
+- Core Data work goes through the context's queue. `perform` is asynchronous: code after it runs before the block. Use `performAndWait` when the next line depends on the result. Mixing them up has caused repeated sync and ordering bugs (`documentation/learnings/macos-cloudkit-sync-race-condition.md`, `swift-testing-coredata-mainactor.md`).
+- Coalesce bursts of sync notifications into one reload with a cancellable `DispatchWorkItem` and `[weak self]` (see `WatchMainViewModel.scheduleSyncReload()`).
+- Prefer async/await to nested completion handlers in new code.
 
-### SwiftUI Views
-- Keep views small and focused, extract subviews
-- Handle errors explicitly with Result or throws
-
-### Error Handling
-- Never force unwrap (!)
-- Handle errors explicitly, never ignore them
-
-## Antipatterns (Avoid This)
-
-### State Management
-- Callback hell with nested completion handlers
-- Singletons everywhere with `shared` instances
-- Massive 500+ line SwiftUI views
-
-### Concurrency
-- Force unwrapping (!) and ignoring errors
-- Manual locks/semaphores for synchronization
-
-### Code Structure
-- God objects that do everything
-- Mixing UI and business logic
-
-## Code Examples
-
-### Good: Async/Await
-```swift
-func fetchItems() async throws -> [Item] {
-    let data = try await api.getData()
-    return try JSONDecoder().decode([Item].self, from: data)
-}
-```
-
-### Bad: Callback Hell
-```swift
-func fetchItems(completion: @escaping (Result<[Item], Error>) -> Void) {
-    api.getData { result in
-        switch result {
-        case .success(let data):
-            api.parseData(data) { parseResult in
-                // More nesting...
-            }
-        case .failure(let error):
-            completion(.failure(error))
-        }
-    }
-}
-```
-
-### Good: Actor for Thread Safety
-```swift
-actor DataCache {
-    private var cache: [String: Data] = [:]
-
-    func get(_ key: String) -> Data? {
-        cache[key]
-    }
-
-    func set(_ key: String, data: Data) {
-        cache[key] = data
-    }
-}
-```
-
-### Bad: Manual Locking
-```swift
-class DataCache {
-    private var cache: [String: Data] = [:]
-    private let lock = NSLock()
-
-    func get(_ key: String) -> Data? {
-        lock.lock()
-        defer { lock.unlock() }
-        return cache[key]
-    }
-}
-```
+## Views and Errors
+- Keep views small; extract subviews when a body grows past what fits on a screen.
+- Don't force unwrap. Handle or surface errors; don't swallow them silently.
+- Platform differences go behind `#if os(...)` in shared files, not in copied files.

@@ -1,6 +1,6 @@
 ---
 name: test-isolation
-description: Test isolation patterns to prevent permission dialogs on macOS. Use when tests trigger system access or when debugging permission issues.
+description: "Patterns that keep macOS tests from touching real system resources (App Groups, iCloud, Keychain) and raising permission dialogs. Use when a macOS test run shows a permission dialog or when writing tests for code that accesses system services."
 ---
 
 # macOS Test Isolation

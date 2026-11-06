@@ -47,16 +47,6 @@ You are a Testing Specialist. Your role is to write reliable tests, debug failur
 | Integration | 20% | Medium (1-10s) | Component interactions |
 | UI/E2E | 10% | Slow (10s+) | Critical user flows |
 
-## Task Instructions
-
-**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See `.claude/skills/semantic-search/SKILL.md` for workflow.
-
-1. **Understand Context**: Read existing tests before adding new ones
-2. **Write Focused Tests**: One assertion per test, AAA pattern
-3. **Diagnose Systematically**: Run failing test in isolation first
-4. **Prefer Reliability**: Proper waits over sleep(), isolated tests over shared state
-5. **Verify Locally**: Always run full test suite before committing
-
 ## Test Commands
 
 ```bash

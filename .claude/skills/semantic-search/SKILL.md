@@ -1,6 +1,6 @@
 ---
 name: semantic-search
-description: Reference for listall_call_graph MCP tool — modes, parameters, bootstrapping workflow, and decision matrix for Swift code exploration
+description: "Reference for the listall_call_graph MCP tool: modes, parameters, bootstrapping and when to use it instead of Grep. Use when finding callers, definitions, references or the call graph of a Swift symbol, or when a Grep for a symbol is blocked."
 ---
 
 # Semantic Search with `listall_call_graph`

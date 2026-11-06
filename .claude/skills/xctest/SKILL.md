@@ -151,3 +151,12 @@ let testItem = Item(
     text: "Item \(Int.random(in: 1...100))"
 )
 ```
+
+## macOS XCUITest in ListAll
+
+The macOS SwiftUI views don't expose the element types you would expect (see `documentation/learnings/macos-xcuitest-list-selection.md`):
+
+- Sidebar hierarchy: `AXOutline (ListsSidebar)` → `AXRow` → `AXCell` → `AXUnknown (SidebarListCell_<name>)`. Row 0 is the "Lists" header, row 1 the first list. Find cells with `app.otherElements["SidebarListCell_<name>"]`, not `staticTexts`.
+- The items list is an outline: `app.outlines["ItemsList"].outlineRows`, not `app.tables` / `tableRows`.
+- Item rows use `.accessibilityElement(children: .combine)`, so their inner `Text` views can't be queried; target the `outlineRows`.
+- Outline rows often fail `.click()` with "Not hittable". Click by coordinate: `element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()`.

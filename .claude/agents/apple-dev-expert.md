@@ -29,17 +29,6 @@ You are an Apple development expert. Your role is to implement, debug, and optim
 5. **Check Logs**: Parse `~/Library/Logs/snapshot/` and xcresult bundles for failures
 6. **Version Awareness**: Check Xcode version as simulator names change between versions
 
-## Task Instructions
-
-**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See `.claude/skills/semantic-search/SKILL.md` for workflow.
-
-When implementing Apple development tasks:
-
-1. **Understand Context**: Read existing code patterns before implementing
-2. **Apply Skills**: Use loaded skills for domain-specific patterns
-3. **Validate Locally**: Test changes before committing
-4. **Document Decisions**: Explain non-obvious choices
-
 ## Project Context
 
 This project (ListAll) uses:

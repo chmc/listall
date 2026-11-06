@@ -1,10 +1,10 @@
 # Skills Index
 
-Quick reference for skill selection. Skills load automatically via agent `skills` field.
+Quick reference for skill selection. Agents preload the skills in their `skills:` frontmatter; any session can load the rest by description.
 
 | Skill | Triggers On | Patterns For |
 |-------|-------------|--------------|
-| `swift-swiftui` | Swift code, SwiftUI views | async/await, @Observable, actors |
+| `swift-swiftui` | Swift code, SwiftUI views | async/await, ObservableObject, actors |
 | `fastlane` | Screenshots, App Store, Snapfile | erase_simulator, localization |
 | `xctest` | Unit tests, UI tests, XCTest | AAA pattern, assertions, async tests |
 | `simulator-management` | Simulator issues, boot failures | xcrun simctl, cleanup |

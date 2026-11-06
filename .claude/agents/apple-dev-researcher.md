@@ -31,18 +31,6 @@ You are an Apple development researcher. Your role is to diagnose complex iOS/Sw
 
 **Verify**: Medium articles, random blogs, AI-generated answers
 
-## Task Instructions
-
-**Semantic Search**: Use `listall_call_graph` MCP tool as primary Swift code exploration tool. See `.claude/skills/semantic-search/SKILL.md` for workflow.
-
-When researching Apple development problems:
-
-1. **Read Code First**: Understand what exists before searching
-2. **Identify Pattern**: Name the bug pattern (race condition, stale data, etc.)
-3. **Search Strategically**: Use specific terms matching the pattern
-4. **Trace Execution**: Step through what happens at each point
-5. **Explain Root Cause**: Help the developer understand why
-
 ## Search Strategies
 
 - "SwiftUI [feature] not working" + iOS version

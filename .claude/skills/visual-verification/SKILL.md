@@ -1,80 +1,15 @@
 ---
 name: visual-verification
-description: Verify implementations work by using ListAll apps via MCP tools. Close the feedback loop after any code change.
+description: "Build, launch, screenshot and interact with the ListAll apps (iOS, iPad, macOS, watchOS) through the listall MCP tools, plus the escalation ladder for tool failures. Use after any app-code change, when verifying UI behavior, or before reporting that something cannot be verified."
 ---
 
 # Implementation Verification
 
 These tools let you verify your code works by actually using the app. Launch it, interact with it, see the result. If wrong, fix and try again.
 
-## Visual-First Navigation Process
+## Screenshot First
 
-**CRITICAL**: Use screenshots as primary navigation input, not just passive verification. Understand the UI visually BEFORE interacting.
-
-### Step 1: Screenshot Analysis (Visual Context)
-
-Before ANY interaction, take a screenshot and identify:
-
-| Aspect | What to Identify |
-|--------|------------------|
-| **Platform** | iOS, macOS, watchOS |
-| **Structure** | Modal sheet? Navigation stack? Tab bar? Sidebar? |
-| **Layout zones** | Top bar, content area, bottom bar |
-| **Visual hierarchy** | What's emphasized (color, size, position)? |
-
-**iOS Sheet Detection Signals:**
-- Rounded corners at top
-- Dimmed/translucent background behind
-- Drag indicator at top-center
-- Title bar with Cancel (left) and Create/Save (right)
-
-### Step 2: Apply HIG Pattern Recognition
-
-Match visual patterns to known iOS/macOS conventions:
-
-| Visual Pattern | Meaning | Action |
-|----------------|---------|--------|
-| Top-right button in nav bar | Primary action (Create, Save, Done) | Click to complete task |
-| Top-left button in nav bar | Secondary action (Cancel, Back) | Click to dismiss/go back |
-| Dimmed overlay + rounded modal | Sheet presentation | Actions are scoped to sheet |
-| Back chevron + title | Navigation stack | Swipe right or tap back |
-| Bottom tab bar (3-5 icons) | Main navigation | Tap to switch sections |
-
-### Step 3: Scoped Query for Precision
-
-After visual analysis, query ONLY what's needed:
-```
-Visual: "I see a sheet with Create button in top-right"
-Query: Find button with label "Create" in navigation bar area
-Action: Click the specific element found
-```
-
-### Step 4: Execute with Context
-
-Click/type based on:
-- Element role (button → click, textField → type)
-- Expected visual feedback (sheet dismisses, list updates)
-- Next state prediction (what should appear after action)
-
-### Step 5: Visual Verification Loop
-
-After action, screenshot and verify:
-- Did expected change occur? (sheet closed, item added)
-- Any error states? (validation message, loading spinner)
-- Ready for next action?
-
-### Example: "Add Peruna" Workflow
-
-```
-1. Screenshot iPhone → "I see a list view with items"
-2. Visual analysis → "There's an 'Item' button to add new items"
-3. Click 'Item' → Opens sheet
-4. Screenshot → "I see a modal sheet with text field and Create button in top-right nav bar"
-5. Type 'Peruna' in text field
-6. Visual analysis → "Create button is in top-right corner of sheet's navigation bar"
-7. Click 'Create' (top-right nav bar button)
-8. Screenshot → "Sheet closed, Peruna appears in list"
-```
+Take a screenshot before interacting and decide what you are looking at (sheet, navigation stack, sidebar), then use `listall_query` scoped to the element you need instead of guessing coordinates. After each action, screenshot again and study it: the expected change, clipped or overlapping text, alignment, navigation bar, empty and error states, and the same screen on the other affected platforms. The user expects the screenshots to have been analyzed, not just taken.
 
 ## The Loop
 
@@ -222,6 +157,8 @@ Verify on every platform your change affects, and compare the screenshots for co
 | watchOS | Watch app affected | `io.github.chmc.ListAll.watchkitapp` | `listall_screenshot` (Watch simulator) |
 
 Launch iOS and macOS with `UITEST_MODE` and `DISABLE_TOOLTIPS` (deterministic test data, no feature tips covering the UI). The watch app only reads `UITEST_MODE`.
+
+**Finnish locale on macOS**: `listall_launch_macos` does not pass `-AppleLanguages`, so launch with `open -a ListAll.app --args UITEST_MODE DISABLE_TOOLTIPS -AppleLanguages "(fi)"` and then use the MCP tools. Finnish labels: Settings is "Asetukset" (menu identifier `menuAction:`, same as English), the feature tips item is "Näytä kaikki ominaisuusvinkit".
 
 **If the `listall_*` tools are missing** from the session, stop and ask the user to restart Claude Code (the MCP server loads at startup). Don't substitute `screencapture` or `simctl io`: they capture whatever state the device is in, without the test data, the accessibility tree or the interaction tools, so they can't show that the change works.
 

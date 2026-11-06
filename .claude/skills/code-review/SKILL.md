@@ -1,93 +1,39 @@
 ---
 name: code-review
-description: Code review patterns and checklist for quality assurance. Use when reviewing code changes, PRs, or validating implementations.
+description: "Review checklist and severity levels for ListAll changes, focused on correctness. Use when reviewing a diff, PR or plan, or validating an implementation before commit."
 ---
 
-# Code Review Standards
+# Code Review
 
-## Review Lenses by Domain
+Look for what would make the change wrong, and prove findings (failing test, log, `file:line`) instead of asserting them. Skip style preferences and tests for cases that cannot happen; say plainly when a part is fine.
 
-### For Code Changes
-- **Correctness**: Does it do what it claims?
-- **Security**: Are there vulnerabilities?
-- **Performance**: Are there bottlenecks?
-- **Maintainability**: Can others understand and modify this?
-- **Testing**: Is it adequately tested?
-- **Error handling**: What happens when things go wrong?
+## Severity
 
-### For Architecture Decisions
-- **Scalability**: Will this work at 10x or 100x load?
-- **Flexibility**: Can this adapt to changing requirements?
-- **Simplicity**: Is this the simplest solution that works?
-- **Coupling**: Are components appropriately independent?
-- **Standards**: Does this follow established patterns?
+| Level | Meaning |
+|-------|---------|
+| CRITICAL | Data loss, crash, sync corruption, broken release; must fix |
+| IMPORTANT | Wrong behavior in a real scenario, missing test for changed logic; fix before commit |
+| MINOR | Real but low-impact issue; fix if cheap |
+| OBSERVATION | Worth knowing, no action needed |
 
-### For CI/CD Pipeline Changes
-- **Reliability**: Will this make the pipeline more or less stable?
-- **Speed**: Impact on build and deploy times?
-- **Cost**: Resource usage and runner costs?
-- **Debugging**: Can failures be easily diagnosed?
-- **Recovery**: What happens when jobs fail?
+## ListAll Risk Checklist
 
-### For Dependency Upgrades
-- **Runtime semantics**: A clean compile is not enough. Diff how the library calls your code: concurrency and serialization of handlers, cancellation, ordering, and default values.
-- **Transitive changes**: Diff `Package.resolved` (new or bumped packages).
-- **Pin type**: Under 0.x, `from:` accepts any 0.y and minor bumps can break the API. Use `.upToNextMinor(from:)`.
-- **Deprecations**: Count them from a clean build. Incremental builds under-report.
-- **Rollback**: Can the previous artifact be restored if the new build fails?
+Recurring bug sources in this codebase, check these first:
 
-## Constructive Critique Patterns
+- **Core Data threading**: `perform` vs `performAndWait` where the next line depends on the result; contexts used off their queue (`documentation/learnings/macos-cloudkit-sync-race-condition.md`).
+- **Sync reloads**: notification bursts must coalesce into one reload; reloads must not overwrite an in-flight mutation (`coredata-sync` skill).
+- **Watch connectivity**: payload shape changes need both iPhone and watch sides plus the round-trip test (`watch-connectivity` skill).
+- **Platforms**: shared files compile for iOS, macOS and watchOS; `#if os(...)` branches all still build.
+- **Localization**: new user-facing strings have Finnish translations in `Localizable.xcstrings`.
+- **Tests**: wait on state (`XCTNSPredicateExpectation`), not fixed `asyncAfter` delays; macOS tests don't touch real App Groups or iCloud (`test-isolation` skill).
+- **Docs**: user-facing feature changes update `documentation/features/` (the `feature-doc-gate` hook enforces this on `feat` commits).
 
-### Do This
-- Frame critiques to further discussion, not tear down
-- Offer specific, actionable feedback with examples
-- Acknowledge what is good before pointing out issues
-- Suggest alternatives when identifying problems
-- Use Socratic questioning to help others discover issues
-- Stay focused on the work, never the person
+## Lenses by Change Type
 
-### Effective Challenge Techniques
-- Ask "What would make this fail?" before "Will this work?"
-- Request evidence for claims and assumptions
-- Look for what is missing, not just what is present
-- Consider second-order effects
-- Test ideas against edge cases
-- Question whether the problem itself is correctly defined
+- **Code**: correctness, error handling, test coverage of the changed logic.
+- **CI/CD**: reliability, run time, whether a failure is diagnosable from the log, what happens when a job is cancelled or times out.
+- **Dependency upgrades**: a clean compile is not enough. Diff how the library calls your code (concurrency and serialization of handlers, cancellation, ordering, defaults). Diff `Package.resolved`. Under 0.x, `from:` accepts any 0.y; use `.upToNextMinor(from:)`. Count deprecations from a clean build. Know how to roll back.
 
-## Red Team Thinking
+## Escalate
 
-- Assume the role of an adversary trying to break the solution
-- Look for the weakest link in any chain of logic
-- Consider how requirements might change in the future
-- Identify single points of failure
-- Question whether success metrics actually measure success
-
-## Antipatterns (Avoid)
-
-### Destructive Criticism
-- Criticizing without offering alternatives
-- Focusing on style preferences rather than substance
-- Making personal attacks
-- Being negative for the sake of being negative
-- Blocking progress indefinitely
-
-### Analysis Paralysis
-- Demanding perfection when good enough will do
-- Finding problems without assessing impact
-- Treating all issues as equally important
-- Continuously moving goalposts
-
-### Poor Communication
-- Using vague criticism like "this feels wrong"
-- Failing to explain why something is problematic
-- Not prioritizing feedback by importance
-- Overwhelming with too many issues at once
-
-## When to Escalate Concerns
-
-Raise strong objections when:
-- User safety or data privacy is at risk
-- Legal or compliance issues are present
-- Irreversible actions are proposed without safeguards
-- Core architecture is being changed without sufficient analysis
-- Technical debt is being added without acknowledgment
+Object strongly when user data or privacy is at risk, an irreversible step has no safeguard, or core architecture changes without analysis.

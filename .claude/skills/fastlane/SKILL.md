@@ -65,18 +65,7 @@ concurrent_simulators(true)
 
 ## Simulator Management
 
-### Patterns
-
-- Let Fastlane boot simulators on demand
-- Run `xcrun simctl shutdown all` before screenshot runs
-- Run `xcrun simctl delete unavailable` for cleanup
-- Set `SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT=120`
-
-### Antipatterns
-
-- Pre-booting simulators before Fastlane (causes race conditions)
-- Leaving simulators in unknown state
-- Accumulating broken/duplicate simulators
+Shut down and clean simulators before screenshot runs and let Fastlane boot them on demand; commands and antipatterns are in the `simulator-management` skill.
 
 ## App Store Screenshot Requirements
 

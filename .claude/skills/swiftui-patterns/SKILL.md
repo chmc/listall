@@ -1,6 +1,6 @@
 ---
 name: swiftui-patterns
-description: SwiftUI patterns and antipatterns for List, ForEach, onMove, and data binding. Use when debugging SwiftUI issues or implementing list features.
+description: "SwiftUI List, ForEach, onMove and data-binding bugs: reordering, stale rows, drag and drop. Use when debugging list behavior or implementing list features."
 ---
 
 # SwiftUI List/ForEach Patterns
@@ -117,15 +117,7 @@ func updateItem(_ item: Item) {
 ```
 
 ### Pattern
-Single source of reload, debounced, with mutation protection:
-```swift
-var isMutating = false
-
-func loadData() {
-    guard !isMutating else { return }  // Skip during mutation
-    // ... load
-}
-```
+One source of reload, coalesced (cancellable `DispatchWorkItem`), skipped while a mutation is in flight. The `isMutating` guard is in the `coredata-sync` skill ("Remote Change Notification Timing").
 
 ## Debugging Checklist
 
