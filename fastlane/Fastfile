@@ -129,6 +129,25 @@ def validate_release_notes!(platform:, version:)
   UI.success("✅ #{platform} release notes are updated for #{version}")
 end
 
+# App Review contact for deliver's app_review_information. The repo is public, so
+# the contact comes from GitHub secrets (REVIEW_CONTACT_*) instead of the
+# metadata/review_information/*.txt files; notes.txt stays in git. App Store
+# Connect requires all four fields before "Add for Review", so fail before upload.
+def review_contact_from_env
+  fields = {
+    first_name: "REVIEW_CONTACT_FIRST_NAME",
+    last_name: "REVIEW_CONTACT_LAST_NAME",
+    email_address: "REVIEW_CONTACT_EMAIL",
+    phone_number: "REVIEW_CONTACT_PHONE"
+  }
+  missing = fields.values.select { |name| ENV[name].to_s.strip.empty? }
+  unless missing.empty?
+    UI.user_error!("❌ App Review contact missing: set #{missing.join(', ')} (GitHub secrets for Publish to App Store)")
+  end
+
+  fields.transform_values { |name| ENV[name].strip }
+end
+
 # Prepare screenshots for deliver by copying RAW NORMALIZED screenshots (not framed)
 # App Store Connect requires exact pixel dimensions (Apple's 2026 requirements):
 # - iPhone 6.9": 1260x2736 (2026 standard)
@@ -711,6 +730,7 @@ platform :ios do
       in_house: false
     )
     validate_release_notes!(platform: "IOS", version: version)
+    review_contact = review_contact_from_env
 
     # Path to normalized screenshots (exact App Store dimensions, not framed)
     # App Store Connect requires exact pixel dimensions (Apple's 2026 requirements):
@@ -739,6 +759,7 @@ platform :ios do
       screenshots_path: skip_screenshots ? nil : delivery_path,
       skip_screenshots: skip_screenshots,
       overwrite_screenshots: !skip_screenshots,
+      app_review_information: review_contact,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,
@@ -818,6 +839,7 @@ platform :ios do
       in_house: false
     )
     validate_release_notes!(platform: "MAC_OS", version: version)
+    review_contact = review_contact_from_env
 
     screenshots_path = File.expand_path("screenshots/mac/processed", __dir__)
 
@@ -863,6 +885,7 @@ platform :ios do
       screenshots_path: skip_screenshots ? nil : screenshots_path,
       skip_screenshots: skip_screenshots,
       overwrite_screenshots: !skip_screenshots,
+      app_review_information: review_contact,
       skip_binary_upload: true,
       submit_for_review: false,
       precheck_include_in_app_purchases: false,

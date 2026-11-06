@@ -27,6 +27,11 @@ jobs:
       ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
       MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
       MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+      # App Review contact (required by "Add for Review"); kept out of the public repo
+      REVIEW_CONTACT_FIRST_NAME: ${{ secrets.REVIEW_CONTACT_FIRST_NAME }}
+      REVIEW_CONTACT_LAST_NAME: ${{ secrets.REVIEW_CONTACT_LAST_NAME }}
+      REVIEW_CONTACT_EMAIL: ${{ secrets.REVIEW_CONTACT_EMAIL }}
+      REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
 
     steps:
       - name: Checkout repository

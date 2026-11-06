@@ -1,0 +1,26 @@
+ListAll is a privacy-focused list management app for iPhone, iPad and Apple Watch with iCloud sync. No login or demo account is needed.
+
+KEY TESTING INSTRUCTIONS:
+1. Create a new list by tapping the + button on the main screen, or start from a template
+2. Add items to the list with title, description, and quantity
+3. Add photos to items using the camera or photo library
+4. Type similar item names multiple times to see smart suggestions appear
+5. Cross out items by tapping the checkbox
+6. Archive a list from its context menu (long-press)
+7. Enable Face ID/Touch ID lock in Settings (if available on the test device)
+
+WATCHOS TESTING:
+1. Open the watchOS app on the paired Apple Watch
+2. Lists sync automatically from iPhone
+3. Tap items to mark them complete; changes sync back to iPhone
+
+PRIVACY PERMISSIONS:
+- Camera: attach photos to list items
+- Photo Library: select existing photos for list items
+- Face ID/Touch ID: optional app lock
+- iCloud: syncs data across the user's devices when signed in to iCloud
+
+NO THIRD-PARTY SERVICES:
+- All data is stored locally or in the user's iCloud
+- No analytics, tracking, ads, subscriptions or in-app purchases
+- The app works completely offline

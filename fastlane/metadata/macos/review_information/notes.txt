@@ -1,0 +1,23 @@
+ListAll for Mac is a privacy-focused list management app with iCloud sync to iOS. No login or demo account is needed.
+
+KEY TESTING INSTRUCTIONS:
+1. Create a new list via File > New List (Cmd+Shift+N)
+2. Add items using File > New Item (Cmd+N)
+3. Add photos to items via drag-and-drop or paste
+4. Type similar item names multiple times to see smart suggestions
+5. Cross out items by clicking the checkbox
+6. Archive lists via the Lists menu or context menu
+7. Preview items with images using Quick Look (spacebar)
+8. Try the keyboard shortcuts (see the Lists and Edit menus)
+9. Services menu: select text in Safari, right-click > Services > Add to ListAll
+10. Handoff: start on iPhone, continue on Mac (or vice versa)
+
+PRIVACY PERMISSIONS:
+- Photos: access existing photos for list items
+- iCloud: sync data across devices (enabled by default)
+- Network: required for iCloud sync
+
+NO THIRD-PARTY SERVICES:
+- All data is stored locally or in the user's iCloud
+- No analytics, tracking, ads, subscriptions or in-app purchases
+- The app works completely offline; iCloud syncs when available

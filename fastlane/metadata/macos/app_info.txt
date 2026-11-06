@@ -86,6 +86,8 @@ Availability: All Territories
 
 REVIEW NOTES (macOS-Specific)
 =============================
+(Uploaded from review_information/notes.txt; keep that file as the source.)
+
 ListAll for Mac is a privacy-focused list management app with iCloud sync to iOS.
 
 KEY TESTING INSTRUCTIONS:
@@ -128,9 +130,7 @@ SANDBOX ENTITLEMENTS:
 
 CONTACT INFORMATION
 ===================
-First Name: Aleksi
-Last Name: Sutela
-Phone: [TO BE FILLED]
-Email: [TO BE FILLED]
+Uploaded by Publish to App Store from the GitHub secrets REVIEW_CONTACT_*
+(not stored in this public repo). Review notes: review_information/notes.txt
 
 Demo Account: Not required (no login system)
