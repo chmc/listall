@@ -70,6 +70,8 @@ Availability: All Territories
 
 REVIEW NOTES
 ============
+(Uploaded from review_information/notes.txt; keep that file as the source.)
+
 ListAll is a privacy-focused list management app with iOS and watchOS support.
 
 KEY TESTING INSTRUCTIONS:
@@ -109,9 +111,8 @@ SPECIAL NOTES:
 
 CONTACT INFORMATION
 ===================
-First Name: Aleksi
-Last Name: Sutela
-Email: listallapp@gmail.com
+Uploaded by Publish to App Store from the GitHub secrets REVIEW_CONTACT_*
+(not stored in this public repo).
 
 Demo Account: Not required (no login system)
 
