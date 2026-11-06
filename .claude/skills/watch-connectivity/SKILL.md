@@ -70,6 +70,22 @@ class WatchConnectivityService: NSObject, WCSessionDelegate {
 }
 ```
 
+**Ordering (ListAll):** `WatchConnectivityService.init(session:)` only sets the delegate. View models call
+`activate()` after registering their incoming-data observers; otherwise queued transfers are delivered before anyone
+listens and are lost. Send on `activationDidCompleteWith`, never on a timer: `activate()` is asynchronous, and the old
+`asyncAfter(3.0)` send always hit `activationState != .activated` and silently returned
+(`documentation/learnings/watchos-initial-sync-request.md`).
+
+## Testing
+
+- **Fake session**: the service takes a `WatchSessionProtocol`; see `FakeWatchSession` in
+  `ListAllTests/WatchConnectivityInitialSyncTests.swift` (iOS) and `ListAllWatch Watch AppTests/WatchFullSyncRequestTests.swift`.
+- **Round trip**: `testListsPayloadRoundTripsThroughReceivingService` hands the exact `sendListsData` payload to the
+  receiving service's `didReceiveUserInfo` and checks the decoded lists.
+- **Simulator limit**: `transferUserInfo` is not delivered between simulators (Apple docs; 5 transfers, 0 received).
+  `sendMessage` works there. Verify requests/sends from the logs (`log stream --predicate 'subsystem == "com.listall"'`),
+  cover delivery with the round-trip test, and do the final check on a device.
+
 ## Boundary Validation
 
 ```swift
@@ -96,6 +112,11 @@ func handleWatchMessage(_ message: [String: Any]) {
 - **Cause**: `applicationContext` not updated
 - **Fix**: Call `updateApplicationContext` after changes
 - **Prevention**: Update context on every relevant data change
+
+### "Watch stays empty until something changes on the iPhone"
+- **Cause**: Data was only sent on edits; a launch-time send ran before activation
+- **Fix**: Send on activation / `sessionWatchStateDidChange`; watch sends `fullSyncRequest` on launch and refresh
+- **Prevention**: Every empty state that depends on the other device needs a way to fetch the data
 
 ### "Session activation fails"
 - **Cause**: Watch not paired or app not installed on watch

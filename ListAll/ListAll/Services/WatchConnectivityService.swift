@@ -3,6 +3,38 @@ import Combine
 import WatchConnectivity
 import os.log
 
+/// The parts of WCSession the service uses, so tests can substitute a fake session
+protocol WatchSessionProtocol: AnyObject {
+    var delegate: WCSessionDelegate? { get set }
+    var activationState: WCSessionActivationState { get }
+    var isReachable: Bool { get }
+    #if os(iOS)
+    var isPaired: Bool { get }
+    var isWatchAppInstalled: Bool { get }
+    #endif
+    /// True while a full lists transfer is still queued for the paired device
+    var hasOutstandingListsTransfer: Bool { get }
+    func activate()
+    func sendMessage(_ message: [String: Any],
+                     replyHandler: (([String: Any]) -> Void)?,
+                     errorHandler: ((Error) -> Void)?)
+    /// Queues a transferUserInfo transfer (delivered in order, even if not reachable)
+    func queueUserInfo(_ userInfo: [String: Any])
+}
+
+extension WCSession: WatchSessionProtocol {
+    var hasOutstandingListsTransfer: Bool {
+        outstandingUserInfoTransfers.contains {
+            $0.isTransferring && $0.userInfo[WatchConnectivityService.MessageKey.dataType] as? String
+                == WatchConnectivityService.DataType.fullSync
+        }
+    }
+
+    func queueUserInfo(_ userInfo: [String: Any]) {
+        _ = transferUserInfo(userInfo)
+    }
+}
+
 /// Service for handling communication between iOS and watchOS apps using WatchConnectivity framework
 /// This service provides direct device-to-device communication when both devices are paired and in range
 /// Complements CloudKit sync by providing instant notifications of data changes
@@ -18,8 +50,8 @@ class WatchConnectivityService: NSObject, ObservableObject {
     
     // MARK: - Singleton
     
-    static let shared = WatchConnectivityService()
-    
+    static let shared = WatchConnectivityService(session: WCSession.isSupported() ? WCSession.default : nil)
+
     // MARK: - Properties
     
     @Published private(set) var isReachable: Bool = false
@@ -30,45 +62,54 @@ class WatchConnectivityService: NSObject, ObservableObject {
     @Published private(set) var isWatchAppInstalled: Bool = false
     #endif
     
-    private let session: WCSession?
+    #if os(iOS)
+    /// Supplies the iPhone's current lists when the watch needs a full sync
+    /// (session activation, watch app install, or a request from the watch)
+    var listsProvider: (() -> [List])?
+    #endif
+
+    private let session: WatchSessionProtocol?
     private let logger = Logger(subsystem: "com.listall", category: "WatchConnectivity")
-    
+
     // MARK: - Message Keys
-    
-    private enum MessageKey {
+
+    fileprivate enum MessageKey {
         static let syncNotification = "syncNotification"
         static let timestamp = "timestamp"
         static let listsData = "listsData"
         static let dataType = "dataType"
     }
-    
-    private enum DataType {
+
+    fileprivate enum DataType {
         static let fullSync = "fullSync"
+        /// Sent by the watch to ask the iPhone for its current lists
+        static let fullSyncRequest = "fullSyncRequest"
     }
-    
+
     // MARK: - Initialization
-    
-    override init() {
-        // Initialize session if supported on this device
-        if WCSession.isSupported() {
-            self.session = WCSession.default
-        } else {
-            self.session = nil
-            logger.warning("WatchConnectivity is not supported on this device")
-        }
-        
+
+    /// Sets the delegate but does not activate. Call `activate()` only after the incoming data
+    /// observers are registered, otherwise queued transfers are delivered to nobody and lost.
+    init(session: WatchSessionProtocol?) {
+        self.session = session
         super.init()
-        
-        // Activate session if available
+
         if let session = session {
             session.delegate = self
-            session.activate()
-            logger.info("WatchConnectivity session activation requested")
+        } else {
+            logger.warning("WatchConnectivity is not supported on this device")
         }
     }
-    
+
+    /// Activates the session (no-op if already activated)
+    func activate() {
+        guard let session = session, session.activationState == .notActivated else { return }
+        session.activate()
+        logger.info("WatchConnectivity session activation requested")
+    }
+
     // MARK: - Public Methods
-    
+
     #if os(iOS)
     /// Sends language preference to watchOS
     func sendLanguagePreference(_ languageCode: String) {
@@ -93,7 +134,7 @@ class WatchConnectivityService: NSObject, ObservableObject {
             })
         } else {
             // Watch not reachable, queue for background delivery
-            _ = session.transferUserInfo(message)
+            session.queueUserInfo(message)
             logger.info("Queued language preference for background delivery: \(languageCode)")
         }
     }
@@ -194,7 +235,7 @@ class WatchConnectivityService: NSObject, ObservableObject {
             
             // Use transferUserInfo for reliable background transfer
             // This queues the transfer if the device is not reachable
-            _ = session.transferUserInfo(userInfo)
+            session.queueUserInfo(userInfo)
             
             logger.info("📤 Sending \(lists.count) lists to paired device via transferUserInfo")
             
@@ -213,7 +254,74 @@ class WatchConnectivityService: NSObject, ObservableObject {
         return session.isReachable
         #endif
     }
-    
+
+    // MARK: - Full Sync
+
+    #if os(iOS)
+    /// Sends the iPhone's current lists to the watch, if its app is installed.
+    /// Empty results are not sent: the watch ignores them anyway.
+    func sendCurrentListsToWatch() {
+        guard let session = session,
+              session.activationState == .activated,
+              session.isWatchAppInstalled else { return }
+        guard let lists = listsProvider?(), !lists.isEmpty else { return }
+        sendListsData(lists)
+    }
+    #endif
+
+    #if os(watchOS)
+    /// Asks the iPhone for its current lists.
+    /// While watch changes are still queued, the request is queued behind them so the iPhone
+    /// receives them before replying; otherwise the reply would delete them on the watch.
+    func requestFullSync() {
+        guard let session = session, session.activationState == .activated else { return }
+
+        let request: [String: Any] = [
+            MessageKey.dataType: DataType.fullSyncRequest,
+            MessageKey.timestamp: Date().timeIntervalSince1970
+        ]
+
+        guard session.isReachable, !session.hasOutstandingListsTransfer else {
+            session.queueUserInfo(request)
+            logger.info("Queued full sync request for the iPhone")
+            return
+        }
+
+        // sendMessage wakes the iPhone app in the background; queue if that fails
+        session.sendMessage(request, replyHandler: nil) { [weak self] error in
+            self?.logger.error("Full sync request failed, queueing: \(error.localizedDescription)")
+            session.queueUserInfo(request)
+        }
+        logger.info("Requested full sync from the iPhone")
+    }
+    #endif
+
+    /// Called on the main queue once the session is activated
+    func handleActivationCompleted() {
+        #if os(iOS)
+        sendCurrentListsToWatch()
+        #else
+        requestFullSync()
+        #endif
+    }
+
+    #if os(iOS)
+    /// Called on the main queue when the watch app is installed/removed or pairing changes
+    func handleWatchStateChanged() {
+        sendCurrentListsToWatch()
+    }
+    #endif
+
+    /// Called on the main queue for every message and userInfo from the paired device
+    func handleIncomingPayload(_ payload: [String: Any]) {
+        #if os(iOS)
+        if payload[MessageKey.dataType] as? String == DataType.fullSyncRequest {
+            logger.info("📥 Watch requested full sync")
+            sendCurrentListsToWatch()
+        }
+        #endif
+    }
+
     // MARK: - Private Methods
     
     private func updateReachabilityStatus() {
@@ -302,7 +410,10 @@ extension WatchConnectivityService: WCSessionDelegate {
         case .activated:
             logger.info("WCSession activated successfully")
             updateReachabilityStatus()
-            
+            DispatchQueue.main.async {
+                self.handleActivationCompleted()
+            }
+
         case .inactive:
             logger.warning("WCSession is inactive")
             
@@ -321,7 +432,10 @@ extension WatchConnectivityService: WCSessionDelegate {
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         logger.info("Received message from paired device: \(message)")
-        
+        DispatchQueue.main.async {
+            self.handleIncomingPayload(message)
+        }
+
         // Check if this is a language update from iOS
         #if os(watchOS)
         if let languageCode = message["language"] as? String {
@@ -338,7 +452,10 @@ extension WatchConnectivityService: WCSessionDelegate {
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         logger.info("Received message with reply handler from paired device: \(message)")
-        
+        DispatchQueue.main.async {
+            self.handleIncomingPayload(message)
+        }
+
         // Check if this is a language update from iOS
         #if os(watchOS)
         if let languageCode = message["language"] as? String {
@@ -379,7 +496,10 @@ extension WatchConnectivityService: WCSessionDelegate {
     
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
         logger.info("📥 Received userInfo from paired device")
-        
+        DispatchQueue.main.async {
+            self.handleIncomingPayload(userInfo)
+        }
+
         // Check if this contains lists data
         if let dataType = userInfo[MessageKey.dataType] as? String {
             if dataType == DataType.fullSync {
@@ -401,6 +521,9 @@ extension WatchConnectivityService: WCSessionDelegate {
     func sessionWatchStateDidChange(_ session: WCSession) {
         logger.info("Watch state changed")
         updateReachabilityStatus()
+        DispatchQueue.main.async {
+            self.handleWatchStateChanged()
+        }
     }
     #endif
 }

@@ -12,15 +12,19 @@ struct WatchListsView: View {
                     // Show error state
                     WatchErrorView(message: errorMessage) {
                         Task {
-                            await viewModel.refresh()
+                            await performRefresh()
                         }
                     }
                 } else if viewModel.isLoading && viewModel.lists.isEmpty {
                     // Show loading indicator on initial load
                     WatchLoadingView(message: watchLocalizedString("Loading lists...", comment: "watchOS loading message when loading lists"))
                 } else if viewModel.lists.isEmpty {
-                    // Show empty state
-                    WatchEmptyStateView()
+                    // Show empty state (pull-to-refresh and a sync button ask the iPhone for lists)
+                    WatchPullToRefreshView {
+                        WatchEmptyStateView(onSync: performRefresh)
+                    } onRefresh: {
+                        await performRefresh()
+                    }
                 } else {
                     // Show lists
                     listsContent
@@ -71,9 +75,14 @@ struct WatchListsView: View {
                 WatchListView(list: list)
             }
         } onRefresh: {
-            WatchHapticManager.shared.playRefresh()
-            await viewModel.refresh()
+            await performRefresh()
         }
+    }
+
+    // MARK: - Refresh
+    private func performRefresh() async {
+        WatchHapticManager.shared.playRefresh()
+        await viewModel.refresh()
     }
 }
 

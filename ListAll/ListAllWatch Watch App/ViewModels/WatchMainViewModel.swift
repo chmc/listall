@@ -35,10 +35,11 @@ class WatchMainViewModel: ObservableObject {
         // 3. RELOAD lists after cleanup to get clean data
         loadLists()
         
-        // 4. Auto-sync clean data to iPhone (after WatchConnectivity activates)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            WatchConnectivityService.shared.sendListsData(self.dataManager.lists)
-        }
+        // 4. Activate WatchConnectivity after the observers above are registered, so queued
+        //    iPhone transfers are not lost; activation then requests the iPhone's lists.
+        //    The watch no longer pushes a full snapshot here: a stale snapshot would delete
+        //    iPhone lists it has never seen. Watch edits are still sent as they happen.
+        WatchConnectivityService.shared.activate()
     }
     
     deinit {
@@ -222,13 +223,14 @@ class WatchMainViewModel: ObservableObject {
     }
     
     /// Refresh data manually (for pull-to-refresh and manual sync button)
+    /// Does not set `isLoading`: the loading view would replace the empty state (and its sync
+    /// button) mid-refresh. Progress shows in the sync indicator instead.
     func refresh() async {
         await MainActor.run {
-            isLoading = true
             isSyncingFromiOS = true
             errorMessage = nil
         }
-        
+
         // Wait for WatchConnectivity session to be ready
         let watchConnectivity = WatchConnectivityService.shared
         var waitCount = 0
@@ -236,19 +238,16 @@ class WatchMainViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             waitCount += 1
         }
-        
-        // Send our data to iPhone if session is ready
-        if watchConnectivity.isActivated {
-            watchConnectivity.sendListsData(dataManager.lists)
-        }
-        
+
+        // Ask the iPhone for its lists; its reply arrives as a lists transfer
+        watchConnectivity.requestFullSync()
+
         // Reload data from Core Data (in case iPhone sent us data)
         dataManager.loadData()
-        
+
         await MainActor.run {
             loadLists()
-            isLoading = false
-            
+
             // Hide sync indicator after brief delay
             Task {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
