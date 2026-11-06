@@ -26,14 +26,17 @@ if ! printf '%s' "${PROSE}" | grep -Eiq "${LIMITATION_PATTERN}"; then
 fi
 
 # Attempts are listed: nothing to add
-if printf '%s' "${MESSAGE}" | grep -Eiq '(Kokeiltu|Tried)[*_]*:'; then
+if printf '%s' "${PROSE}" | grep -Eiq '(Kokeiltu|Tried)[*_]*:'; then
   exit 0
 fi
 
 # Loop guard 2: at most once per message (independent of stop_hook_active semantics)
 SESSION_ID=$(echo "${INPUT}" | jq -r '.session_id // "unknown"')
 HASH=$(printf '%s' "${MESSAGE}" | shasum | cut -c1-16)
-MARKER="${TMPDIR:-/tmp}/claude-verification-gap-${SESSION_ID}-${HASH}"
+MARKER_DIR="${TMPDIR:-/tmp}/claude-verification-gap"
+mkdir -p "${MARKER_DIR}"
+find "${MARKER_DIR}" -type f -mtime +1 -delete 2>/dev/null || true
+MARKER="${MARKER_DIR}/${SESSION_ID}-${HASH}"
 if [[ -e "${MARKER}" ]]; then
   exit 0
 fi

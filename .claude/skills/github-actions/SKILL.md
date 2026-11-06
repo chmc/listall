@@ -60,7 +60,7 @@ jobs:
 ```yaml
 - name: Upload logs
   if: always()  # Upload even on failure
-  uses: actions/upload-artifact@v4
+  uses: actions/upload-artifact@v7
   with:
     name: logs
     path: ~/Library/Logs/snapshot/
@@ -70,11 +70,13 @@ jobs:
 
 ### Caching
 ```yaml
-- name: Cache Homebrew
-  uses: actions/cache@v4
+- name: Cache DerivedData (as in ci.yml)
+  uses: actions/cache@v5
   with:
-    path: ~/Library/Caches/Homebrew
-    key: homebrew-${{ hashFiles('Brewfile.lock.json') }}
+    path: ~/Library/Developer/Xcode/DerivedData
+    key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-ios-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
+    restore-keys: |
+      ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-ios-
 
 - name: Setup Ruby with Bundler cache
   uses: ruby/setup-ruby@v1
@@ -84,7 +86,7 @@ jobs:
 
 ### Shallow Clone
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v6
   with:
     fetch-depth: 1  # Shallow clone
 ```
@@ -124,11 +126,11 @@ jobs:
 ```yaml
 # BAD: Cannot debug failures
 - if: success()
-  uses: actions/upload-artifact@v4
+  uses: actions/upload-artifact@v7
 
 # GOOD: Always upload
 - if: always()
-  uses: actions/upload-artifact@v4
+  uses: actions/upload-artifact@v7
 ```
 
 ### No Caching
@@ -137,10 +139,10 @@ jobs:
 - run: brew install imagemagick
 
 # GOOD: Cache dependencies
-- uses: actions/cache@v4
+- uses: actions/cache@v5
   with:
-    path: ~/Library/Caches/Homebrew
-    key: homebrew-${{ hashFiles('Brewfile.lock.json') }}
+    path: ~/Library/Developer/Xcode/DerivedData
+    key: ${{ runner.os }}-xcode-${{ hashFiles('.xcode-version') }}-derived-data-ios-${{ hashFiles('**/ListAll.xcodeproj/project.pbxproj') }}
 ```
 
 ## Code Signing in CI
@@ -175,6 +177,5 @@ env:
   # Simulator
   SNAPSHOT_SIMULATOR_WAIT_FOR_BOOT_TIMEOUT: "120"
 
-  # Xcode
-  DEVELOPER_DIR: /Applications/Xcode_16.app/Contents/Developer
+  # Xcode: never hardcode DEVELOPER_DIR; .github/actions/setup-xcode selects the version in .xcode-version
 ```

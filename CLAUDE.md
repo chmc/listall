@@ -4,7 +4,7 @@ Always use Context7 MCP when I need library/API documentation, code generation, 
 
 ## Subagent Skill Injection
 
-MANDATORY: When spawning subagents via Task tool, include this instruction block in prompts (replace `{agent-name}`):
+MANDATORY: When spawning subagents via the Agent tool, include this instruction block in prompts (replace `{agent-name}`):
 ```
 SKILL USAGE INSTRUCTION:
 1. Read your agent definition at `.claude/agents/{agent-name}.md`
@@ -12,7 +12,7 @@ SKILL USAGE INSTRUCTION:
 3. ONLY if task requires skills outside your domain, read `.claude/skills/SKILLS-SUMMARY.md`
 4. Apply patterns from loaded skills; reference which skills you used
 ```
-**Verification**: If your Task prompt does NOT contain the SKILL USAGE INSTRUCTION block, you are violating this rule.
+**Verification**: If your Agent prompt does NOT contain the SKILL USAGE INSTRUCTION block, you are violating this rule.
 
 ## Mandatory Rules
 
@@ -81,13 +81,13 @@ Agents handle tasks; their skills load automatically. See `.claude/skills/INDEX.
 |-------|---------|--------|
 | `apple-dev-expert` | iOS/watchOS implementation, UX | swift-swiftui, fastlane, xctest, apple-hig, apple-ux-patterns |
 | `apple-dev-researcher` | Bug research, root causes | swiftui-patterns, coredata-sync |
-| `critic` | Review before implementation | code-review |
+| `critic-reviewer` | Review before implementation | code-review |
 | `integration-specialist` | Sync/data flow issues | coredata-sync, watch-connectivity |
 | `pipeline-specialist` | CI/CD failures | github-actions, fastlane |
-| `shell-specialist` | Shell scripts | bash-scripting |
+| `shell-script-specialist` | Shell scripts | bash-scripting |
 | `testing-specialist` | Tests, verification | xctest, test-isolation |
 
-**Always run `critic` before major implementations** (timing and method: see Decision Protocol).
+**Always run `critic-reviewer` before major implementations** (timing and method: see Decision Protocol).
 
 ## Learnings Format
 

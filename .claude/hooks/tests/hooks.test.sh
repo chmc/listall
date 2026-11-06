@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Tests for verification-gap-check.sh (Stop) and mcp-failure-ladder.sh (PostToolUseFailure).
+# Tests for the project hooks: verification-gap-check.sh (Stop), mcp-failure-ladder.sh (PostToolUseFailure),
+# semantic-search-enforce.sh (PreToolUse Grep), subagent-search-reminder.sh (SubagentStart),
+# feature-doc-gate.sh (PreToolUse Bash).
 # Run: .claude/hooks/tests/hooks.test.sh
 set -euo pipefail
 
@@ -7,6 +9,9 @@ HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly HOOK_DIR
 readonly STOP_HOOK="${HOOK_DIR}/verification-gap-check.sh"
 readonly FAILURE_HOOK="${HOOK_DIR}/mcp-failure-ladder.sh"
+readonly GREP_HOOK="${HOOK_DIR}/semantic-search-enforce.sh"
+readonly SUBAGENT_HOOK="${HOOK_DIR}/subagent-search-reminder.sh"
+readonly DOC_GATE_HOOK="${HOOK_DIR}/feature-doc-gate.sh"
 
 PASSED=0
 FAILED=0
@@ -52,6 +57,48 @@ expect_silent() {
     FAILED=$((FAILED + 1))
     echo "FAIL (expected no output): ${name}: ${output}"
   fi
+}
+
+expect_deny() {
+  local name="${1}" output="${2}"
+  if [[ -n "${output}" ]] && echo "${output}" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null; then
+    PASSED=$((PASSED + 1))
+  else
+    FAILED=$((FAILED + 1))
+    echo "FAIL (expected deny): ${name}: ${output}"
+  fi
+}
+
+run_grep_hook() {
+  local pattern="${1}" glob="${2:-}"
+  jq -n --arg p "${pattern}" --arg g "${glob}" \
+    '{hook_event_name: "PreToolUse", tool_name: "Grep", tool_input: {pattern: $p, glob: $g}}' \
+    | "${GREP_HOOK}"
+}
+
+run_subagent_hook() {
+  jq -n --arg t "${1}" '{hook_event_name: "SubagentStart", agent_type: $t}' | "${SUBAGENT_HOOK}"
+}
+
+run_doc_gate() {
+  local repo="${1}" command="${2}"
+  jq -n --arg c "${command}" '{hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: {command: $c}}' \
+    | CLAUDE_PROJECT_DIR="${repo}" "${DOC_GATE_HOOK}"
+}
+
+# A throwaway repo with the app and docs layout; stages the given paths
+doc_gate_repo() {
+  local repo
+  repo="$(mktemp -d)"
+  git -C "${repo}" init -q
+  git -C "${repo}" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+  local path
+  for path in "$@"; do
+    mkdir -p "${repo}/$(dirname "${path}")"
+    echo x > "${repo}/${path}"
+    git -C "${repo}" add "${path}"
+  done
+  echo "${repo}"
 }
 
 expect_context_contains() {
@@ -146,6 +193,64 @@ expect_context_contains "unknown error points at tool source" \
   "Tools/listall-mcp/Sources"
 
 expect_silent "other MCP server ignored" "$(run_failure_hook mcp__playwright__browser_click 'boom')"
+
+# --- Stop hook: Kokeiltu inside a code block is not evidence ---
+
+fresh_tmpdir
+expect_context "Kokeiltu only inside code block" "$(run_stop_hook \
+  $'Tätä ei voi todentaa simulaattorissa.\n```\nKokeiltu: esimerkki\n```')"
+
+# --- PreToolUse Grep: semantic search enforcement ---
+
+expect_deny "verb-prefixed symbol" "$(run_grep_hook fetchListsFromCloud)"
+expect_deny "type suffix" "$(run_grep_hook WatchListViewModel)"
+expect_silent "comment marker" "$(run_grep_hook 'TODO: sync')"
+expect_silent "markdown glob" "$(run_grep_hook WatchListViewModel '*.md')"
+expect_silent "short pattern" "$(run_grep_hook id)"
+
+# Fallback file is found via CLAUDE_PROJECT_DIR, not the current directory
+fallback_project="$(mktemp -d)"
+mkdir -p "${fallback_project}/.claude"
+touch "${fallback_project}/.claude/.grep-fallback-authorized"
+expect_silent "fallback authorized from a subdirectory" "$(cd /tmp && \
+  jq -n '{tool_name: "Grep", tool_input: {pattern: "WatchListViewModel"}}' \
+  | CLAUDE_PROJECT_DIR="${fallback_project}" "${GREP_HOOK}")"
+
+# --- SubagentStart: call_graph reminder only for agents that explore Swift code ---
+
+expect_context "Explore gets reminder" "$(run_subagent_hook Explore)"
+expect_context "general-purpose gets reminder" "$(run_subagent_hook general-purpose)"
+expect_context "apple-dev-expert gets reminder" "$(run_subagent_hook apple-dev-expert)"
+expect_silent "critic-reviewer skipped" "$(run_subagent_hook critic-reviewer)"
+expect_silent "shell-script-specialist skipped" "$(run_subagent_hook shell-script-specialist)"
+expect_silent "pipeline-specialist skipped" "$(run_subagent_hook pipeline-specialist)"
+
+# --- PreToolUse Bash: feature docs must change with user-facing features ---
+
+repo="$(doc_gate_repo 'ListAll/ListAll/Views/MainView.swift')"
+expect_deny "feat with app code, no docs" "$(run_doc_gate "${repo}" 'git commit -m "feat: Add empty state"')"
+
+repo="$(doc_gate_repo 'ListAll/ListAllWatch Watch App/Views/WatchListView.swift')"
+expect_deny "feat via heredoc message" "$(run_doc_gate "${repo}" $'git commit -m "$(cat <<\'EOF\'\nfeat(watch): Add sync banner\n\nCo-Authored-By: x\nEOF\n)"')"
+
+repo="$(doc_gate_repo 'ListAll/Shared/Model.swift' 'documentation/features/SUMMARY.md')"
+expect_silent "feat with docs staged" "$(run_doc_gate "${repo}" 'git commit -m "feat: Add model field"')"
+
+repo="$(doc_gate_repo 'ListAll/ListAllMac/Views/MacMainView.swift')"
+expect_silent "fix commit" "$(run_doc_gate "${repo}" 'git commit -m "fix: Crash on launch"')"
+
+repo="$(doc_gate_repo 'Tools/listall-mcp/Sources/Tool.swift')"
+expect_silent "feat touching tooling only" "$(run_doc_gate "${repo}" 'git commit -m "feat: Add MCP tool"')"
+
+repo="$(doc_gate_repo 'ListAll/ListAll/Views/MainView.swift')"
+expect_silent "Feature-Doc trailer" "$(run_doc_gate "${repo}" $'git commit -m "feat: Internal flag\n\nFeature-Doc: n/a (not user-facing)"')"
+
+repo="$(doc_gate_repo)"
+mkdir -p "${repo}/ListAll/ListAll"
+echo x > "${repo}/ListAll/ListAll/New.swift"
+expect_deny "git add in same command" "$(run_doc_gate "${repo}" 'git add -A && git commit -m "feat: New screen"')"
+
+expect_silent "not a commit" "$(run_doc_gate "${repo}" 'git status')"
 
 echo "Passed: ${PASSED}, Failed: ${FAILED}"
 [[ "${FAILED}" -eq 0 ]]

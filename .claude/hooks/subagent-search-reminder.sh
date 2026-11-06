@@ -4,7 +4,14 @@ set -euo pipefail
 INPUT=$(cat)
 AGENT_TYPE=$(echo "${INPUT}" | jq -r '.agent_type // ""' 2>/dev/null || echo "")
 
-# Remind all subagent types to use call_graph for Swift code exploration
+# Agents that do not explore Swift code get no reminder
+case "${AGENT_TYPE}" in
+  critic-reviewer|shell-script-specialist|pipeline-specialist|statusline-setup|claude-code-guide|web-fetch)
+    exit 0
+    ;;
+esac
+
+# Explore and Plan start without CLAUDE.md, so this reminder is their only pointer to call_graph
 jq -n '{
   hookSpecificOutput: {
     hookEventName: "SubagentStart",

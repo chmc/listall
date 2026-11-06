@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Configuration
-readonly FALLBACK_FILE=".claude/.grep-fallback-authorized"
+readonly FALLBACK_FILE="${CLAUDE_PROJECT_DIR:-.}/.claude/.grep-fallback-authorized"
 readonly FALLBACK_TTL_SECONDS=300
 
 # Read stdin
